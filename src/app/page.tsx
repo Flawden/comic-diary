@@ -1,11 +1,13 @@
 import { db } from "@/db";
 import { categories } from "@/db/schema";
+import { getComics } from "@/modules/comics/queries/get-comics";
 import { LibraryStat } from "@/modules/diary/components/LibraryStat";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
     const categoryList = await db.select().from(categories);
+  const comicList = await getComics();
     {
         return (
             <main className="mx-auto min-h-screen max-w-5xl px-4 py-8 sm:px-8">
@@ -60,6 +62,48 @@ export default async function Home() {
                     </div>
                 </section>
                 <section className="mt-10">
+        <h2 className="mb-4 text-xl font-semibold">
+          Каталог
+        </h2>
+
+        {comicList.length === 0 ? (
+          <p className="text-[var(--muted)]">
+            Комиксов пока нет
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {comicList.map((comic) => (
+              <li
+                key={comic.id}
+                className="rounded-xl bg-[var(--surface)] p-4"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-semibold">
+                      {comic.title}
+                    </p>
+
+                    <p className="text-sm text-[var(--muted)]">
+                      {comic.categoryName ?? "Без категории"}
+                    </p>
+                  </div>
+
+                  <a
+                    href={comic.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-semibold text-[var(--primary)]"
+                  >
+                    Читать
+                  </a>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-10">
                     <h2 className="mb-4 text-xl font-semibold">
                         Категории
                     </h2>
