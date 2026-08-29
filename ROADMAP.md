@@ -233,7 +233,7 @@ Completed:
 
 # R4 — Ratings & Personal Notes
 
-Status: IN PROGRESS
+Status: COMPLETE
 
 ## R4.1 — Ratings & Personal Notes Data Model
 
@@ -294,6 +294,26 @@ Completed:
 - rated comics show the average score out of 5;
 - comics with a personal note show a lightweight note indicator;
 - personal note text remains on the comic detail page rather than expanding library cards.
+
+## R4 Acceptance
+
+Status: COMPLETE
+
+Validated:
+
+- schema and migration contracts;
+- live PostgreSQL rating columns and range constraints;
+- average rating behavior for empty, partial, and full ratings;
+- comic detail and personal library query layers;
+- mutation-layer and HTTP-boundary validation;
+- end-to-end rating and personal note persistence;
+- comic detail page runtime rendering;
+- personal library runtime rendering;
+- invalid rating rejection;
+- partial rating updates and clearing values;
+- repeatable development seed reset;
+- lint, typecheck, production build, and Docker build;
+- clean repository state after the acceptance audit.
 
 Goal:
 
