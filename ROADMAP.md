@@ -281,6 +281,20 @@ Completed:
 - support partial rating updates and clearing existing values;
 - development seed restores a clean ratings and notes baseline.
 
+## R4.4 — Personal Rating in Library
+
+Status: COMPLETE
+
+Completed:
+
+- personal library query exposes all five rating dimensions;
+- personal library query exposes personal note presence;
+- library cards calculate the personal average rating;
+- unrated comics show an explicit no-rating state;
+- rated comics show the average score out of 5;
+- comics with a personal note show a lightweight note indicator;
+- personal note text remains on the comic detail page rather than expanding library cards.
+
 Goal:
 
 Add the personal opinion layer of the reading diary.

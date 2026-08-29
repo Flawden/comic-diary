@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LibraryStat } from "@/modules/library/components/LibraryStat";
 import { DEV_USER_EMAIL } from "@/modules/library/dev-user";
 import { getUserLibrary } from "@/modules/library/queries/get-user-library";
+import { calculateAverageRating } from "@/modules/library/ratings/calculate-average-rating";
 
 export const dynamic = "force-dynamic";
 
@@ -101,14 +102,22 @@ export default async function LibraryPage({
     ON_HOLD: onHoldCount,
   };
 
-  const filteredLibrary =
+  const filteredLibrary = (
     activeFilter === "ALL"
       ? library
       : library.filter(
           (item) =>
             item.status ===
             activeFilter,
-        );
+        )
+  ).map((item) => ({
+    ...item,
+    averageRating:
+      calculateAverageRating(item),
+    hasPersonalNote:
+      item.personalNote !== null &&
+      item.personalNote.trim() !== "",
+  }));
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-6 py-10">
@@ -296,6 +305,32 @@ export default async function LibraryPage({
                           : ` / ${item.totalChapters}`}
                       </strong>
                     </p>
+
+                    <div className="mt-3 border-t border-black/10 pt-3">
+                      <p className="text-sm">
+                        Оценка:{" "}
+                        {item.averageRating ===
+                        null ? (
+                          <span className="text-[var(--muted)]">
+                            Без оценки
+                          </span>
+                        ) : (
+                          <strong>
+                            ★{" "}
+                            {item.averageRating.toFixed(
+                              1,
+                            )}{" "}
+                            / 5
+                          </strong>
+                        )}
+                      </p>
+
+                      {item.hasPersonalNote ? (
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          Есть личная заметка
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
 
                   <Link

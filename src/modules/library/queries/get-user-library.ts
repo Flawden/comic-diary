@@ -25,6 +25,12 @@ export async function getUserLibrary(
       categoryName: categories.name,
       status: userComics.status,
       currentChapter: userComics.currentChapter,
+      ratingPlot: userComics.ratingPlot,
+      ratingCharacters: userComics.ratingCharacters,
+      ratingArt: userComics.ratingArt,
+      ratingDepth: userComics.ratingDepth,
+      ratingWorld: userComics.ratingWorld,
+      personalNote: userComics.personalNote,
       updatedAt: userComics.updatedAt,
     })
     .from(userComics)
