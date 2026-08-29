@@ -116,6 +116,12 @@ async function seed() {
         status: "READING",
         currentChapter: 3,
         completedAt: null,
+        ratingPlot: null,
+        ratingCharacters: null,
+        ratingArt: null,
+        ratingDepth: null,
+        ratingWorld: null,
+        personalNote: null,
         updatedAt: new Date(),
       },
     });

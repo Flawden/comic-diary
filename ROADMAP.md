@@ -265,6 +265,22 @@ Completed:
 - partially filled ratings are averaged using only filled dimensions;
 - fully filled ratings preserve decimal averages.
 
+## R4.3 — Edit Ratings & Personal Notes
+
+Status: COMPLETE
+
+Completed:
+
+- edit five personal rating dimensions from the comic detail page;
+- leave individual rating dimensions empty;
+- save and clear a personal text note;
+- validate rating values at the HTTP boundary;
+- validate rating values again in the mutation layer;
+- persist ratings and notes in PostgreSQL;
+- display the calculated average rating on the comic detail page;
+- support partial rating updates and clearing existing values;
+- development seed restores a clean ratings and notes baseline.
+
 Goal:
 
 Add the personal opinion layer of the reading diary.

@@ -7,9 +7,15 @@ import {
   users,
 } from "@/db/schema";
 import { DEV_USER_EMAIL } from "@/modules/library/dev-user";
+import type { PersonalRatings } from "@/modules/library/ratings/calculate-average-rating";
 
 export type ReadingStatus =
   typeof userComics.$inferSelect.status;
+
+export type PersonalDiaryInput =
+  PersonalRatings & {
+    personalNote: string | null;
+  };
 
 const readingStatuses: ReadingStatus[] = [
   "WANT_TO_READ",
@@ -294,6 +300,65 @@ export async function changeDevUserComicProgress(
       startedAt,
       completedAt,
       updatedAt: now,
+    })
+    .where(
+      and(
+        eq(
+          userComics.userId,
+          context.userId,
+        ),
+        eq(
+          userComics.comicId,
+          comicId,
+        ),
+      ),
+    );
+
+  return context.slug;
+}
+
+export async function updateDevUserComicDiary(
+  comicId: number,
+  diary: PersonalDiaryInput,
+) {
+  const context =
+    await getDevUserComicContext(
+      comicId,
+    );
+
+  const ratingValues = [
+    diary.ratingPlot,
+    diary.ratingCharacters,
+    diary.ratingArt,
+    diary.ratingDepth,
+    diary.ratingWorld,
+  ];
+
+  for (const rating of ratingValues) {
+    if (
+      rating !== null &&
+      (
+        !Number.isInteger(rating) ||
+        rating < 1 ||
+        rating > 5
+      )
+    ) {
+      throw new Error(
+        "Rating must be null or an integer from 1 to 5",
+      );
+    }
+  }
+
+  await db
+    .update(userComics)
+    .set({
+      ratingPlot: diary.ratingPlot,
+      ratingCharacters: diary.ratingCharacters,
+      ratingArt: diary.ratingArt,
+      ratingDepth: diary.ratingDepth,
+      ratingWorld: diary.ratingWorld,
+      personalNote: diary.personalNote,
+      updatedAt: new Date(),
     })
     .where(
       and(

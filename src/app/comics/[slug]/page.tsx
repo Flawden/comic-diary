@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getComicBySlug } from "@/modules/comics/queries/get-comic-by-slug";
 import { DEV_USER_EMAIL } from "@/modules/library/dev-user";
 import { getUserComicState } from "@/modules/library/queries/get-user-comic-state";
+import { calculateAverageRating } from "@/modules/library/ratings/calculate-average-rating";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,29 @@ const statusLabels = {
   COMPLETED: "Прочитано",
   ON_HOLD: "Отложено",
 } as const;
+
+const ratingFields = [
+  {
+    name: "ratingPlot",
+    label: "Сюжет",
+  },
+  {
+    name: "ratingCharacters",
+    label: "Персонажи",
+  },
+  {
+    name: "ratingArt",
+    label: "Рисовка",
+  },
+  {
+    name: "ratingDepth",
+    label: "Глубина",
+  },
+  {
+    name: "ratingWorld",
+    label: "Мир",
+  },
+] as const;
 
 export default async function ComicPage({
   params,
@@ -47,6 +71,12 @@ export default async function ComicPage({
       readingState.currentChapter <
         comic.totalChapters
     );
+
+  const averageRating = readingState
+    ? calculateAverageRating(
+        readingState,
+      )
+    : null;
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-6 py-10">
@@ -237,6 +267,119 @@ export default async function ComicPage({
                       </form>
                     </div>
                   </div>
+
+                  <form
+                    action="/api/library/reading-state"
+                    method="post"
+                    className="border-t border-black/10 pt-5"
+                  >
+                    <input
+                      type="hidden"
+                      name="comicId"
+                      value={comic.id}
+                    />
+
+                    <input
+                      type="hidden"
+                      name="intent"
+                      value="update-diary"
+                    />
+
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-semibold">
+                          Моя оценка
+                        </h3>
+
+                        <p className="mt-1 text-sm text-[var(--muted)]">
+                          Можно оценить только те критерии, по которым уже есть мнение.
+                        </p>
+                      </div>
+
+                      {averageRating !== null ? (
+                        <p className="rounded-xl bg-[var(--surface)] px-3 py-2 text-sm">
+                          Средняя оценка:{" "}
+                          <strong>
+                            {averageRating.toFixed(1)} / 5
+                          </strong>
+                        </p>
+                      ) : (
+                        <p className="text-sm text-[var(--muted)]">
+                          Пока без средней оценки
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {ratingFields.map(
+                        (field) => (
+                          <label
+                            key={field.name}
+                            htmlFor={field.name}
+                            className="block text-sm"
+                          >
+                            <span className="mb-1 block font-medium">
+                              {field.label}
+                            </span>
+
+                            <select
+                              id={field.name}
+                              name={field.name}
+                              defaultValue={
+                                readingState[
+                                  field.name
+                                ] ?? ""
+                              }
+                              className="w-full rounded-xl border border-black/10 bg-[var(--surface)] px-3 py-2"
+                            >
+                              <option value="">
+                                Не оценено
+                              </option>
+
+                              {[1, 2, 3, 4, 5].map(
+                                (value) => (
+                                  <option
+                                    key={value}
+                                    value={value}
+                                  >
+                                    {value}
+                                  </option>
+                                ),
+                              )}
+                            </select>
+                          </label>
+                        ),
+                      )}
+                    </div>
+
+                    <label
+                      htmlFor="personal-note"
+                      className="mt-4 block text-sm"
+                    >
+                      <span className="mb-1 block font-medium">
+                        Личная заметка
+                      </span>
+
+                      <textarea
+                        id="personal-note"
+                        name="personalNote"
+                        rows={5}
+                        defaultValue={
+                          readingState.personalNote ??
+                          ""
+                        }
+                        placeholder="Мысли, впечатления, что хочется запомнить..."
+                        className="w-full resize-y rounded-xl border border-black/10 bg-[var(--surface)] px-3 py-2 leading-6"
+                      />
+                    </label>
+
+                    <button
+                      type="submit"
+                      className="mt-4 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"
+                    >
+                      Сохранить оценку и заметку
+                    </button>
+                  </form>
 
                   <form
                     action="/api/library/reading-state"
