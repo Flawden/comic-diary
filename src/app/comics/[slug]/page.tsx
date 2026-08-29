@@ -247,9 +247,36 @@ export default async function ComicPage({
                   </div>
                 </div>
               ) : (
-                <p className="mt-3 text-sm text-[var(--muted)]">
-                  Комикс ещё не добавлен в библиотеку.
-                </p>
+                <div className="mt-4">
+                  <p className="text-sm text-[var(--muted)]">
+                    Комикс ещё не добавлен в библиотеку.
+                  </p>
+
+                  <form
+                    action="/api/library/reading-state"
+                    method="post"
+                    className="mt-4"
+                  >
+                    <input
+                      type="hidden"
+                      name="comicId"
+                      value={comic.id}
+                    />
+
+                    <input
+                      type="hidden"
+                      name="intent"
+                      value="add-to-library"
+                    />
+
+                    <button
+                      type="submit"
+                      className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"
+                    >
+                      Добавить в библиотеку
+                    </button>
+                  </form>
+                </div>
               )}
             </section>
 

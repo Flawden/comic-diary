@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
+  addComicToDevUserLibrary,
   changeDevUserComicProgress,
   isReadingStatus,
   setDevUserComicStatus,
@@ -32,8 +33,14 @@ export async function POST(request: Request) {
   try {
     let slug: string;
 
-    if (intent === "set-status") {
-      const status = formData.get("status");
+    if (intent === "add-to-library") {
+      slug =
+        await addComicToDevUserLibrary(
+          comicId,
+        );
+    } else if (intent === "set-status") {
+      const status =
+        formData.get("status");
 
       if (
         typeof status !== "string" ||
@@ -41,7 +48,8 @@ export async function POST(request: Request) {
       ) {
         return NextResponse.json(
           {
-            error: "Invalid reading status",
+            error:
+              "Invalid reading status",
           },
           {
             status: 400,
@@ -49,10 +57,11 @@ export async function POST(request: Request) {
         );
       }
 
-      slug = await setDevUserComicStatus(
-        comicId,
-        status,
-      );
+      slug =
+        await setDevUserComicStatus(
+          comicId,
+          status,
+        );
     } else if (
       intent === "change-progress"
     ) {
@@ -60,10 +69,14 @@ export async function POST(request: Request) {
         formData.get("delta"),
       );
 
-      if (delta !== -1 && delta !== 1) {
+      if (
+        delta !== -1 &&
+        delta !== 1
+      ) {
         return NextResponse.json(
           {
-            error: "Invalid progress delta",
+            error:
+              "Invalid progress delta",
           },
           {
             status: 400,
@@ -102,7 +115,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        error: "Unable to update reading state",
+        error:
+          "Unable to update reading state",
       },
       {
         status: 400,

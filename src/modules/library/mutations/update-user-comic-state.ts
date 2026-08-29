@@ -26,6 +26,52 @@ export function isReadingStatus(
   );
 }
 
+async function getDevUser() {
+  const result = await db
+    .select({
+      id: users.id,
+    })
+    .from(users)
+    .where(
+      eq(users.email, DEV_USER_EMAIL),
+    )
+    .limit(1);
+
+  const user = result[0];
+
+  if (!user) {
+    throw new Error(
+      "Development user does not exist",
+    );
+  }
+
+  return user;
+}
+
+async function getComic(comicId: number) {
+  const result = await db
+    .select({
+      id: comics.id,
+      slug: comics.slug,
+      totalChapters: comics.totalChapters,
+    })
+    .from(comics)
+    .where(
+      eq(comics.id, comicId),
+    )
+    .limit(1);
+
+  const comic = result[0];
+
+  if (!comic) {
+    throw new Error(
+      "Comic does not exist",
+    );
+  }
+
+  return comic;
+}
+
 async function getDevUserComicContext(
   comicId: number,
 ) {
@@ -68,13 +114,38 @@ async function getDevUserComicContext(
   return context;
 }
 
+export async function addComicToDevUserLibrary(
+  comicId: number,
+) {
+  const user = await getDevUser();
+  const comic = await getComic(comicId);
+
+  await db
+    .insert(userComics)
+    .values({
+      userId: user.id,
+      comicId: comic.id,
+      status: "WANT_TO_READ",
+      currentChapter: 0,
+    })
+    .onConflictDoNothing({
+      target: [
+        userComics.userId,
+        userComics.comicId,
+      ],
+    });
+
+  return comic.slug;
+}
+
 export async function setDevUserComicStatus(
   comicId: number,
   status: ReadingStatus,
 ) {
-  const context = await getDevUserComicContext(
-    comicId,
-  );
+  const context =
+    await getDevUserComicContext(
+      comicId,
+    );
 
   const now = new Date();
 
@@ -118,8 +189,14 @@ export async function setDevUserComicStatus(
     .set(values)
     .where(
       and(
-        eq(userComics.userId, context.userId),
-        eq(userComics.comicId, comicId),
+        eq(
+          userComics.userId,
+          context.userId,
+        ),
+        eq(
+          userComics.comicId,
+          comicId,
+        ),
       ),
     );
 
@@ -136,14 +213,18 @@ export async function changeDevUserComicProgress(
     );
   }
 
-  const context = await getDevUserComicContext(
-    comicId,
-  );
+  const context =
+    await getDevUserComicContext(
+      comicId,
+    );
 
   let nextChapter =
     context.currentChapter + delta;
 
-  nextChapter = Math.max(0, nextChapter);
+  nextChapter = Math.max(
+    0,
+    nextChapter,
+  );
 
   if (context.totalChapters !== null) {
     nextChapter = Math.min(
@@ -168,12 +249,15 @@ export async function changeDevUserComicProgress(
 
   if (
     context.totalChapters !== null &&
-    nextChapter >= context.totalChapters
+    nextChapter >=
+      context.totalChapters
   ) {
     nextStatus = "COMPLETED";
     completedAt = now;
     startedAt ??= now;
-  } else if (nextStatus === "COMPLETED") {
+  } else if (
+    nextStatus === "COMPLETED"
+  ) {
     nextStatus = "READING";
     completedAt = null;
   }
@@ -189,8 +273,14 @@ export async function changeDevUserComicProgress(
     })
     .where(
       and(
-        eq(userComics.userId, context.userId),
-        eq(userComics.comicId, comicId),
+        eq(
+          userComics.userId,
+          context.userId,
+        ),
+        eq(
+          userComics.comicId,
+          comicId,
+        ),
       ),
     );
 
