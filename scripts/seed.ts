@@ -4,7 +4,12 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-import { categories, comics } from "../src/db/schema";
+import {
+  categories,
+  comics,
+  userComics,
+  users,
+} from "../src/db/schema";
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -20,6 +25,8 @@ const db = drizzle(pool);
 
 async function seed() {
   const categoryName = "Чайная территория";
+  const comicSlug = "r2-3-test-comic";
+  const devUserEmail = "reader@comic-diary.local";
 
   const existingCategory = await db
     .select()
@@ -43,15 +50,15 @@ async function seed() {
     categoryId = insertedCategories[0].id;
   }
 
-  await db
+  const comicRows = await db
     .insert(comics)
     .values({
-      slug: "r2-3-test-comic",
+      slug: comicSlug,
       title: "Тестовый комикс R2.3",
       description:
         "Временная запись для проверки полного пути PostgreSQL → Drizzle → UI.",
       sourceUrl: "https://vk.com/",
-      totalChapters: 1,
+      totalChapters: 12,
       categoryId,
     })
     .onConflictDoUpdate({
@@ -61,8 +68,54 @@ async function seed() {
         description:
           "Временная запись для проверки полного пути PostgreSQL → Drizzle → UI.",
         sourceUrl: "https://vk.com/",
-        totalChapters: 1,
+        totalChapters: 12,
         categoryId,
+        updatedAt: new Date(),
+      },
+    })
+    .returning({
+      id: comics.id,
+    });
+
+  const comicId = comicRows[0].id;
+
+  const userRows = await db
+    .insert(users)
+    .values({
+      email: devUserEmail,
+      displayName: "Тестовый читатель",
+    })
+    .onConflictDoUpdate({
+      target: users.email,
+      set: {
+        displayName: "Тестовый читатель",
+        updatedAt: new Date(),
+      },
+    })
+    .returning({
+      id: users.id,
+    });
+
+  const userId = userRows[0].id;
+
+  await db
+    .insert(userComics)
+    .values({
+      userId,
+      comicId,
+      status: "READING",
+      currentChapter: 3,
+      startedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [
+        userComics.userId,
+        userComics.comicId,
+      ],
+      set: {
+        status: "READING",
+        currentChapter: 3,
+        completedAt: null,
         updatedAt: new Date(),
       },
     });
@@ -70,6 +123,8 @@ async function seed() {
   console.log("Seed completed.");
   console.log(`Category: ${categoryName}`);
   console.log("Comic: Тестовый комикс R2.3");
+  console.log("User: Тестовый читатель");
+  console.log("Reading state: READING, chapter 3 / 12");
 }
 
 seed()

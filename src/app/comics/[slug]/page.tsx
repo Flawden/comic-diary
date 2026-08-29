@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getComicBySlug } from "@/modules/comics/queries/get-comic-by-slug";
+import { DEV_USER_EMAIL } from "@/modules/library/dev-user";
+import { getUserComicState } from "@/modules/library/queries/get-user-comic-state";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +12,13 @@ type ComicPageProps = {
     slug: string;
   }>;
 };
+
+const statusLabels = {
+  WANT_TO_READ: "Хочу прочитать",
+  READING: "Читаю",
+  COMPLETED: "Прочитано",
+  ON_HOLD: "Отложено",
+} as const;
 
 export default async function ComicPage({
   params,
@@ -20,6 +29,11 @@ export default async function ComicPage({
   if (!comic) {
     notFound();
   }
+
+  const readingState = await getUserComicState(
+    DEV_USER_EMAIL,
+    comic.id,
+  );
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-6 py-10">
@@ -73,6 +87,37 @@ export default async function ComicPage({
                 Описание пока не добавлено.
               </p>
             )}
+
+            <section className="mt-8 rounded-xl bg-[var(--background)] p-5">
+              <h2 className="font-semibold">
+                Моя библиотека
+              </h2>
+
+              {readingState ? (
+                <div className="mt-3 space-y-1 text-sm">
+                  <p>
+                    Статус:{" "}
+                    <strong>
+                      {statusLabels[readingState.status]}
+                    </strong>
+                  </p>
+
+                  <p>
+                    Прогресс:{" "}
+                    <strong>
+                      {readingState.currentChapter}
+                      {comic.totalChapters === null
+                        ? ""
+                        : ` / ${comic.totalChapters}`}
+                    </strong>
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-[var(--muted)]">
+                  Комикс ещё не добавлен в библиотеку.
+                </p>
+              )}
+            </section>
 
             <div className="mt-8">
               <a
