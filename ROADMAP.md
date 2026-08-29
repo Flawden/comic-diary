@@ -1,0 +1,495 @@
+# Comic Diary Roadmap
+
+This document is the canonical development roadmap for Comic Diary.
+
+It records both completed historical milestones and the planned direction of the project.
+
+## Product Goal
+
+Comic Diary is a personal reading diary and catalog for comics.
+
+The application should allow a reader to:
+
+- browse a catalog of comics;
+- open a comic detail page;
+- follow the original reading source without hosting comic pages;
+- maintain a personal reading library;
+- track reading status and progress;
+- rate comics;
+- keep personal notes;
+- use the application comfortably on desktop and mobile;
+- eventually use multiple languages and authenticated user accounts.
+
+The current project is a modular monolith built with:
+
+- TypeScript;
+- React;
+- Next.js App Router;
+- Tailwind CSS;
+- PostgreSQL;
+- Drizzle ORM;
+- Docker;
+- GitHub Actions.
+
+---
+
+# R0 — Product Concept
+
+Status: COMPLETE
+
+The initial product concept and technical direction were established.
+
+Key decisions:
+
+- personal comic reading diary and catalog;
+- source comic pages remain external;
+- application stores metadata and personal reading data;
+- initial catalog category: "Чайная территория";
+- mobile-friendly responsive interface;
+- cozy cream and dark-green visual direction;
+- PostgreSQL as persistent storage;
+- modular monolith architecture;
+- future support for authentication, internationalization and PWA.
+
+---
+
+# R1 — Application Foundation
+
+Status: COMPLETE
+
+Foundation of the application and development workflow.
+
+Completed:
+
+- Next.js application bootstrap;
+- TypeScript configuration;
+- Tailwind CSS foundation;
+- project directory structure;
+- Git repository baseline;
+- PostgreSQL development database;
+- Docker Compose;
+- Drizzle ORM;
+- database migrations;
+- centralized environment configuration;
+- application-to-database connection;
+- Dockerized Next.js application;
+- production-style standalone build;
+- GitHub Actions CI;
+- lint, typecheck, application build and Docker build gates.
+
+---
+
+# R2 — Catalog Core
+
+Status: COMPLETE
+
+Core comic catalog model and read-only catalog experience.
+
+Completed:
+
+- categories database model;
+- comics database model;
+- comic slug support;
+- descriptions;
+- cover URL support;
+- source URL support;
+- chapter count;
+- category relationship;
+- repeatable development seed;
+- catalog query layer;
+- comic catalog cards;
+- comic detail route;
+- external source link;
+- empty/fallback cover handling.
+
+---
+
+# R3 — Personal Library
+
+Status: COMPLETE
+
+Checkpoint:
+
+- commit: 76e40b4
+- CI run: 33268384962
+- CI job: 99142384121
+
+Personal reading state is now persisted in PostgreSQL and exposed throughout the application.
+
+## R3.1 — User Reading Progress Model
+
+Completed:
+
+- users table;
+- user_comics table;
+- reading status enum:
+  - WANT_TO_READ;
+  - READING;
+  - COMPLETED;
+  - ON_HOLD;
+- current chapter;
+- started timestamp;
+- completed timestamp;
+- user/comic uniqueness;
+- non-negative progress constraint;
+- cascade relationships.
+
+## R3.2 — Reading State on Comic Page
+
+Completed:
+
+- development reader identity;
+- user comic state query;
+- reading state visible on comic detail page.
+
+## R3.3 — Reading State Mutations
+
+Completed:
+
+- change reading status;
+- increase chapter progress;
+- decrease chapter progress;
+- automatic WANT_TO_READ -> READING transition;
+- automatic completion at final known chapter;
+- COMPLETED -> READING transition when progress decreases;
+- chapter range protection;
+- mutation validation;
+- POST/303 form workflow.
+
+## R3.4 — Add to Library
+
+Completed:
+
+- add comic to personal library;
+- default WANT_TO_READ state;
+- initial progress 0;
+- idempotent insert.
+
+## R3.5 — Remove from Library
+
+Completed:
+
+- remove comic from personal library;
+- idempotent removal;
+- detail page empty-library state.
+
+## R3.6 — Personal Library Page
+
+Completed:
+
+- /library route;
+- library query layer;
+- comic cards;
+- reading status;
+- reading progress;
+- library statistics;
+- empty-library state.
+
+## R3.7 — Global Navigation
+
+Completed:
+
+- shared application navigation;
+- catalog link;
+- personal library link;
+- redundant page-level back links removed.
+
+## R3.8 — Real Home Dashboard
+
+Completed:
+
+- real PostgreSQL-backed dashboard;
+- current reading comic;
+- real chapter progress;
+- progress percentage;
+- real library counters;
+- no-reading state;
+- removal of prototype/fake user data.
+
+## R3.9 — Library Status Filters
+
+Completed:
+
+- All;
+- Reading;
+- Want to Read;
+- Completed;
+- On Hold;
+- URL-driven filters;
+- empty filtered-state handling;
+- invalid-filter fallback.
+
+## R3.10 — Navigable Library Statistics
+
+Completed:
+
+- reusable LibraryStat component;
+- clickable status statistics;
+- links from dashboard to filtered library;
+- links from library statistics to filters;
+- obsolete diary component removed.
+
+---
+
+# R4 — Ratings & Personal Notes
+
+Status: PLANNED
+
+Goal:
+
+Add the personal opinion layer of the reading diary.
+
+Planned capabilities:
+
+- plot rating;
+- characters rating;
+- art rating;
+- depth rating;
+- world rating;
+- values from 1 to 5;
+- average rating calculated from filled rating dimensions;
+- personal text notes;
+- edit existing ratings and notes;
+- show personal rating on comic detail page;
+- expose useful rating information in the personal library.
+
+This stage should extend the existing user_comics domain rather than introduce authentication concerns.
+
+---
+
+# R5 — Real Catalog Data
+
+Status: PLANNED
+
+Goal:
+
+Move from development seed content to a useful real comic catalog.
+
+Planned work:
+
+- define canonical comic metadata requirements;
+- prepare repeatable catalog import workflow;
+- migrate real comic metadata;
+- populate categories;
+- populate titles and descriptions;
+- populate source links;
+- populate known chapter totals;
+- establish cover strategy;
+- validate duplicate detection;
+- retain repeatable development fixtures separately from real catalog data.
+
+Comic pages remain external; the application should link to the approved source rather than host comic pages.
+
+---
+
+# R6 — Catalog Discovery & UX
+
+Status: PLANNED
+
+Goal:
+
+Make a larger catalog pleasant to browse.
+
+Candidate capabilities:
+
+- search by title;
+- category filtering;
+- sorting;
+- improved catalog layout;
+- useful empty states;
+- responsive card grids;
+- library/catalog visual consistency;
+- better mobile navigation;
+- potentially expose reading state directly in catalog cards.
+
+Exact scope should be refined before implementation.
+
+---
+
+# R7 — Authentication & User Identity
+
+Status: PLANNED
+
+Goal:
+
+Replace the development user identity with real authenticated users.
+
+Planned direction:
+
+- authentication;
+- session handling;
+- connect application requests to the authenticated user;
+- remove DEV_USER_EMAIL from production paths;
+- protect personal data;
+- preserve the existing users and user_comics data model where practical.
+
+Likely implementation candidate: Auth.js or an equivalent session-based solution.
+
+Exact authentication provider and account model should be selected at the start of this stage.
+
+---
+
+# R8 — Internationalization
+
+Status: PLANNED
+
+Goal:
+
+Make UI language independent from hard-coded Russian text.
+
+Planned languages:
+
+- Ukrainian;
+- Russian;
+- English.
+
+Planned work:
+
+- translation key structure;
+- locale-aware routing or equivalent language strategy;
+- migrate interface strings out of components;
+- translated statuses and navigation;
+- translated empty states and forms;
+- define default locale before release.
+
+The architecture should avoid coupling stored domain values to a display language.
+
+---
+
+# R9 — PWA & Mobile Experience
+
+Status: PLANNED
+
+Goal:
+
+Make Comic Diary comfortable as an installable mobile application.
+
+Planned work:
+
+- web app manifest;
+- application icons;
+- installability;
+- mobile layout review;
+- touch-friendly interactions;
+- basic offline/application-shell strategy where useful;
+- PWA metadata;
+- mobile browser testing.
+
+Offline comic reading is not a goal because comic content remains hosted externally.
+
+---
+
+# R10 — Production Deployment
+
+Status: PLANNED
+
+Goal:
+
+Run the application on a real server safely and repeatably.
+
+Planned architecture:
+
+Internet
+-> HTTPS reverse proxy
+-> Next.js application container
+-> private Docker network
+-> PostgreSQL
+
+Planned work:
+
+- production environment configuration;
+- Caddy or equivalent reverse proxy;
+- HTTPS;
+- production Docker Compose;
+- database not exposed publicly;
+- persistent database storage;
+- deployment procedure;
+- production migration procedure;
+- health verification.
+
+---
+
+# R11 — Reliability, Backup & Operations
+
+Status: PLANNED
+
+Goal:
+
+Make production operation safe enough for real data.
+
+Planned work:
+
+- PostgreSQL backups;
+- restore procedure;
+- migration safety;
+- application logging;
+- container restart policy;
+- health checks;
+- deployment rollback strategy;
+- data persistence verification;
+- secret handling;
+- operational documentation.
+
+---
+
+# R12 — Release Hardening
+
+Status: PLANNED
+
+Goal:
+
+Turn the working project into a stable release candidate.
+
+Planned work:
+
+- full product regression;
+- accessibility review;
+- responsive UI review;
+- error-state review;
+- performance review;
+- dependency review;
+- security review;
+- production configuration review;
+- documentation cleanup;
+- removal of development-only behavior;
+- final release checklist.
+
+R12 completes the initial product roadmap.
+
+---
+
+# Future / Pro Ideas
+
+These ideas are intentionally outside the initial R0-R12 delivery contract.
+
+Possible future features:
+
+- richer private diary entries;
+- external/private diary content without hosting comic pages;
+- additional reading analytics;
+- richer statistics;
+- additional catalog sources;
+- administrative content tools;
+- import automation;
+- recommendation features.
+
+They should not expand current milestones unless explicitly promoted into the roadmap.
+
+---
+
+# Roadmap Rules
+
+1. This file is the canonical roadmap.
+2. Completed milestones should not be silently rewritten.
+3. Planned milestone scope may be refined before implementation begins.
+4. Significant scope changes should be committed together with this document.
+5. Development-only shortcuts must be removed before production release.
+6. Each milestone should finish with:
+   - lint;
+   - typecheck;
+   - production build;
+   - Docker build where applicable;
+   - local functional validation;
+   - Git commit;
+   - push;
+   - green CI.
