@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { categories } from "@/db/schema";
+import { ComicCard } from "@/modules/comics/components/ComicCard";
 import { getComics } from "@/modules/comics/queries/get-comics";
 import { LibraryStat } from "@/modules/diary/components/LibraryStat";
 
@@ -73,30 +74,8 @@ export default async function Home() {
         ) : (
           <ul className="space-y-3">
             {comicList.map((comic) => (
-              <li
-                key={comic.id}
-                className="rounded-xl bg-[var(--surface)] p-4"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-semibold">
-                      {comic.title}
-                    </p>
-
-                    <p className="text-sm text-[var(--muted)]">
-                      {comic.categoryName ?? "Без категории"}
-                    </p>
-                  </div>
-
-                  <a
-                    href={comic.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sm font-semibold text-[var(--primary)]"
-                  >
-                    Читать
-                  </a>
-                </div>
+              <li key={comic.id}>
+                <ComicCard comic={comic} />
               </li>
             ))}
           </ul>

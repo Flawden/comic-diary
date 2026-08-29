@@ -23,3 +23,7 @@ export async function getComics() {
     )
     .orderBy(asc(comics.title));
 }
+
+export type ComicListItem = Awaited<
+  ReturnType<typeof getComics>
+>[number];
