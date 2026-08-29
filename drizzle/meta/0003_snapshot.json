@@ -1,0 +1,394 @@
+{
+  "id": "8b420867-0169-483b-907e-b72cec8055e5",
+  "prevId": "eb58fd34-aab2-4d56-af9a-5c5ae4a8dd13",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.categories": {
+      "name": "categories",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.comics": {
+      "name": "comics",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cover_url": {
+          "name": "cover_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_chapters": {
+          "name": "total_chapters",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "comics_category_id_categories_id_fk": {
+          "name": "comics_category_id_categories_id_fk",
+          "tableFrom": "comics",
+          "tableTo": "categories",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "comics_slug_unique": {
+          "name": "comics_slug_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "slug"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user_comics": {
+      "name": "user_comics",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "comic_id": {
+          "name": "comic_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "reading_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'WANT_TO_READ'"
+        },
+        "current_chapter": {
+          "name": "current_chapter",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "rating_plot": {
+          "name": "rating_plot",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rating_characters": {
+          "name": "rating_characters",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rating_art": {
+          "name": "rating_art",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rating_depth": {
+          "name": "rating_depth",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rating_world": {
+          "name": "rating_world",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "personal_note": {
+          "name": "personal_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_comics_user_id_users_id_fk": {
+          "name": "user_comics_user_id_users_id_fk",
+          "tableFrom": "user_comics",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "user_comics_comic_id_comics_id_fk": {
+          "name": "user_comics_comic_id_comics_id_fk",
+          "tableFrom": "user_comics",
+          "tableTo": "comics",
+          "columnsFrom": [
+            "comic_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_comics_user_id_comic_id_unique": {
+          "name": "user_comics_user_id_comic_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "comic_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "user_comics_current_chapter_non_negative": {
+          "name": "user_comics_current_chapter_non_negative",
+          "value": "\"user_comics\".\"current_chapter\" >= 0"
+        },
+        "user_comics_rating_plot_range": {
+          "name": "user_comics_rating_plot_range",
+          "value": "\"user_comics\".\"rating_plot\" IS NULL OR (\"user_comics\".\"rating_plot\" >= 1 AND \"user_comics\".\"rating_plot\" <= 5)"
+        },
+        "user_comics_rating_characters_range": {
+          "name": "user_comics_rating_characters_range",
+          "value": "\"user_comics\".\"rating_characters\" IS NULL OR (\"user_comics\".\"rating_characters\" >= 1 AND \"user_comics\".\"rating_characters\" <= 5)"
+        },
+        "user_comics_rating_art_range": {
+          "name": "user_comics_rating_art_range",
+          "value": "\"user_comics\".\"rating_art\" IS NULL OR (\"user_comics\".\"rating_art\" >= 1 AND \"user_comics\".\"rating_art\" <= 5)"
+        },
+        "user_comics_rating_depth_range": {
+          "name": "user_comics_rating_depth_range",
+          "value": "\"user_comics\".\"rating_depth\" IS NULL OR (\"user_comics\".\"rating_depth\" >= 1 AND \"user_comics\".\"rating_depth\" <= 5)"
+        },
+        "user_comics_rating_world_range": {
+          "name": "user_comics_rating_world_range",
+          "value": "\"user_comics\".\"rating_world\" IS NULL OR (\"user_comics\".\"rating_world\" >= 1 AND \"user_comics\".\"rating_world\" <= 5)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.reading_status": {
+      "name": "reading_status",
+      "schema": "public",
+      "values": [
+        "WANT_TO_READ",
+        "READING",
+        "COMPLETED",
+        "ON_HOLD"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

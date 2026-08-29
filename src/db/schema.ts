@@ -106,6 +106,18 @@ export const userComics = pgTable(
       .default(0)
       .notNull(),
 
+    ratingPlot: integer("rating_plot"),
+
+    ratingCharacters: integer("rating_characters"),
+
+    ratingArt: integer("rating_art"),
+
+    ratingDepth: integer("rating_depth"),
+
+    ratingWorld: integer("rating_world"),
+
+    personalNote: text("personal_note"),
+
     startedAt: timestamp("started_at", {
       withTimezone: true,
     }),
@@ -135,6 +147,31 @@ export const userComics = pgTable(
     check(
       "user_comics_current_chapter_non_negative",
       sql`${table.currentChapter} >= 0`,
+    ),
+
+    check(
+      "user_comics_rating_plot_range",
+      sql`${table.ratingPlot} IS NULL OR (${table.ratingPlot} >= 1 AND ${table.ratingPlot} <= 5)`,
+    ),
+
+    check(
+      "user_comics_rating_characters_range",
+      sql`${table.ratingCharacters} IS NULL OR (${table.ratingCharacters} >= 1 AND ${table.ratingCharacters} <= 5)`,
+    ),
+
+    check(
+      "user_comics_rating_art_range",
+      sql`${table.ratingArt} IS NULL OR (${table.ratingArt} >= 1 AND ${table.ratingArt} <= 5)`,
+    ),
+
+    check(
+      "user_comics_rating_depth_range",
+      sql`${table.ratingDepth} IS NULL OR (${table.ratingDepth} >= 1 AND ${table.ratingDepth} <= 5)`,
+    ),
+
+    check(
+      "user_comics_rating_world_range",
+      sql`${table.ratingWorld} IS NULL OR (${table.ratingWorld} >= 1 AND ${table.ratingWorld} <= 5)`,
     ),
   ],
 );

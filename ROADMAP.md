@@ -233,7 +233,23 @@ Completed:
 
 # R4 — Ratings & Personal Notes
 
-Status: PLANNED
+Status: IN PROGRESS
+
+## R4.1 — Ratings & Personal Notes Data Model
+
+Status: COMPLETE
+
+Completed:
+
+- plot rating storage;
+- characters rating storage;
+- art rating storage;
+- depth rating storage;
+- world rating storage;
+- nullable personal note;
+- rating values constrained to 1..5 at database level;
+- partially filled ratings supported;
+- development seed remains compatible.
 
 Goal:
 
