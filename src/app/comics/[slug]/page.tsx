@@ -24,16 +24,30 @@ export default async function ComicPage({
   params,
 }: ComicPageProps) {
   const { slug } = await params;
+
   const comic = await getComicBySlug(slug);
 
   if (!comic) {
     notFound();
   }
 
-  const readingState = await getUserComicState(
-    DEV_USER_EMAIL,
-    comic.id,
-  );
+  const readingState =
+    await getUserComicState(
+      DEV_USER_EMAIL,
+      comic.id,
+    );
+
+  const canDecreaseProgress =
+    readingState !== null &&
+    readingState.currentChapter > 0;
+
+  const canIncreaseProgress =
+    readingState !== null &&
+    (
+      comic.totalChapters === null ||
+      readingState.currentChapter <
+        comic.totalChapters
+    );
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-6 py-10">
@@ -94,23 +108,143 @@ export default async function ComicPage({
               </h2>
 
               {readingState ? (
-                <div className="mt-3 space-y-1 text-sm">
-                  <p>
-                    Статус:{" "}
-                    <strong>
-                      {statusLabels[readingState.status]}
-                    </strong>
-                  </p>
+                <div className="mt-4 space-y-5">
+                  <form
+                    action="/api/library/reading-state"
+                    method="post"
+                    className="space-y-2"
+                  >
+                    <input
+                      type="hidden"
+                      name="comicId"
+                      value={comic.id}
+                    />
 
-                  <p>
-                    Прогресс:{" "}
-                    <strong>
+                    <input
+                      type="hidden"
+                      name="intent"
+                      value="set-status"
+                    />
+
+                    <label
+                      htmlFor="reading-status"
+                      className="block text-sm font-medium"
+                    >
+                      Статус
+                    </label>
+
+                    <div className="flex flex-wrap gap-2">
+                      <select
+                        id="reading-status"
+                        name="status"
+                        defaultValue={
+                          readingState.status
+                        }
+                        className="rounded-xl border border-black/10 bg-[var(--surface)] px-3 py-2 text-sm"
+                      >
+                        {Object.entries(
+                          statusLabels,
+                        ).map(
+                          ([value, label]) => (
+                            <option
+                              key={value}
+                              value={value}
+                            >
+                              {label}
+                            </option>
+                          ),
+                        )}
+                      </select>
+
+                      <button
+                        type="submit"
+                        className="rounded-xl border border-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary)]"
+                      >
+                        Сохранить статус
+                      </button>
+                    </div>
+                  </form>
+
+                  <div>
+                    <p className="text-sm font-medium">
+                      Прогресс
+                    </p>
+
+                    <p className="mt-1 text-lg font-semibold">
                       {readingState.currentChapter}
                       {comic.totalChapters === null
                         ? ""
                         : ` / ${comic.totalChapters}`}
-                    </strong>
-                  </p>
+                    </p>
+
+                    <div className="mt-3 flex gap-2">
+                      <form
+                        action="/api/library/reading-state"
+                        method="post"
+                      >
+                        <input
+                          type="hidden"
+                          name="comicId"
+                          value={comic.id}
+                        />
+
+                        <input
+                          type="hidden"
+                          name="intent"
+                          value="change-progress"
+                        />
+
+                        <input
+                          type="hidden"
+                          name="delta"
+                          value="-1"
+                        />
+
+                        <button
+                          type="submit"
+                          disabled={
+                            !canDecreaseProgress
+                          }
+                          className="rounded-xl border border-black/10 bg-[var(--surface)] px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          −1 глава
+                        </button>
+                      </form>
+
+                      <form
+                        action="/api/library/reading-state"
+                        method="post"
+                      >
+                        <input
+                          type="hidden"
+                          name="comicId"
+                          value={comic.id}
+                        />
+
+                        <input
+                          type="hidden"
+                          name="intent"
+                          value="change-progress"
+                        />
+
+                        <input
+                          type="hidden"
+                          name="delta"
+                          value="1"
+                        />
+
+                        <button
+                          type="submit"
+                          disabled={
+                            !canIncreaseProgress
+                          }
+                          className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          +1 глава
+                        </button>
+                      </form>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p className="mt-3 text-sm text-[var(--muted)]">
