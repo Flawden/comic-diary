@@ -245,6 +245,31 @@ export default async function ComicPage({
                       </form>
                     </div>
                   </div>
+
+                  <form
+                    action="/api/library/reading-state"
+                    method="post"
+                    className="border-t border-black/10 pt-5"
+                  >
+                    <input
+                      type="hidden"
+                      name="comicId"
+                      value={comic.id}
+                    />
+
+                    <input
+                      type="hidden"
+                      name="intent"
+                      value="remove-from-library"
+                    />
+
+                    <button
+                      type="submit"
+                      className="rounded-xl border border-black/15 px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+                    >
+                      Удалить из библиотеки
+                    </button>
+                  </form>
                 </div>
               ) : (
                 <div className="mt-4">

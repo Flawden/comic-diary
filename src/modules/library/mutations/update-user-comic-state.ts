@@ -138,6 +138,30 @@ export async function addComicToDevUserLibrary(
   return comic.slug;
 }
 
+export async function removeComicFromDevUserLibrary(
+  comicId: number,
+) {
+  const user = await getDevUser();
+  const comic = await getComic(comicId);
+
+  await db
+    .delete(userComics)
+    .where(
+      and(
+        eq(
+          userComics.userId,
+          user.id,
+        ),
+        eq(
+          userComics.comicId,
+          comic.id,
+        ),
+      ),
+    );
+
+  return comic.slug;
+}
+
 export async function setDevUserComicStatus(
   comicId: number,
   status: ReadingStatus,

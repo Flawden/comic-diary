@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import {
   addComicToDevUserLibrary,
   changeDevUserComicProgress,
+  removeComicFromDevUserLibrary,
   isReadingStatus,
   setDevUserComicStatus,
 } from "@/modules/library/mutations/update-user-comic-state";
@@ -36,6 +37,13 @@ export async function POST(request: Request) {
     if (intent === "add-to-library") {
       slug =
         await addComicToDevUserLibrary(
+          comicId,
+        );
+    } else if (
+      intent === "remove-from-library"
+    ) {
+      slug =
+        await removeComicFromDevUserLibrary(
           comicId,
         );
     } else if (intent === "set-status") {
