@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getComicBySlug } from "@/modules/comics/queries/get-comic-by-slug";
@@ -51,14 +50,7 @@ export default async function ComicPage({
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-6 py-10">
-      <Link
-        href="/"
-        className="text-sm font-medium text-[var(--primary)]"
-      >
-        ← Назад
-      </Link>
-
-      <article className="mt-6 overflow-hidden rounded-2xl border border-black/5 bg-[var(--surface)] shadow-sm">
+      <article className="overflow-hidden rounded-2xl border border-black/5 bg-[var(--surface)] shadow-sm">
         <div className="grid md:grid-cols-[280px_1fr]">
           <div className="aspect-[3/4] bg-[#e4e1d7] md:aspect-auto">
             {comic.coverUrl ? (

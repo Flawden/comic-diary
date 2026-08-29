@@ -46,14 +46,7 @@ export default async function LibraryPage() {
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-6 py-10">
-      <Link
-        href="/"
-        className="text-sm font-medium text-[var(--primary)]"
-      >
-        ← Каталог
-      </Link>
-
-      <header className="mt-6">
+      <header>
         <p className="text-sm font-medium text-[var(--primary)]">
           Читательский дневник
         </p>
