@@ -9,7 +9,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "local": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/local-start.ps1",
-    "local:stop": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/local-stop.ps1"
+    "local:stop": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/local-stop.ps1",
+    "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
@@ -29,6 +30,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   }
 }
