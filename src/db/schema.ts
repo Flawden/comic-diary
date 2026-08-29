@@ -1,23 +1,51 @@
 import {
-    pgTable,
-    serial,
-    text,
-    timestamp,
-    varchar,
+  integer,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  varchar,
 } from "drizzle-orm/pg-core";
 
 export const categories = pgTable("categories", {
-    id: serial("id").primaryKey(),
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 120 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
 
-    name: varchar("name", { length: 120 }).notNull(),
+export const comics = pgTable("comics", {
+  id: serial("id").primaryKey(),
 
-    description: text("description"),
+  slug: varchar("slug", { length: 160 })
+    .notNull()
+    .unique(),
 
-    createdAt: timestamp("created_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
 
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
+  description: text("description"),
+
+  coverUrl: text("cover_url"),
+
+  sourceUrl: text("source_url").notNull(),
+
+  totalChapters: integer("total_chapters"),
+
+  categoryId: integer("category_id").references(
+    () => categories.id,
+    { onDelete: "set null" },
+  ),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
