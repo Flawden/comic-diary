@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { ComicListItem } from "@/modules/comics/queries/get-comics";
 
 type ComicCardProps = {
@@ -32,7 +34,12 @@ export function ComicCard({ comic }: ComicCardProps) {
             </p>
 
             <h3 className="mt-1 text-xl font-semibold">
-              {comic.title}
+              <Link
+                href={`/comics/${comic.slug}`}
+                className="hover:underline"
+              >
+                {comic.title}
+              </Link>
             </h3>
 
             <p className="mt-2 text-sm text-[var(--muted)]">
@@ -48,7 +55,14 @@ export function ComicCard({ comic }: ComicCardProps) {
             ) : null}
           </div>
 
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href={`/comics/${comic.slug}`}
+              className="inline-flex rounded-xl border border-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary)]"
+            >
+              Подробнее
+            </Link>
+
             <a
               href={comic.sourceUrl}
               target="_blank"
