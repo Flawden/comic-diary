@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Р§РёС‚Р°С‚РµР»СЊСЃРєРёР№ РґРЅРµРІРЅРёРє",
-  description: "Р›РёС‡РЅС‹Р№ РґРЅРµРІРЅРёРє РґР»СЏ С‡С‚РµРЅРёСЏ Рё РѕС†РµРЅРєРё РєРѕРјРёРєСЃРѕРІ",
+  title: "Читательский дневник",
+  description: "Личный дневник для чтения и оценки комиксов",
 };
 
 export default function RootLayout({
