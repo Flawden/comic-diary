@@ -251,6 +251,20 @@ Completed:
 - partially filled ratings supported;
 - development seed remains compatible.
 
+## R4.2 — Ratings Query Layer
+
+Status: COMPLETE
+
+Completed:
+
+- comic reading-state query exposes all five ratings;
+- comic reading-state query exposes the personal note;
+- reusable PersonalRatings type;
+- average rating calculation;
+- empty ratings return no average;
+- partially filled ratings are averaged using only filled dimensions;
+- fully filled ratings preserve decimal averages.
+
 Goal:
 
 Add the personal opinion layer of the reading diary.

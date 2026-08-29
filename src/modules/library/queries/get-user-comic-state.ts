@@ -11,6 +11,12 @@ export async function getUserComicState(
     .select({
       status: userComics.status,
       currentChapter: userComics.currentChapter,
+      ratingPlot: userComics.ratingPlot,
+      ratingCharacters: userComics.ratingCharacters,
+      ratingArt: userComics.ratingArt,
+      ratingDepth: userComics.ratingDepth,
+      ratingWorld: userComics.ratingWorld,
+      personalNote: userComics.personalNote,
       startedAt: userComics.startedAt,
       completedAt: userComics.completedAt,
     })
