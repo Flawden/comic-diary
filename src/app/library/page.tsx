@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { LibraryStat } from "@/modules/library/components/LibraryStat";
 import { DEV_USER_EMAIL } from "@/modules/library/dev-user";
 import { getUserLibrary } from "@/modules/library/queries/get-user-library";
 
@@ -129,26 +130,31 @@ export default async function LibraryPage({
         <LibraryStat
           label="Всего"
           value={library.length}
+          href="/library"
         />
 
         <LibraryStat
           label="Читаю"
           value={readingCount}
+          href="/library?status=READING"
         />
 
         <LibraryStat
           label="Хочу прочитать"
           value={wantToReadCount}
+          href="/library?status=WANT_TO_READ"
         />
 
         <LibraryStat
           label="Прочитано"
           value={completedCount}
+          href="/library?status=COMPLETED"
         />
 
         <LibraryStat
           label="Отложено"
           value={onHoldCount}
+          href="/library?status=ON_HOLD"
         />
       </section>
 
@@ -305,25 +311,5 @@ export default async function LibraryPage({
         </section>
       )}
     </main>
-  );
-}
-
-function LibraryStat({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="rounded-xl border border-black/5 bg-[var(--surface)] p-4 shadow-sm">
-      <p className="text-2xl font-bold">
-        {value}
-      </p>
-
-      <p className="mt-1 text-xs text-[var(--muted)]">
-        {label}
-      </p>
-    </div>
   );
 }

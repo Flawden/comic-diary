@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { categories } from "@/db/schema";
 import { ComicCard } from "@/modules/comics/components/ComicCard";
 import { getComics } from "@/modules/comics/queries/get-comics";
-import { LibraryStat } from "@/modules/diary/components/LibraryStat";
+import { LibraryStat } from "@/modules/library/components/LibraryStat";
 import { DEV_USER_EMAIL } from "@/modules/library/dev-user";
 import { getUserLibrary } from "@/modules/library/queries/get-user-library";
 
@@ -182,21 +182,25 @@ export default async function Home() {
           <LibraryStat
             label="Читаю"
             value={readingCount}
+            href="/library?status=READING"
           />
 
           <LibraryStat
             label="Хочу прочитать"
             value={wantToReadCount}
+            href="/library?status=WANT_TO_READ"
           />
 
           <LibraryStat
             label="Прочитано"
             value={completedCount}
+            href="/library?status=COMPLETED"
           />
 
           <LibraryStat
             label="Отложено"
             value={onHoldCount}
+            href="/library?status=ON_HOLD"
           />
         </div>
       </section>
