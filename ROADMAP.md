@@ -438,7 +438,7 @@ Status: COMPLETE
 
 ### R5.3.2 — VK Connection & Discovery
 
-Status: IN PROGRESS
+Status: COMPLETE
 
 - resolve and validate the VK community;
 - inspect albums, photos, wall entries, links, and useful community metadata;
@@ -447,7 +447,7 @@ Status: IN PROGRESS
 
 ### R5.3.3 — Raw VK Snapshot
 
-Status: PLANNED
+Status: IN PROGRESS
 
 - define a versioned raw snapshot contract;
 - preserve VK identifiers, source URLs, timestamps, and evidence;

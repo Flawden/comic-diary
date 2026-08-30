@@ -8,6 +8,11 @@ import {
   getAdminImportAvailability,
   verifyAdminImportSession,
 } from "@/modules/admin-import/admin-import-gate";
+import {
+  discoverVkCommunity,
+  parseVkCommunityUrl,
+  VkDiscoveryError,
+} from "@/modules/admin-import/vk/vk-api";
 
 function redirectToWorkspace(
   request: NextRequest,
@@ -34,51 +39,6 @@ function redirectToWorkspace(
       status: 303,
     },
   );
-}
-
-function normalizeCommunityUrl(
-  value: string,
-) {
-  let url: URL;
-
-  try {
-    url = new URL(value);
-  } catch {
-    return null;
-  }
-
-  const hostname =
-    url.hostname
-      .toLowerCase()
-      .replace(/^www\./, "");
-
-  if (
-    hostname !== "vk.ru" &&
-    hostname !== "vk.com"
-  ) {
-    return null;
-  }
-
-  const segments =
-    url.pathname
-      .split("/")
-      .filter(Boolean);
-
-  if (segments.length !== 1) {
-    return null;
-  }
-
-  const screenName = segments[0];
-
-  if (
-    !/^[a-zA-Z0-9_.-]{2,64}$/.test(
-      screenName,
-    )
-  ) {
-    return null;
-  }
-
-  return `https://vk.ru/${screenName}`;
 }
 
 export async function POST(
@@ -133,12 +93,12 @@ export async function POST(
     );
   }
 
-  const communityUrl =
-    normalizeCommunityUrl(
+  const parsedCommunity =
+    parseVkCommunityUrl(
       rawCommunityUrl.trim(),
     );
 
-  if (!communityUrl) {
+  if (!parsedCommunity) {
     return redirectToWorkspace(
       request,
       {
@@ -157,7 +117,7 @@ export async function POST(
         probe:
           "invalid-token",
         community:
-          communityUrl,
+          parsedCommunity.normalizedUrl,
       },
     );
   }
@@ -175,29 +135,83 @@ export async function POST(
         probe:
           "invalid-token",
         community:
-          communityUrl,
+          parsedCommunity.normalizedUrl,
       },
     );
   }
 
-  /*
-   * R5.3.1 intentionally stops here.
-   *
-   * The service token exists only inside
-   * this request scope and is neither
-   * persisted nor returned to the client.
-   *
-   * R5.3.2 will introduce the actual
-   * read-only VK API discovery call.
-   */
-  void serviceToken;
+  try {
+    const discovery =
+      await discoverVkCommunity(
+        parsedCommunity,
+        serviceToken,
+      );
 
-  return redirectToWorkspace(
-    request,
-    {
-      probe: "accepted",
+    const values: Record<string, string> = {
+      probe:
+        "connected",
       community:
-        communityUrl,
-    },
-  );
+        discovery.normalizedUrl,
+      groupId:
+        String(discovery.id),
+      groupName:
+        discovery.name,
+      groupScreenName:
+        discovery.screenName,
+      groupType:
+        discovery.type,
+      apiVersion:
+        discovery.apiVersion,
+    };
+
+    if (
+      discovery.membersCount !== null
+    ) {
+      values.membersCount =
+        String(
+          discovery.membersCount,
+        );
+    }
+
+    return redirectToWorkspace(
+      request,
+      values,
+    );
+  } catch (error) {
+    if (
+      error instanceof
+      VkDiscoveryError
+    ) {
+      const values: Record<string, string> = {
+        probe:
+          "vk-error",
+        community:
+          parsedCommunity.normalizedUrl,
+        vkFailure:
+          error.kind,
+      };
+
+      if (error.vkCode !== null) {
+        values.vkCode =
+          String(error.vkCode);
+      }
+
+      return redirectToWorkspace(
+        request,
+        values,
+      );
+    }
+
+    return redirectToWorkspace(
+      request,
+      {
+        probe:
+          "vk-error",
+        community:
+          parsedCommunity.normalizedUrl,
+        vkFailure:
+          "invalid-response",
+      },
+    );
+  }
 }
