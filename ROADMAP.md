@@ -456,7 +456,7 @@ Status: COMPLETE
 
 ### R5.3.4 — Candidate Normalization
 
-Status: IN PROGRESS
+Status: COMPLETE
 
 - derive title, slug, description, source URL, cover, authorship, translator metadata, and reliable chapter information;
 - preserve evidence for every derived field;
@@ -465,7 +465,7 @@ Status: IN PROGRESS
 
 ### R5.3.5 — Review Console
 
-Status: PLANNED
+Status: IN PROGRESS
 
 - show candidates, warnings, evidence, and existing catalog matches;
 - allow editing, accepting, skipping, and postponing candidates;
