@@ -546,6 +546,74 @@ export default async function VkCatalogImportPage({
         </ul>
       </section>
 
+      <section className="mt-6 rounded-2xl bg-[var(--surface)] p-6 shadow-sm">
+        <h2 className="text-xl font-semibold">
+          Raw VK Snapshot
+        </h2>
+
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Создаёт версионируемый source snapshot
+          для разработки парсера без повторных
+          запросов к VK.
+        </p>
+
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Snapshot сохраняет исходные названия
+          альбомов, VK ID, ссылки, timestamps и
+          derived wall evidence. Raw wall text и
+          service token исключены.
+        </p>
+
+        <form
+          action="/api/admin/catalog-import/vk/snapshot"
+          method="post"
+          className="mt-6 space-y-5"
+        >
+          <input
+            type="hidden"
+            name="communityUrl"
+            value={community}
+          />
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium">
+              Service token
+            </span>
+
+            <input
+              type="password"
+              name="serviceToken"
+              autoComplete="off"
+              spellCheck={false}
+              required
+              className="w-full rounded-xl border border-black/15 bg-white px-4 py-3"
+            />
+
+            <span className="mt-2 block text-xs text-[var(--muted)]">
+              Используется только во время
+              текущего server-side capture.
+            </span>
+          </label>
+
+          <button
+            type="submit"
+            className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white"
+          >
+            Скачать Raw Snapshot v1
+          </button>
+        </form>
+
+        <ul className="mt-5 space-y-2 text-sm text-[var(--muted)]">
+          <li>• буквальные raw title VK-альбомов</li>
+          <li>• photo/page count без преобразования в главы</li>
+          <li>• source URL и timestamps</li>
+          <li>• signed cover URL только как временное evidence</li>
+          <li>• community original-source links</li>
+          <li>• wall evidence без raw post text</li>
+          <li>• historical album references</li>
+          <li>• никаких записей в каталог или БД</li>
+        </ul>
+      </section>
       <section className="mt-6 rounded-2xl border border-black/10 p-5">
         <h2 className="font-semibold">
           Контракт R5.3.2

@@ -447,7 +447,7 @@ Status: COMPLETE
 
 ### R5.3.3 — Raw VK Snapshot
 
-Status: IN PROGRESS
+Status: COMPLETE
 
 - define a versioned raw snapshot contract;
 - preserve VK identifiers, source URLs, timestamps, and evidence;
@@ -456,7 +456,7 @@ Status: IN PROGRESS
 
 ### R5.3.4 — Candidate Normalization
 
-Status: PLANNED
+Status: IN PROGRESS
 
 - derive title, slug, description, source URL, cover, authorship, translator metadata, and reliable chapter information;
 - preserve evidence for every derived field;

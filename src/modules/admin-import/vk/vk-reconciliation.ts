@@ -16,6 +16,17 @@ type JsonRecord =
 
 type AlbumCandidate = {
   id: number;
+
+  /*
+   * Exact title returned by VK.
+   * This field must never be normalized or
+   * cosmetically rewritten.
+   */
+  rawTitle: string;
+
+  /*
+   * Display helper used by reconciliation.
+   */
   title: string;
   normalizedTitle: string;
   description: string | null;
@@ -150,7 +161,7 @@ type IdBackedHint = {
 };
 
 export type VkReconciliationReport = {
-  schemaVersion: 4;
+  schemaVersion: 5;
   generatedAt: string;
   apiVersion: string;
 
@@ -604,15 +615,19 @@ async function loadAlbums(
           return null;
         }
 
+        const rawTitle =
+          readString(
+            album.title,
+          ) ?? "";
+
         const title =
           cleanDisplayTitle(
-            readString(
-              album.title,
-            ) ?? "",
+            rawTitle,
           );
 
         return {
           id,
+          rawTitle,
           title,
           normalizedTitle:
             normalizeTitle(title),
@@ -1535,7 +1550,7 @@ export async function buildVkReconciliationReport(
     );
 
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
 
     generatedAt:
       new Date().toISOString(),
