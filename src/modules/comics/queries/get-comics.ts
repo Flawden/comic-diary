@@ -10,9 +10,14 @@ export async function getComics() {
       slug: comics.slug,
       title: comics.title,
       description: comics.description,
+      authorName: comics.authorName,
+      translatorName: comics.translatorName,
+      translatorNote: comics.translatorNote,
       coverUrl: comics.coverUrl,
       sourceUrl: comics.sourceUrl,
       totalChapters: comics.totalChapters,
+      publicationStatus:
+        comics.publicationStatus,
       categoryId: categories.id,
       categoryName: categories.name,
     })
@@ -20,6 +25,12 @@ export async function getComics() {
     .leftJoin(
       categories,
       eq(comics.categoryId, categories.id),
+    )
+    .where(
+      eq(
+        comics.publicationStatus,
+        "PUBLISHED",
+      ),
     )
     .orderBy(asc(comics.title));
 }

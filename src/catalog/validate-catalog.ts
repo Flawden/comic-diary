@@ -1,10 +1,18 @@
 import type {
   CatalogCategory,
   CatalogComic,
+  ComicPublicationStatus,
 } from "@/catalog/catalog-data";
 
 const slugPattern =
   /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+const publicationStatuses =
+  new Set<ComicPublicationStatus>([
+    "PUBLISHED",
+    "HIDDEN",
+    "ARCHIVED",
+  ]);
 
 function validateSlug(
   slug: string,
@@ -58,6 +66,21 @@ function validateSourceUrl(
   }
 }
 
+function validateOptionalText(
+  value: string | null,
+  label: string,
+  comicSlug: string,
+) {
+  if (
+    value !== null &&
+    value.trim() === ""
+  ) {
+    throw new Error(
+      `Comic ${comicSlug} has empty ${label}`,
+    );
+  }
+}
+
 export function validateCatalogData(
   categories: readonly CatalogCategory[],
   comics: readonly CatalogComic[],
@@ -100,6 +123,34 @@ export function validateCatalogData(
     if (comic.title.trim() === "") {
       throw new Error(
         `Comic ${comic.slug} has an empty title`,
+      );
+    }
+
+    validateOptionalText(
+      comic.authorName,
+      "author name",
+      comic.slug,
+    );
+
+    validateOptionalText(
+      comic.translatorName,
+      "translator name",
+      comic.slug,
+    );
+
+    validateOptionalText(
+      comic.translatorNote,
+      "translator note",
+      comic.slug,
+    );
+
+    if (
+      !publicationStatuses.has(
+        comic.publicationStatus,
+      )
+    ) {
+      throw new Error(
+        `Comic ${comic.slug} has invalid publication status`,
       );
     }
 

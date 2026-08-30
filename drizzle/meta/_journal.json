@@ -36,6 +36,13 @@
       "when": 1788035511619,
       "tag": "0004_wealthy_the_call",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788105411693,
+      "tag": "0005_lucky_juggernaut",
+      "breakpoints": true
     }
   ]
 }

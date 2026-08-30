@@ -65,8 +65,12 @@ async function seed() {
       title: "Тестовый комикс R2.3",
       description:
         "Временная запись для проверки полного пути PostgreSQL → Drizzle → UI.",
+      authorName: null,
+      translatorName: null,
+      translatorNote: null,
       sourceUrl: "https://vk.com/",
       totalChapters: 12,
+      publicationStatus: "PUBLISHED",
       categoryId: category.id,
     })
     .onConflictDoUpdate({
@@ -75,8 +79,12 @@ async function seed() {
         title: "Тестовый комикс R2.3",
         description:
           "Временная запись для проверки полного пути PostgreSQL → Drizzle → UI.",
+        authorName: null,
+        translatorName: null,
+        translatorNote: null,
         sourceUrl: "https://vk.com/",
         totalChapters: 12,
+        publicationStatus: "PUBLISHED",
         categoryId: category.id,
         updatedAt: new Date(),
       },

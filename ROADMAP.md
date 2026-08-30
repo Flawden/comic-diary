@@ -339,27 +339,75 @@ This stage should extend the existing user_comics domain rather than introduce a
 
 # R5 — Real Catalog Data
 
-Status: PLANNED
+Status: IN PROGRESS
 
 Goal:
 
 Move from development seed content to a useful real comic catalog.
 
+## R5.1 — Catalog Import Foundation
+
+Status: COMPLETE
+
+Checkpoint:
+
+- commit: 6540a6e
+- CI run: 33319449692
+- CI job: 99278733358
+
+Completed:
+
+- stable category slug business key;
+- canonical typed catalog dataset;
+- catalog validation and duplicate slug detection;
+- repeatable idempotent catalog importer;
+- catalog import separated from development fixtures;
+- repeatable development seed built on top of the catalog import;
+- category slug migration and live database contract;
+- catalog import and development seed idempotency validation.
+
+## R5.2 — Canonical Comic Metadata
+
+Status: IN PROGRESS
+
 Planned work:
 
-- define canonical comic metadata requirements;
-- prepare repeatable catalog import workflow;
-- migrate real comic metadata;
-- populate categories;
-- populate titles and descriptions;
-- populate source links;
+- complete the canonical comic metadata contract;
+- add author metadata;
+- add translator metadata and translator note;
+- add publication lifecycle status;
+- keep only published comics in the public catalog;
+- preserve existing personal library history for hidden or archived comics;
+- establish the input contract for bulk real catalog data.
+
+## R5.3 — Real Catalog Dataset
+
+Status: PLANNED
+
+Planned work:
+
+- populate real categories;
+- populate real comic titles and descriptions;
+- populate approved external source links;
 - populate known chapter totals;
-- establish cover strategy;
-- validate duplicate detection;
-- retain repeatable development fixtures separately from real catalog data.
+- populate available authorship and translator metadata;
+- establish the initial cover dataset;
+- import the real catalog repeatably.
+
+## R5.4 — Real Catalog Acceptance
+
+Status: PLANNED
+
+Planned work:
+
+- validate real catalog duplicates and references;
+- validate repeatable catalog import;
+- validate public visibility rules;
+- validate real comic detail pages;
+- validate development fixture isolation;
+- complete local, Docker, and CI acceptance.
 
 Comic pages remain external; the application should link to the approved source rather than host comic pages.
-
 ---
 
 # R6 — Catalog Discovery & UX

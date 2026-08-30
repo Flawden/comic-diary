@@ -18,6 +18,15 @@ export const readingStatus = pgEnum("reading_status", [
   "ON_HOLD",
 ]);
 
+export const comicPublicationStatus = pgEnum(
+  "comic_publication_status",
+  [
+    "PUBLISHED",
+    "HIDDEN",
+    "ARCHIVED",
+  ],
+);
+
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
 
@@ -46,11 +55,27 @@ export const comics = pgTable("comics", {
 
   description: text("description"),
 
+  authorName: varchar("author_name", {
+    length: 255,
+  }),
+
+  translatorName: varchar("translator_name", {
+    length: 255,
+  }),
+
+  translatorNote: text("translator_note"),
+
   coverUrl: text("cover_url"),
 
   sourceUrl: text("source_url").notNull(),
 
   totalChapters: integer("total_chapters"),
+
+  publicationStatus: comicPublicationStatus(
+    "publication_status",
+  )
+    .default("PUBLISHED")
+    .notNull(),
 
   categoryId: integer("category_id").references(
     () => categories.id,

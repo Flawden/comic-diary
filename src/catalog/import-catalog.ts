@@ -90,10 +90,17 @@ export async function importCatalog(): Promise<CatalogImportResult> {
           slug: comic.slug,
           title: comic.title,
           description: comic.description,
+          authorName: comic.authorName,
+          translatorName:
+            comic.translatorName,
+          translatorNote:
+            comic.translatorNote,
           coverUrl: comic.coverUrl,
           sourceUrl: comic.sourceUrl,
           totalChapters:
             comic.totalChapters,
+          publicationStatus:
+            comic.publicationStatus,
           categoryId,
         })
         .onConflictDoUpdate({
@@ -102,10 +109,18 @@ export async function importCatalog(): Promise<CatalogImportResult> {
             title: comic.title,
             description:
               comic.description,
+            authorName:
+              comic.authorName,
+            translatorName:
+              comic.translatorName,
+            translatorNote:
+              comic.translatorNote,
             coverUrl: comic.coverUrl,
             sourceUrl: comic.sourceUrl,
             totalChapters:
               comic.totalChapters,
+            publicationStatus:
+              comic.publicationStatus,
             categoryId,
             updatedAt: new Date(),
           },

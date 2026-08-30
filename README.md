@@ -12,10 +12,11 @@ Completed milestones:
 - R1 — Application Foundation
 - R2 — Catalog Core
 - R3 — Personal Library
+- R4 — Ratings & Personal Notes
 
 Current milestone:
 
-- R4 — Ratings & Personal Notes
+- R5 — Real Catalog Data
 
 See [ROADMAP.md](./ROADMAP.md) for the canonical project roadmap.
 
@@ -249,7 +250,7 @@ Important current tables:
 
 The `user_comics` table stores personal reading status, chapter progress and reading timestamps.
 
-R4 will extend this personal diary layer with ratings and notes.
+The personal diary layer includes five-dimensional ratings and personal notes.
 
 ## Continuous Integration
 

@@ -4,13 +4,22 @@ export type CatalogCategory = {
   description: string | null;
 };
 
+export type ComicPublicationStatus =
+  | "PUBLISHED"
+  | "HIDDEN"
+  | "ARCHIVED";
+
 export type CatalogComic = {
   slug: string;
   title: string;
   description: string | null;
+  authorName: string | null;
+  translatorName: string | null;
+  translatorNote: string | null;
   coverUrl: string | null;
   sourceUrl: string;
   totalChapters: number | null;
+  publicationStatus: ComicPublicationStatus;
   categorySlug: string;
 };
 

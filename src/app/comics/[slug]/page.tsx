@@ -113,6 +113,50 @@ export default async function ComicPage({
                 ? "Количество глав пока не указано"
                 : `Глав: ${comic.totalChapters}`}
             </p>
+            {comic.publicationStatus !== "PUBLISHED" ? (
+              <p className="mt-4 inline-flex rounded-full border border-black/10 bg-[var(--background)] px-3 py-1 text-xs font-semibold text-[var(--muted)]">
+                {comic.publicationStatus === "HIDDEN"
+                  ? "Скрыт из публичного каталога"
+                  : "Архивный комикс"}
+              </p>
+            ) : null}
+
+            {comic.authorName || comic.translatorName ? (
+              <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
+                {comic.authorName ? (
+                  <div className="rounded-xl bg-[var(--background)] p-4">
+                    <dt className="text-[var(--muted)]">
+                      Автор
+                    </dt>
+                    <dd className="mt-1 font-semibold">
+                      {comic.authorName}
+                    </dd>
+                  </div>
+                ) : null}
+
+                {comic.translatorName ? (
+                  <div className="rounded-xl bg-[var(--background)] p-4">
+                    <dt className="text-[var(--muted)]">
+                      Перевод
+                    </dt>
+                    <dd className="mt-1 font-semibold">
+                      {comic.translatorName}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            ) : null}
+
+            {comic.translatorNote ? (
+              <section className="mt-6 rounded-xl border border-black/5 bg-[var(--background)] p-5">
+                <h2 className="font-semibold">
+                  Примечание переводчика
+                </h2>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--muted)]">
+                  {comic.translatorNote}
+                </p>
+              </section>
+            ) : null}
 
             {comic.description ? (
               <p className="mt-6 max-w-2xl leading-7 text-[var(--muted)]">
