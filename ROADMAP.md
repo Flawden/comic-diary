@@ -396,18 +396,101 @@ Completed:
 
 ## R5.3 — Real Catalog Dataset
 
+Status: IN PROGRESS
+
+Goal:
+
+Build a safe and reviewable pipeline for discovering the real White Dragon catalog from VK, reviewing uncertain metadata, and importing accepted data through the canonical Comic Diary catalog pipeline.
+
+Primary source:
+
+- VK community: `comics_white_dragon`.
+
+Fallback sources:
+
+- XLSX;
+- UTF-8 CSV;
+- manually reviewed canonical data.
+
+Architecture:
+
+VK → read-only discovery → raw snapshot → candidates → human review → validation → dry-run → idempotent import → PostgreSQL.
+
+Safety rules:
+
+- VK credentials remain server-side only;
+- credentials are never committed, persisted in browser storage, or written to logs;
+- discovery and candidate generation never mutate the canonical catalog;
+- every import passes the canonical validator;
+- repeated import of the same accepted dataset is idempotent;
+- source disappearance never implicitly deletes comics or personal history.
+
+### R5.3.1 — Admin Import Shell
+
+Status: IN PROGRESS
+
+- add `/admin/catalog-import/vk`;
+- add a temporary server-side admin gate until R7 authentication;
+- accept VK community URL and temporary service token;
+- keep the token server-side and ephemeral;
+- provide connection/discovery status UI;
+- keep the first implementation read-only.
+
+### R5.3.2 — VK Connection & Discovery
+
 Status: PLANNED
 
-Planned work:
+- resolve and validate the VK community;
+- inspect albums, photos, wall entries, links, and useful community metadata;
+- determine the real publication structure before defining parser rules;
+- produce deterministic discovery results without catalog writes.
 
-- populate real categories;
-- populate real comic titles and descriptions;
-- populate approved external source links;
-- populate known chapter totals;
-- populate available authorship and translator metadata;
-- establish the initial cover dataset;
-- import the real catalog repeatably.
+### R5.3.3 — Raw VK Snapshot
 
+Status: PLANNED
+
+- define a versioned raw snapshot contract;
+- preserve VK identifiers, source URLs, timestamps, and evidence;
+- exclude credentials from snapshots;
+- allow parser development without repeatedly requesting VK.
+
+### R5.3.4 — Candidate Normalization
+
+Status: PLANNED
+
+- derive title, slug, description, source URL, cover, authorship, translator metadata, and reliable chapter information;
+- preserve evidence for every derived field;
+- explicitly mark uncertain or missing metadata;
+- never silently invent values.
+
+### R5.3.5 — Review Console
+
+Status: PLANNED
+
+- show candidates, warnings, evidence, and existing catalog matches;
+- allow editing, accepting, skipping, and postponing candidates;
+- detect duplicate slugs and invalid metadata;
+- preview create/update/unchanged decisions.
+
+### R5.3.6 — Canonical Import
+
+Status: PLANNED
+
+- convert accepted candidates to the canonical catalog contract;
+- run canonical validation and dry-run diff;
+- reuse the idempotent catalog importer;
+- preserve personal progress, ratings, and notes;
+- avoid implicit destructive deletion.
+
+### R5.3.7 — Initial Real Dataset & VK Sync
+
+Status: PLANNED
+
+- discover and review the real `comics_white_dragon` catalog;
+- import the first real dataset;
+- rerun discovery and classify new, changed, unchanged, and unresolved candidates;
+- retain XLSX/CSV as fallback import paths;
+- prepare the project for R5.4 real catalog acceptance.
 ## R5.4 — Real Catalog Acceptance
 
 Status: PLANNED
