@@ -20,6 +20,11 @@ export const readingStatus = pgEnum("reading_status", [
 
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
+
+  slug: varchar("slug", { length: 160 })
+    .notNull()
+    .unique(),
+
   name: varchar("name", { length: 120 }).notNull(),
   description: text("description"),
   createdAt: timestamp("created_at", { withTimezone: true })

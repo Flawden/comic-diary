@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
+import { importCatalog } from "../src/catalog/import-catalog";
 import {
   categories,
   comics,
@@ -11,10 +12,13 @@ import {
   users,
 } from "../src/db/schema";
 
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl =
+  process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-  throw new Error("DATABASE_URL is not defined");
+  throw new Error(
+    "DATABASE_URL is not defined",
+  );
 }
 
 const pool = new Pool({
@@ -24,30 +28,34 @@ const pool = new Pool({
 const db = drizzle(pool);
 
 async function seed() {
-  const categoryName = "Чайная территория";
+  const categorySlug = "tea-territory";
   const comicSlug = "r2-3-test-comic";
-  const devUserEmail = "reader@comic-diary.local";
+  const devUserEmail =
+    "reader@comic-diary.local";
 
-  const existingCategory = await db
-    .select()
+  const catalogResult =
+    await importCatalog();
+
+  const categoryRows = await db
+    .select({
+      id: categories.id,
+      name: categories.name,
+    })
     .from(categories)
-    .where(eq(categories.name, categoryName))
+    .where(
+      eq(
+        categories.slug,
+        categorySlug,
+      ),
+    )
     .limit(1);
 
-  let categoryId = existingCategory[0]?.id;
+  const category = categoryRows[0];
 
-  if (!categoryId) {
-    const insertedCategories = await db
-      .insert(categories)
-      .values({
-        name: categoryName,
-        description: "Основная территория каталога комиксов",
-      })
-      .returning({
-        id: categories.id,
-      });
-
-    categoryId = insertedCategories[0].id;
+  if (!category) {
+    throw new Error(
+      "Development category does not exist after catalog import",
+    );
   }
 
   const comicRows = await db
@@ -59,7 +67,7 @@ async function seed() {
         "Временная запись для проверки полного пути PostgreSQL → Drizzle → UI.",
       sourceUrl: "https://vk.com/",
       totalChapters: 12,
-      categoryId,
+      categoryId: category.id,
     })
     .onConflictDoUpdate({
       target: comics.slug,
@@ -69,7 +77,7 @@ async function seed() {
           "Временная запись для проверки полного пути PostgreSQL → Drizzle → UI.",
         sourceUrl: "https://vk.com/",
         totalChapters: 12,
-        categoryId,
+        categoryId: category.id,
         updatedAt: new Date(),
       },
     })
@@ -83,12 +91,14 @@ async function seed() {
     .insert(users)
     .values({
       email: devUserEmail,
-      displayName: "Тестовый читатель",
+      displayName:
+        "Тестовый читатель",
     })
     .onConflictDoUpdate({
       target: users.email,
       set: {
-        displayName: "Тестовый читатель",
+        displayName:
+          "Тестовый читатель",
         updatedAt: new Date(),
       },
     })
@@ -127,10 +137,21 @@ async function seed() {
     });
 
   console.log("Seed completed.");
-  console.log(`Category: ${categoryName}`);
-  console.log("Comic: Тестовый комикс R2.3");
-  console.log("User: Тестовый читатель");
-  console.log("Reading state: READING, chapter 3 / 12");
+  console.log(
+    `Catalog: ${catalogResult.categories} categories, ${catalogResult.comics} comics`,
+  );
+  console.log(
+    `Category: ${category.name}`,
+  );
+  console.log(
+    "Comic: Тестовый комикс R2.3",
+  );
+  console.log(
+    "User: Тестовый читатель",
+  );
+  console.log(
+    "Reading state: READING, chapter 3 / 12",
+  );
 }
 
 seed()
