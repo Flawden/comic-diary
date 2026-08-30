@@ -427,7 +427,7 @@ Safety rules:
 
 ### R5.3.1 — Admin Import Shell
 
-Status: IN PROGRESS
+Status: COMPLETE
 
 - add `/admin/catalog-import/vk`;
 - add a temporary server-side admin gate until R7 authentication;
@@ -438,7 +438,7 @@ Status: IN PROGRESS
 
 ### R5.3.2 — VK Connection & Discovery
 
-Status: PLANNED
+Status: IN PROGRESS
 
 - resolve and validate the VK community;
 - inspect albums, photos, wall entries, links, and useful community metadata;
