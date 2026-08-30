@@ -1,5 +1,8 @@
 import { cookies } from "next/headers";
 
+import { VkReviewConsole } from "@/modules/admin-import/vk/VkReviewConsole";
+import { loadVkReviewWorkspace } from "@/modules/admin-import/vk/vk-review-source";
+
 import {
   ADMIN_IMPORT_SESSION_COOKIE,
   getAdminImportAvailability,
@@ -207,8 +210,11 @@ export default async function VkCatalogImportPage({
     );
   }
 
+  const reviewWorkspace =
+    await loadVkReviewWorkspace();
+
   return (
-    <main className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-8">
+    <main className="mx-auto min-h-screen max-w-5xl px-4 py-8 sm:px-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-[var(--primary)]">
@@ -245,6 +251,21 @@ export default async function VkCatalogImportPage({
           </button>
         </form>
       </div>
+
+      <VkReviewConsole
+        candidateSet={
+          reviewWorkspace.candidateSet
+        }
+        candidateSha256={
+          reviewWorkspace.candidateSha256
+        }
+        categories={
+          reviewWorkspace.categories
+        }
+        existingComics={
+          reviewWorkspace.existingComics
+        }
+      />
 
       {probe === "connected" ? (
         <section className="mt-8 rounded-2xl border border-green-300 bg-green-50 p-5 text-green-900">

@@ -12,23 +12,25 @@ import {
 } from "@/modules/admin-import/admin-import-gate";
 
 function redirectToWorkspace(
-  request: NextRequest,
   gate: string,
 ) {
-  const url = new URL(
-    "/admin/catalog-import/vk",
-    request.url,
-  );
+  const params =
+    new URLSearchParams();
 
-  url.searchParams.set(
+  params.set(
     "gate",
     gate,
   );
 
-  return NextResponse.redirect(
-    url,
+  return new NextResponse(
+    null,
     {
       status: 303,
+
+      headers: {
+        Location:
+          `/admin/catalog-import/vk?${params.toString()}`,
+      },
     },
   );
 }
@@ -41,7 +43,6 @@ export async function POST(
 
   if (availability !== "ready") {
     return redirectToWorkspace(
-      request,
       availability,
     );
   }
@@ -55,7 +56,6 @@ export async function POST(
   if (intent === "logout") {
     const response =
       redirectToWorkspace(
-        request,
         "locked",
       );
 
@@ -74,14 +74,12 @@ export async function POST(
     !verifyAdminImportSecret(candidate)
   ) {
     return redirectToWorkspace(
-      request,
       "invalid",
     );
   }
 
   const response =
     redirectToWorkspace(
-      request,
       "unlocked",
     );
 

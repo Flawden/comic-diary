@@ -465,7 +465,7 @@ Status: COMPLETE
 
 ### R5.3.5 — Review Console
 
-Status: IN PROGRESS
+Status: COMPLETE
 
 - show candidates, warnings, evidence, and existing catalog matches;
 - allow editing, accepting, skipping, and postponing candidates;
@@ -474,7 +474,7 @@ Status: IN PROGRESS
 
 ### R5.3.6 — Canonical Import
 
-Status: PLANNED
+Status: IN PROGRESS
 
 - convert accepted candidates to the canonical catalog contract;
 - run canonical validation and dry-run diff;
