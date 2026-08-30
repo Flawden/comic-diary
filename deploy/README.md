@@ -61,3 +61,33 @@ SSH local forwarding to VPS `127.0.0.1:18082`.
 
 Only after the private production stack is validated should the host firewall
 and reverse proxy be changed for public HTTP/HTTPS.
+## Container registry contract
+
+The CI workflow publishes production application images to:
+
+`ghcr.io/flawden/comic-diary`
+
+For a successful push to `master`, the same verified Docker image is tagged as:
+
+- the complete Git commit SHA;
+- `master`.
+
+The commit SHA tag is the version-oriented deployment reference.
+
+`master` is only a convenience pointer and must never be used as the production
+deployment identity.
+
+After publication, CI also resolves the registry content digest and verifies
+that the SHA and `master` tags point to the same image content.
+
+The strongest deployment identity is therefore:
+
+`ghcr.io/flawden/comic-diary@sha256:<digest>`
+
+Future CD must deploy either the exact commit-addressed image or, preferably,
+the exact resolved digest. It must never deploy an unqualified moving tag.
+
+GitHub Actions publishes with its repository-scoped `GITHUB_TOKEN`.
+
+The VPS must later receive only the minimum credentials required to pull the
+private image. Registry write credentials do not belong on the VPS.

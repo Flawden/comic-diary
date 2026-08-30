@@ -6,6 +6,11 @@ on:
 
 permissions:
   contents: read
+  packages: write
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
@@ -39,3 +44,94 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t comic-diary:ci .
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" |
+            docker login ghcr.io \
+              --username "${{ github.actor }}" \
+              --password-stdin
+
+      - name: Publish commit-addressed Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        env:
+          IMAGE_REPOSITORY: ghcr.io/flawden/comic-diary
+        run: |
+          set -euo pipefail
+
+          docker tag \
+            comic-diary:ci \
+            "$IMAGE_REPOSITORY:$GITHUB_SHA"
+
+          docker tag \
+            comic-diary:ci \
+            "$IMAGE_REPOSITORY:master"
+
+          docker push \
+            "$IMAGE_REPOSITORY:$GITHUB_SHA"
+
+          docker push \
+            "$IMAGE_REPOSITORY:master"
+
+      - name: Verify published Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        env:
+          IMAGE_REPOSITORY: ghcr.io/flawden/comic-diary
+        run: |
+          set -euo pipefail
+
+          docker pull \
+            "$IMAGE_REPOSITORY:$GITHUB_SHA"
+
+          sha_ref="$(
+            docker image inspect \
+              "$IMAGE_REPOSITORY:$GITHUB_SHA" \
+              --format '{{index .RepoDigests 0}}'
+          )"
+
+          docker pull \
+            "$IMAGE_REPOSITORY:master"
+
+          master_ref="$(
+            docker image inspect \
+              "$IMAGE_REPOSITORY:master" \
+              --format '{{index .RepoDigests 0}}'
+          )"
+
+          if [ -z "$sha_ref" ]; then
+            echo "SHA image has no repository digest"
+            exit 1
+          fi
+
+          if [ "$sha_ref" != "$master_ref" ]; then
+            echo "SHA and master tags do not resolve to the same digest"
+            echo "sha=$sha_ref"
+            echo "master=$master_ref"
+            exit 1
+          fi
+
+          digest="${sha_ref#*@}"
+
+          case "$digest" in
+            sha256:*)
+              ;;
+            *)
+              echo "Unexpected image digest: $digest"
+              exit 1
+              ;;
+          esac
+
+          echo "GHCR_SHA_TAG=$IMAGE_REPOSITORY:$GITHUB_SHA"
+          echo "GHCR_SHA_REF=$sha_ref"
+          echo "GHCR_DIGEST=$digest"
+
+          {
+            echo "### Published Comic Diary container"
+            echo
+            echo "\`$IMAGE_REPOSITORY:$GITHUB_SHA\`"
+            echo
+            echo "\`$sha_ref\`"
+          } >> "$GITHUB_STEP_SUMMARY"
