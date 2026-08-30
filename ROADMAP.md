@@ -368,17 +368,31 @@ Completed:
 
 ## R5.2 — Canonical Comic Metadata
 
-Status: IN PROGRESS
+Status: COMPLETE
 
-Planned work:
+Checkpoint:
 
-- complete the canonical comic metadata contract;
-- add author metadata;
-- add translator metadata and translator note;
-- add publication lifecycle status;
-- keep only published comics in the public catalog;
-- preserve existing personal library history for hidden or archived comics;
-- establish the input contract for bulk real catalog data.
+- commit: 610a260fedd843de09cf55f8885e4ed5ab8aeb9d
+- CI run: 33321946096
+- CI job: 99285337426
+
+Completed:
+
+- added canonical author metadata;
+- added translator metadata and translator notes;
+- added the `PUBLISHED`, `HIDDEN`, and `ARCHIVED` publication lifecycle;
+- added additive migration `0005_lucky_juggernaut.sql`;
+- migrated existing comics safely to `PUBLISHED`;
+- kept public catalog discovery limited to published comics;
+- preserved hidden and archived comics in personal library history;
+- preserved direct detail access for hidden and archived library entries;
+- extended the catalog importer and validator for canonical metadata;
+- made the development fixture deterministic for the new metadata fields;
+- exposed author, translator, translator note, and lifecycle state on comic details;
+- documented the XLSX/CSV bulk catalog input contract;
+- validated catalog import and development seed idempotency;
+- validated production build and fresh Docker runtime;
+- validated publication lifecycle behavior against the live database and application.
 
 ## R5.3 — Real Catalog Dataset
 
