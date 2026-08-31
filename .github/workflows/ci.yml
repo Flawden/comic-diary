@@ -4,18 +4,19 @@ on:
   push:
   pull_request:
 
-permissions:
-  contents: read
-  packages: write
+permissions: {}
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -42,72 +43,96 @@ jobs:
           DATABASE_URL: postgresql://build:build@127.0.0.1:5432/build
           NEXT_TELEMETRY_DISABLED: "1"
 
-      - name: Build Docker image
+      - name: Build Docker verification image
         run: docker build -t comic-diary:ci .
 
+  publish:
+    name: Publish immutable image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs:
+      - verify
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      digest: ${{ steps.publish.outputs.digest }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
       - name: Log in to GitHub Container Registry
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_TOKEN: ${{ github.token }}
         run: |
-          echo "$GHCR_TOKEN" |
+          set -euo pipefail
+
+          printf '%s\n' "$GHCR_TOKEN" |
             docker login ghcr.io \
               --username "${{ github.actor }}" \
               --password-stdin
 
-      - name: Publish commit-addressed Docker image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      - name: Build release image
+        run: |
+          set -euo pipefail
+
+          docker build \
+            -t comic-diary:release \
+            .
+
+      - name: Publish and verify immutable image
+        id: publish
         env:
           IMAGE_REPOSITORY: ghcr.io/flawden/comic-diary
         run: |
           set -euo pipefail
 
-          docker tag \
-            comic-diary:ci \
-            "$IMAGE_REPOSITORY:$GITHUB_SHA"
+          sha_tag="$IMAGE_REPOSITORY:$GITHUB_SHA"
+          master_tag="$IMAGE_REPOSITORY:master"
 
           docker tag \
-            comic-diary:ci \
-            "$IMAGE_REPOSITORY:master"
+            comic-diary:release \
+            "$sha_tag"
+
+          docker tag \
+            comic-diary:release \
+            "$master_tag"
 
           docker push \
-            "$IMAGE_REPOSITORY:$GITHUB_SHA"
+            "$sha_tag"
 
           docker push \
-            "$IMAGE_REPOSITORY:master"
-
-      - name: Verify published Docker image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        env:
-          IMAGE_REPOSITORY: ghcr.io/flawden/comic-diary
-        run: |
-          set -euo pipefail
+            "$master_tag"
 
           docker pull \
-            "$IMAGE_REPOSITORY:$GITHUB_SHA"
+            "$sha_tag"
 
           sha_ref="$(
             docker image inspect \
-              "$IMAGE_REPOSITORY:$GITHUB_SHA" \
+              "$sha_tag" \
               --format '{{index .RepoDigests 0}}'
           )"
 
           docker pull \
-            "$IMAGE_REPOSITORY:master"
+            "$master_tag"
 
           master_ref="$(
             docker image inspect \
-              "$IMAGE_REPOSITORY:master" \
+              "$master_tag" \
               --format '{{index .RepoDigests 0}}'
           )"
 
           if [ -z "$sha_ref" ]; then
-            echo "SHA image has no repository digest"
+            echo "ERROR: SHA image has no repository digest"
             exit 1
           fi
 
           if [ "$sha_ref" != "$master_ref" ]; then
-            echo "SHA and master tags do not resolve to the same digest"
+            echo "ERROR: SHA and master tags differ"
             echo "sha=$sha_ref"
             echo "master=$master_ref"
             exit 1
@@ -115,23 +140,182 @@ jobs:
 
           digest="${sha_ref#*@}"
 
-          case "$digest" in
-            sha256:*)
-              ;;
-            *)
-              echo "Unexpected image digest: $digest"
-              exit 1
-              ;;
-          esac
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "ERROR: invalid published digest: $digest"
+            exit 1
+          fi
 
-          echo "GHCR_SHA_TAG=$IMAGE_REPOSITORY:$GITHUB_SHA"
+          echo "digest=$digest" \
+            >> "$GITHUB_OUTPUT"
+
+          echo "GHCR_SHA_TAG=$sha_tag"
           echo "GHCR_SHA_REF=$sha_ref"
           echo "GHCR_DIGEST=$digest"
 
           {
             echo "### Published Comic Diary container"
             echo
-            echo "\`$IMAGE_REPOSITORY:$GITHUB_SHA\`"
+            echo "Commit:"
+            echo
+            echo "\`$GITHUB_SHA\`"
+            echo
+            echo "Immutable image:"
             echo
             echo "\`$sha_ref\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Log out of GitHub Container Registry
+        if: always()
+        run: |
+          docker logout ghcr.io \
+            >/dev/null 2>&1 \
+            || true
+
+  deploy:
+    name: Deploy production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs:
+      - publish
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: read
+
+    concurrency:
+      group: comic-diary-production
+      cancel-in-progress: false
+
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+      RELEASE_DIGEST: ${{ needs.publish.outputs.digest }}
+
+    steps:
+      - name: Validate deployment contract
+        run: |
+          set -euo pipefail
+
+          : "${DEPLOY_HOST:?DEPLOY_HOST is missing}"
+          : "${DEPLOY_PORT:?DEPLOY_PORT is missing}"
+          : "${DEPLOY_USER:?DEPLOY_USER is missing}"
+          : "${RELEASE_DIGEST:?release digest is missing}"
+
+          if [[ ! "$DEPLOY_PORT" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: invalid DEPLOY_PORT"
+            exit 1
+          fi
+
+          if [[ ! "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "ERROR: invalid GITHUB_SHA"
+            exit 1
+          fi
+
+          if [[ ! "$RELEASE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "ERROR: invalid release digest"
+            exit 1
+          fi
+
+          echo "commit=$GITHUB_SHA"
+          echo "digest=$RELEASE_DIGEST"
+          echo "deploy-contract=PASS"
+
+      - name: Install restricted SSH identity
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+
+          : "${DEPLOY_SSH_PRIVATE_KEY:?DEPLOY_SSH_PRIVATE_KEY is missing}"
+          : "${DEPLOY_KNOWN_HOSTS:?DEPLOY_KNOWN_HOSTS is missing}"
+
+          install \
+            -d \
+            -m 0700 \
+            "$HOME/.ssh"
+
+          umask 077
+
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" \
+            > "$HOME/.ssh/comic-diary-deploy"
+
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" \
+            > "$HOME/.ssh/known_hosts"
+
+          chmod \
+            0600 \
+            "$HOME/.ssh/comic-diary-deploy" \
+            "$HOME/.ssh/known_hosts"
+
+          ssh-keygen \
+            -y \
+            -f "$HOME/.ssh/comic-diary-deploy" \
+            >/dev/null
+
+          echo "ssh-material=PASS"
+
+      - name: Probe restricted production gate
+        run: |
+          set -euo pipefail
+
+          ssh \
+            -T \
+            -i "$HOME/.ssh/comic-diary-deploy" \
+            -p "$DEPLOY_PORT" \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ConnectTimeout=15 \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            probe
+
+      - name: Deploy exact commit and digest
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          : "${GHCR_TOKEN:?GitHub package token is missing}"
+
+          printf '%s\n' "$GHCR_TOKEN" |
+            ssh \
+              -T \
+              -i "$HOME/.ssh/comic-diary-deploy" \
+              -p "$DEPLOY_PORT" \
+              -o IdentitiesOnly=yes \
+              -o BatchMode=yes \
+              -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+              -o ConnectTimeout=15 \
+              -o ServerAliveInterval=15 \
+              -o ServerAliveCountMax=8 \
+              "$DEPLOY_USER@$DEPLOY_HOST" \
+              "deploy $GITHUB_SHA $RELEASE_DIGEST"
+
+      - name: Record successful production deployment
+        run: |
+          {
+            echo "### Production deployment"
+            echo
+            echo "Commit:"
+            echo
+            echo "\`$GITHUB_SHA\`"
+            echo
+            echo "Digest:"
+            echo
+            echo "\`$RELEASE_DIGEST\`"
+            echo
+            echo "Result: **PASS**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove SSH material
+        if: always()
+        run: |
+          rm -f \
+            "$HOME/.ssh/comic-diary-deploy" \
+            "$HOME/.ssh/known_hosts" \
+            2>/dev/null \
+            || true
