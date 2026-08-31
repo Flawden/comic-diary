@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
+  index,
   integer,
   pgEnum,
   pgTable,
@@ -24,6 +26,14 @@ export const comicPublicationStatus = pgEnum(
     "PUBLISHED",
     "HIDDEN",
     "ARCHIVED",
+  ],
+);
+
+export const userRole = pgEnum(
+  "user_role",
+  [
+    "USER",
+    "ADMIN",
   ],
 );
 
@@ -166,6 +176,23 @@ export const users = pgTable("users", {
 
   displayName: varchar("display_name", { length: 120 }),
 
+  /*
+   * Nullable during the R6 migration because the
+   * pre-auth development user already exists.
+   *
+   * R6.2 will require a strong password hash for
+   * password-authenticated accounts.
+   */
+  passwordHash: text("password_hash"),
+
+  role: userRole("role")
+    .default("USER")
+    .notNull(),
+
+  isActive: boolean("is_active")
+    .default(true)
+    .notNull(),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -174,6 +201,69 @@ export const users = pgTable("users", {
     .defaultNow()
     .notNull(),
 });
+
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: serial("id").primaryKey(),
+
+    userId: integer("user_id")
+      .notNull()
+      .references(
+        () => users.id,
+        { onDelete: "cascade" },
+      ),
+
+    /*
+     * The browser receives a high-entropy opaque
+     * session secret. PostgreSQL stores only its
+     * SHA-256 digest.
+     */
+    tokenHash: varchar("token_hash", {
+      length: 64,
+    }).notNull(),
+
+    expiresAt: timestamp("expires_at", {
+      withTimezone: true,
+    }).notNull(),
+
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+    })
+      .defaultNow()
+      .notNull(),
+
+    lastSeenAt: timestamp("last_seen_at", {
+      withTimezone: true,
+    })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    unique(
+      "sessions_token_hash_unique",
+    ).on(
+      table.tokenHash,
+    ),
+
+    index(
+      "sessions_user_id_idx",
+    ).on(
+      table.userId,
+    ),
+
+    index(
+      "sessions_expires_at_idx",
+    ).on(
+      table.expiresAt,
+    ),
+
+    check(
+      "sessions_token_hash_sha256_check",
+      sql`${table.tokenHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+  ],
+);
 
 export const userComics = pgTable(
   "user_comics",

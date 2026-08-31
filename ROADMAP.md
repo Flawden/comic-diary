@@ -474,13 +474,35 @@ Status: COMPLETE
 
 ### R5.3.6 — Canonical Import
 
-Status: IN PROGRESS
+Status: COMPLETE
 
-- convert accepted candidates to the canonical catalog contract;
-- run canonical validation and dry-run diff;
-- reuse the idempotent catalog importer;
-- preserve personal progress, ratings, and notes;
-- avoid implicit destructive deletion.
+Completed:
+
+- A — convert accepted Review Artifact entries into the canonical catalog contract;
+- B1 — add durable `catalog_import_receipts` identity records;
+- B2 — perform fresh PostgreSQL-aware CREATE / UPDATE / UNCHANGED / IMPORTED planning;
+- C — apply the whole accepted batch atomically inside one PostgreSQL transaction;
+- C — recompute current database state inside the transaction before writing;
+- C — preserve `user_comics` progress, ratings and personal notes;
+- C — prove whole-batch rollback when a later item fails;
+- D — expose one guarded server-side import API boundary;
+- D — require exact candidate SHA-256 and rebuild canonical state server-side;
+- D — keep the production feature gate independent and disabled by default;
+- E — connect the Review Console to fresh database dry-run results;
+- E — require explicit confirmation before apply;
+- E — expose CREATE / UPDATE / UNCHANGED / IMPORTED states in the review UI;
+- E — remove imported cards only from the active READY queue while preserving review history;
+- preserve durable receipt history without implicit catalog deletion;
+- keep comic pages external and import metadata/source links only.
+
+The complete path is now:
+
+VK → raw snapshot → candidates → human review → canonical validation →
+database-aware dry-run → explicit confirmation → atomic PostgreSQL apply →
+durable receipt → IMPORTED UI state.
+
+Production catalog import remains disabled until real R6 ADMIN authorization is
+integrated and the independent feature gate is intentionally enabled.
 
 ### R5.3.7 — Initial Real Dataset & VK Sync
 
@@ -507,182 +529,233 @@ Planned work:
 Comic pages remain external; the application should link to the approved source rather than host comic pages.
 ---
 
-# R6 — Catalog Discovery & UX
+# R6 — Authentication & Roles
+
+Status: IN PROGRESS
+
+Goal:
+
+Replace the development-only reader identity and temporary admin secret with
+real authenticated accounts and server-side authorization.
+
+Core decisions:
+
+- preserve the existing `users` and `user_comics` identity graph;
+- initial roles are only `USER` and `ADMIN`;
+- `ADMIN` inherits all normal USER capabilities;
+- use opaque server-side sessions;
+- store only session-token hashes in PostgreSQL;
+- never store authentication secrets in localStorage;
+- enforce authorization on the server;
+- keep `ADMIN_IMPORT_ENABLED` as an independent production kill switch.
+
+## R6.1 — Auth Data Model
+
+Status: COMPLETE
+
+Completed acceptance:
+
+- extend existing users additively;
+- add USER / ADMIN role;
+- add account activation state;
+- add password-hash storage without invalidating the existing development user;
+- add hashed persistent sessions;
+- preserve all existing user IDs and `user_comics`;
+- validate upgrade migration and fresh migration paths.
+
+## R6.2 — Login / Logout
+
+Status: PLANNED
+
+- dedicated password hashing with Argon2id or equivalent;
+- normalized login identifier handling;
+- create and verify opaque session tokens;
+- HttpOnly production cookie;
+- login page;
+- logout;
+- expired-session handling;
+- inactive-user rejection;
+- no raw session token in PostgreSQL.
+
+## R6.3 — Request Identity & Authorization
+
+Status: PLANNED
+
+- resolve authenticated user for server-rendered pages;
+- resolve authenticated user for route handlers;
+- replace `DEV_USER_EMAIL` in personal product paths;
+- make library, progress, ratings and notes belong to the authenticated user;
+- require ADMIN for administrative server operations;
+- preserve same-origin/CSRF protections where applicable;
+- keep authorization independent from hidden UI controls.
+
+## R6.4 — Admin Bootstrap
+
+Status: PLANNED
+
+- secure first-admin creation procedure;
+- no hard-coded production admin password;
+- only ADMIN may assign administrative roles;
+- prevent accidental removal or deactivation of the last active ADMIN;
+- document emergency recovery.
+
+## R6.5 — Authentication Production Proof
+
+Status: PLANNED
+
+- deploy additive auth migrations;
+- validate anonymous behavior;
+- validate USER behavior;
+- validate ADMIN behavior;
+- validate session expiry/logout;
+- prove personal data isolation between users;
+- prove catalog import still requires both ADMIN and the independent feature flag;
+- remove the temporary R5 admin-secret session only after replacement is proven.
+
+---
+
+# R7 — Admin Panel
 
 Status: PLANNED
 
 Goal:
 
-Make a larger catalog pleasant to browse.
+Turn existing protected import tooling into a coherent administration area.
 
-Candidate capabilities:
+## R7.1 — Admin Shell
 
-- search by title;
+- `/admin` dashboard;
+- ADMIN-only server boundary;
+- admin navigation;
+- service and catalog overview.
+
+## R7.2 — Catalog Import Admin
+
+- move the completed VK Review Console into the authenticated admin shell;
+- preserve server-side dry-run and transactional apply;
+- preserve durable import receipts and history;
+- intentionally enable production import only after authorization acceptance.
+
+## R7.3 — Comics Management
+
+- manually create canonical comic entries;
+- edit existing metadata;
+- manage publication lifecycle;
+- reuse the same canonical validation and mutation rules as imports;
+- do not create a competing write path.
+
+## R7.4 — Categories Management
+
+- create categories;
+- edit category metadata;
+- protect references and avoid destructive deletion.
+
+## R7.5 — Users & Roles
+
+- list users;
+- inspect account state;
+- activate/deactivate users;
+- USER ↔ ADMIN role management;
+- last-active-ADMIN protection.
+
+## R7.6 — Admin Audit Log
+
+- record administrative actor;
+- action;
+- target;
+- timestamp;
+- import events;
+- catalog edits;
+- role/account changes.
+
+---
+
+# R8 — User Account & Catalog UX
+
+Status: PLANNED
+
+Goal:
+
+Finish the normal authenticated reader experience after identity is real.
+
+Planned work:
+
+- account/profile page;
+- display-name management;
+- improved personal library UX;
+- improved ratings and notes UX;
+- catalog title search;
 - category filtering;
 - sorting;
-- improved catalog layout;
-- useful empty states;
-- responsive card grids;
-- library/catalog visual consistency;
+- publication-aware empty states;
+- responsive catalog layout;
 - better mobile navigation;
-- potentially expose reading state directly in catalog cards.
-
-Exact scope should be refined before implementation.
+- optionally expose personal reading state directly in catalog cards.
 
 ---
 
-# R7 — Authentication & User Identity
+# R9 — Production Reliability & Security
 
 Status: PLANNED
 
 Goal:
 
-Replace the development user identity with real authenticated users.
+Harden the already deployed production system for real user data.
 
-Planned direction:
+Existing baseline already includes:
 
-- authentication;
-- session handling;
-- connect application requests to the authenticated user;
-- remove DEV_USER_EMAIL from production paths;
-- protect personal data;
-- preserve the existing users and user_comics data model where practical.
+- immutable Docker image deployment;
+- private GHCR release images;
+- restricted SSH deployment identity;
+- production migrations;
+- private PostgreSQL networking;
+- HTTPS reverse proxy;
+- public health verification.
 
-Likely implementation candidate: Auth.js or an equivalent session-based solution.
+Remaining work:
 
-Exact authentication provider and account model should be selected at the start of this stage.
+- permanent application domain;
+- PostgreSQL off-site backups;
+- documented restore procedure;
+- authentication/login rate limiting;
+- security headers;
+- session policy hardening;
+- CSRF review;
+- application/error monitoring;
+- uptime monitoring;
+- backup and restore drills;
+- operational audit documentation.
 
 ---
 
-# R8 — Internationalization
+# R10 — Product Polish & Expansion
 
 Status: PLANNED
 
 Goal:
 
-Make UI language independent from hard-coded Russian text.
+Turn the authenticated and administered application into a polished release.
 
-Planned languages:
+Candidate work:
 
-- Ukrainian;
-- Russian;
-- English.
-
-Planned work:
-
-- translation key structure;
-- locale-aware routing or equivalent language strategy;
-- migrate interface strings out of components;
-- translated statuses and navigation;
-- translated empty states and forms;
-- define default locale before release.
-
-The architecture should avoid coupling stored domain values to a display language.
-
----
-
-# R9 — PWA & Mobile Experience
-
-Status: PLANNED
-
-Goal:
-
-Make Comic Diary comfortable as an installable mobile application.
-
-Planned work:
-
-- web app manifest;
+- Ukrainian / Russian / English interface architecture;
+- move display strings out of domain values;
+- PWA manifest and installability;
 - application icons;
-- installability;
-- mobile layout review;
-- touch-friendly interactions;
-- basic offline/application-shell strategy where useful;
-- PWA metadata;
-- mobile browser testing.
-
-Offline comic reading is not a goal because comic content remains hosted externally.
-
----
-
-# R10 — Production Deployment
-
-Status: PLANNED
-
-Goal:
-
-Run the application on a real server safely and repeatably.
-
-Planned architecture:
-
-Internet
--> HTTPS reverse proxy
--> Next.js application container
--> private Docker network
--> PostgreSQL
-
-Planned work:
-
-- production environment configuration;
-- Caddy or equivalent reverse proxy;
-- HTTPS;
-- production Docker Compose;
-- database not exposed publicly;
-- persistent database storage;
-- deployment procedure;
-- production migration procedure;
-- health verification.
-
----
-
-# R11 — Reliability, Backup & Operations
-
-Status: PLANNED
-
-Goal:
-
-Make production operation safe enough for real data.
-
-Planned work:
-
-- PostgreSQL backups;
-- restore procedure;
-- migration safety;
-- application logging;
-- container restart policy;
-- health checks;
-- deployment rollback strategy;
-- data persistence verification;
-- secret handling;
-- operational documentation.
-
----
-
-# R12 — Release Hardening
-
-Status: PLANNED
-
-Goal:
-
-Turn the working project into a stable release candidate.
-
-Planned work:
-
-- full product regression;
+- mobile/touch review;
 - accessibility review;
-- responsive UI review;
+- responsive regression;
 - error-state review;
 - performance review;
-- dependency review;
-- security review;
-- production configuration review;
-- documentation cleanup;
-- removal of development-only behavior;
-- final release checklist.
+- dependency/security review;
+- release checklist;
+- richer reading analytics;
+- recommendation features where useful.
 
-R12 completes the initial product roadmap.
+Comic content remains externally hosted; Comic Diary continues to store catalog
+metadata and personal reader data rather than comic pages.
 
 ---
-
 # Future / Pro Ideas
 
 These ideas are intentionally outside the initial R0-R12 delivery contract.
