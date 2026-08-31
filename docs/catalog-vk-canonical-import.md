@@ -178,3 +178,50 @@ accepted batch. Partial successful imports are not allowed.
 
 Categories are resolved but are not implicitly created, deleted, or edited by
 the VK apply boundary.
+
+## HTTP import boundary
+
+R5.3.6D exposes the reviewed catalog pipeline through one server-side JSON
+endpoint:
+
+`POST /api/admin/catalog-import/vk/import`
+
+The request supplies:
+
+- the exact candidate artifact SHA-256;
+- the Review Artifact;
+- `mode: "dry-run"` or `mode: "apply"`;
+- `confirmApply: true` for a write request.
+
+Authorization is checked before the request body is processed.
+
+The temporary R5 admin-import session is isolated behind
+`authorizeAdminCatalogImportRequest`.
+
+R6 may replace that temporary session check with authenticated user and `ADMIN`
+role authorization without changing the canonical import pipeline.
+
+`ADMIN_IMPORT_ENABLED` remains an independent feature gate. Having the future
+`ADMIN` role alone must not implicitly enable catalog imports.
+
+The endpoint also requires a same-origin browser request. Reverse-proxy
+`X-Forwarded-Proto` and the public `Host` header are used when reconstructing the
+expected origin.
+
+The server never trusts a serialized Review Artifact canonical result, validation
+result, preview action, or `acceptedReady` flag.
+
+For both modes it reloads the tracked candidate source, verifies its exact
+SHA-256, restores reviewer-owned state, performs fresh review analysis, and
+rebuilds the canonical plan.
+
+`dry-run` performs a fresh PostgreSQL-aware comparison and does not write.
+
+`apply` requires explicit confirmation and then delegates to the R5.3.6C
+transactional apply boundary. The final database action is recomputed inside the
+transaction.
+
+The endpoint performs no delete operation and has no `user_comics` write path.
+
+Production may deploy the endpoint while keeping it unavailable by leaving
+`ADMIN_IMPORT_ENABLED` disabled.
