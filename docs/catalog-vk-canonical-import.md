@@ -136,3 +136,45 @@ canonical comic metadata.
 
 The database-aware planner is read-only. It does not modify comics, receipts or
 personal `user_comics` state.
+
+## Transactional apply
+
+R5.3.6C introduces the first database write boundary for reviewed VK catalog
+imports.
+
+The entire accepted canonical batch is applied inside one PostgreSQL
+transaction.
+
+Before mutation, the canonical batch is freshly validated again.
+
+Inside the transaction the importer:
+
+1. acquires a PostgreSQL transaction-scoped advisory lock for Comic Diary
+   catalog imports;
+2. resolves every referenced category from PostgreSQL;
+3. recomputes the current comic and receipt state;
+4. chooses `create`, `update`, `unchanged`, or `imported`;
+5. mutates only catalog comic metadata when required;
+6. writes the durable receipt in the same transaction.
+
+The earlier review preview and database-aware dry-run remain advisory. Apply
+never trusts a stale action supplied by either layer.
+
+`unchanged` writes no comic metadata. It only records the missing durable
+receipt.
+
+`imported` writes neither the comic nor another receipt.
+
+A historical receipt does not prevent repair. If PostgreSQL metadata has drifted
+from canonical metadata, apply performs `update`. The existing exact receipt may
+remain the durable proof for that canonical representation.
+
+No source absence causes deletion or archival.
+
+R5.3.6C does not modify `user_comics`.
+
+If any comic or receipt operation fails, PostgreSQL rolls back the complete
+accepted batch. Partial successful imports are not allowed.
+
+Categories are resolved but are not implicitly created, deleted, or edited by
+the VK apply boundary.

@@ -55,7 +55,7 @@ export type VkDatabaseAwareImportPlan = {
   items: VkDatabaseAwareImportPlanItem[];
 };
 
-type DatabaseComic = {
+export type DatabaseComic = {
   slug: string;
   title: string;
   description: string | null;
@@ -124,7 +124,7 @@ export function hashVkCanonicalComic(
     );
 }
 
-function databaseComicEqualsCanonical(
+export function databaseComicEqualsCanonical(
   existing: DatabaseComic,
   canonical: CatalogComic,
 ): boolean {
