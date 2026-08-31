@@ -225,3 +225,45 @@ The endpoint performs no delete operation and has no `user_comics` write path.
 
 Production may deploy the endpoint while keeping it unavailable by leaving
 `ADMIN_IMPORT_ENABLED` disabled.
+
+## Review Console import UI
+
+R5.3.6E connects the existing browser Review Console to the guarded server
+import endpoint.
+
+The reviewer workflow is:
+
+1. edit and explicitly accept individual candidate cards;
+2. run `Проверить импорт`;
+3. inspect fresh PostgreSQL-aware `CREATE`, `UPDATE`, `UNCHANGED`, and
+   `IMPORTED` actions;
+4. explicitly confirm the batch;
+5. run the transactional apply.
+
+The browser-side preview is never authoritative. Any review edit invalidates
+the current database plan.
+
+Apply still rebuilds the canonical plan on the server and recomputes the final
+database action inside the R5.3.6C PostgreSQL transaction.
+
+After a successful apply every item in that exact canonical batch is treated as
+`IMPORTED` in the Review Console. Imported cards are removed from the active
+`Ready to import` filter but remain visible through normal review history and
+the dedicated `Imported` filter.
+
+The durable source of imported history remains
+`catalog_import_receipts`. Browser imported state is only a UI projection and
+can be reconstructed by another database-aware dry-run.
+
+Editing an imported review card invalidates its browser imported state because
+the resulting canonical representation may have a different SHA-256 and may
+require another import.
+
+A failed apply does not mark new cards as imported. R5.3.6C transaction
+rollback semantics therefore leave failed cards in the active READY queue.
+
+Review JSON/localStorage behavior remains unchanged. Review decisions are not
+rewritten to represent database state.
+
+The production `ADMIN_IMPORT_ENABLED` feature gate remains independent and
+disabled unless explicitly enabled.

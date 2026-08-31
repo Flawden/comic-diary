@@ -4,6 +4,7 @@ import {
   type ChangeEvent,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -15,6 +16,12 @@ import type {
 import type {
   VkCandidateSetV1,
 } from "./vk-candidate-normalization";
+
+import {
+  postVkCatalogImport,
+  type VkImportAction,
+  type VkImportResult,
+} from "./vk-import-client";
 
 import {
   analyzeVkReviewEntries,
@@ -49,6 +56,7 @@ type ReviewFilter =
   | "postponed"
   | "skipped"
   | "ready"
+  | "imported"
   | "invalid";
 
 const attentionWarnings =
@@ -124,8 +132,41 @@ const previewLabels:
     "INVALID",
 };
 
+const databaseActionLabels:
+  Record<VkImportAction, string> = {
+  create:
+    "DB CREATE",
+
+  update:
+    "DB UPDATE",
+
+  unchanged:
+    "DB UNCHANGED",
+
+  imported:
+    "IMPORTED",
+};
+
 const reviewStoragePrefix =
   "comic-diary:vk-review:v1";
+
+function databaseActionClass(
+  action: VkImportAction,
+) {
+  if (action === "create") {
+    return "border-green-400 bg-green-100 text-green-950";
+  }
+
+  if (action === "update") {
+    return "border-blue-400 bg-blue-100 text-blue-950";
+  }
+
+  if (action === "unchanged") {
+    return "border-black/20 bg-black/5 text-[var(--foreground)]";
+  }
+
+  return "border-violet-300 bg-violet-50 text-violet-950";
+}
 
 function previewClass(
   action: VkReviewPreviewAction,
@@ -265,11 +306,64 @@ export function VkReviewConsole({
     );
 
   const [
+    databasePlan,
+    setDatabasePlan,
+  ] =
+    useState<VkImportResult | null>(
+      null,
+    );
+
+  const [
+    databasePlanRevision,
+    setDatabasePlanRevision,
+  ] =
+    useState<number | null>(
+      null,
+    );
+
+  const [
+    importedCandidateIds,
+    setImportedCandidateIds,
+  ] =
+    useState<Set<string>>(
+      () =>
+        new Set(),
+    );
+
+  const [
+    importStatus,
+    setImportStatus,
+  ] =
+    useState<
+      | "idle"
+      | "checking"
+      | "ready"
+      | "applying"
+      | "success"
+      | "error"
+    >(
+      "idle",
+    );
+
+  const [
+    importMessage,
+    setImportMessage,
+  ] =
+    useState<string | null>(
+      null,
+    );
+
+  const [
     storageReady,
     setStorageReady,
   ] =
     useState(
       false,
+    );
+
+  const reviewRevision =
+    useRef(
+      0,
     );
 
   const analyses =
@@ -444,6 +538,26 @@ export function VkReviewConsole({
       [analyses],
     );
 
+  const databasePlanById =
+    useMemo(
+      () =>
+        new Map(
+          (
+            databasePlan
+              ?.items ??
+            []
+          ).map(
+            (item) => [
+              item.candidateId,
+              item,
+            ],
+          ),
+        ),
+      [
+        databasePlan,
+      ],
+    );
+
   const stats =
     useMemo(
       () => {
@@ -460,6 +574,23 @@ export function VkReviewConsole({
               analysis.acceptedReady,
           ).length;
 
+        const imported =
+          analyses.filter(
+            (analysis) =>
+              importedCandidateIds.has(
+                analysis.candidateId,
+              ),
+          ).length;
+
+        const activeReady =
+          analyses.filter(
+            (analysis) =>
+              analysis.acceptedReady &&
+              !importedCandidateIds.has(
+                analysis.candidateId,
+              ),
+          ).length;
+
         return {
           total:
             entries.length,
@@ -474,6 +605,10 @@ export function VkReviewConsole({
           accepted,
 
           acceptedReady,
+
+          activeReady,
+
+          imported,
 
           acceptedBlocked:
             accepted -
@@ -527,8 +662,72 @@ export function VkReviewConsole({
       [
         analyses,
         entries,
+        importedCandidateIds,
       ],
     );
+
+  const importBusy =
+    importStatus ===
+      "checking" ||
+    importStatus ===
+      "applying";
+
+  const pendingApplyCount =
+    databasePlan
+      ?.items.filter(
+        (item) =>
+          item.action !==
+          "imported",
+      ).length ??
+    0;
+
+  function invalidateImportPreview(
+    candidateId?: string,
+  ) {
+    reviewRevision.current +=
+      1;
+
+    setDatabasePlan(
+      null,
+    );
+
+    setDatabasePlanRevision(
+      null,
+    );
+
+    setImportStatus(
+      "idle",
+    );
+
+    setImportMessage(
+      null,
+    );
+
+    if (candidateId) {
+      setImportedCandidateIds(
+        (current) => {
+          if (
+            !current.has(
+              candidateId,
+            )
+          ) {
+            return current;
+          }
+
+          const next =
+            new Set(
+              current,
+            );
+
+          next.delete(
+            candidateId,
+          );
+
+          return next;
+        },
+      );
+    }
+  }
 
   function updateEntry(
     candidateId: string,
@@ -537,6 +736,10 @@ export function VkReviewConsole({
         current: VkReviewEntryV1,
       ) => VkReviewEntryV1,
   ) {
+    invalidateImportPreview(
+      candidateId,
+    );
+
     setEntries(
       (current) =>
         current.map(
@@ -655,6 +858,12 @@ export function VkReviewConsole({
       return;
     }
 
+    invalidateImportPreview();
+
+    setImportedCandidateIds(
+      new Set(),
+    );
+
     setEntries(
       buildInitialVkReviewEntries(
         candidateSet,
@@ -735,6 +944,12 @@ export function VkReviewConsole({
           parsed,
         );
 
+      invalidateImportPreview();
+
+      setImportedCandidateIds(
+        new Set(),
+      );
+
       setEntries(
         restored,
       );
@@ -751,6 +966,398 @@ export function VkReviewConsole({
     } finally {
       event.target.value =
         "";
+    }
+  }
+
+  function currentReviewArtifact() {
+    return buildVkReviewArtifact(
+      candidateSet,
+      candidateSha256,
+      entries,
+      categories,
+      existingComics,
+      new Date().toISOString(),
+    );
+  }
+
+  function synchronizeImportedState(
+    result: VkImportResult,
+  ) {
+    setImportedCandidateIds(
+      (current) => {
+        const next =
+          new Set(
+            current,
+          );
+
+        for (
+          const item of
+          result.items
+        ) {
+          if (
+            item.action ===
+            "imported"
+          ) {
+            next.add(
+              item.candidateId,
+            );
+          } else {
+            next.delete(
+              item.candidateId,
+            );
+          }
+        }
+
+        return next;
+      },
+    );
+  }
+
+  async function checkDatabaseImport() {
+    if (
+      stats.acceptedBlocked >
+      0
+    ) {
+      setImportStatus(
+        "error",
+      );
+
+      setImportMessage(
+        "Есть Accepted blocked. Сначала исправьте или снимите эти решения.",
+      );
+
+      return;
+    }
+
+    if (
+      stats.acceptedReady ===
+      0
+    ) {
+      setImportStatus(
+        "error",
+      );
+
+      setImportMessage(
+        "Нет ни одной Accepted ready карточки для проверки.",
+      );
+
+      return;
+    }
+
+    const revision =
+      reviewRevision.current;
+
+    let artifact:
+      ReturnType<
+        typeof buildVkReviewArtifact
+      >;
+
+    try {
+      artifact =
+        currentReviewArtifact();
+    } catch (error) {
+      setImportStatus(
+        "error",
+      );
+
+      setImportMessage(
+        error instanceof Error
+          ? error.message
+          : "Не удалось собрать Review Artifact.",
+      );
+
+      return;
+    }
+
+    setImportStatus(
+      "checking",
+    );
+
+    setImportMessage(
+      "Сервер выполняет fresh database-aware dry-run...",
+    );
+
+    try {
+      const response =
+        await postVkCatalogImport({
+          candidateSha256,
+
+          reviewArtifact:
+            artifact,
+
+          mode:
+            "dry-run",
+
+          confirmApply:
+            false,
+        });
+
+      if (
+        reviewRevision.current !==
+        revision
+      ) {
+        setImportStatus(
+          "idle",
+        );
+
+        setImportMessage(
+          "Review изменился во время проверки. Старый dry-run отброшен.",
+        );
+
+        return;
+      }
+
+      const result =
+        response.result;
+
+      setDatabasePlan(
+        result,
+      );
+
+      setDatabasePlanRevision(
+        revision,
+      );
+
+      synchronizeImportedState(
+        result,
+      );
+
+      setImportStatus(
+        "ready",
+      );
+
+      setImportMessage(
+        `Dry-run готов: CREATE ${result.summary.create}, UPDATE ${result.summary.update}, UNCHANGED ${result.summary.unchanged}, IMPORTED ${result.summary.imported}.`,
+      );
+    } catch (error) {
+      setDatabasePlan(
+        null,
+      );
+
+      setDatabasePlanRevision(
+        null,
+      );
+
+      setImportStatus(
+        "error",
+      );
+
+      setImportMessage(
+        error instanceof Error
+          ? error.message
+          : "Database dry-run завершился ошибкой.",
+      );
+    }
+  }
+
+  async function applyDatabaseImport() {
+    if (
+      !databasePlan ||
+      databasePlanRevision ===
+        null ||
+      databasePlanRevision !==
+        reviewRevision.current
+    ) {
+      setImportStatus(
+        "error",
+      );
+
+      setImportMessage(
+        "Сначала выполните свежий dry-run.",
+      );
+
+      return;
+    }
+
+    if (
+      pendingApplyCount ===
+      0
+    ) {
+      setImportStatus(
+        "success",
+      );
+
+      setImportMessage(
+        "Все карточки этого плана уже IMPORTED.",
+      );
+
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Применить ${pendingApplyCount} карточек к каталогу PostgreSQL? Операция выполняется одной транзакцией.`,
+      )
+    ) {
+      return;
+    }
+
+    const revision =
+      reviewRevision.current;
+
+    let artifact:
+      ReturnType<
+        typeof buildVkReviewArtifact
+      >;
+
+    try {
+      artifact =
+        currentReviewArtifact();
+    } catch (error) {
+      setImportStatus(
+        "error",
+      );
+
+      setImportMessage(
+        error instanceof Error
+          ? error.message
+          : "Не удалось собрать Review Artifact.",
+      );
+
+      return;
+    }
+
+    setImportStatus(
+      "applying",
+    );
+
+    setImportMessage(
+      "Применяется атомарная PostgreSQL-транзакция...",
+    );
+
+    try {
+      const response =
+        await postVkCatalogImport({
+          candidateSha256,
+
+          reviewArtifact:
+            artifact,
+
+          mode:
+            "apply",
+
+          confirmApply:
+            true,
+        });
+
+      if (
+        reviewRevision.current !==
+        revision
+      ) {
+        /*
+         * The server transaction may already have
+         * succeeded, but the local review changed
+         * while it was running. Do not merge stale
+         * UI state. A new dry-run will reconcile it.
+         */
+        setDatabasePlan(
+          null,
+        );
+
+        setDatabasePlanRevision(
+          null,
+        );
+
+        setImportStatus(
+          "idle",
+        );
+
+        setImportMessage(
+          "Импорт завершился, но Review был изменён во время запроса. Выполните новый dry-run для синхронизации.",
+        );
+
+        return;
+      }
+
+      const result =
+        response.result;
+
+      setImportedCandidateIds(
+        (current) => {
+          const next =
+            new Set(
+              current,
+            );
+
+          for (
+            const item of
+            result.items
+          ) {
+            next.add(
+              item.candidateId,
+            );
+          }
+
+          return next;
+        },
+      );
+
+      /*
+       * After a successful transaction every item
+       * in this exact canonical batch has a matching
+       * durable receipt and canonical DB state.
+       */
+      setDatabasePlan({
+        summary: {
+          accepted:
+            result.summary.accepted,
+
+          create:
+            0,
+
+          update:
+            0,
+
+          unchanged:
+            0,
+
+          imported:
+            result.summary.accepted,
+
+          receiptsInserted:
+            result.summary.receiptsInserted,
+        },
+
+        items:
+          result.items.map(
+            (item) => ({
+              ...item,
+
+              action:
+                "imported",
+            }),
+          ),
+      });
+
+      setDatabasePlanRevision(
+        revision,
+      );
+
+      setImportStatus(
+        "success",
+      );
+
+      setImportMessage(
+        `Импорт завершён: CREATE ${result.summary.create}, UPDATE ${result.summary.update}, UNCHANGED ${result.summary.unchanged}, уже IMPORTED ${result.summary.imported}, новых receipts ${result.summary.receiptsInserted}.`,
+      );
+
+      setFilter(
+        "ready",
+      );
+    } catch (error) {
+      /*
+       * R5.3.6C guarantees whole-batch rollback.
+       * Therefore READY items remain active here.
+       */
+      setImportStatus(
+        "error",
+      );
+
+      setImportMessage(
+        error instanceof Error
+          ? error.message
+          : "Импорт завершился ошибкой. Пачка не применена.",
+      );
     }
   }
 
@@ -831,7 +1438,20 @@ export function VkReviewConsole({
         }
 
         if (filter === "ready") {
-          return analysis.acceptedReady;
+          return (
+            analysis.acceptedReady &&
+            !importedCandidateIds.has(
+              candidate.candidateId,
+            )
+          );
+        }
+
+        if (
+          filter === "imported"
+        ) {
+          return importedCandidateIds.has(
+            candidate.candidateId,
+          );
         }
 
         if (filter === "invalid") {
@@ -854,7 +1474,7 @@ export function VkReviewConsole({
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
             <p className="text-sm font-semibold text-[var(--primary)]">
-              R5.3.5 · Human Review
+              R5.3.6E · Human Review + Import
             </p>
 
             <h2 className="mt-2 text-2xl font-bold">
@@ -868,8 +1488,9 @@ export function VkReviewConsole({
               Изменения автоматически сохраняются в этом
               браузере и восстанавливаются после
               перезагрузки. Review Artifact можно скачать
-              как переносимый backup. PostgreSQL и
-              canonical catalog здесь не изменяются.
+              как переносимый backup. PostgreSQL изменяется
+              только через отдельный Database Import ниже,
+              после server-side dry-run и явного подтверждения.
             </p>
           </div>
 
@@ -936,10 +1557,10 @@ export function VkReviewConsole({
 
           <div className="rounded-xl border border-green-300 bg-green-50 p-3">
             <div className="text-xs text-green-800/70">
-              Accepted ready
+              Ready to import
             </div>
             <div className="mt-1 text-xl font-bold text-green-900">
-              {stats.acceptedReady}
+              {stats.activeReady}
             </div>
           </div>
 
@@ -949,6 +1570,15 @@ export function VkReviewConsole({
             </div>
             <div className="mt-1 text-xl font-bold text-amber-950">
               {stats.acceptedBlocked}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-violet-300 bg-violet-50 p-3">
+            <div className="text-xs text-violet-900/70">
+              Imported history
+            </div>
+            <div className="mt-1 text-xl font-bold text-violet-950">
+              {stats.imported}
             </div>
           </div>
 
@@ -997,6 +1627,161 @@ export function VkReviewConsole({
           {storageReady
             ? "Автосохранение review: активно в этом браузере."
             : "Автосохранение review: восстановление состояния..."}
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-black/10 bg-[var(--surface)] p-6 shadow-sm">
+        <p className="text-sm font-semibold text-[var(--primary)]">
+          R5.3.6E · Database Import
+        </p>
+
+        <h2 className="mt-2 text-2xl font-bold">
+          Применение к каталогу
+        </h2>
+
+        <p className="mt-3 max-w-3xl text-sm text-[var(--muted)]">
+          Сначала сервер заново проверяет Review Artifact
+          и делает fresh PostgreSQL dry-run. Только после
+          этого становится доступно явное применение.
+          Финальное действие всё равно пересчитывается
+          внутри одной транзакции.
+        </p>
+
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button
+            type="button"
+            disabled={
+              importBusy ||
+              stats.acceptedReady === 0 ||
+              stats.acceptedBlocked > 0
+            }
+            onClick={
+              checkDatabaseImport
+            }
+            className={
+              importBusy ||
+              stats.acceptedReady === 0 ||
+              stats.acceptedBlocked > 0
+                ? "cursor-not-allowed rounded-xl border border-black/10 bg-black/5 px-4 py-2.5 text-sm font-semibold text-[var(--muted)]"
+                : "rounded-xl border border-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary)]"
+            }
+          >
+            {importStatus ===
+            "checking"
+              ? "Проверяем..."
+              : "Проверить импорт"}
+          </button>
+
+          <button
+            type="button"
+            disabled={
+              importBusy ||
+              databasePlan === null ||
+              pendingApplyCount === 0
+            }
+            onClick={
+              applyDatabaseImport
+            }
+            className={
+              importBusy ||
+              databasePlan === null ||
+              pendingApplyCount === 0
+                ? "cursor-not-allowed rounded-xl border border-black/10 bg-black/5 px-4 py-2.5 text-sm font-semibold text-[var(--muted)]"
+                : "rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white"
+            }
+          >
+            {importStatus ===
+            "applying"
+              ? "Импортируем..."
+              : databasePlan !== null &&
+                  pendingApplyCount === 0
+                ? "Всё уже импортировано"
+                : `Импортировать ${pendingApplyCount}`}
+          </button>
+        </div>
+
+        {databasePlan ? (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="rounded-xl border border-green-300 bg-green-50 p-3">
+              <div className="text-xs text-green-900/70">
+                CREATE
+              </div>
+              <div className="mt-1 text-xl font-bold text-green-950">
+                {databasePlan.summary.create}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-blue-300 bg-blue-50 p-3">
+              <div className="text-xs text-blue-900/70">
+                UPDATE
+              </div>
+              <div className="mt-1 text-xl font-bold text-blue-950">
+                {databasePlan.summary.update}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-black/15 p-3">
+              <div className="text-xs text-[var(--muted)]">
+                UNCHANGED
+              </div>
+              <div className="mt-1 text-xl font-bold">
+                {databasePlan.summary.unchanged}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-violet-300 bg-violet-50 p-3">
+              <div className="text-xs text-violet-900/70">
+                IMPORTED
+              </div>
+              <div className="mt-1 text-xl font-bold text-violet-950">
+                {databasePlan.summary.imported}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-black/15 p-3">
+              <div className="text-xs text-[var(--muted)]">
+                To apply
+              </div>
+              <div className="mt-1 text-xl font-bold">
+                {pendingApplyCount}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {importMessage ? (
+          <p
+            aria-live="polite"
+            className={
+              importStatus ===
+              "error"
+                ? "mt-5 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-900"
+                : importStatus ===
+                    "success"
+                  ? "mt-5 rounded-xl border border-green-300 bg-green-50 p-3 text-sm text-green-900"
+                  : "mt-5 rounded-xl border border-black/10 bg-black/5 p-3 text-sm"
+            }
+          >
+            {importMessage}
+          </p>
+        ) : null}
+
+        {stats.acceptedBlocked > 0 ? (
+          <p className="mt-4 text-xs font-medium text-amber-900">
+            Импорт заблокирован: Accepted blocked =
+            {" "}
+            {stats.acceptedBlocked}.
+            Canonical planner принимает только полностью
+            подтверждённую accepted-пачку.
+          </p>
+        ) : null}
+
+        <p className="mt-4 text-xs text-[var(--muted)]">
+          Успешный apply не удаляет Review history.
+          Такие карточки получают IMPORTED и исчезают
+          только из активного фильтра Ready to import.
+          Изменение импортированной карточки снова
+          требует fresh dry-run.
         </p>
       </div>
 
@@ -1055,7 +1840,11 @@ export function VkReviewConsole({
               </option>
 
               <option value="ready">
-                Accepted ready
+                Ready to import
+              </option>
+
+              <option value="imported">
+                Imported
               </option>
 
               <option value="postponed">
@@ -1096,6 +1885,16 @@ export function VkReviewConsole({
           ) {
             return null;
           }
+
+          const databasePlanItem =
+            databasePlanById.get(
+              candidate.candidateId,
+            );
+
+          const isImported =
+            importedCandidateIds.has(
+              candidate.candidateId,
+            );
 
           const canApprove =
             analysis.valid &&
@@ -1148,6 +1947,22 @@ export function VkReviewConsole({
                     {analysis.acceptedReady ? (
                       <span className="rounded-lg border border-green-300 bg-green-50 px-2.5 py-1 text-xs font-bold text-green-900">
                         READY
+                      </span>
+                    ) : null}
+
+                    {isImported ? (
+                      <span className="rounded-lg border border-violet-300 bg-violet-50 px-2.5 py-1 text-xs font-bold text-violet-950">
+                        IMPORTED
+                      </span>
+                    ) : databasePlanItem ? (
+                      <span
+                        className={`rounded-lg border px-2.5 py-1 text-xs font-bold ${databaseActionClass(
+                          databasePlanItem.action,
+                        )}`}
+                      >
+                        {databaseActionLabels[
+                          databasePlanItem.action
+                        ]}
                       </span>
                     ) : null}
 

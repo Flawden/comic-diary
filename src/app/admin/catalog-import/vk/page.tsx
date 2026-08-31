@@ -164,7 +164,7 @@ export default async function VkCatalogImportPage({
 
           <p className="mt-2 text-sm text-[var(--muted)]">
             Временный gate будет заменён
-            нормальной авторизацией в R7.
+            нормальной авторизацией USER / ADMIN в R6.
           </p>
 
           {gateMessage === "invalid" ? (
