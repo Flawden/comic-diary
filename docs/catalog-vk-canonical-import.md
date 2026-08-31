@@ -1,0 +1,138 @@
+# VK Canonical Import Plan
+
+## Purpose
+
+R5.3.6 converts explicitly reviewed VK candidates into a freshly validated
+canonical import plan.
+
+The first R5.3.6 boundary is intentionally read-only.
+
+It does not write PostgreSQL and does not mutate the tracked canonical catalog.
+
+## Trusted input
+
+The planner receives:
+
+- the exact VK candidate set;
+- the exact candidate artifact SHA-256;
+- a Review Artifact;
+- canonical categories;
+- the current canonical comic set used for dry-run comparison.
+
+Review Artifact `canonical`, `validation`, `preview`, and `acceptedReady` values
+are not trusted as import input.
+
+The artifact is restored through the strict R5.3.5 restore boundary. Candidate
+identity and candidate SHA must match. Reviewer-owned draft and decision state
+are then analyzed again.
+
+## Accepted boundary
+
+Only entries whose decision is `accepted` may enter an import plan.
+
+Every accepted entry must still be `acceptedReady` after fresh analysis.
+
+If even one accepted entry is blocked, the whole plan fails. R5.3.6 must not
+silently import a partial subset of accepted entries.
+
+Pending, skipped, and postponed entries are not imported.
+
+## Canonical validation
+
+Canonical rows are reconstructed from the restored draft.
+
+The complete accepted batch is passed through the existing Comic Diary
+canonical validator before the plan is returned.
+
+## Dry-run actions
+
+Every accepted canonical comic receives one action:
+
+- `create`;
+- `update`;
+- `unchanged`.
+
+The action is recomputed against the supplied current canonical comic set.
+
+No serialized preview action from Review Artifact is trusted.
+
+## Write boundary
+
+This stage performs no database writes.
+
+A later R5.3.6 stage will:
+
+1. compare the freshly validated plan with PostgreSQL;
+2. preserve personal `user_comics` state;
+3. apply only explicit create/update operations;
+4. avoid implicit deletion;
+5. record durable import receipts;
+6. make successfully imported review entries disappear from the active queue
+   while preserving review/import history.
+
+## Durable import receipts
+
+R5.3.6 stores successful import history separately from comic metadata and
+personal reading state.
+
+The `catalog_import_receipts` table records:
+
+- candidate artifact SHA-256;
+- source snapshot SHA-256;
+- VK community ID;
+- candidate ID;
+- VK album ID;
+- resulting comic slug;
+- deterministic canonical comic SHA-256;
+- applied action;
+- import timestamp.
+
+Receipt identity is:
+
+`candidateSha256 + candidateId + canonicalSha256`.
+
+This proves that one exact canonical representation of one exact reviewed
+candidate was processed.
+
+A later edited canonical draft receives a different canonical SHA-256 and is
+therefore eligible for another explicit import.
+
+A receipt does not replace database comparison. A candidate counts as currently
+imported only when:
+
+1. a matching receipt exists; and
+2. the current PostgreSQL comic still equals the reviewed canonical comic.
+
+This protects against later database drift.
+
+Receipts intentionally have no foreign key to comics. Catalog lifecycle changes
+must not destroy import history.
+
+Receipt operations must never mutate `user_comics`.
+
+## Database-aware dry-run
+
+The R5.3.6 database-aware planner treats PostgreSQL as the final source of truth
+for the action required at import time.
+
+The earlier canonical-plan action is advisory only. The database-aware plan
+recomputes the result immediately before apply.
+
+Possible actions are:
+
+- `create` — the reviewed slug is absent from PostgreSQL;
+- `update` — the slug exists but canonical metadata differs;
+- `unchanged` — PostgreSQL already equals canonical metadata but no matching
+  durable receipt exists;
+- `imported` — PostgreSQL equals canonical metadata and the exact
+  candidate/canonical receipt already exists.
+
+A matching historical receipt does not hide later database drift. If comic
+metadata changes after a successful import, the database-aware action becomes
+`update`.
+
+Canonical receipt hashes use an explicit deterministic field order and cover all
+canonical comic metadata.
+
+The database-aware planner is read-only. It does not modify comics, receipts or
+personal `user_comics` state.

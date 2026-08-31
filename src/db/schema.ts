@@ -91,6 +91,72 @@ export const comics = pgTable("comics", {
     .notNull(),
 });
 
+export const catalogImportReceipts = pgTable(
+  "catalog_import_receipts",
+  {
+    id: serial("id").primaryKey(),
+
+    candidateSha256: varchar(
+      "candidate_sha256",
+      { length: 64 },
+    ).notNull(),
+
+    snapshotSha256: varchar(
+      "snapshot_sha256",
+      { length: 64 },
+    ).notNull(),
+
+    communityId: integer(
+      "community_id",
+    ).notNull(),
+
+    candidateId: varchar(
+      "candidate_id",
+      { length: 160 },
+    ).notNull(),
+
+    albumId: integer(
+      "album_id",
+    ).notNull(),
+
+    comicSlug: varchar(
+      "comic_slug",
+      { length: 160 },
+    ).notNull(),
+
+    canonicalSha256: varchar(
+      "canonical_sha256",
+      { length: 64 },
+    ).notNull(),
+
+    appliedAction: varchar(
+      "applied_action",
+      { length: 16 },
+    ).notNull(),
+
+    importedAt: timestamp(
+      "imported_at",
+      { withTimezone: true },
+    )
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    unique(
+      "catalog_import_receipts_identity_unique",
+    ).on(
+      table.candidateSha256,
+      table.candidateId,
+      table.canonicalSha256,
+    ),
+
+    check(
+      "catalog_import_receipts_action_check",
+      sql`${table.appliedAction} IN ('create', 'update', 'unchanged')`,
+    ),
+  ],
+);
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
 
