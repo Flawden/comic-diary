@@ -12,9 +12,11 @@
     "local:stop": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/local-stop.ps1",
     "db:seed": "tsx scripts/seed.ts",
     "db:catalog": "tsx scripts/import-catalog.ts",
-    "catalog:vk:candidates": "tsx scripts/generate-vk-candidates.ts"
+    "catalog:vk:candidates": "tsx scripts/generate-vk-candidates.ts",
+    "auth:probe": "tsx scripts/auth-crypto-probe.ts"
   },
   "dependencies": {
+    "@node-rs/argon2": "2.1.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "next": "16.3.3",
