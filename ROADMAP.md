@@ -541,8 +541,13 @@ real authenticated accounts and server-side authorization.
 Core decisions:
 
 - preserve the existing `users` and `user_comics` identity graph;
-- initial roles are only `USER` and `ADMIN`;
-- `ADMIN` inherits all normal USER capabilities;
+- R6.1 initially persists `USER` and `ADMIN`;
+- expand the authorization model to `USER`, `EDITOR`, and `ADMIN` before final R6 acceptance;
+- roles represent authority over shared/system data, not product-plan capabilities;
+- `EDITOR` inherits normal USER capabilities and may manage shared catalog content;
+- `EDITOR` must not manage users, bans/account activation, roles, ADMIN security, or system-level controls;
+- `ADMIN` inherits normal USER and EDITOR capabilities plus explicitly authorized administrative capabilities;
+- optional account capabilities such as private personal catalog access must be modeled separately from roles;
 - use opaque server-side sessions;
 - store only session-token hashes in PostgreSQL;
 - never store authentication secrets in localStorage;
@@ -585,7 +590,12 @@ Status: PLANNED
 - resolve authenticated user for route handlers;
 - replace `DEV_USER_EMAIL` in personal product paths;
 - make library, progress, ratings and notes belong to the authenticated user;
-- require ADMIN for administrative server operations;
+- extend the role model to `USER`, `EDITOR`, and `ADMIN`;
+- define server-side permission checks instead of relying on role names in UI code;
+- allow EDITOR to create and edit shared/public catalog content;
+- prevent EDITOR from activating/deactivating users, assigning roles, banning users, changing ADMIN security, or controlling system-level features;
+- require ADMIN for account administration, role management, security-sensitive operations, and system controls;
+- keep bulk catalog import separately guarded and ADMIN-only unless a later explicit acceptance safely delegates it;
 - preserve same-origin/CSRF protections where applicable;
 - keep authorization independent from hidden UI controls.
 
@@ -595,24 +605,31 @@ Status: PLANNED
 
 - secure first-admin creation procedure;
 - no hard-coded production admin password;
-- only ADMIN may assign administrative roles;
-- prevent accidental removal or deactivation of the last active ADMIN;
+- only ADMIN may assign or remove staff roles;
+- support USER / EDITOR / ADMIN role management;
+- prevent accidental removal, demotion, or deactivation of the last active ADMIN;
+- EDITOR must never be able to modify ADMIN authority;
 - document emergency recovery.
 
 ## R6.5 — Authentication Production Proof
 
 Status: PLANNED
 
-- deploy additive auth migrations;
+- deploy additive auth and authorization migrations;
 - validate anonymous behavior;
 - validate USER behavior;
+- validate EDITOR behavior;
 - validate ADMIN behavior;
 - validate session expiry/logout;
 - prove personal data isolation between users;
-- prove catalog import still requires both ADMIN and the independent feature flag;
+- prove EDITOR can manage shared catalog content without obtaining account/security authority;
+- prove EDITOR cannot alter ADMIN users, roles, activation state, or protected system controls;
+- prove catalog import still requires both ADMIN and the independent feature flag unless an explicit later policy changes it;
 - remove the temporary R5 admin-secret session only after replacement is proven.
 
 ---
+
+# R7 — Admin Panel---
 
 # R7 — Admin Panel
 
@@ -620,65 +637,79 @@ Status: PLANNED
 
 Goal:
 
-Turn existing protected import tooling into a coherent administration area.
+Turn existing protected import tooling into a coherent role-aware administration
+and shared-catalog editing area.
 
-## R7.1 — Admin Shell
+## R7.1 — Staff Shell
 
 - `/admin` dashboard;
-- ADMIN-only server boundary;
-- admin navigation;
+- authenticated server boundary;
+- role-aware navigation;
+- EDITOR access only to explicitly delegated content-management areas;
+- ADMIN access to account/security/system administration;
 - service and catalog overview.
 
 ## R7.2 — Catalog Import Admin
 
-- move the completed VK Review Console into the authenticated admin shell;
+- move the completed VK Review Console into the authenticated administration shell;
 - preserve server-side dry-run and transactional apply;
 - preserve durable import receipts and history;
+- keep bulk import ADMIN-only initially because of its broad shared-catalog impact;
 - intentionally enable production import only after authorization acceptance.
 
 ## R7.3 — Comics Management
 
-- manually create canonical comic entries;
-- edit existing metadata;
+- manually create canonical public comic entries;
+- edit existing shared/public metadata;
 - manage publication lifecycle;
+- allow EDITOR and ADMIN through explicit server-side permission checks;
 - reuse the same canonical validation and mutation rules as imports;
-- do not create a competing write path.
+- do not create a competing write path;
+- keep private user-owned titles outside the shared-catalog editing boundary.
 
 ## R7.4 — Categories Management
 
 - create categories;
 - edit category metadata;
+- allow EDITOR and ADMIN through explicit permissions;
 - protect references and avoid destructive deletion.
 
 ## R7.5 — Users & Roles
 
+- ADMIN-only;
 - list users;
 - inspect account state;
 - activate/deactivate users;
-- USER ↔ ADMIN role management;
-- last-active-ADMIN protection.
+- USER / EDITOR / ADMIN role management;
+- manage account entitlements separately from roles;
+- last-active-ADMIN protection;
+- EDITOR has no access to account punishment, ban, activation, or role controls.
 
-## R7.6 — Admin Audit Log
+## R7.6 — Administrative Audit Log
 
-- record administrative actor;
+- record administrative or editorial actor;
 - action;
 - target;
 - timestamp;
 - import events;
-- catalog edits;
-- role/account changes.
+- shared catalog edits;
+- role/account changes;
+- distinguish EDITOR content actions from ADMIN security/account actions.
 
 ---
 
-# R8 — User Account & Catalog UX
+# R8 — User Account & Catalog UX---
+
+# R8 — User Account, Reading Diary & Catalog UX
 
 Status: PLANNED
 
 Goal:
 
-Finish the normal authenticated reader experience after identity is real.
+Finish the authenticated reader experience and evolve Comic Diary from a simple
+progress tracker into a durable history of reading and changing opinion.
 
-Planned work:
+## R8.1 — Account & Catalog UX
 
 - account/profile page;
 - display-name management;
@@ -692,7 +723,137 @@ Planned work:
 - better mobile navigation;
 - optionally expose personal reading state directly in catalog cards.
 
+## R8.2 — Private Personal Catalog
+
+Product decision:
+
+Private-catalog access is an account capability/entitlement, not an authorization
+role.
+
+Working product name may be `VIP`, `Plus`, or another user-facing label.
+The internal capability should remain concept-oriented, for example
+`PRIVATE_CATALOG`.
+
+Planned behavior:
+
+- STANDARD users track titles from the shared public catalog;
+- an account with PRIVATE_CATALOG may add external titles for personal tracking;
+- personal titles store metadata and external reading links only;
+- Comic Diary still does not need to host comic pages;
+- a private title belongs to exactly one user;
+- private titles never appear in the public catalog;
+- private titles never appear in another user's searches or library;
+- EDITOR authority over the shared catalog does not grant access to another user's private titles;
+- reuse the normal reading-state, progress, rating and note model where practical;
+- avoid building a second incompatible diary subsystem;
+- shared canonical import must never implicitly modify or delete private titles;
+- prove owner isolation at query and mutation boundaries.
+
+The likely data direction is to extend the canonical comic model with explicit
+visibility/ownership rather than duplicate the entire comic and `user_comics`
+domain, but the exact migration must be designed at implementation time.
+
+## R8.3 — Next Chapter / Release Tracking
+
+Goal:
+
+Help the reader remember when it is worth returning to a title.
+
+Planned behavior:
+
+- allow a reader to record an expected next-chapter date;
+- treat the date as personal reading data initially;
+- show upcoming releases;
+- show releases expected today;
+- show titles whose expected release date has passed as "possibly released";
+- allow updating or clearing the expectation after returning to the title;
+- account for different sources/translations having different release schedules;
+- later consider optional notifications;
+- later consider shared/editor-managed release metadata separately from personal overrides.
+
+Initial data direction:
+
+- personal `next_chapter_expected_at` associated with the user's reading state.
+
+## R8.4 — Per-Chapter Ratings
+
+Goal:
+
+Capture how a title feels while it is being read instead of preserving only one
+final score.
+
+Planned behavior:
+
+- allow the reader to rate individual chapters;
+- associate every chapter rating with user, comic and chapter number;
+- keep the title-level/current overall opinion separate from the chapter rating;
+- do not silently derive one metric from the other;
+- define the rating scale at implementation time rather than coupling the schema prematurely;
+- preserve timestamps needed for chronological analysis;
+- if chapter ratings become editable, preserve enough history that meaningful diary chronology is not silently destroyed.
+
+Candidate data model:
+
+- one current `user_chapter_rating` per user / comic / chapter;
+- optional rating-event history when edits need to be preserved.
+
+## R8.5 — Reading Timeline & Opinion History
+
+Goal:
+
+Show the history of the reading experience, not only its current state.
+
+Candidate timeline events:
+
+- reading started;
+- chapter progress;
+- chapter rating;
+- overall title-rating change;
+- personal note;
+- completion;
+- return from ON_HOLD;
+- expected-next-chapter changes where useful.
+
+Planned UX:
+
+- chronological reading diary per title;
+- show where the reader stopped and what they thought at that point;
+- visualize how personal opinion changed as chapters progressed;
+- distinguish "this chapter was good/bad" from "my overall opinion of the title changed".
+
+## R8.6 — Community Chapter Analytics
+
+Goal:
+
+Aggregate chapter-level ratings into useful spoiler-aware community insight.
+
+Candidate metrics:
+
+- average rating per chapter;
+- rating count per chapter;
+- rolling/moving average across chapters;
+- average community rating up to the reader's current progress;
+- comparison between the reader's curve and community curve;
+- distribution by reading-progress bands;
+- title-level opinion changes over progress where enough data exists.
+
+Spoiler policy:
+
+- by default, never expose future chapter-rating trends beyond the authenticated
+  reader's current progress;
+- allow explicitly revealing the full curve only behind a clear spoiler warning.
+
+The analytics model must distinguish:
+
+- ratings of individual chapters;
+- a user's changing overall title opinion;
+- cross-sectional ratings from users at different progress points.
+
+These are different metrics and must not be silently mixed.
+
 ---
+
+# R9 — Production Reliability & Security---
 
 # R9 — Production Reliability & Security
 
