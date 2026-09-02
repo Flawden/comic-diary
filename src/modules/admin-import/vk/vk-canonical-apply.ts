@@ -20,6 +20,12 @@ import {
   comics,
 } from "@/db/schema";
 
+import {
+  canonicalComicCreateValues,
+  canonicalComicUpdateValues,
+  SHARED_CATALOG_ADVISORY_LOCK,
+} from "@/modules/catalog/canonical-catalog-write";
+
 import type {
   VkCanonicalImportPlan,
 } from "./vk-canonical-import";
@@ -30,16 +36,6 @@ import {
 import type {
   VkDatabaseAwareImportAction,
 } from "./vk-canonical-db";
-
-/*
- * One process-wide PostgreSQL advisory transaction
- * lock serializes Comic Diary catalog imports.
- *
- * This closes the gap between "fresh DB decision"
- * and the subsequent catalog mutation.
- */
-const VK_CATALOG_IMPORT_ADVISORY_LOCK =
-  536000001;
 
 export type VkCanonicalApplyItemResult = {
   candidateId: string;
@@ -207,7 +203,7 @@ export async function applyVkCanonicalImportPlan(
         await tx.execute(
           sql`
             SELECT pg_advisory_xact_lock(
-              ${VK_CATALOG_IMPORT_ADVISORY_LOCK}
+              ${SHARED_CATALOG_ADVISORY_LOCK}
             )
           `,
         );
@@ -457,39 +453,12 @@ export async function applyVkCanonicalImportPlan(
                 .insert(
                   comics,
                 )
-                .values({
-                  slug:
-                    item.comic.slug,
-
-                  title:
-                    item.comic.title,
-
-                  description:
-                    item.comic.description,
-
-                  authorName:
-                    item.comic.authorName,
-
-                  translatorName:
-                    item.comic.translatorName,
-
-                  translatorNote:
-                    item.comic.translatorNote,
-
-                  coverUrl:
-                    item.comic.coverUrl,
-
-                  sourceUrl:
-                    item.comic.sourceUrl,
-
-                  totalChapters:
-                    item.comic.totalChapters,
-
-                  publicationStatus:
-                    item.comic.publicationStatus,
-
-                  categoryId,
-                })
+                .values(
+                  canonicalComicCreateValues(
+                    item.comic,
+                    categoryId,
+                  ),
+                )
                 .returning({
                   id:
                     comics.id,
@@ -515,39 +484,12 @@ export async function applyVkCanonicalImportPlan(
                 .update(
                   comics,
                 )
-                .set({
-                  title:
-                    item.comic.title,
-
-                  description:
-                    item.comic.description,
-
-                  authorName:
-                    item.comic.authorName,
-
-                  translatorName:
-                    item.comic.translatorName,
-
-                  translatorNote:
-                    item.comic.translatorNote,
-
-                  coverUrl:
-                    item.comic.coverUrl,
-
-                  sourceUrl:
-                    item.comic.sourceUrl,
-
-                  totalChapters:
-                    item.comic.totalChapters,
-
-                  publicationStatus:
-                    item.comic.publicationStatus,
-
-                  categoryId,
-
-                  updatedAt:
-                    new Date(),
-                })
+                .set(
+                  canonicalComicUpdateValues(
+                    item.comic,
+                    categoryId,
+                  ),
+                )
                 .where(
                   eq(
                     comics.slug,
