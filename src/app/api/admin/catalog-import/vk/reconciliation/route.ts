@@ -4,10 +4,8 @@ import {
 } from "next/server";
 
 import {
-  ADMIN_IMPORT_SESSION_COOKIE,
-  getAdminImportAvailability,
-  verifyAdminImportSession,
-} from "@/modules/admin-import/admin-import-gate";
+  authorizeAdminCatalogImportRequest,
+} from "@/modules/admin-import/admin-import-authorization";
 
 import {
   parseVkCommunityUrl,
@@ -49,29 +47,16 @@ function errorResponse(
 export async function POST(
   request: NextRequest,
 ) {
-  if (
-    getAdminImportAvailability() !==
-    "ready"
-  ) {
-    return errorResponse(
-      "admin-unavailable",
-      null,
-      503,
+  const authorization =
+    await authorizeAdminCatalogImportRequest(
+      request,
     );
-  }
 
-  const session =
-    request.cookies.get(
-      ADMIN_IMPORT_SESSION_COOKIE,
-    )?.value;
-
-  if (
-    !verifyAdminImportSession(session)
-  ) {
+  if (!authorization.ok) {
     return errorResponse(
-      "admin-session-expired",
+      authorization.kind,
       null,
-      401,
+      authorization.status,
     );
   }
 

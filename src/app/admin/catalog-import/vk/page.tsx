@@ -1,18 +1,17 @@
-import { cookies } from "next/headers";
+import {
+  redirect,
+} from "next/navigation";
 
 import { VkReviewConsole } from "@/modules/admin-import/vk/VkReviewConsole";
 import { loadVkReviewWorkspace } from "@/modules/admin-import/vk/vk-review-source";
 
 import {
-  ADMIN_IMPORT_SESSION_COOKIE,
-  getAdminImportAvailability,
-  verifyAdminImportSession,
-} from "@/modules/admin-import/admin-import-gate";
+  authorizeAdminCatalogImportPage,
+} from "@/modules/admin-import/admin-import-authorization";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
-  gate?: string | string[];
   probe?: string | string[];
   community?: string | string[];
   groupId?: string | string[];
@@ -42,9 +41,6 @@ export default async function VkCatalogImportPage({
 }) {
   const params =
     await searchParams;
-
-  const gateMessage =
-    firstValue(params.gate);
 
   const probe =
     firstValue(params.probe);
@@ -81,14 +77,51 @@ export default async function VkCatalogImportPage({
   const vkCode =
     firstValue(params.vkCode);
 
-  const availability =
-    getAdminImportAvailability();
+  const authorization =
+    await authorizeAdminCatalogImportPage();
 
-  if (availability === "disabled") {
+  if (!authorization.ok) {
+    if (
+      authorization.kind ===
+      "unauthorized"
+    ) {
+      redirect(
+        "/login?next=/admin/catalog-import/vk",
+      );
+    }
+
+    if (
+      authorization.kind ===
+      "forbidden"
+    ) {
+      return (
+        <main className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-8">
+          <p className="text-sm font-semibold text-[var(--primary)]">
+            R6.3 · Authorization
+          </p>
+
+          <h1 className="mt-2 text-3xl font-bold">
+            Доступ запрещён
+          </h1>
+
+          <section className="mt-8 rounded-2xl bg-[var(--surface)] p-6 shadow-sm">
+            <h2 className="text-lg font-semibold">
+              Недостаточно прав
+            </h2>
+
+            <p className="mt-3 text-sm text-[var(--muted)]">
+              Для технического импорта требуется
+              разрешение RUN_BULK_IMPORT.
+            </p>
+          </section>
+        </main>
+      );
+    }
+
     return (
       <main className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-8">
         <p className="text-sm font-semibold text-[var(--primary)]">
-          R5.3 · VK Catalog Import
+          R6.3 · Authorization
         </p>
 
         <h1 className="mt-2 text-3xl font-bold">
@@ -101,110 +134,9 @@ export default async function VkCatalogImportPage({
           </h2>
 
           <p className="mt-3 text-sm text-[var(--muted)]">
-            Установите ADMIN_IMPORT_ENABLED=true
-            и задайте ADMIN_IMPORT_SECRET
-            в локальном окружении сервера.
+            Production kill-switch
+            ADMIN_IMPORT_ENABLED выключен.
           </p>
-        </section>
-      </main>
-    );
-  }
-
-  if (availability === "misconfigured") {
-    return (
-      <main className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-8">
-        <p className="text-sm font-semibold text-[var(--primary)]">
-          R5.3 · VK Catalog Import
-        </p>
-
-        <h1 className="mt-2 text-3xl font-bold">
-          Импорт каталога VK
-        </h1>
-
-        <section className="mt-8 rounded-2xl bg-[var(--surface)] p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">
-            Админ-импорт настроен не полностью
-          </h2>
-
-          <p className="mt-3 text-sm text-[var(--muted)]">
-            ADMIN_IMPORT_ENABLED включён,
-            но ADMIN_IMPORT_SECRET отсутствует.
-          </p>
-        </section>
-      </main>
-    );
-  }
-
-  const cookieStore =
-    await cookies();
-
-  const session =
-    cookieStore.get(
-      ADMIN_IMPORT_SESSION_COOKIE,
-    )?.value;
-
-  const unlocked =
-    verifyAdminImportSession(session);
-
-  if (!unlocked) {
-    return (
-      <main className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-8">
-        <p className="text-sm font-semibold text-[var(--primary)]">
-          R5.3 · VK Catalog Import
-        </p>
-
-        <h1 className="mt-2 text-3xl font-bold">
-          Импорт каталога VK
-        </h1>
-
-        <section className="mt-8 rounded-2xl bg-[var(--surface)] p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">
-            Вход в техническую админку
-          </h2>
-
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Временный gate будет заменён
-            нормальной авторизацией USER / ADMIN в R6.
-          </p>
-
-          {gateMessage === "invalid" ? (
-            <p className="mt-4 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">
-              Неверный admin secret.
-            </p>
-          ) : null}
-
-          {gateMessage === "expired" ? (
-            <p className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              Админ-сессия истекла.
-            </p>
-          ) : null}
-
-          <form
-            action="/api/admin/catalog-import/session"
-            method="post"
-            className="mt-5 space-y-4"
-          >
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium">
-                Admin secret
-              </span>
-
-              <input
-                type="password"
-                name="adminSecret"
-                autoComplete="off"
-                required
-                className="w-full rounded-xl border border-black/15 bg-white px-4 py-3"
-              />
-            </label>
-
-            <button
-              type="submit"
-              className="rounded-xl bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white"
-            >
-              Открыть импорт
-            </button>
-          </form>
         </section>
       </main>
     );
@@ -233,23 +165,7 @@ export default async function VkCatalogImportPage({
           </p>
         </div>
 
-        <form
-          action="/api/admin/catalog-import/session"
-          method="post"
-        >
-          <input
-            type="hidden"
-            name="intent"
-            value="logout"
-          />
 
-          <button
-            type="submit"
-            className="rounded-xl border border-black/15 px-4 py-2 text-sm font-semibold"
-          >
-            Закрыть админку
-          </button>
-        </form>
       </div>
 
       <VkReviewConsole

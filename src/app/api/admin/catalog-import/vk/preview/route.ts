@@ -4,10 +4,8 @@ import {
 } from "next/server";
 
 import {
-  ADMIN_IMPORT_SESSION_COOKIE,
-  getAdminImportAvailability,
-  verifyAdminImportSession,
-} from "@/modules/admin-import/admin-import-gate";
+  authorizeAdminCatalogImportRequest,
+} from "@/modules/admin-import/admin-import-authorization";
 import {
   discoverVkCommunity,
   parseVkCommunityUrl,
@@ -44,30 +42,32 @@ function redirectToWorkspace(
 export async function POST(
   request: NextRequest,
 ) {
-  if (
-    getAdminImportAvailability() !==
-    "ready"
-  ) {
-    return redirectToWorkspace(
+  const authorization =
+    await authorizeAdminCatalogImportRequest(
       request,
-      {
-        gate: "unavailable",
-      },
     );
-  }
 
-  const session =
-    request.cookies.get(
-      ADMIN_IMPORT_SESSION_COOKIE,
-    )?.value;
-
-  if (
-    !verifyAdminImportSession(session)
-  ) {
-    return redirectToWorkspace(
-      request,
+  if (!authorization.ok) {
+    return NextResponse.json(
       {
-        gate: "expired",
+        ok: false,
+
+        error: {
+          kind:
+            authorization.kind,
+        },
+      },
+      {
+        status:
+          authorization.status,
+
+        headers: {
+          "cache-control":
+            "no-store",
+
+          "x-content-type-options":
+            "nosniff",
+        },
       },
     );
   }

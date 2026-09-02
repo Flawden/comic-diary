@@ -133,7 +133,7 @@ export async function POST(
    * potentially large or malformed request data.
    */
   const authorization =
-    authorizeAdminCatalogImportRequest(
+    await authorizeAdminCatalogImportRequest(
       request,
     );
 
