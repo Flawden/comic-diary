@@ -1,12 +1,18 @@
-import { NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import { getCurrentUser } from "@/modules/auth/request-identity";
+import { isSameOriginRequest } from "@/modules/auth/request-origin";
 
 import {
-  addComicToDevUserLibrary,
-  changeDevUserComicProgress,
-  removeComicFromDevUserLibrary,
+  addComicToUserLibrary,
+  changeUserComicProgress,
+  removeComicFromUserLibrary,
   isReadingStatus,
-  setDevUserComicStatus,
-  updateDevUserComicDiary,
+  setUserComicStatus,
+  updateUserComicDiary,
 } from "@/modules/library/mutations/update-user-comic-state";
 
 const INVALID_RATING = Symbol(
@@ -43,7 +49,34 @@ function parseOptionalRating(
   return rating;
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: NextRequest,
+) {
+  if (!isSameOriginRequest(request)) {
+    return NextResponse.json(
+      {
+        error: "Forbidden",
+      },
+      {
+        status: 403,
+      },
+    );
+  }
+
+  const currentUser =
+    await getCurrentUser();
+
+  if (!currentUser) {
+    return NextResponse.json(
+      {
+        error: "Authentication required",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
   const formData = await request.formData();
 
   const comicId = Number(
@@ -71,14 +104,16 @@ export async function POST(request: Request) {
 
     if (intent === "add-to-library") {
       slug =
-        await addComicToDevUserLibrary(
+        await addComicToUserLibrary(
+          currentUser.id,
           comicId,
         );
     } else if (
       intent === "remove-from-library"
     ) {
       slug =
-        await removeComicFromDevUserLibrary(
+        await removeComicFromUserLibrary(
+          currentUser.id,
           comicId,
         );
     } else if (intent === "set-status") {
@@ -101,7 +136,8 @@ export async function POST(request: Request) {
       }
 
       slug =
-        await setDevUserComicStatus(
+        await setUserComicStatus(
+          currentUser.id,
           comicId,
           status,
         );
@@ -128,7 +164,8 @@ export async function POST(request: Request) {
       }
 
       slug =
-        await changeDevUserComicProgress(
+        await changeUserComicProgress(
+          currentUser.id,
           comicId,
           delta,
         );
@@ -201,7 +238,8 @@ export async function POST(request: Request) {
         personalNoteValue.trim();
 
       slug =
-        await updateDevUserComicDiary(
+        await updateUserComicDiary(
+          currentUser.id,
           comicId,
           {
             ratingPlot,

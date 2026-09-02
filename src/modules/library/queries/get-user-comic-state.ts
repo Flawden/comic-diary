@@ -1,10 +1,13 @@
-import { and, eq } from "drizzle-orm";
+import {
+  and,
+  eq,
+} from "drizzle-orm";
 
 import { db } from "@/db";
-import { userComics, users } from "@/db/schema";
+import { userComics } from "@/db/schema";
 
 export async function getUserComicState(
-  userEmail: string,
+  userId: number,
   comicId: number,
 ) {
   const result = await db
@@ -21,14 +24,16 @@ export async function getUserComicState(
       completedAt: userComics.completedAt,
     })
     .from(userComics)
-    .innerJoin(
-      users,
-      eq(userComics.userId, users.id),
-    )
     .where(
       and(
-        eq(users.email, userEmail),
-        eq(userComics.comicId, comicId),
+        eq(
+          userComics.userId,
+          userId,
+        ),
+        eq(
+          userComics.comicId,
+          comicId,
+        ),
       ),
     )
     .limit(1);

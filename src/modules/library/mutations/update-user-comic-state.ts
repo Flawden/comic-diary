@@ -6,7 +6,6 @@ import {
   userComics,
   users,
 } from "@/db/schema";
-import { DEV_USER_EMAIL } from "@/modules/library/dev-user";
 import type { PersonalRatings } from "@/modules/library/ratings/calculate-average-rating";
 
 export type ReadingStatus =
@@ -30,28 +29,6 @@ export function isReadingStatus(
   return readingStatuses.includes(
     value as ReadingStatus,
   );
-}
-
-async function getDevUser() {
-  const result = await db
-    .select({
-      id: users.id,
-    })
-    .from(users)
-    .where(
-      eq(users.email, DEV_USER_EMAIL),
-    )
-    .limit(1);
-
-  const user = result[0];
-
-  if (!user) {
-    throw new Error(
-      "Development user does not exist",
-    );
-  }
-
-  return user;
 }
 
 async function getComic(comicId: number) {
@@ -78,7 +55,8 @@ async function getComic(comicId: number) {
   return comic;
 }
 
-async function getDevUserComicContext(
+async function getUserComicContext(
+  userId: number,
   comicId: number,
 ) {
   const result = await db
@@ -103,7 +81,7 @@ async function getDevUserComicContext(
     )
     .where(
       and(
-        eq(users.email, DEV_USER_EMAIL),
+        eq(userComics.userId, userId),
         eq(userComics.comicId, comicId),
       ),
     )
@@ -113,23 +91,23 @@ async function getDevUserComicContext(
 
   if (!context) {
     throw new Error(
-      "Comic is not in the development user's library",
+      "Comic is not in the authenticated user's library",
     );
   }
 
   return context;
 }
 
-export async function addComicToDevUserLibrary(
+export async function addComicToUserLibrary(
+  userId: number,
   comicId: number,
 ) {
-  const user = await getDevUser();
   const comic = await getComic(comicId);
 
   await db
     .insert(userComics)
     .values({
-      userId: user.id,
+      userId: userId,
       comicId: comic.id,
       status: "WANT_TO_READ",
       currentChapter: 0,
@@ -144,10 +122,10 @@ export async function addComicToDevUserLibrary(
   return comic.slug;
 }
 
-export async function removeComicFromDevUserLibrary(
+export async function removeComicFromUserLibrary(
+  userId: number,
   comicId: number,
 ) {
-  const user = await getDevUser();
   const comic = await getComic(comicId);
 
   await db
@@ -156,7 +134,7 @@ export async function removeComicFromDevUserLibrary(
       and(
         eq(
           userComics.userId,
-          user.id,
+          userId,
         ),
         eq(
           userComics.comicId,
@@ -168,12 +146,14 @@ export async function removeComicFromDevUserLibrary(
   return comic.slug;
 }
 
-export async function setDevUserComicStatus(
+export async function setUserComicStatus(
+  userId: number,
   comicId: number,
   status: ReadingStatus,
 ) {
   const context =
-    await getDevUserComicContext(
+    await getUserComicContext(
+      userId,
       comicId,
     );
 
@@ -233,7 +213,8 @@ export async function setDevUserComicStatus(
   return context.slug;
 }
 
-export async function changeDevUserComicProgress(
+export async function changeUserComicProgress(
+  userId: number,
   comicId: number,
   delta: number,
 ) {
@@ -244,7 +225,8 @@ export async function changeDevUserComicProgress(
   }
 
   const context =
-    await getDevUserComicContext(
+    await getUserComicContext(
+      userId,
       comicId,
     );
 
@@ -317,12 +299,14 @@ export async function changeDevUserComicProgress(
   return context.slug;
 }
 
-export async function updateDevUserComicDiary(
+export async function updateUserComicDiary(
+  userId: number,
   comicId: number,
   diary: PersonalDiaryInput,
 ) {
   const context =
-    await getDevUserComicContext(
+    await getUserComicContext(
+      userId,
       comicId,
     );
 

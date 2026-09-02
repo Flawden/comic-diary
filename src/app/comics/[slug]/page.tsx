@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { getComicBySlug } from "@/modules/comics/queries/get-comic-by-slug";
-import { DEV_USER_EMAIL } from "@/modules/library/dev-user";
+import { getCurrentUser } from "@/modules/auth/request-identity";
 import { getUserComicState } from "@/modules/library/queries/get-user-comic-state";
 import { calculateAverageRating } from "@/modules/library/ratings/calculate-average-rating";
 
@@ -48,17 +48,25 @@ export default async function ComicPage({
 }: ComicPageProps) {
   const { slug } = await params;
 
-  const comic = await getComicBySlug(slug);
+  const [
+    comic,
+    currentUser,
+  ] = await Promise.all([
+    getComicBySlug(slug),
+    getCurrentUser(),
+  ]);
 
   if (!comic) {
     notFound();
   }
 
   const readingState =
-    await getUserComicState(
-      DEV_USER_EMAIL,
-      comic.id,
-    );
+    currentUser
+      ? await getUserComicState(
+          currentUser.id,
+          comic.id,
+        )
+      : null;
 
   const canDecreaseProgress =
     readingState !== null &&
