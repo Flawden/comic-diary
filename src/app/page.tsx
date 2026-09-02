@@ -5,12 +5,15 @@ import { categories } from "@/db/schema";
 import { ComicCard } from "@/modules/comics/components/ComicCard";
 import { getComics } from "@/modules/comics/queries/get-comics";
 import { LibraryStat } from "@/modules/library/components/LibraryStat";
-import { DEV_USER_EMAIL } from "@/modules/library/dev-user";
+import { getCurrentUser } from "@/modules/auth/request-identity";
 import { getUserLibrary } from "@/modules/library/queries/get-user-library";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  const currentUser =
+    await getCurrentUser();
+
   const [
     categoryList,
     comicList,
@@ -18,7 +21,11 @@ export default async function Home() {
   ] = await Promise.all([
     db.select().from(categories),
     getComics(),
-    getUserLibrary(DEV_USER_EMAIL),
+    currentUser
+      ? getUserLibrary(
+          currentUser.id,
+        )
+      : [],
   ]);
 
   const readingNow =

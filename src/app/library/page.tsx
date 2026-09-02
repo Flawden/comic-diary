@@ -1,7 +1,10 @@
 import Link from "next/link";
+import {
+  redirect,
+} from "next/navigation";
 
 import { LibraryStat } from "@/modules/library/components/LibraryStat";
-import { DEV_USER_EMAIL } from "@/modules/library/dev-user";
+import { getCurrentUser } from "@/modules/auth/request-identity";
 import { getUserLibrary } from "@/modules/library/queries/get-user-library";
 import { calculateAverageRating } from "@/modules/library/ratings/calculate-average-rating";
 
@@ -43,11 +46,22 @@ function isLibraryFilter(
 export default async function LibraryPage({
   searchParams,
 }: LibraryPageProps) {
+  const currentUser =
+    await getCurrentUser();
+
+  if (!currentUser) {
+    redirect(
+      "/login?next=/library",
+    );
+  }
+
   const [
     library,
     resolvedSearchParams,
   ] = await Promise.all([
-    getUserLibrary(DEV_USER_EMAIL),
+    getUserLibrary(
+      currentUser.id,
+    ),
     searchParams,
   ]);
 

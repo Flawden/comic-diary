@@ -13,7 +13,7 @@ import {
 } from "@/db/schema";
 
 export async function getUserLibrary(
-  userEmail: string,
+  userId: number,
 ) {
   return db
     .select({
@@ -56,10 +56,7 @@ export async function getUserLibrary(
       ),
     )
     .where(
-      eq(
-        users.email,
-        userEmail,
-      ),
+      eq(userComics.userId, userId),
     )
     .orderBy(
       desc(userComics.updatedAt),
