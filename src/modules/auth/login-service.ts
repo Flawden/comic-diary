@@ -1,3 +1,4 @@
+import type { UserRole } from "./permissions";
 import {
   eq,
 } from "drizzle-orm";
@@ -22,9 +23,7 @@ export type PasswordLoginUser = {
   id: number;
   email: string;
   displayName: string | null;
-  role:
-    | "USER"
-    | "ADMIN";
+  role: UserRole;
 };
 
 export async function authenticatePasswordLogin(

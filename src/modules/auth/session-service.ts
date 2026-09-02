@@ -1,3 +1,4 @@
+import type { UserRole } from "./permissions";
 import {
   and,
   eq,
@@ -24,9 +25,7 @@ export type AuthenticatedUser = {
   id: number;
   email: string;
   displayName: string | null;
-  role:
-    | "USER"
-    | "ADMIN";
+  role: UserRole;
 };
 
 export type AuthenticatedSession = {
