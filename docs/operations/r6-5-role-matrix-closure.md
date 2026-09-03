@@ -89,3 +89,40 @@ R6.5 is fully closed only when both are true:
 - `R6_5_NON_PRODUCTION_ROLE_MATRIX=CLOSED`
 
 No additional production role fixtures are required or permitted for this closure.
+
+<!-- R6_5B_CLOSURE_BEGIN -->
+
+## R6.5B execution closure
+
+Status: **CLOSED / PASS**
+
+Execution baseline: `79c1e5572ae16b4c2fe908b4ecb257d84c895632`
+
+Ephemeral proof log SHA256: `344b08b85d43d4d38b585663ddc341372dc717a1a099f016886f02381662ff5d`
+
+The originally pending non-production role-matrix closure has now been executed against isolated disposable infrastructure using the exact production application image.
+
+Closure evidence:
+
+- USER / EDITOR / ADMIN HTTP login and session identity: PASS
+- personal library access for all roles: PASS
+- USER A / USER B personal-state isolation: PASS
+- client-supplied user id override: ignored
+- EDITOR shared-catalog authority: PASS
+- USER shared-catalog denial: PASS
+- EDITOR account-administration denial: PASS
+- EDITOR bulk-import denial: PASS
+- ADMIN account-administration authorization: PASS
+- ADMIN bulk import with feature flag enabled: PASS
+- ADMIN bulk import with feature flag disabled: expected 503
+- cross-origin mutation denial: PASS
+- digest-only session storage: PASS
+- logout / server-side session revocation: PASS
+- ephemeral fixture teardown: PASS
+- production database fingerprint unchanged: PASS
+- production writes: NONE
+
+`R6_5_NON_PRODUCTION_ROLE_MATRIX=CLOSED`
+
+`R6_5=CLOSED`
+<!-- R6_5B_CLOSURE_END -->
