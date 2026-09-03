@@ -8,6 +8,15 @@ import {
 } from "@/modules/auth/login-service";
 
 import {
+  readTrustedClientIp,
+} from "@/modules/auth/client-ip";
+
+import {
+  consumeLoginRateLimit,
+} from "@/modules/auth/auth-rate-limit";
+
+
+import {
   isSameOriginRequest,
 } from "@/modules/auth/request-origin";
 
@@ -58,6 +67,60 @@ export async function POST(
     return jsonError(
       "forbidden_origin",
       403,
+    );
+  }
+
+  const clientIp =
+    readTrustedClientIp(
+      request.headers,
+    );
+
+  if (!clientIp) {
+    return jsonError(
+      "rate_limit_identity_unavailable",
+      503,
+    );
+  }
+
+  let rateLimit;
+
+  try {
+    rateLimit =
+      await consumeLoginRateLimit(
+        clientIp,
+      );
+  } catch {
+    /*
+     * Login fails closed when the shared anti-abuse
+     * backend is unavailable. Do not silently fall
+     * back to unthrottled password verification.
+     */
+    return jsonError(
+      "rate_limit_unavailable",
+      503,
+    );
+  }
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error:
+          "rate_limited",
+      },
+      {
+        status:
+          429,
+
+        headers: {
+          "Cache-Control":
+            "no-store",
+
+          "Retry-After":
+            String(
+              rateLimit.retryAfterSeconds,
+            ),
+        },
+      },
     );
   }
 

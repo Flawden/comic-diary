@@ -25,6 +25,15 @@ export const REGISTRATION_RATE_LIMIT_MAX_REQUESTS =
 export const REGISTRATION_RATE_LIMIT_WINDOW_MS =
   15 * 60 * 1000;
 
+export const LOGIN_RATE_LIMIT_SCOPE =
+  "login-ip-v1";
+
+export const LOGIN_RATE_LIMIT_MAX_REQUESTS =
+  20;
+
+export const LOGIN_RATE_LIMIT_WINDOW_MS =
+  15 * 60 * 1000;
+
 export type AuthRateLimitDecision = {
   allowed: boolean;
   requestCount: number;
@@ -335,6 +344,24 @@ export async function consumeRegistrationRateLimit(
       REGISTRATION_RATE_LIMIT_MAX_REQUESTS,
     windowMs:
       REGISTRATION_RATE_LIMIT_WINDOW_MS,
+    now,
+  });
+}
+
+
+export async function consumeLoginRateLimit(
+  clientIp: string,
+  now?: Date,
+): Promise<AuthRateLimitDecision> {
+  return consumeAuthRateLimit({
+    scope:
+      LOGIN_RATE_LIMIT_SCOPE,
+    identity:
+      clientIp,
+    maxRequests:
+      LOGIN_RATE_LIMIT_MAX_REQUESTS,
+    windowMs:
+      LOGIN_RATE_LIMIT_WINDOW_MS,
     now,
   });
 }
