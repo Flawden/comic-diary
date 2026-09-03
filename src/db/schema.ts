@@ -168,6 +168,82 @@ export const catalogImportReceipts = pgTable(
   ],
 );
 
+export const authRateLimits = pgTable(
+  "auth_rate_limits",
+  {
+    id:
+      serial("id")
+        .primaryKey(),
+
+    scope:
+      varchar(
+        "scope",
+        {
+          length: 80,
+        },
+      )
+        .notNull(),
+
+    keyHash:
+      varchar(
+        "key_hash",
+        {
+          length: 64,
+        },
+      )
+        .notNull(),
+
+    windowStartedAt:
+      timestamp(
+        "window_started_at",
+        {
+          withTimezone: true,
+        },
+      )
+        .notNull(),
+
+    requestCount:
+      integer(
+        "request_count",
+      )
+        .notNull(),
+
+    updatedAt:
+      timestamp(
+        "updated_at",
+        {
+          withTimezone: true,
+        },
+      )
+        .defaultNow()
+        .notNull(),
+  },
+  (table) => [
+    unique(
+      "auth_rate_limits_scope_key_unique",
+    ).on(
+      table.scope,
+      table.keyHash,
+    ),
+
+    index(
+      "auth_rate_limits_updated_at_idx",
+    ).on(
+      table.updatedAt,
+    ),
+
+    check(
+      "auth_rate_limits_key_hash_sha256_check",
+      sql`${table.keyHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+
+    check(
+      "auth_rate_limits_request_count_positive_check",
+      sql`${table.requestCount} >= 1`,
+    ),
+  ],
+);
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
 

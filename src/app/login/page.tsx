@@ -48,6 +48,11 @@ export default async function LoginPage({
       ),
     );
 
+  const registerHref =
+    `/register?next=${encodeURIComponent(
+      nextPath,
+    )}`;
+
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10 sm:px-8">
       <div className="w-full">
@@ -82,7 +87,19 @@ export default async function LoginPage({
           />
         </section>
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center text-sm text-[var(--muted)]">
+          Нет аккаунта?{" "}
+          <Link
+            href={
+              registerHref
+            }
+            className="font-medium text-[var(--primary)] hover:underline"
+          >
+            Зарегистрироваться
+          </Link>
+        </div>
+
+        <div className="mt-3 text-center">
           <Link
             href="/"
             className="text-sm font-medium text-[var(--primary)] hover:underline"

@@ -64,6 +64,13 @@
       "when": 1788364691380,
       "tag": "0008_r6_editor_role_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788457412366,
+      "tag": "0009_r7_auth_rate_limit",
+      "breakpoints": true
     }
   ]
 }
