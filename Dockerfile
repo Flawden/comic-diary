@@ -68,6 +68,11 @@ COPY --from=builder \
     /app/scripts/migrate-production.mjs \
     ./scripts/migrate-production.mjs
 
+COPY --from=builder \
+    --chown=nextjs:nodejs \
+    /app/scripts/admin-bootstrap.mjs \
+    ./scripts/admin-bootstrap.mjs
+
 USER nextjs
 
 EXPOSE 3000
