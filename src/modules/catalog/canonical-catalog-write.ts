@@ -1,4 +1,5 @@
 import type {
+  CatalogCategory,
   CatalogComic,
 } from "@/catalog/catalog-data";
 
@@ -11,6 +12,49 @@ import type {
  */
 export const SHARED_CATALOG_ADVISORY_LOCK =
   536000001;
+
+export function canonicalCategoryCreateValues(
+  category: CatalogCategory,
+) {
+  return {
+    slug:
+      category.slug,
+
+    name:
+      category.name,
+
+    description:
+      category.description,
+  };
+}
+
+export function canonicalCategoryUpdateValues(
+  category: CatalogCategory,
+) {
+  const createValues =
+    canonicalCategoryCreateValues(
+      category,
+    );
+
+  const {
+    slug,
+    ...mutableValues
+  } = createValues;
+
+  /*
+   * Category slug is canonical identity and is excluded
+   * from metadata updates. Existing comic/import references
+   * therefore remain stable across category edits.
+   */
+  void slug;
+
+  return {
+    ...mutableValues,
+
+    updatedAt:
+      new Date(),
+  };
+}
 
 export function canonicalComicCreateValues(
   comic: CatalogComic,

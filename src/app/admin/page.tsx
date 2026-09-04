@@ -80,7 +80,7 @@ export default async function AdminPage() {
         </Link>
       </div>
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-2">
+      <section className="mt-8 grid gap-4 sm:grid-cols-3">
         <article className="rounded-2xl bg-[var(--surface)] p-6 shadow-sm">
           <p className="text-sm text-[var(--muted)]">
             Комиксов в PostgreSQL
@@ -88,6 +88,16 @@ export default async function AdminPage() {
 
           <p className="mt-2 text-3xl font-bold">
             {counts.comics}
+          </p>
+        </article>
+
+        <article className="rounded-2xl bg-[var(--surface)] p-6 shadow-sm">
+          <p className="text-sm text-[var(--muted)]">
+            Категорий
+          </p>
+
+          <p className="mt-2 text-3xl font-bold">
+            {counts.categories}
           </p>
         </article>
 
@@ -102,7 +112,7 @@ export default async function AdminPage() {
         </article>
       </section>
 
-      <section className="mt-8 grid gap-4 md:grid-cols-3">
+      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {access.canEditCatalog ? (
           <Link
             href="/admin/comics"
@@ -115,6 +125,22 @@ export default async function AdminPage() {
             <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
               Создание и редактирование метаданных,
               категории и статуса публикации.
+            </p>
+          </Link>
+        ) : null}
+
+        {access.canEditCatalog ? (
+          <Link
+            href="/admin/categories"
+            className="rounded-2xl border border-black/5 bg-[var(--surface)] p-6 shadow-sm transition hover:-translate-y-0.5"
+          >
+            <h2 className="text-lg font-semibold">
+              Категории
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              Создание категорий и безопасное редактирование
+              названия и описания без destructive delete.
             </p>
           </Link>
         ) : null}

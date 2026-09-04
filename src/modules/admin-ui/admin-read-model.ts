@@ -23,6 +23,10 @@ export async function listAdminCategories() {
         categories.slug,
       name:
         categories.name,
+      description:
+        categories.description,
+      updatedAt:
+        categories.updatedAt,
     })
     .from(
       categories,
@@ -125,6 +129,7 @@ export async function listAdminUsers() {
 export async function getAdminDashboardCounts() {
   const [
     comicRows,
+    categoryRows,
     userRows,
   ] =
     await Promise.all([
@@ -140,6 +145,15 @@ export async function getAdminDashboardCounts() {
       db
         .select({
           id:
+            categories.id,
+        })
+        .from(
+          categories,
+        ),
+
+      db
+        .select({
+          id:
             users.id,
         })
         .from(
@@ -150,6 +164,8 @@ export async function getAdminDashboardCounts() {
   return {
     comics:
       comicRows.length,
+    categories:
+      categoryRows.length,
     users:
       userRows.length,
   };

@@ -4,6 +4,7 @@ import {
 } from "drizzle-orm";
 
 import type {
+  CatalogCategory,
   CatalogComic,
 } from "@/catalog/catalog-data";
 import {
@@ -19,6 +20,8 @@ import {
 } from "@/db/schema";
 
 import {
+  canonicalCategoryCreateValues,
+  canonicalCategoryUpdateValues,
   canonicalComicCreateValues,
   canonicalComicUpdateValues,
   SHARED_CATALOG_ADVISORY_LOCK,
@@ -26,6 +29,7 @@ import {
 
 export type SharedCatalogMutationErrorKind =
   | "invalid-catalog"
+  | "category-already-exists"
   | "category-not-found"
   | "comic-already-exists"
   | "comic-not-found";
@@ -43,6 +47,135 @@ export class SharedCatalogMutationError
     this.name =
       "SharedCatalogMutationError";
   }
+}
+
+function validateCanonicalCategory(
+  category: CatalogCategory,
+) {
+  try {
+    validateCatalogData(
+      [
+        category,
+      ],
+      [],
+    );
+  } catch {
+    throw new SharedCatalogMutationError(
+      "invalid-catalog",
+    );
+  }
+}
+
+export async function createSharedCatalogCategory(
+  category: CatalogCategory,
+) {
+  return db.transaction(
+    async (
+      tx,
+    ) => {
+      await tx.execute(
+        sql`
+          SELECT pg_advisory_xact_lock(
+            ${SHARED_CATALOG_ADVISORY_LOCK}
+          )
+        `,
+      );
+
+      validateCanonicalCategory(
+        category,
+      );
+
+      const inserted =
+        await tx
+          .insert(
+            categories,
+          )
+          .values(
+            canonicalCategoryCreateValues(
+              category,
+            ),
+          )
+          .onConflictDoNothing({
+            target:
+              categories.slug,
+          })
+          .returning({
+            id:
+              categories.id,
+
+            slug:
+              categories.slug,
+          });
+
+      if (
+        inserted.length !==
+        1
+      ) {
+        throw new SharedCatalogMutationError(
+          "category-already-exists",
+        );
+      }
+
+      return inserted[0];
+    },
+  );
+}
+
+export async function updateSharedCatalogCategory(
+  category: CatalogCategory,
+) {
+  return db.transaction(
+    async (
+      tx,
+    ) => {
+      await tx.execute(
+        sql`
+          SELECT pg_advisory_xact_lock(
+            ${SHARED_CATALOG_ADVISORY_LOCK}
+          )
+        `,
+      );
+
+      validateCanonicalCategory(
+        category,
+      );
+
+      const updated =
+        await tx
+          .update(
+            categories,
+          )
+          .set(
+            canonicalCategoryUpdateValues(
+              category,
+            ),
+          )
+          .where(
+            eq(
+              categories.slug,
+              category.slug,
+            ),
+          )
+          .returning({
+            id:
+              categories.id,
+
+            slug:
+              categories.slug,
+          });
+
+      if (
+        updated.length !==
+        1
+      ) {
+        throw new SharedCatalogMutationError(
+          "category-not-found",
+        );
+      }
+
+      return updated[0];
+    },
+  );
 }
 
 async function validateCanonicalComic(
