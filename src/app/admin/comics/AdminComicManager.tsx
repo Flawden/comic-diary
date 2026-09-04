@@ -1,0 +1,809 @@
+"use client";
+
+import {
+  type FormEvent,
+  useState,
+} from "react";
+
+import {
+  useRouter,
+} from "next/navigation";
+
+type Category = {
+  id: number;
+  slug: string;
+  name: string;
+};
+
+type PublicationStatus =
+  | "PUBLISHED"
+  | "HIDDEN"
+  | "ARCHIVED";
+
+type AdminComic = {
+  id: number;
+  slug: string;
+  title: string;
+  description: string | null;
+  authorName: string | null;
+  translatorName: string | null;
+  translatorNote: string | null;
+  coverUrl: string | null;
+  sourceUrl: string;
+  totalChapters: number | null;
+  publicationStatus:
+    PublicationStatus;
+  categorySlug: string | null;
+  categoryName: string | null;
+  updatedAt: string;
+};
+
+type Props = {
+  categories: Category[];
+  initialComics: AdminComic[];
+};
+
+type ApiEnvelope = {
+  ok?: unknown;
+  error?: {
+    kind?: unknown;
+  };
+};
+
+const publicationStatusLabels: Record<
+  PublicationStatus,
+  string
+> = {
+  PUBLISHED: "Опубликован",
+  HIDDEN: "Скрыт",
+  ARCHIVED: "Архив",
+};
+
+function nullableText(
+  value: FormDataEntryValue | null,
+): string | null {
+  if (
+    typeof value !==
+    "string"
+  ) {
+    return null;
+  }
+
+  const trimmed =
+    value.trim();
+
+  return trimmed === ""
+    ? null
+    : trimmed;
+}
+
+function apiErrorKind(
+  body: ApiEnvelope,
+): string | null {
+  return typeof body.error?.kind ===
+    "string"
+    ? body.error.kind
+    : null;
+}
+
+function errorMessage(
+  kind: string | null,
+): string {
+  switch (kind) {
+    case "comic-already-exists":
+      return "Комикс с таким slug уже существует.";
+
+    case "comic-not-found":
+      return "Комикс больше не найден. Обновите страницу.";
+
+    case "category-not-found":
+      return "Выбранная категория не найдена.";
+
+    case "invalid-catalog":
+    case "invalid-catalog-request":
+      return "Проверьте поля комикса: данные не прошли валидацию.";
+
+    case "origin-not-allowed":
+      return "Запрос отклонён политикой same-origin.";
+
+    case "forbidden":
+      return "Недостаточно прав для изменения каталога.";
+
+    case "unauthorized":
+      return "Сессия закончилась. Войдите снова.";
+
+    default:
+      return "Не удалось сохранить комикс.";
+  }
+}
+
+function textValue(
+  form: FormData,
+  name: string,
+): string {
+  const value =
+    form.get(
+      name,
+    );
+
+  return typeof value ===
+    "string"
+    ? value.trim()
+    : "";
+}
+
+function comicPayload(
+  form: FormData,
+  immutableSlug?: string,
+) {
+  const rawTotal =
+    textValue(
+      form,
+      "totalChapters",
+    );
+
+  return {
+    slug:
+      immutableSlug ??
+      textValue(
+        form,
+        "slug",
+      ),
+
+    title:
+      textValue(
+        form,
+        "title",
+      ),
+
+    description:
+      nullableText(
+        form.get(
+          "description",
+        ),
+      ),
+
+    authorName:
+      nullableText(
+        form.get(
+          "authorName",
+        ),
+      ),
+
+    translatorName:
+      nullableText(
+        form.get(
+          "translatorName",
+        ),
+      ),
+
+    translatorNote:
+      nullableText(
+        form.get(
+          "translatorNote",
+        ),
+      ),
+
+    coverUrl:
+      nullableText(
+        form.get(
+          "coverUrl",
+        ),
+      ),
+
+    sourceUrl:
+      textValue(
+        form,
+        "sourceUrl",
+      ),
+
+    totalChapters:
+      rawTotal === ""
+        ? null
+        : Number(
+            rawTotal,
+          ),
+
+    publicationStatus:
+      textValue(
+        form,
+        "publicationStatus",
+      ),
+
+    categorySlug:
+      textValue(
+        form,
+        "categorySlug",
+      ),
+  };
+}
+
+function ComicFields({
+  categories,
+  comic,
+  create,
+}: {
+  categories: Category[];
+  comic?: AdminComic;
+  create: boolean;
+}) {
+  return (
+    <>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium">
+            Slug
+          </span>
+
+          <input
+            name="slug"
+            required
+            readOnly={!create}
+            defaultValue={
+              comic?.slug ??
+              ""
+            }
+            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 read-only:bg-black/5"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium">
+            Название
+          </span>
+
+          <input
+            name="title"
+            required
+            defaultValue={
+              comic?.title ??
+              ""
+            }
+            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium">
+            Категория
+          </span>
+
+          <select
+            name="categorySlug"
+            required
+            defaultValue={
+              comic?.categorySlug ??
+              ""
+            }
+            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+          >
+            <option
+              value=""
+              disabled
+            >
+              Выберите категорию
+            </option>
+
+            {categories.map(
+              (category) => (
+                <option
+                  key={
+                    category.id
+                  }
+                  value={
+                    category.slug
+                  }
+                >
+                  {category.name}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium">
+            Статус публикации
+          </span>
+
+          <select
+            name="publicationStatus"
+            defaultValue={
+              comic?.publicationStatus ??
+              "PUBLISHED"
+            }
+            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+          >
+            {(
+              Object.entries(
+                publicationStatusLabels,
+              ) as [
+                PublicationStatus,
+                string,
+              ][]
+            ).map(
+              ([
+                value,
+                label,
+              ]) => (
+                <option
+                  key={value}
+                  value={value}
+                >
+                  {label}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium">
+            Автор
+          </span>
+
+          <input
+            name="authorName"
+            defaultValue={
+              comic?.authorName ??
+              ""
+            }
+            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium">
+            Переводчик
+          </span>
+
+          <input
+            name="translatorName"
+            defaultValue={
+              comic?.translatorName ??
+              ""
+            }
+            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium">
+            Глав
+          </span>
+
+          <input
+            type="number"
+            name="totalChapters"
+            min={0}
+            step={1}
+            defaultValue={
+              comic?.totalChapters ??
+              ""
+            }
+            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium">
+            Source URL
+          </span>
+
+          <input
+            type="url"
+            name="sourceUrl"
+            required
+            defaultValue={
+              comic?.sourceUrl ??
+              ""
+            }
+            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+          />
+        </label>
+
+        <label className="block md:col-span-2">
+          <span className="mb-1 block text-sm font-medium">
+            Cover URL
+          </span>
+
+          <input
+            type="url"
+            name="coverUrl"
+            defaultValue={
+              comic?.coverUrl ??
+              ""
+            }
+            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+          />
+        </label>
+      </div>
+
+      <label className="mt-4 block">
+        <span className="mb-1 block text-sm font-medium">
+          Описание
+        </span>
+
+        <textarea
+          name="description"
+          rows={4}
+          defaultValue={
+            comic?.description ??
+            ""
+          }
+          className="w-full resize-y rounded-xl border border-black/10 bg-white px-3 py-2"
+        />
+      </label>
+
+      <label className="mt-4 block">
+        <span className="mb-1 block text-sm font-medium">
+          Примечание переводчика
+        </span>
+
+        <textarea
+          name="translatorNote"
+          rows={3}
+          defaultValue={
+            comic?.translatorNote ??
+            ""
+          }
+          className="w-full resize-y rounded-xl border border-black/10 bg-white px-3 py-2"
+        />
+      </label>
+    </>
+  );
+}
+
+export function AdminComicManager({
+  categories,
+  initialComics,
+}: Props) {
+  const router =
+    useRouter();
+
+  const [
+    busyKey,
+    setBusyKey,
+  ] = useState<
+    string | null
+  >(null);
+
+  const [
+    message,
+    setMessage,
+  ] = useState<
+    string | null
+  >(null);
+
+  const [
+    error,
+    setError,
+  ] = useState<
+    string | null
+  >(null);
+
+  async function saveComic(
+    event:
+      FormEvent<HTMLFormElement>,
+    mode:
+      | "create"
+      | "update",
+    immutableSlug?: string,
+  ) {
+    event.preventDefault();
+
+    const key =
+      mode === "create"
+        ? "create"
+        : `update:${immutableSlug}`;
+
+    if (busyKey) {
+      return;
+    }
+
+    setBusyKey(
+      key,
+    );
+    setMessage(null);
+    setError(null);
+
+    const form =
+      event.currentTarget;
+
+    const data =
+      new FormData(
+        form,
+      );
+
+    const payload =
+      comicPayload(
+        data,
+        immutableSlug,
+      );
+
+    if (
+      !payload.slug ||
+      !payload.title ||
+      !payload.sourceUrl ||
+      !payload.categorySlug
+    ) {
+      setError(
+        "Slug, название, source URL и категория обязательны.",
+      );
+      setBusyKey(null);
+      return;
+    }
+
+    if (
+      payload.totalChapters !==
+        null &&
+      (
+        !Number.isInteger(
+          payload.totalChapters,
+        ) ||
+        payload.totalChapters <
+          0
+      )
+    ) {
+      setError(
+        "Количество глав должно быть целым неотрицательным числом.",
+      );
+      setBusyKey(null);
+      return;
+    }
+
+    try {
+      const response =
+        await fetch(
+          "/api/admin/catalog/comics",
+          {
+            method:
+              mode ===
+                "create"
+                ? "POST"
+                : "PATCH",
+
+            credentials:
+              "same-origin",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                payload,
+              ),
+          },
+        );
+
+      const body =
+        await response
+          .json()
+          .catch(
+            () =>
+              ({}) as ApiEnvelope,
+          ) as ApiEnvelope;
+
+      if (
+        response.status ===
+        401
+      ) {
+        router.replace(
+          "/login?next=%2Fadmin%2Fcomics",
+        );
+        router.refresh();
+        return;
+      }
+
+      if (!response.ok) {
+        setError(
+          errorMessage(
+            apiErrorKind(
+              body,
+            ),
+          ),
+        );
+        setBusyKey(null);
+        return;
+      }
+
+      if (
+        mode ===
+        "create"
+      ) {
+        form.reset();
+        setMessage(
+          `Комикс ${payload.slug} создан.`,
+        );
+      } else {
+        setMessage(
+          `Комикс ${payload.slug} обновлён.`,
+        );
+      }
+
+      setBusyKey(null);
+      router.refresh();
+    } catch {
+      setError(
+        "Не удалось связаться с сервером.",
+      );
+      setBusyKey(null);
+    }
+  }
+
+  return (
+    <div className="mt-8 space-y-8">
+      {error ? (
+        <p
+          role="alert"
+          className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800"
+        >
+          {error}
+        </p>
+      ) : null}
+
+      {message ? (
+        <p
+          role="status"
+          className="rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-800"
+        >
+          {message}
+        </p>
+      ) : null}
+
+      <section className="rounded-2xl bg-[var(--surface)] p-6 shadow-sm">
+        <h2 className="text-xl font-semibold">
+          Новый комикс
+        </h2>
+
+        {categories.length ===
+        0 ? (
+          <p className="mt-3 text-sm text-red-700">
+            Создание недоступно: в PostgreSQL нет категорий.
+          </p>
+        ) : (
+          <form
+            onSubmit={(
+              event,
+            ) =>
+              saveComic(
+                event,
+                "create",
+              )
+            }
+            className="mt-6"
+          >
+            <ComicFields
+              categories={
+                categories
+              }
+              create
+            />
+
+            <button
+              type="submit"
+              disabled={
+                busyKey !==
+                null
+              }
+              className="mt-5 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+            >
+              Создать комикс
+            </button>
+          </form>
+        )}
+      </section>
+
+      <section>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="text-xl font-semibold">
+            Каталог
+          </h2>
+
+          <p className="text-sm text-[var(--muted)]">
+            Всего: {initialComics.length}
+          </p>
+        </div>
+
+        {initialComics.length ===
+        0 ? (
+          <p className="mt-4 text-[var(--muted)]">
+            Комиксов пока нет.
+          </p>
+        ) : (
+          <div className="mt-4 space-y-5">
+            {initialComics.map(
+              (comic) => (
+                <details
+                  key={
+                    comic.id
+                  }
+                  className="rounded-2xl border border-black/5 bg-[var(--surface)] p-5 shadow-sm"
+                >
+                  <summary className="cursor-pointer list-none">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-semibold">
+                          {comic.title}
+                        </h3>
+
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          {comic.slug} ·{" "}
+                          {
+                            publicationStatusLabels[
+                              comic.publicationStatus
+                            ]
+                          }
+                        </p>
+                      </div>
+
+                      <span className="rounded-full bg-[var(--background)] px-3 py-1 text-xs font-semibold">
+                        {comic.categoryName ??
+                          "Без категории"}
+                      </span>
+                    </div>
+                  </summary>
+
+                  <form
+                    onSubmit={(
+                      event,
+                    ) =>
+                      saveComic(
+                        event,
+                        "update",
+                        comic.slug,
+                      )
+                    }
+                    className="mt-6 border-t border-black/10 pt-6"
+                  >
+                    <ComicFields
+                      categories={
+                        categories
+                      }
+                      comic={comic}
+                      create={
+                        false
+                      }
+                    />
+
+                    {comic.categorySlug ===
+                    null ? (
+                      <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                        У старой записи нет категории.
+                        Выберите существующую категорию перед сохранением.
+                      </p>
+                    ) : null}
+
+                    <div className="mt-5 flex flex-wrap items-center gap-4">
+                      <button
+                        type="submit"
+                        disabled={
+                          busyKey !==
+                          null ||
+                          categories.length ===
+                            0
+                        }
+                        className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+                      >
+                        Сохранить изменения
+                      </button>
+
+                      <a
+                        href={`/comics/${comic.slug}`}
+                        className="text-sm font-semibold text-[var(--primary)]"
+                      >
+                        Открыть публичную страницу
+                      </a>
+                    </div>
+                  </form>
+                </details>
+              ),
+            )}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
