@@ -8,6 +8,7 @@ import {
 } from "@/db";
 import {
   sessions,
+  userEntitlements,
   users,
 } from "@/db/schema";
 
@@ -15,6 +16,32 @@ import {
   requirePermission,
   type UserRole,
 } from "./permissions";
+
+export const ACCOUNT_ENTITLEMENTS = [
+  "PRIVATE_CATALOG",
+] as const;
+
+export type AccountEntitlement =
+  (typeof ACCOUNT_ENTITLEMENTS)[number];
+
+function normalizeEntitlements(
+  values: readonly AccountEntitlement[],
+): AccountEntitlement[] {
+  return [...new Set(values)].sort();
+}
+
+function sameEntitlements(
+  left: readonly AccountEntitlement[],
+  right: readonly AccountEntitlement[],
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every(
+      (value, index) =>
+        value === right[index],
+    )
+  );
+}
 
 /**
  * Serializes mutations that can change whether the
@@ -49,6 +76,7 @@ export class AccountAdministrationError
 export type ManagedAccountUpdate = {
   role?: UserRole;
   isActive?: boolean;
+  entitlements?: readonly AccountEntitlement[];
 };
 
 export type ManagedAccountUpdateResult = {
@@ -57,6 +85,7 @@ export type ManagedAccountUpdateResult = {
     email: string;
     role: UserRole;
     isActive: boolean;
+    entitlements: AccountEntitlement[];
   };
 
   sessionsRevoked: number;
@@ -81,6 +110,8 @@ export async function updateManagedAccount(
       update.role ===
         undefined &&
       update.isActive ===
+        undefined &&
+      update.entitlements ===
         undefined
     )
   ) {
@@ -141,6 +172,38 @@ export async function updateManagedAccount(
         );
       }
 
+      const currentEntitlementRows =
+        await tx
+          .select({
+            entitlement:
+              userEntitlements.entitlement,
+          })
+          .from(
+            userEntitlements,
+          )
+          .where(
+            eq(
+              userEntitlements.userId,
+              target.id,
+            ),
+          );
+
+      const currentEntitlements =
+        normalizeEntitlements(
+          currentEntitlementRows.map(
+            (row) =>
+              row.entitlement,
+          ),
+        );
+
+      const nextEntitlements =
+        update.entitlements ===
+          undefined
+          ? currentEntitlements
+          : normalizeEntitlements(
+              update.entitlements,
+            );
+
       const nextRole =
         update.role ??
         target.role;
@@ -192,11 +255,18 @@ export async function updateManagedAccount(
         }
       }
 
+      const entitlementChanged =
+        !sameEntitlements(
+          currentEntitlements,
+          nextEntitlements,
+        );
+
       const changed =
         target.role !==
           nextRole ||
         target.isActive !==
-          nextIsActive;
+          nextIsActive ||
+        entitlementChanged;
 
       const updatedRows =
         await tx
@@ -242,6 +312,40 @@ export async function updateManagedAccount(
         );
       }
 
+      if (
+        entitlementChanged
+      ) {
+        await tx
+          .delete(
+            userEntitlements,
+          )
+          .where(
+            eq(
+              userEntitlements.userId,
+              target.id,
+            ),
+          );
+
+        if (
+          nextEntitlements.length >
+          0
+        ) {
+          await tx
+            .insert(
+              userEntitlements,
+            )
+            .values(
+              nextEntitlements.map(
+                (entitlement) => ({
+                  userId:
+                    target.id,
+                  entitlement,
+                }),
+              ),
+            );
+        }
+      }
+
       let sessionsRevoked =
         0;
 
@@ -272,8 +376,11 @@ export async function updateManagedAccount(
       }
 
       return {
-        user:
-          updatedUser,
+        user: {
+          ...updatedUser,
+          entitlements:
+            nextEntitlements,
+        },
 
         sessionsRevoked,
       };

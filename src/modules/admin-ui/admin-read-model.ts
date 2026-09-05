@@ -11,6 +11,7 @@ import {
 import {
   categories,
   comics,
+  userEntitlements,
   users,
 } from "@/db/schema";
 
@@ -96,34 +97,90 @@ export async function listAdminComics() {
  * Never exposes password hashes or session token digests.
  */
 export async function listAdminUsers() {
-  return db
-    .select({
-      id:
-        users.id,
-      email:
-        users.email,
-      displayName:
-        users.displayName,
-      role:
-        users.role,
-      isActive:
-        users.isActive,
-      createdAt:
-        users.createdAt,
-      updatedAt:
-        users.updatedAt,
-    })
-    .from(
-      users,
-    )
-    .orderBy(
-      desc(
-        users.createdAt,
-      ),
-      desc(
-        users.id,
-      ),
+  const [
+    userRows,
+    entitlementRows,
+  ] =
+    await Promise.all([
+      db
+        .select({
+          id:
+            users.id,
+          email:
+            users.email,
+          displayName:
+            users.displayName,
+          role:
+            users.role,
+          isActive:
+            users.isActive,
+          createdAt:
+            users.createdAt,
+          updatedAt:
+            users.updatedAt,
+        })
+        .from(
+          users,
+        )
+        .orderBy(
+          desc(
+            users.createdAt,
+          ),
+          desc(
+            users.id,
+          ),
+        ),
+
+      db
+        .select({
+          userId:
+            userEntitlements.userId,
+          entitlement:
+            userEntitlements.entitlement,
+        })
+        .from(
+          userEntitlements,
+        )
+        .orderBy(
+          asc(
+            userEntitlements.entitlement,
+          ),
+        ),
+    ]);
+
+  const byUserId =
+    new Map<
+      number,
+      (typeof entitlementRows)[number]["entitlement"][]
+    >();
+
+  for (
+    const row of entitlementRows
+  ) {
+    const current =
+      byUserId.get(
+        row.userId,
+      ) ?? [];
+
+    current.push(
+      row.entitlement,
     );
+
+    byUserId.set(
+      row.userId,
+      current,
+    );
+  }
+
+  return userRows.map(
+    (user) => ({
+      ...user,
+      entitlements:
+        byUserId.get(
+          user.id,
+        ) ?? [],
+    }),
+  );
 }
 
 export async function getAdminDashboardCounts() {

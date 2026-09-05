@@ -6,6 +6,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   serial,
   text,
   timestamp,
@@ -35,6 +36,13 @@ export const userRole = pgEnum(
     "USER",
     "EDITOR",
     "ADMIN",
+  ],
+);
+
+export const accountEntitlement = pgEnum(
+  "account_entitlement",
+  [
+    "PRIVATE_CATALOG",
   ],
 );
 
@@ -278,6 +286,38 @@ export const users = pgTable("users", {
     .defaultNow()
     .notNull(),
 });
+
+export const userEntitlements = pgTable(
+  "user_entitlements",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(
+        () => users.id,
+        { onDelete: "cascade" },
+      ),
+
+    entitlement: accountEntitlement(
+      "entitlement",
+    ).notNull(),
+
+    grantedAt: timestamp(
+      "granted_at",
+      { withTimezone: true },
+    )
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [
+        table.userId,
+        table.entitlement,
+      ],
+      name: "user_entitlements_user_id_entitlement_pk",
+    }),
+  ],
+);
 
 export const sessions = pgTable(
   "sessions",

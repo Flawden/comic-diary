@@ -4,7 +4,9 @@ import {
 } from "next/server";
 
 import {
+  ACCOUNT_ENTITLEMENTS,
   AccountAdministrationError,
+  type AccountEntitlement,
   updateManagedAccount,
 } from "@/modules/auth/account-administration";
 
@@ -32,6 +34,11 @@ const allowedRoles =
     "EDITOR",
     "ADMIN",
   ]);
+
+const allowedEntitlements =
+  new Set<AccountEntitlement>(
+    ACCOUNT_ENTITLEMENTS,
+  );
 
 type RouteContext = {
   params: Promise<{
@@ -95,6 +102,7 @@ type ParsedUpdate =
       update: {
         role?: UserRole;
         isActive?: boolean;
+        entitlements?: AccountEntitlement[];
       };
     }
   | {
@@ -229,7 +237,8 @@ async function readUpdate(
     keys.some(
       (key) =>
         key !== "role" &&
-        key !== "isActive",
+        key !== "isActive" &&
+        key !== "entitlements",
     )
   ) {
     return {
@@ -246,6 +255,7 @@ async function readUpdate(
   const update: {
     role?: UserRole;
     isActive?: boolean;
+    entitlements?: AccountEntitlement[];
   } = {};
 
   if (
@@ -299,6 +309,44 @@ async function readUpdate(
 
     update.isActive =
       value.isActive;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      value,
+      "entitlements",
+    )
+  ) {
+    if (
+      !Array.isArray(
+        value.entitlements,
+      ) ||
+      value.entitlements.length >
+        ACCOUNT_ENTITLEMENTS.length ||
+      value.entitlements.some(
+        (entitlement) =>
+          typeof entitlement !==
+            "string" ||
+          !allowedEntitlements.has(
+            entitlement as AccountEntitlement,
+          ),
+      )
+    ) {
+      return {
+        ok: false,
+
+        response:
+          errorResponse(
+            "invalid-entitlements",
+            400,
+          ),
+      };
+    }
+
+    update.entitlements =
+      [...new Set(
+        value.entitlements as AccountEntitlement[],
+      )].sort();
   }
 
   return {

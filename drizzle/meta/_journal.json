@@ -71,6 +71,13 @@
       "when": 1788457412366,
       "tag": "0009_r7_auth_rate_limit",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788583150382,
+      "tag": "0010_r7_5_account_entitlements",
+      "breakpoints": true
     }
   ]
 }

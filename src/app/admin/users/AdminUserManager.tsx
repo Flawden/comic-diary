@@ -14,12 +14,16 @@ type UserRole =
   | "EDITOR"
   | "ADMIN";
 
+type AccountEntitlement =
+  | "PRIVATE_CATALOG";
+
 type AdminUser = {
   id: number;
   email: string;
   displayName: string | null;
   role: UserRole;
   isActive: boolean;
+  entitlements: AccountEntitlement[];
   createdAt: string;
   updatedAt: string;
 };
@@ -144,6 +148,25 @@ export function AdminUserManager({
         "isActive",
       ) === "on";
 
+    const entitlements:
+      AccountEntitlement[] =
+      data.get(
+        "entitlement_PRIVATE_CATALOG",
+      ) === "on"
+        ? [
+            "PRIVATE_CATALOG",
+          ]
+        : [];
+
+    const entitlementsChanged =
+      user.entitlements.length !==
+        entitlements.length ||
+      user.entitlements.some(
+        (value, index) =>
+          value !==
+          entitlements[index],
+      );
+
     const authorityReduced =
       (
         user.role ===
@@ -191,6 +214,7 @@ export function AdminUserManager({
               JSON.stringify({
                 role,
                 isActive,
+                entitlements,
               }),
           },
         );
@@ -245,7 +269,8 @@ export function AdminUserManager({
           role !==
             user.role ||
           isActive !==
-            user.isActive
+            user.isActive ||
+          entitlementsChanged
         )
       ) {
         router.replace(
@@ -345,7 +370,7 @@ export function AdminUserManager({
                     user,
                   )
                 }
-                className="mt-5 grid gap-4 border-t border-black/10 pt-5 sm:grid-cols-[1fr_auto_auto] sm:items-end"
+                className="mt-5 grid gap-4 border-t border-black/10 pt-5 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end"
               >
                 <label className="block">
                   <span className="mb-1 block text-sm font-medium">
@@ -391,6 +416,19 @@ export function AdminUserManager({
                     }
                   />
                   Активен
+                </label>
+
+                <label className="flex min-h-10 items-center gap-2 rounded-xl border border-black/10 px-3 py-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    name="entitlement_PRIVATE_CATALOG"
+                    defaultChecked={
+                      user.entitlements.includes(
+                        "PRIVATE_CATALOG",
+                      )
+                    }
+                  />
+                  PRIVATE_CATALOG
                 </label>
 
                 <button
