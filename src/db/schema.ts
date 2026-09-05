@@ -4,6 +4,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -43,6 +44,32 @@ export const accountEntitlement = pgEnum(
   "account_entitlement",
   [
     "PRIVATE_CATALOG",
+  ],
+);
+
+
+
+export const administrativeAuditAction = pgEnum(
+  "administrative_audit_action",
+  [
+    "CATEGORY_CREATE",
+    "CATEGORY_UPDATE",
+    "COMIC_CREATE",
+    "COMIC_UPDATE",
+    "VK_IMPORT_APPLY",
+    "ACCOUNT_ROLE_CHANGE",
+    "ACCOUNT_ACTIVE_CHANGE",
+    "ACCOUNT_ENTITLEMENTS_CHANGE",
+  ],
+);
+
+export const administrativeAuditTarget = pgEnum(
+  "administrative_audit_target",
+  [
+    "CATEGORY",
+    "COMIC",
+    "IMPORT_BATCH",
+    "USER",
   ],
 );
 
@@ -286,6 +313,70 @@ export const users = pgTable("users", {
     .defaultNow()
     .notNull(),
 });
+
+
+export const administrativeAuditEvents = pgTable(
+  "administrative_audit_events",
+  {
+    id: serial("id").primaryKey(),
+
+    actorUserId: integer("actor_user_id")
+      .notNull()
+      .references(
+        () => users.id,
+      ),
+
+    actorRole: userRole("actor_role")
+      .notNull(),
+
+    action: administrativeAuditAction(
+      "action",
+    ).notNull(),
+
+    targetType: administrativeAuditTarget(
+      "target_type",
+    ).notNull(),
+
+    targetId: integer("target_id"),
+
+    targetKey: varchar(
+      "target_key",
+      { length: 320 },
+    ).notNull(),
+
+    details: jsonb("details")
+      .$type<Record<string, unknown>>()
+      .default(sql`'{}'::jsonb`)
+      .notNull(),
+
+    occurredAt: timestamp(
+      "occurred_at",
+      { withTimezone: true },
+    )
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index(
+      "administrative_audit_events_occurred_at_idx",
+    ).on(
+      table.occurredAt,
+    ),
+
+    index(
+      "administrative_audit_events_actor_user_id_idx",
+    ).on(
+      table.actorUserId,
+    ),
+
+    index(
+      "administrative_audit_events_target_idx",
+    ).on(
+      table.targetType,
+      table.targetKey,
+    ),
+  ],
+);
 
 export const userEntitlements = pgTable(
   "user_entitlements",

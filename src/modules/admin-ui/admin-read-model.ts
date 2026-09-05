@@ -9,6 +9,7 @@ import {
 } from "@/db";
 
 import {
+  administrativeAuditEvents,
   categories,
   comics,
   userEntitlements,
@@ -226,4 +227,70 @@ export async function getAdminDashboardCounts() {
     users:
       userRows.length,
   };
+}
+
+/**
+ * ADMIN_SECURITY read model for the durable administrative audit trail.
+ *
+ * Details are curated mutation metadata only; password hashes, session-token
+ * digests and raw authentication secrets are never stored in audit events.
+ */
+export async function listAdministrativeAuditEvents(
+  limit = 200,
+) {
+  const boundedLimit =
+    Math.max(
+      1,
+      Math.min(
+        limit,
+        500,
+      ),
+    );
+
+  return db
+    .select({
+      id:
+        administrativeAuditEvents.id,
+      actorUserId:
+        administrativeAuditEvents.actorUserId,
+      actorRole:
+        administrativeAuditEvents.actorRole,
+      actorEmail:
+        users.email,
+      actorDisplayName:
+        users.displayName,
+      action:
+        administrativeAuditEvents.action,
+      targetType:
+        administrativeAuditEvents.targetType,
+      targetId:
+        administrativeAuditEvents.targetId,
+      targetKey:
+        administrativeAuditEvents.targetKey,
+      details:
+        administrativeAuditEvents.details,
+      occurredAt:
+        administrativeAuditEvents.occurredAt,
+    })
+    .from(
+      administrativeAuditEvents,
+    )
+    .leftJoin(
+      users,
+      eq(
+        administrativeAuditEvents.actorUserId,
+        users.id,
+      ),
+    )
+    .orderBy(
+      desc(
+        administrativeAuditEvents.occurredAt,
+      ),
+      desc(
+        administrativeAuditEvents.id,
+      ),
+    )
+    .limit(
+      boundedLimit,
+    );
 }

@@ -112,7 +112,7 @@ export default async function AdminPage() {
         </article>
       </section>
 
-      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {access.canEditCatalog ? (
           <Link
             href="/admin/comics"
@@ -176,6 +176,23 @@ export default async function AdminPage() {
             </p>
           </Link>
         ) : null}
+
+        {access.canViewAudit ? (
+          <Link
+            href="/admin/audit"
+            className="rounded-2xl border border-black/5 bg-[var(--surface)] p-6 shadow-sm transition hover:-translate-y-0.5"
+          >
+            <h2 className="text-lg font-semibold">
+              Журнал аудита
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              Неизменяемая история редакторских и административных
+              действий с actor, target и временем.
+            </p>
+          </Link>
+        ) : null}
+
       </section>
 
       <Link

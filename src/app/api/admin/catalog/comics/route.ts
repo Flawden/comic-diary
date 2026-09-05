@@ -371,25 +371,33 @@ async function authorize(
     );
 
   if (!authorization.ok) {
-    return errorResponse(
-      authorization.kind,
-      authorization.status,
-    );
+    return {
+      ok: false as const,
+      response:
+        errorResponse(
+          authorization.kind,
+          authorization.status,
+        ),
+    };
   }
 
-  return null;
+  return {
+    ok: true as const,
+    currentUser:
+      authorization.currentUser,
+  };
 }
 
 export async function POST(
   request: NextRequest,
 ) {
-  const denied =
+  const access =
     await authorize(
       request,
     );
 
-  if (denied) {
-    return denied;
+  if (!access.ok) {
+    return access.response;
   }
 
   /*
@@ -409,6 +417,12 @@ export async function POST(
     const created =
       await createSharedCatalogComic(
         body.comic,
+        {
+          userId:
+            access.currentUser.id,
+          role:
+            access.currentUser.role,
+        },
       );
 
     return jsonResponse(
@@ -429,13 +443,13 @@ export async function POST(
 export async function PATCH(
   request: NextRequest,
 ) {
-  const denied =
+  const access =
     await authorize(
       request,
     );
 
-  if (denied) {
-    return denied;
+  if (!access.ok) {
+    return access.response;
   }
 
   /*
@@ -455,6 +469,12 @@ export async function PATCH(
     const updated =
       await updateSharedCatalogComic(
         body.comic,
+        {
+          userId:
+            access.currentUser.id,
+          role:
+            access.currentUser.role,
+        },
       );
 
     return jsonResponse(

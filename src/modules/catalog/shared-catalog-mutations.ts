@@ -15,9 +15,14 @@ import {
   db,
 } from "@/db";
 import {
+  administrativeAuditEvents,
   categories,
   comics,
 } from "@/db/schema";
+
+import type {
+  UserRole,
+} from "@/modules/auth/permissions";
 
 import {
   canonicalCategoryCreateValues,
@@ -26,6 +31,11 @@ import {
   canonicalComicUpdateValues,
   SHARED_CATALOG_ADVISORY_LOCK,
 } from "./canonical-catalog-write";
+
+export type SharedCatalogAuditActor = {
+  userId: number;
+  role: UserRole;
+};
 
 export type SharedCatalogMutationErrorKind =
   | "invalid-catalog"
@@ -68,6 +78,7 @@ function validateCanonicalCategory(
 
 export async function createSharedCatalogCategory(
   category: CatalogCategory,
+  actor: SharedCatalogAuditActor,
 ) {
   return db.transaction(
     async (
@@ -116,13 +127,40 @@ export async function createSharedCatalogCategory(
         );
       }
 
-      return inserted[0];
+      const created =
+        inserted[0];
+
+      await tx
+        .insert(
+          administrativeAuditEvents,
+        )
+        .values({
+          actorUserId:
+            actor.userId,
+          actorRole:
+            actor.role,
+          action:
+            "CATEGORY_CREATE",
+          targetType:
+            "CATEGORY",
+          targetId:
+            created.id,
+          targetKey:
+            created.slug,
+          details: {
+            channel:
+              "manual",
+          },
+        });
+
+      return created;
     },
   );
 }
 
 export async function updateSharedCatalogCategory(
   category: CatalogCategory,
+  actor: SharedCatalogAuditActor,
 ) {
   return db.transaction(
     async (
@@ -173,7 +211,33 @@ export async function updateSharedCatalogCategory(
         );
       }
 
-      return updated[0];
+      const result =
+        updated[0];
+
+      await tx
+        .insert(
+          administrativeAuditEvents,
+        )
+        .values({
+          actorUserId:
+            actor.userId,
+          actorRole:
+            actor.role,
+          action:
+            "CATEGORY_UPDATE",
+          targetType:
+            "CATEGORY",
+          targetId:
+            result.id,
+          targetKey:
+            result.slug,
+          details: {
+            channel:
+              "manual",
+          },
+        });
+
+      return result;
     },
   );
 }
@@ -249,6 +313,7 @@ async function validateCanonicalComic(
 
 export async function createSharedCatalogComic(
   comic: CatalogComic,
+  actor: SharedCatalogAuditActor,
 ) {
   return db.transaction(
     async (
@@ -328,13 +393,44 @@ export async function createSharedCatalogComic(
         );
       }
 
-      return inserted[0];
+      const created =
+        inserted[0];
+
+      await tx
+        .insert(
+          administrativeAuditEvents,
+        )
+        .values({
+          actorUserId:
+            actor.userId,
+          actorRole:
+            actor.role,
+          action:
+            "COMIC_CREATE",
+          targetType:
+            "COMIC",
+          targetId:
+            created.id,
+          targetKey:
+            created.slug,
+          details: {
+            channel:
+              "manual",
+            categorySlug:
+              comic.categorySlug,
+            publicationStatus:
+              comic.publicationStatus,
+          },
+        });
+
+      return created;
     },
   );
 }
 
 export async function updateSharedCatalogComic(
   comic: CatalogComic,
+  actor: SharedCatalogAuditActor,
 ) {
   return db.transaction(
     async (
@@ -416,7 +512,37 @@ export async function updateSharedCatalogComic(
         );
       }
 
-      return updated[0];
+      const result =
+        updated[0];
+
+      await tx
+        .insert(
+          administrativeAuditEvents,
+        )
+        .values({
+          actorUserId:
+            actor.userId,
+          actorRole:
+            actor.role,
+          action:
+            "COMIC_UPDATE",
+          targetType:
+            "COMIC",
+          targetId:
+            result.id,
+          targetKey:
+            result.slug,
+          details: {
+            channel:
+              "manual",
+            categorySlug:
+              comic.categorySlug,
+            publicationStatus:
+              comic.publicationStatus,
+          },
+        });
+
+      return result;
     },
   );
 }

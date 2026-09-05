@@ -358,6 +358,12 @@ export async function POST(
         canonicalPlan,
         workspace.categories,
         databaseUrl,
+        {
+          userId:
+            authorization.currentUser.id,
+          role:
+            authorization.currentUser.role,
+        },
       );
 
     return jsonResponse(

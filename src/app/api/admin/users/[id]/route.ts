@@ -482,7 +482,12 @@ export async function PATCH(
   try {
     const result =
       await updateManagedAccount(
-        currentUser.role,
+        {
+          userId:
+            currentUser.id,
+          role:
+            currentUser.role,
+        },
         targetUserId,
         parsed.update,
       );

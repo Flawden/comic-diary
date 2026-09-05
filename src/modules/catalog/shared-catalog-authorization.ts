@@ -24,19 +24,46 @@ export async function authorizeSharedCatalogMutationRequest(
   request: NextRequest,
 ) {
   if (!isSameOriginRequest(request)) {
-    return evaluateSharedCatalogMutationPolicy({
-      sameOrigin: false,
-      userRole: null,
-    });
+    const authorization =
+      evaluateSharedCatalogMutationPolicy({
+        sameOrigin: false,
+        userRole: null,
+      });
+
+    if (authorization.ok) {
+      throw new Error(
+        "Cross-origin catalog authorization unexpectedly succeeded",
+      );
+    }
+
+    return authorization;
   }
 
   const currentUser =
     await getCurrentUser();
 
-  return evaluateSharedCatalogMutationPolicy({
-    sameOrigin: true,
-    userRole:
-      currentUser?.role ??
-      null,
-  });
+  const authorization =
+    evaluateSharedCatalogMutationPolicy({
+      sameOrigin: true,
+      userRole:
+        currentUser?.role ??
+        null,
+    });
+
+  if (!authorization.ok) {
+    return authorization;
+  }
+
+  if (!currentUser) {
+    return {
+      ok: false,
+      kind: "unauthorized",
+      status: 401,
+    } as const;
+  }
+
+  return {
+    ...authorization,
+    currentUser,
+  } as const;
 }

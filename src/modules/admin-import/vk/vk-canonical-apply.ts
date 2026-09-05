@@ -15,10 +15,15 @@ import type {
 } from "@/catalog/catalog-data";
 import { validateCatalogData } from "@/catalog/validate-catalog";
 import {
+  administrativeAuditEvents,
   catalogImportReceipts,
   categories,
   comics,
 } from "@/db/schema";
+
+import type {
+  UserRole,
+} from "@/modules/auth/permissions";
 
 import {
   canonicalComicCreateValues,
@@ -36,6 +41,11 @@ import {
 import type {
   VkDatabaseAwareImportAction,
 } from "./vk-canonical-db";
+
+export type VkCanonicalApplyAuditActor = {
+  userId: number;
+  role: UserRole;
+};
 
 export type VkCanonicalApplyItemResult = {
   candidateId: string;
@@ -164,6 +174,7 @@ export async function applyVkCanonicalImportPlan(
   canonicalPlan: VkCanonicalImportPlan,
   catalogCategories: readonly CatalogCategory[],
   databaseUrl: string,
+  actor: VkCanonicalApplyAuditActor,
 ): Promise<VkCanonicalApplyResult> {
   if (
     databaseUrl.trim() === ""
@@ -598,6 +609,38 @@ export async function applyVkCanonicalImportPlan(
             receiptInserted,
           });
         }
+
+        await tx
+          .insert(
+            administrativeAuditEvents,
+          )
+          .values({
+            actorUserId:
+              actor.userId,
+            actorRole:
+              actor.role,
+            action:
+              "VK_IMPORT_APPLY",
+            targetType:
+              "IMPORT_BATCH",
+            targetKey:
+              canonicalPlan.source
+                .candidateSha256,
+            details: {
+              communityId:
+                canonicalPlan.source
+                  .communityId,
+              candidateSha256:
+                canonicalPlan.source
+                  .candidateSha256,
+              snapshotSha256:
+                canonicalPlan.source
+                  .snapshotSha256,
+              summary: {
+                ...result.summary,
+              },
+            },
+          });
 
         return result;
       },

@@ -7,6 +7,7 @@ import {
   db,
 } from "@/db";
 import {
+  administrativeAuditEvents,
   sessions,
   userEntitlements,
   users,
@@ -73,6 +74,11 @@ export class AccountAdministrationError
   }
 }
 
+export type AccountAdministrationActor = {
+  userId: number;
+  role: UserRole;
+};
+
 export type ManagedAccountUpdate = {
   role?: UserRole;
   isActive?: boolean;
@@ -92,12 +98,12 @@ export type ManagedAccountUpdateResult = {
 };
 
 export async function updateManagedAccount(
-  actorRole: UserRole,
+  actor: AccountAdministrationActor,
   targetUserId: number,
   update: ManagedAccountUpdate,
 ): Promise<ManagedAccountUpdateResult> {
   requirePermission(
-    actorRole,
+    actor.role,
     "ADMIN_USERS",
   );
 
@@ -373,6 +379,103 @@ export async function updateManagedAccount(
 
         sessionsRevoked =
           revoked.length;
+      }
+
+      const auditRows: Array<
+        typeof administrativeAuditEvents.$inferInsert
+      > = [];
+
+      if (
+        target.role !==
+        nextRole
+      ) {
+        auditRows.push({
+          actorUserId:
+            actor.userId,
+          actorRole:
+            actor.role,
+          action:
+            "ACCOUNT_ROLE_CHANGE",
+          targetType:
+            "USER",
+          targetId:
+            target.id,
+          targetKey:
+            `user:${target.id}`,
+          details: {
+            from:
+              target.role,
+            to:
+              nextRole,
+            sessionsRevoked,
+          },
+        });
+      }
+
+      if (
+        target.isActive !==
+        nextIsActive
+      ) {
+        auditRows.push({
+          actorUserId:
+            actor.userId,
+          actorRole:
+            actor.role,
+          action:
+            "ACCOUNT_ACTIVE_CHANGE",
+          targetType:
+            "USER",
+          targetId:
+            target.id,
+          targetKey:
+            `user:${target.id}`,
+          details: {
+            from:
+              target.isActive,
+            to:
+              nextIsActive,
+            sessionsRevoked,
+          },
+        });
+      }
+
+      if (
+        entitlementChanged
+      ) {
+        auditRows.push({
+          actorUserId:
+            actor.userId,
+          actorRole:
+            actor.role,
+          action:
+            "ACCOUNT_ENTITLEMENTS_CHANGE",
+          targetType:
+            "USER",
+          targetId:
+            target.id,
+          targetKey:
+            `user:${target.id}`,
+          details: {
+            from:
+              currentEntitlements,
+            to:
+              nextEntitlements,
+            sessionsRevoked,
+          },
+        });
+      }
+
+      if (
+        auditRows.length >
+        0
+      ) {
+        await tx
+          .insert(
+            administrativeAuditEvents,
+          )
+          .values(
+            auditRows,
+          );
       }
 
       return {

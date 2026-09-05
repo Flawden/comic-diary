@@ -78,6 +78,13 @@
       "when": 1788583150382,
       "tag": "0010_r7_5_account_entitlements",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788604380767,
+      "tag": "0011_r7_6_administrative_audit_log",
+      "breakpoints": true
     }
   ]
 }

@@ -23,6 +23,7 @@ export async function getAdminWorkspaceAccess() {
       canEditCatalog: false,
       canAdminUsers: false,
       canRunBulkImport: false,
+      canViewAudit: false,
     } as const;
   }
 
@@ -44,14 +45,22 @@ export async function getAdminWorkspaceAccess() {
       "RUN_BULK_IMPORT",
     );
 
+  const canViewAudit =
+    hasPermission(
+      currentUser.role,
+      "ADMIN_SECURITY",
+    );
+
   return {
     currentUser,
     canAccessWorkspace:
       canEditCatalog ||
       canAdminUsers ||
-      canRunBulkImport,
+      canRunBulkImport ||
+      canViewAudit,
     canEditCatalog,
     canAdminUsers,
     canRunBulkImport,
+    canViewAudit,
   };
 }

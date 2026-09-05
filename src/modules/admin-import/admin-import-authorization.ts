@@ -32,24 +32,51 @@ export async function authorizeAdminCatalogImportRequest(
   request: NextRequest,
 ) {
   if (!isSameOriginRequest(request)) {
-    return evaluateAdminImportRequestPolicy({
-      sameOrigin: false,
-      userRole: null,
-      enabled: false,
-    });
+    const authorization =
+      evaluateAdminImportRequestPolicy({
+        sameOrigin: false,
+        userRole: null,
+        enabled: false,
+      });
+
+    if (authorization.ok) {
+      throw new Error(
+        "Cross-origin import authorization unexpectedly succeeded",
+      );
+    }
+
+    return authorization;
   }
 
   const currentUser =
     await getCurrentUser();
 
-  return evaluateAdminImportRequestPolicy({
-    sameOrigin: true,
-    userRole:
-      currentUser?.role ??
-      null,
-    enabled:
-      adminImportEnabled(),
-  });
+  const authorization =
+    evaluateAdminImportRequestPolicy({
+      sameOrigin: true,
+      userRole:
+        currentUser?.role ??
+        null,
+      enabled:
+        adminImportEnabled(),
+    });
+
+  if (!authorization.ok) {
+    return authorization;
+  }
+
+  if (!currentUser) {
+    return {
+      ok: false,
+      kind: "unauthorized",
+      status: 401,
+    } as const;
+  }
+
+  return {
+    ...authorization,
+    currentUser,
+  } as const;
 }
 
 export async function authorizeAdminCatalogImportPage() {
