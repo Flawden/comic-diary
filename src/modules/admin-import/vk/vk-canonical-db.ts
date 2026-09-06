@@ -56,6 +56,9 @@ export type VkDatabaseAwareImportPlan = {
 };
 
 export type DatabaseComic = {
+  visibility:
+    | "SHARED"
+    | "PRIVATE";
   slug: string;
   title: string;
   description: string | null;
@@ -69,6 +72,20 @@ export type DatabaseComic = {
     CatalogComic["publicationStatus"];
   categorySlug: string | null;
 };
+
+export class VkPrivateCatalogSlugCollisionError
+  extends Error {
+  constructor(
+    readonly slug: string,
+  ) {
+    super(
+      `Shared canonical slug collides with a private title: ${slug}`,
+    );
+
+    this.name =
+      "VkPrivateCatalogSlugCollisionError";
+  }
+}
 
 function canonicalPayload(
   comic: CatalogComic,
@@ -129,6 +146,8 @@ export function databaseComicEqualsCanonical(
   canonical: CatalogComic,
 ): boolean {
   return (
+    existing.visibility ===
+      "SHARED" &&
     existing.slug ===
       canonical.slug &&
     existing.title ===
@@ -192,6 +211,9 @@ export async function buildVkDatabaseAwareImportPlan(
       const existingRows =
         await db
           .select({
+            visibility:
+              comics.visibility,
+
             slug:
               comics.slug,
 
@@ -248,6 +270,15 @@ export async function buildVkDatabaseAwareImportPlan(
       const existing =
         existingRows[0] ??
         null;
+
+      if (
+        existing?.visibility ===
+          "PRIVATE"
+      ) {
+        throw new VkPrivateCatalogSlugCollisionError(
+          item.comic.slug,
+        );
+      }
 
       const receiptRows =
         await db

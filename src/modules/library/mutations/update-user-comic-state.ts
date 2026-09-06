@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -31,16 +31,42 @@ export function isReadingStatus(
   );
 }
 
-async function getComic(comicId: number) {
+async function getComic(
+  userId: number,
+  comicId: number,
+) {
   const result = await db
     .select({
       id: comics.id,
       slug: comics.slug,
       totalChapters: comics.totalChapters,
+      visibility: comics.visibility,
+      ownerUserId: comics.ownerUserId,
     })
     .from(comics)
     .where(
-      eq(comics.id, comicId),
+      and(
+        eq(
+          comics.id,
+          comicId,
+        ),
+        or(
+          eq(
+            comics.visibility,
+            "SHARED",
+          ),
+          and(
+            eq(
+              comics.visibility,
+              "PRIVATE",
+            ),
+            eq(
+              comics.ownerUserId,
+              userId,
+            ),
+          ),
+        ),
+      ),
     )
     .limit(1);
 
@@ -83,6 +109,22 @@ async function getUserComicContext(
       and(
         eq(userComics.userId, userId),
         eq(userComics.comicId, comicId),
+        or(
+          eq(
+            comics.visibility,
+            "SHARED",
+          ),
+          and(
+            eq(
+              comics.visibility,
+              "PRIVATE",
+            ),
+            eq(
+              comics.ownerUserId,
+              userId,
+            ),
+          ),
+        ),
       ),
     )
     .limit(1);
@@ -102,7 +144,10 @@ export async function addComicToUserLibrary(
   userId: number,
   comicId: number,
 ) {
-  const comic = await getComic(comicId);
+  const comic = await getComic(
+    userId,
+    comicId,
+  );
 
   await db
     .insert(userComics)
@@ -126,7 +171,10 @@ export async function removeComicFromUserLibrary(
   userId: number,
   comicId: number,
 ) {
-  const comic = await getComic(comicId);
+  const comic = await getComic(
+    userId,
+    comicId,
+  );
 
   await db
     .delete(userComics)

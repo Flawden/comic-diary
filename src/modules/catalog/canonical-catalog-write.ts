@@ -91,6 +91,12 @@ export function canonicalComicCreateValues(
     publicationStatus:
       comic.publicationStatus,
 
+    visibility:
+      "SHARED" as const,
+
+    ownerUserId:
+      null,
+
     categoryId,
   };
 }
@@ -107,8 +113,13 @@ export function canonicalComicUpdateValues(
 
   const {
     slug,
+    visibility,
+    ownerUserId,
     ...mutableValues
   } = createValues;
+
+  void visibility;
+  void ownerUserId;
 
   /*
    * Reading slug here is deliberate:

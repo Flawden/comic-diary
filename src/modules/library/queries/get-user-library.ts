@@ -1,7 +1,9 @@
 import {
+  and,
   asc,
   desc,
   eq,
+  or,
 } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -23,6 +25,8 @@ export async function getUserLibrary(
       coverUrl: comics.coverUrl,
       totalChapters: comics.totalChapters,
       categoryName: categories.name,
+      visibility: comics.visibility,
+      ownerUserId: comics.ownerUserId,
       status: userComics.status,
       currentChapter: userComics.currentChapter,
       ratingPlot: userComics.ratingPlot,
@@ -56,7 +60,28 @@ export async function getUserLibrary(
       ),
     )
     .where(
-      eq(userComics.userId, userId),
+      and(
+        eq(
+          userComics.userId,
+          userId,
+        ),
+        or(
+          eq(
+            comics.visibility,
+            "SHARED",
+          ),
+          and(
+            eq(
+              comics.visibility,
+              "PRIVATE",
+            ),
+            eq(
+              comics.ownerUserId,
+              userId,
+            ),
+          ),
+        ),
+      ),
     )
     .orderBy(
       desc(userComics.updatedAt),

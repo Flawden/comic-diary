@@ -31,6 +31,14 @@ export const comicPublicationStatus = pgEnum(
   ],
 );
 
+export const comicVisibility = pgEnum(
+  "comic_visibility",
+  [
+    "SHARED",
+    "PRIVATE",
+  ],
+);
+
 export const userRole = pgEnum(
   "user_role",
   [
@@ -73,6 +81,41 @@ export const administrativeAuditTarget = pgEnum(
   ],
 );
 
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+
+  email: varchar("email", { length: 320 })
+    .notNull()
+    .unique(),
+
+  displayName: varchar("display_name", { length: 120 }),
+
+  /*
+   * Nullable during the R6 migration because the
+   * pre-auth development user already exists.
+   *
+   * R6.2 will require a strong password hash for
+   * password-authenticated accounts.
+   */
+  passwordHash: text("password_hash"),
+
+  role: userRole("role")
+    .default("USER")
+    .notNull(),
+
+  isActive: boolean("is_active")
+    .default(true)
+    .notNull(),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
 
@@ -90,52 +133,84 @@ export const categories = pgTable("categories", {
     .notNull(),
 });
 
-export const comics = pgTable("comics", {
-  id: serial("id").primaryKey(),
+export const comics = pgTable(
+  "comics",
+  {
+    id: serial("id").primaryKey(),
 
-  slug: varchar("slug", { length: 160 })
-    .notNull()
-    .unique(),
+    slug: varchar("slug", { length: 160 })
+      .notNull()
+      .unique(),
 
-  title: varchar("title", { length: 255 }).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
 
-  description: text("description"),
+    description: text("description"),
 
-  authorName: varchar("author_name", {
-    length: 255,
-  }),
+    authorName: varchar("author_name", {
+      length: 255,
+    }),
 
-  translatorName: varchar("translator_name", {
-    length: 255,
-  }),
+    translatorName: varchar("translator_name", {
+      length: 255,
+    }),
 
-  translatorNote: text("translator_note"),
+    translatorNote: text("translator_note"),
 
-  coverUrl: text("cover_url"),
+    coverUrl: text("cover_url"),
 
-  sourceUrl: text("source_url").notNull(),
+    sourceUrl: text("source_url").notNull(),
 
-  totalChapters: integer("total_chapters"),
+    totalChapters: integer("total_chapters"),
 
-  publicationStatus: comicPublicationStatus(
-    "publication_status",
-  )
-    .default("PUBLISHED")
-    .notNull(),
+    publicationStatus: comicPublicationStatus(
+      "publication_status",
+    )
+      .default("PUBLISHED")
+      .notNull(),
 
-  categoryId: integer("category_id").references(
-    () => categories.id,
-    { onDelete: "set null" },
-  ),
+    visibility: comicVisibility(
+      "visibility",
+    )
+      .default("SHARED")
+      .notNull(),
 
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
+    ownerUserId: integer(
+      "owner_user_id",
+    ).references(
+      () => users.id,
+      { onDelete: "cascade" },
+    ),
 
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+    categoryId: integer("category_id").references(
+      () => categories.id,
+      { onDelete: "set null" },
+    ),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index(
+      "comics_owner_user_id_idx",
+    ).on(
+      table.ownerUserId,
+    ),
+
+    check(
+      "comics_visibility_owner_check",
+      sql`(
+        (${table.visibility} = 'SHARED' AND ${table.ownerUserId} IS NULL)
+        OR
+        (${table.visibility} = 'PRIVATE' AND ${table.ownerUserId} IS NOT NULL)
+      )`,
+    ),
+  ],
+);
 
 export const catalogImportReceipts = pgTable(
   "catalog_import_receipts",
@@ -279,40 +354,7 @@ export const authRateLimits = pgTable(
   ],
 );
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
 
-  email: varchar("email", { length: 320 })
-    .notNull()
-    .unique(),
-
-  displayName: varchar("display_name", { length: 120 }),
-
-  /*
-   * Nullable during the R6 migration because the
-   * pre-auth development user already exists.
-   *
-   * R6.2 will require a strong password hash for
-   * password-authenticated accounts.
-   */
-  passwordHash: text("password_hash"),
-
-  role: userRole("role")
-    .default("USER")
-    .notNull(),
-
-  isActive: boolean("is_active")
-    .default(true)
-    .notNull(),
-
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
 
 
 export const administrativeAuditEvents = pgTable(

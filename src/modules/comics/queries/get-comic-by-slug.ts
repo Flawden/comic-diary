@@ -1,9 +1,39 @@
-import { eq } from "drizzle-orm";
+import {
+  and,
+  eq,
+  or,
+} from "drizzle-orm";
 
 import { db } from "@/db";
 import { categories, comics } from "@/db/schema";
 
-export async function getComicBySlug(slug: string) {
+export async function getComicBySlug(
+  slug: string,
+  viewerUserId: number | null = null,
+) {
+  const visibilityPredicate =
+    viewerUserId === null
+      ? eq(
+          comics.visibility,
+          "SHARED",
+        )
+      : or(
+          eq(
+            comics.visibility,
+            "SHARED",
+          ),
+          and(
+            eq(
+              comics.visibility,
+              "PRIVATE",
+            ),
+            eq(
+              comics.ownerUserId,
+              viewerUserId,
+            ),
+          ),
+        );
+
   const result = await db
     .select({
       id: comics.id,
@@ -18,6 +48,8 @@ export async function getComicBySlug(slug: string) {
       totalChapters: comics.totalChapters,
       publicationStatus:
         comics.publicationStatus,
+      visibility: comics.visibility,
+      ownerUserId: comics.ownerUserId,
       categoryId: categories.id,
       categoryName: categories.name,
     })
@@ -26,7 +58,12 @@ export async function getComicBySlug(slug: string) {
       categories,
       eq(comics.categoryId, categories.id),
     )
-    .where(eq(comics.slug, slug))
+    .where(
+      and(
+        eq(comics.slug, slug),
+        visibilityPredicate,
+      ),
+    )
     .limit(1);
 
   return result[0] ?? null;

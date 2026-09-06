@@ -37,6 +37,7 @@ import type {
 import {
   databaseComicEqualsCanonical,
   hashVkCanonicalComic,
+  VkPrivateCatalogSlugCollisionError,
 } from "./vk-canonical-db";
 import type {
   VkDatabaseAwareImportAction,
@@ -335,6 +336,9 @@ export async function applyVkCanonicalImportPlan(
           const existingRows =
             await tx
               .select({
+                visibility:
+                  comics.visibility,
+
                 slug:
                   comics.slug,
 
@@ -391,6 +395,15 @@ export async function applyVkCanonicalImportPlan(
           const existing =
             existingRows[0] ??
             null;
+
+          if (
+            existing?.visibility ===
+              "PRIVATE"
+          ) {
+            throw new VkPrivateCatalogSlugCollisionError(
+              item.comic.slug,
+            );
+          }
 
           const receiptRows =
             await tx
@@ -502,9 +515,15 @@ export async function applyVkCanonicalImportPlan(
                   ),
                 )
                 .where(
-                  eq(
-                    comics.slug,
-                    item.comic.slug,
+                  and(
+                    eq(
+                      comics.slug,
+                      item.comic.slug,
+                    ),
+                    eq(
+                      comics.visibility,
+                      "SHARED",
+                    ),
                   ),
                 )
                 .returning({

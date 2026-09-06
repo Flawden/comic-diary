@@ -35,6 +35,10 @@ export async function getComics(
 
   const predicates = [
     eq(
+      comics.visibility,
+      "SHARED",
+    ),
+    eq(
       comics.publicationStatus,
       "PUBLISHED",
     ),
@@ -132,9 +136,15 @@ export async function getPublishedCatalogCategories() {
       ),
     )
     .where(
-      eq(
-        comics.publicationStatus,
-        "PUBLISHED",
+      and(
+        eq(
+          comics.visibility,
+          "SHARED",
+        ),
+        eq(
+          comics.publicationStatus,
+          "PUBLISHED",
+        ),
       ),
     )
     .groupBy(

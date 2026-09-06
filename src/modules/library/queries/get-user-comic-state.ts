@@ -1,10 +1,14 @@
 import {
   and,
   eq,
+  or,
 } from "drizzle-orm";
 
 import { db } from "@/db";
-import { userComics } from "@/db/schema";
+import {
+  comics,
+  userComics,
+} from "@/db/schema";
 
 export async function getUserComicState(
   userId: number,
@@ -24,6 +28,13 @@ export async function getUserComicState(
       completedAt: userComics.completedAt,
     })
     .from(userComics)
+    .innerJoin(
+      comics,
+      eq(
+        userComics.comicId,
+        comics.id,
+      ),
+    )
     .where(
       and(
         eq(
@@ -33,6 +44,22 @@ export async function getUserComicState(
         eq(
           userComics.comicId,
           comicId,
+        ),
+        or(
+          eq(
+            comics.visibility,
+            "SHARED",
+          ),
+          and(
+            eq(
+              comics.visibility,
+              "PRIVATE",
+            ),
+            eq(
+              comics.ownerUserId,
+              userId,
+            ),
+          ),
         ),
       ),
     )

@@ -48,13 +48,14 @@ export default async function ComicPage({
 }: ComicPageProps) {
   const { slug } = await params;
 
-  const [
-    comic,
-    currentUser,
-  ] = await Promise.all([
-    getComicBySlug(slug),
-    getCurrentUser(),
-  ]);
+  const currentUser =
+    await getCurrentUser();
+
+  const comic =
+    await getComicBySlug(
+      slug,
+      currentUser?.id ?? null,
+    );
 
   if (!comic) {
     notFound();

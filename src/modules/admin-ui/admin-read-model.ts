@@ -87,6 +87,12 @@ export async function listAdminComics() {
         categories.id,
       ),
     )
+    .where(
+      eq(
+        comics.visibility,
+        "SHARED",
+      ),
+    )
     .orderBy(
       asc(
         comics.title,
@@ -198,6 +204,12 @@ export async function getAdminDashboardCounts() {
         })
         .from(
           comics,
+        )
+        .where(
+          eq(
+            comics.visibility,
+            "SHARED",
+          ),
         ),
 
       db

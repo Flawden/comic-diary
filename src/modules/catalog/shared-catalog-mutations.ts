@@ -1,4 +1,5 @@
 import {
+  and,
   eq,
   sql,
 } from "drizzle-orm";
@@ -490,9 +491,15 @@ export async function updateSharedCatalogComic(
             ),
           )
           .where(
-            eq(
-              comics.slug,
-              comic.slug,
+            and(
+              eq(
+                comics.slug,
+                comic.slug,
+              ),
+              eq(
+                comics.visibility,
+                "SHARED",
+              ),
             ),
           )
           .returning({
