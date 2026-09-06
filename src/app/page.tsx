@@ -126,6 +126,21 @@ export default async function Home({
         item.status === "ON_HOLD",
     ).length;
 
+  const libraryByComicId =
+    new Map(
+      library.map(
+        (item) =>
+          [
+            item.comicId,
+            {
+              status: item.status,
+              currentChapter:
+                item.currentChapter,
+            },
+          ] as const,
+      ),
+    );
+
   let progressPercent: number | null =
     null;
 
@@ -434,6 +449,11 @@ export default async function Home({
                 >
                   <ComicCard
                     comic={comic}
+                    personalState={
+                      libraryByComicId.get(
+                        comic.id,
+                      ) ?? null
+                    }
                   />
                 </li>
               ),

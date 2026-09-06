@@ -2,11 +2,66 @@ import Link from "next/link";
 
 import type { ComicListItem } from "@/modules/comics/queries/get-comics";
 
-type ComicCardProps = {
-  comic: ComicListItem;
+type ComicCardPersonalState = {
+  status:
+    | "WANT_TO_READ"
+    | "READING"
+    | "COMPLETED"
+    | "ON_HOLD";
+  currentChapter: number;
 };
 
-export function ComicCard({ comic }: ComicCardProps) {
+type ComicCardProps = {
+  comic: ComicListItem;
+  personalState?:
+    | ComicCardPersonalState
+    | null;
+};
+
+const statusLabels = {
+  WANT_TO_READ: "Хочу прочитать",
+  READING: "Читаю",
+  COMPLETED: "Прочитано",
+  ON_HOLD: "Отложено",
+} as const;
+
+function getProgressPercent(
+  currentChapter: number,
+  totalChapters: number | null,
+) {
+  if (
+    totalChapters === null ||
+    totalChapters <= 0
+  ) {
+    return null;
+  }
+
+  return Math.min(
+    100,
+    Math.max(
+      0,
+      Math.round(
+        (
+          currentChapter /
+          totalChapters
+        ) * 100,
+      ),
+    ),
+  );
+}
+
+export function ComicCard({
+  comic,
+  personalState = null,
+}: ComicCardProps) {
+  const progressPercent =
+    personalState
+      ? getProgressPercent(
+          personalState.currentChapter,
+          comic.totalChapters,
+        )
+      : null;
+
   return (
     <article className="overflow-hidden rounded-2xl border border-black/5 bg-[var(--surface)] shadow-sm">
       <div className="grid sm:grid-cols-[140px_1fr]">
@@ -47,6 +102,58 @@ export function ComicCard({ comic }: ComicCardProps) {
                 ? "Количество глав пока не указано"
                 : `Глав: ${comic.totalChapters}`}
             </p>
+
+            {personalState ? (
+              <div className="mt-4 rounded-xl bg-[var(--background)] p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="rounded-full bg-[var(--surface)] px-2.5 py-1 font-semibold text-[var(--primary)]">
+                    {
+                      statusLabels[
+                        personalState.status
+                      ]
+                    }
+                  </span>
+
+                  <span className="text-[var(--muted)]">
+                    Глава{" "}
+                    <strong className="text-[var(--foreground)]">
+                      {
+                        personalState.currentChapter
+                      }
+                      {comic.totalChapters ===
+                      null
+                        ? ""
+                        : ` / ${comic.totalChapters}`}
+                    </strong>
+                  </span>
+                </div>
+
+                {progressPercent !==
+                null ? (
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between gap-3 text-xs text-[var(--muted)]">
+                      <span>
+                        Мой прогресс
+                      </span>
+
+                      <span>
+                        {progressPercent}%
+                      </span>
+                    </div>
+
+                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-black/10">
+                      <div
+                        className="h-full rounded-full bg-[var(--primary)]"
+                        style={{
+                          width:
+                            `${progressPercent}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             {comic.description ? (
               <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
