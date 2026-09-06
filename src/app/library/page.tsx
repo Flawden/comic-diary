@@ -7,6 +7,13 @@ import { LibraryStat } from "@/modules/library/components/LibraryStat";
 import { getCurrentUser } from "@/modules/auth/request-identity";
 import { getUserLibrary } from "@/modules/library/queries/get-user-library";
 import { calculateAverageRating } from "@/modules/library/ratings/calculate-average-rating";
+import {
+  compareLibraryViewItems,
+  getLibraryProgressPercent,
+  isLibrarySort,
+  librarySortLabels,
+  type LibrarySort,
+} from "@/modules/library/library-view";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +38,7 @@ type LibraryFilter =
 type LibraryPageProps = {
   searchParams: Promise<{
     status?: string | string[];
+    sort?: string | string[];
   }>;
 };
 
@@ -41,6 +49,35 @@ function isLibraryFilter(
     filterLabels,
     value,
   );
+}
+
+function libraryHref(
+  filter: LibraryFilter,
+  sort: LibrarySort,
+) {
+  const params =
+    new URLSearchParams();
+
+  if (filter !== "ALL") {
+    params.set(
+      "status",
+      filter,
+    );
+  }
+
+  if (sort !== "UPDATED") {
+    params.set(
+      "sort",
+      sort,
+    );
+  }
+
+  const query =
+    params.toString();
+
+  return query === ""
+    ? "/library"
+    : `/library?${query}`;
 }
 
 export default async function LibraryPage({
@@ -78,6 +115,20 @@ export default async function LibraryPage({
     isLibraryFilter(requestedStatus)
       ? requestedStatus
       : "ALL";
+
+  const rawSort =
+    resolvedSearchParams.sort;
+
+  const requestedSort =
+    Array.isArray(rawSort)
+      ? rawSort[0]
+      : rawSort;
+
+  const activeSort: LibrarySort =
+    requestedSort &&
+    isLibrarySort(requestedSort)
+      ? requestedSort
+      : "UPDATED";
 
   const readingCount =
     library.filter(
@@ -124,17 +175,37 @@ export default async function LibraryPage({
             item.status ===
             activeFilter,
         )
-  ).map((item) => ({
-    ...item,
-    averageRating:
-      calculateAverageRating(item),
-    hasPersonalNote:
-      item.personalNote !== null &&
-      item.personalNote.trim() !== "",
-  }));
+  )
+    .map((item) => {
+      const averageRating =
+        calculateAverageRating(
+          item,
+        );
+
+      return {
+        ...item,
+        averageRating,
+        progressPercent:
+          getLibraryProgressPercent(
+            item.currentChapter,
+            item.totalChapters,
+          ),
+        hasPersonalNote:
+          item.personalNote !== null &&
+          item.personalNote.trim() !== "",
+      };
+    })
+    .sort(
+      (left, right) =>
+        compareLibraryViewItems(
+          left,
+          right,
+          activeSort,
+        ),
+    );
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-6 py-10">
+    <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-8 sm:py-10">
       <header>
         <p className="text-sm font-medium text-[var(--primary)]">
           Читательский дневник
@@ -195,9 +266,10 @@ export default async function LibraryPage({
               filter === activeFilter;
 
             const href =
-              filter === "ALL"
-                ? "/library"
-                : `/library?status=${filter}`;
+              libraryHref(
+                filter,
+                activeSort,
+              );
 
             return (
               <Link
@@ -217,6 +289,61 @@ export default async function LibraryPage({
             );
           })}
         </nav>
+      ) : null}
+
+      {library.length > 1 ? (
+        <form
+          method="get"
+          className="mt-4 flex flex-col gap-3 rounded-2xl border border-black/5 bg-[var(--surface)] p-4 sm:flex-row sm:items-end sm:justify-between"
+        >
+          {activeFilter !== "ALL" ? (
+            <input
+              type="hidden"
+              name="status"
+              value={activeFilter}
+            />
+          ) : null}
+
+          <label className="block flex-1">
+            <span className="mb-2 block text-sm font-medium">
+              Сортировка библиотеки
+            </span>
+
+            <select
+              name="sort"
+              defaultValue={
+                activeSort
+              }
+              className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2 text-sm"
+            >
+              {(
+                Object.keys(
+                  librarySortLabels,
+                ) as LibrarySort[]
+              ).map(
+                (sort) => (
+                  <option
+                    key={sort}
+                    value={sort}
+                  >
+                    {
+                      librarySortLabels[
+                        sort
+                      ]
+                    }
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <button
+            type="submit"
+            className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"
+          >
+            Применить
+          </button>
+        </form>
       ) : null}
 
       {library.length === 0 ? (
@@ -247,7 +374,10 @@ export default async function LibraryPage({
           </p>
 
           <Link
-            href="/library"
+            href={libraryHref(
+              "ALL",
+              activeSort,
+            )}
             className="mt-5 inline-flex rounded-xl border border-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary)]"
           >
             Показать все
@@ -320,6 +450,34 @@ export default async function LibraryPage({
                       </strong>
                     </p>
 
+                    {item.progressPercent !==
+                    null ? (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between gap-3 text-xs text-[var(--muted)]">
+                          <span>
+                            Прочитано
+                          </span>
+
+                          <span>
+                            {
+                              item.progressPercent
+                            }
+                            %
+                          </span>
+                        </div>
+
+                        <div className="mt-1 h-2 overflow-hidden rounded-full bg-black/10">
+                          <div
+                            className="h-full rounded-full bg-[var(--primary)]"
+                            style={{
+                              width:
+                                `${item.progressPercent}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+
                     <div className="mt-3 border-t border-black/10 pt-3">
                       <p className="text-sm">
                         Оценка:{" "}
@@ -340,8 +498,12 @@ export default async function LibraryPage({
                       </p>
 
                       {item.hasPersonalNote ? (
-                        <p className="mt-1 text-xs text-[var(--muted)]">
-                          Есть личная заметка
+                        <p className="mt-2 max-h-10 overflow-hidden text-xs leading-5 text-[var(--muted)]">
+                          «
+                          {
+                            item.personalNote
+                          }
+                          »
                         </p>
                       ) : null}
                     </div>
