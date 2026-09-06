@@ -1,16 +1,73 @@
 import Link from "next/link";
 
-import { db } from "@/db";
-import { categories } from "@/db/schema";
 import { ComicCard } from "@/modules/comics/components/ComicCard";
-import { getComics } from "@/modules/comics/queries/get-comics";
+import {
+  getComics,
+  getPublishedCatalogCategories,
+} from "@/modules/comics/queries/get-comics";
+import {
+  catalogSortLabels,
+  isCatalogSort,
+  normalizeCatalogCategorySlug,
+  normalizeCatalogSearch,
+  type CatalogSort,
+} from "@/modules/comics/catalog-view";
 import { LibraryStat } from "@/modules/library/components/LibraryStat";
 import { getCurrentUser } from "@/modules/auth/request-identity";
 import { getUserLibrary } from "@/modules/library/queries/get-user-library";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+type HomePageProps = {
+  searchParams: Promise<{
+    q?: string | string[];
+    category?: string | string[];
+    sort?: string | string[];
+  }>;
+};
+
+function firstQueryValue(
+  value:
+    | string
+    | string[]
+    | undefined,
+) {
+  return Array.isArray(value)
+    ? value[0]
+    : value;
+}
+
+export default async function Home({
+  searchParams,
+}: HomePageProps) {
+  const resolvedSearchParams =
+    await searchParams;
+
+  const search =
+    normalizeCatalogSearch(
+      firstQueryValue(
+        resolvedSearchParams.q,
+      ),
+    );
+
+  const categorySlug =
+    normalizeCatalogCategorySlug(
+      firstQueryValue(
+        resolvedSearchParams.category,
+      ),
+    );
+
+  const rawSort =
+    firstQueryValue(
+      resolvedSearchParams.sort,
+    );
+
+  const sort: CatalogSort =
+    rawSort &&
+    isCatalogSort(rawSort)
+      ? rawSort
+      : "TITLE_ASC";
+
   const currentUser =
     await getCurrentUser();
 
@@ -19,14 +76,23 @@ export default async function Home() {
     comicList,
     library,
   ] = await Promise.all([
-    db.select().from(categories),
-    getComics(),
+    getPublishedCatalogCategories(),
+    getComics({
+      search,
+      categorySlug,
+      sort,
+    }),
     currentUser
       ? getUserLibrary(
           currentUser.id,
         )
       : [],
   ]);
+
+  const hasCatalogFilters =
+    search !== "" ||
+    categorySlug !== null ||
+    sort !== "TITLE_ASC";
 
   const readingNow =
     library.find(
@@ -212,43 +278,163 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mt-10">
-        <h2 className="mb-4 text-xl font-semibold">
-          Каталог
-        </h2>
+      <section
+        id="catalog"
+        className="mt-10"
+      >
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold">
+              Каталог
+            </h2>
+
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              В каталоге показываются только опубликованные комиксы.
+            </p>
+          </div>
+
+          {hasCatalogFilters ? (
+            <Link
+              href="/#catalog"
+              className="text-sm font-semibold text-[var(--primary)]"
+            >
+              Сбросить фильтры
+            </Link>
+          ) : null}
+        </div>
+
+        <form
+          method="get"
+          action="/"
+          className="mt-5 grid gap-3 rounded-2xl border border-black/5 bg-[var(--surface)] p-4 md:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+        >
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium">
+              Поиск по названию
+            </span>
+
+            <input
+              type="search"
+              name="q"
+              defaultValue={search}
+              maxLength={120}
+              placeholder="Например, Берсерк"
+              className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2 text-sm"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium">
+              Категория
+            </span>
+
+            <select
+              name="category"
+              defaultValue={
+                categorySlug ??
+                ""
+              }
+              className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2 text-sm"
+            >
+              <option value="">
+                Все категории
+              </option>
+
+              {categoryList.map(
+                (category) => (
+                  <option
+                    key={category.id}
+                    value={category.slug}
+                  >
+                    {category.name}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium">
+              Сортировка
+            </span>
+
+            <select
+              name="sort"
+              defaultValue={sort}
+              className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2 text-sm"
+            >
+              {(
+                Object.keys(
+                  catalogSortLabels,
+                ) as CatalogSort[]
+              ).map(
+                (value) => (
+                  <option
+                    key={value}
+                    value={value}
+                  >
+                    {
+                      catalogSortLabels[
+                        value
+                      ]
+                    }
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <button
+            type="submit"
+            className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white md:self-end"
+          >
+            Применить
+          </button>
+        </form>
+
+        {hasCatalogFilters ? (
+          <p className="mt-4 text-sm text-[var(--muted)]">
+            Найдено опубликованных комиксов:{" "}
+            <strong>
+              {comicList.length}
+            </strong>
+          </p>
+        ) : null}
 
         {comicList.length === 0 ? (
-          <p className="text-[var(--muted)]">
-            Комиксов пока нет
-          </p>
-        ) : (
-          <ul className="space-y-3">
-            {comicList.map((comic) => (
-              <li key={comic.id}>
-                <ComicCard
-                  comic={comic}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+          <div className="mt-5 rounded-2xl border border-black/5 bg-[var(--surface)] p-6">
+            <h3 className="font-semibold">
+              {hasCatalogFilters
+                ? "Ничего не найдено"
+                : "Опубликованных комиксов пока нет"}
+            </h3>
 
-      <section className="mt-10">
-        <h2 className="mb-4 text-xl font-semibold">
-          Категории
-        </h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              {hasCatalogFilters
+                ? "Среди опубликованных комиксов нет совпадений по выбранным условиям."
+                : "Скрытые и архивные записи не отображаются в публичном каталоге."}
+            </p>
 
-        {categoryList.length === 0 ? (
-          <p className="text-[var(--muted)]">
-            Категорий пока нет
-          </p>
+            {hasCatalogFilters ? (
+              <Link
+                href="/#catalog"
+                className="mt-4 inline-flex rounded-xl border border-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary)]"
+              >
+                Показать весь каталог
+              </Link>
+            ) : null}
+          </div>
         ) : (
-          <ul className="space-y-1">
-            {categoryList.map(
-              (category) => (
-                <li key={category.id}>
-                  {category.name}
+          <ul className="mt-5 grid gap-4 lg:grid-cols-2">
+            {comicList.map(
+              (comic) => (
+                <li
+                  key={comic.id}
+                  className="min-w-0"
+                >
+                  <ComicCard
+                    comic={comic}
+                  />
                 </li>
               ),
             )}
