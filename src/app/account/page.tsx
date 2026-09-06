@@ -12,6 +12,10 @@ import {
   AccountPasswordForm,
 } from "./AccountPasswordForm";
 
+import {
+  AccountProfileForm,
+} from "./AccountProfileForm";
+
 export const dynamic =
   "force-dynamic";
 
@@ -54,8 +58,9 @@ export default async function AccountPage() {
       </h1>
 
       <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
-        Здесь можно проверить данные аккаунта
-        и безопасно изменить пароль.
+        Здесь можно проверить данные аккаунта,
+        изменить отображаемое имя и безопасно
+        изменить пароль.
       </p>
 
       <section className="mt-8 rounded-2xl bg-[var(--surface)] p-6 shadow-sm sm:p-8">
@@ -94,6 +99,24 @@ export default async function AccountPage() {
             </dd>
           </div>
         </dl>
+      </section>
+
+      <section className="mt-6 rounded-2xl bg-[var(--surface)] p-6 shadow-sm sm:p-8">
+        <h2 className="text-lg font-semibold">
+          Профиль
+        </h2>
+
+        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+          Это имя показывается как часть вашего
+          профиля. Email, роль и права аккаунта
+          здесь не изменяются.
+        </p>
+
+        <AccountProfileForm
+          initialDisplayName={
+            user.displayName
+          }
+        />
       </section>
 
       <section className="mt-6 rounded-2xl bg-[var(--surface)] p-6 shadow-sm sm:p-8">
