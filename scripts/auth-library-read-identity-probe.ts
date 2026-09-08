@@ -35,6 +35,12 @@ const comicPage =
     "utf8",
   );
 
+const comicDetailQuery =
+  readFileSync(
+    "src/modules/comics/queries/get-comic-by-slug.ts",
+    "utf8",
+  );
+
 const mutations =
   readFileSync(
     "src/modules/library/mutations/update-user-comic-state.ts",
@@ -111,28 +117,75 @@ assert(
   "Library still depends on DEV_USER_EMAIL",
 );
 
-/*
- * Intentional R6.3B boundary:
- *
- * comic detail and mutation service stay together
- * on their old identity contract until R6.3C.
- */
 assert(
   comicPage.includes(
-    "DEV_USER_EMAIL",
+    "getCurrentUser",
   ),
-  "Comic detail migrated prematurely",
+  "Comic detail does not resolve current user",
 );
 
 assert(
-  mutations.includes(
-    "DEV_USER_EMAIL",
+  comicPage.includes(
+    "currentUser?.id ?? null",
   ),
-  "Mutation service migrated prematurely",
+  "Comic detail does not pass viewer user id",
 );
 
+assert(
+  comicPage.includes(
+    "currentUser.id",
+  ),
+  "Comic detail personal state is not session-user based",
+);
+
+assert(
+  !comicPage.includes(
+    "DEV_USER_EMAIL",
+  ),
+  "Comic detail still depends on DEV_USER_EMAIL",
+);
+
+assert(
+  comicDetailQuery.includes(
+    "viewerUserId: number | null = null",
+  ),
+  "Comic detail query is not viewer-aware",
+);
+
+assert(
+  comicDetailQuery.includes(
+    "comics.ownerUserId",
+  ),
+  "Comic detail query does not bind private owner",
+);
+
+assert(
+  !mutations.includes(
+    "DEV_USER_EMAIL",
+  ),
+  "Mutation service still depends on DEV_USER_EMAIL",
+);
+
+for (
+  const name
+  of [
+    "addComicToUserLibrary",
+    "removeComicFromUserLibrary",
+    "setUserComicStatus",
+    "changeUserComicProgress",
+    "updateUserComicDiary",
+  ]
+) {
+  assert(
+    mutations.includes(
+      `function ${name}(\n  userId: number,`,
+    ),
+    `${name} is not explicit user-id based`,
+  );
+}
+
 console.log(
-  "R6_3B_LIBRARY_READ_IDENTITY_PROBE=PASS",
+  "R6_3C_LIBRARY_READ_IDENTITY_PROBE=PASS",
 );
 
 console.log(
@@ -160,9 +213,13 @@ console.log(
 );
 
 console.log(
-  "COMIC_DETAIL_IDENTITY=DEFERRED_TO_R6_3C",
+  "COMIC_DETAIL_IDENTITY=CURRENT_SESSION_USER",
 );
 
 console.log(
-  "MUTATION_IDENTITY=DEFERRED_TO_R6_3C",
+  "COMIC_DETAIL_PRIVATE_OWNER_BINDING=YES",
+);
+
+console.log(
+  "MUTATION_IDENTITY=CURRENT_SESSION_USER_ID",
 );

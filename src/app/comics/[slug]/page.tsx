@@ -122,6 +122,13 @@ export default async function ComicPage({
                 ? "Количество глав пока не указано"
                 : `Глав: ${comic.totalChapters}`}
             </p>
+
+            {comic.visibility === "PRIVATE" ? (
+              <p className="mt-4 inline-flex rounded-full border border-[var(--primary)]/30 bg-[var(--background)] px-3 py-1 text-xs font-semibold text-[var(--primary)]">
+                Личный тайтл
+              </p>
+            ) : null}
+
             {comic.publicationStatus !== "PUBLISHED" ? (
               <p className="mt-4 inline-flex rounded-full border border-black/10 bg-[var(--background)] px-3 py-1 text-xs font-semibold text-[var(--muted)]">
                 {comic.publicationStatus === "HIDDEN"
@@ -434,30 +441,33 @@ export default async function ComicPage({
                     </button>
                   </form>
 
-                  <form
-                    action="/api/library/reading-state"
-                    method="post"
-                    className="border-t border-black/10 pt-5"
-                  >
-                    <input
-                      type="hidden"
-                      name="comicId"
-                      value={comic.id}
-                    />
-
-                    <input
-                      type="hidden"
-                      name="intent"
-                      value="remove-from-library"
-                    />
-
-                    <button
-                      type="submit"
-                      className="rounded-xl border border-black/15 px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+                  {comic.visibility !==
+                  "PRIVATE" ? (
+                    <form
+                      action="/api/library/reading-state"
+                      method="post"
+                      className="border-t border-black/10 pt-5"
                     >
-                      Удалить из библиотеки
-                    </button>
-                  </form>
+                      <input
+                        type="hidden"
+                        name="comicId"
+                        value={comic.id}
+                      />
+
+                      <input
+                        type="hidden"
+                        name="intent"
+                        value="remove-from-library"
+                      />
+
+                      <button
+                        type="submit"
+                        className="rounded-xl border border-black/15 px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+                      >
+                        Удалить из библиотеки
+                      </button>
+                    </form>
+                  ) : null}
                 </div>
               ) : (
                 <div className="mt-4">
@@ -500,9 +510,50 @@ export default async function ComicPage({
                 rel="noreferrer"
                 className="inline-flex rounded-xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition-opacity hover:opacity-90"
               >
-                Читать в VK
+                {comic.visibility ===
+                "PRIVATE"
+                  ? "Открыть источник"
+                  : "Читать в VK"}
               </a>
             </div>
+
+            {comic.visibility ===
+              "PRIVATE" &&
+            currentUser?.id ===
+              comic.ownerUserId ? (
+              <form
+                action="/api/library/private-titles"
+                method="post"
+                className="mt-6 rounded-xl border border-red-500/20 bg-[var(--background)] p-5"
+              >
+                <input
+                  type="hidden"
+                  name="intent"
+                  value="delete"
+                />
+
+                <input
+                  type="hidden"
+                  name="comicId"
+                  value={comic.id}
+                />
+
+                <h2 className="font-semibold">
+                  Удалить личный тайтл
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                  Тайтл и связанный читательский дневник будут удалены без влияния на общий каталог.
+                </p>
+
+                <button
+                  type="submit"
+                  className="mt-4 rounded-xl border border-red-500/40 px-4 py-2 text-sm font-semibold"
+                >
+                  Удалить личный тайтл
+                </button>
+              </form>
+            ) : null}
           </div>
         </div>
       </article>

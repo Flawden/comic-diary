@@ -176,6 +176,15 @@ export async function removeComicFromUserLibrary(
     comicId,
   );
 
+  if (
+    comic.visibility ===
+    "PRIVATE"
+  ) {
+    throw new Error(
+      "Private titles cannot be removed from the library",
+    );
+  }
+
   await db
     .delete(userComics)
     .where(

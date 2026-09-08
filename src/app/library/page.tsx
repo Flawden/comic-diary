@@ -5,6 +5,7 @@ import {
 
 import { LibraryStat } from "@/modules/library/components/LibraryStat";
 import { getCurrentUser } from "@/modules/auth/request-identity";
+import { hasPrivateCatalogEntitlement } from "@/modules/auth/account-entitlements";
 import { getUserLibrary } from "@/modules/library/queries/get-user-library";
 import { calculateAverageRating } from "@/modules/library/ratings/calculate-average-rating";
 import {
@@ -95,11 +96,15 @@ export default async function LibraryPage({
   const [
     library,
     resolvedSearchParams,
+    canUsePrivateCatalog,
   ] = await Promise.all([
     getUserLibrary(
       currentUser.id,
     ),
     searchParams,
+    hasPrivateCatalogEntitlement(
+      currentUser.id,
+    ),
   ]);
 
   const rawStatus =
@@ -219,6 +224,89 @@ export default async function LibraryPage({
           Комиксы, которые я добавил в личный список чтения.
         </p>
       </header>
+
+      {canUsePrivateCatalog ? (
+        <section className="mt-8 rounded-2xl border border-black/5 bg-[var(--surface)] p-5 shadow-sm sm:p-6">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">
+              PRIVATE_CATALOG
+            </p>
+
+            <h2 className="mt-2 text-xl font-bold">
+              Добавить личный тайтл
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              Личный тайтл видите только вы. Он не попадает в общий каталог и использует обычные статусы, прогресс, оценки и заметки.
+            </p>
+          </div>
+
+          <form
+            action="/api/library/private-titles"
+            method="post"
+            className="mt-5 grid gap-4 sm:grid-cols-2"
+          >
+            <input
+              type="hidden"
+              name="intent"
+              value="create"
+            />
+
+            <label className="block sm:col-span-2">
+              <span className="mb-1 block text-sm font-medium">
+                Название
+              </span>
+
+              <input
+                required
+                name="title"
+                maxLength={255}
+                className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2"
+                placeholder="Название комикса"
+              />
+            </label>
+
+            <label className="block sm:col-span-2">
+              <span className="mb-1 block text-sm font-medium">
+                Ссылка для чтения
+              </span>
+
+              <input
+                required
+                type="url"
+                name="sourceUrl"
+                maxLength={2048}
+                className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2"
+                placeholder="https://..."
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium">
+                Количество глав
+              </span>
+
+              <input
+                type="number"
+                name="totalChapters"
+                min={1}
+                step={1}
+                className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2"
+                placeholder="Необязательно"
+              />
+            </label>
+
+            <div className="flex items-end">
+              <button
+                type="submit"
+                className="w-full rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"
+              >
+                Создать личный тайтл
+              </button>
+            </div>
+          </form>
+        </section>
+      ) : null}
 
       <section className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-5">
         <LibraryStat
@@ -416,8 +504,11 @@ export default async function LibraryPage({
 
                 <div className="p-5">
                   <p className="text-xs font-medium text-[var(--primary)]">
-                    {item.categoryName ??
-                      "Без категории"}
+                    {item.visibility ===
+                    "PRIVATE"
+                      ? "Личный тайтл"
+                      : item.categoryName ??
+                        "Без категории"}
                   </p>
 
                   <Link
