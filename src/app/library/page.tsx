@@ -229,7 +229,7 @@ export default async function LibraryPage({
         <section className="mt-8 rounded-2xl border border-black/5 bg-[var(--surface)] p-5 shadow-sm sm:p-6">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">
-              PRIVATE_CATALOG
+              Личный каталог
             </p>
 
             <h2 className="mt-2 text-xl font-bold">

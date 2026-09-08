@@ -702,7 +702,7 @@ and shared-catalog editing area.
 
 # R8 — User Account, Reading Diary & Catalog UX
 
-Status: PLANNED
+Status: IN PROGRESS
 
 Goal:
 
@@ -710,6 +710,8 @@ Finish the authenticated reader experience and evolve Comic Diary from a simple
 progress tracker into a durable history of reading and changing opinion.
 
 ## R8.1 — Account & Catalog UX
+
+Status: COMPLETE
 
 - account/profile page;
 - display-name management;
@@ -724,6 +726,8 @@ progress tracker into a durable history of reading and changing opinion.
 - optionally expose personal reading state directly in catalog cards.
 
 ## R8.2 — Private Personal Catalog
+
+Status: COMPLETE
 
 Product decision:
 
@@ -753,49 +757,131 @@ The likely data direction is to extend the canonical comic model with explicit
 visibility/ownership rather than duplicate the entire comic and `user_comics`
 domain, but the exact migration must be designed at implementation time.
 
-## R8.3 — Next Chapter / Release Tracking
+## R8.3 — Canonical Chapters & Release Tracking
 
 Goal:
 
-Help the reader remember when it is worth returning to a title.
+Replace the free-running integer chapter counter with explicit released chapter
+records, make reader progress impossible beyond actually available chapters, and
+give EDITOR / ADMIN a practical workflow for maintaining new releases.
 
-Planned behavior:
+Product decisions:
 
-- allow a reader to record an expected next-chapter date;
-- treat the date as personal reading data initially;
-- show upcoming releases;
-- show releases expected today;
-- show titles whose expected release date has passed as "possibly released";
-- allow updating or clearing the expectation after returning to the title;
+- a chapter is a first-class child of a comic, with its own stable internal ID;
+- the visible chapter number/code is **text**, not a decimal number;
+- labels such as `1`, `1.01`, `1.01а`, `1.01б`, `Extra`, `Спецвыпуск` and other
+  source-specific forms must be stored without trying to parse them numerically;
+- chapter ordering is controlled by a separate internal integer sequence / sort
+  position and must never be inferred from the visible label;
+- chapter title is optional;
+- chapter-specific source URL is optional and may fall back to the comic source;
+- release/publication timestamp is optional when the exact date is unknown;
+- inserting or reordering chapters must not invalidate existing reader state,
+  because personal state binds to stable chapter IDs rather than display labels;
+- once the chapter registry is authoritative, `comics.totalChapters` is no longer
+  the reader's free-form progress ceiling; available/published chapter records are
+  the source of truth for how far a reader can progress;
+- the existing integer `user_comics.currentChapter` is transitional compatibility
+  state and should be replaced or derived from chapter-backed reading state;
+- a reader cannot mark chapter 12 or 211 as read when only 11 available chapter
+  records exist;
+- chapter rows should be shared by SHARED and PRIVATE titles rather than creating
+  incompatible chapter subsystems.
+
+Shared-catalog administration:
+
+- preserve the existing `/admin/comics` manual comic create/edit workflow;
+- after creating or opening a shared comic, provide a chapter manager in the admin
+  area;
+- EDITOR and ADMIN may add, edit, reorder and archive shared chapters through the
+  explicit shared-catalog authorization boundary;
+- avoid direct role-name checks in chapter mutation services; reuse explicit
+  permission/authorization policy;
+- prefer archive/hide over destructive deletion after a chapter has user reading
+  state or ratings;
+- private-title chapter management is owner-scoped and must never be granted by
+  EDITOR shared-catalog authority.
+
+Administrative audit requirements:
+
+- record chapter create, metadata edit, reorder and archive actions;
+- record the authenticated actor, action, comic target, chapter target and time;
+- preserve enough before/after detail to understand what changed;
+- extend the admin audit UI so ADMIN can conveniently filter/search by actor,
+  action, comic/chapter target and time;
+- make editorial chapter actions distinguishable from ADMIN account/security
+  actions;
+- do not silently overwrite chapter history in a way that makes responsibility
+  impossible to reconstruct.
+
+Release tracking:
+
+- distinguish an **actual released chapter record** from an **expected future
+  release date**; an expectation is never proof that a chapter was released;
+- retain the useful personal `next_chapter_expected_at` idea as an optional reader
+  reminder after the canonical chapter registry exists;
+- show titles with unread released chapters from the difference between chapter
+  records and the authenticated reader's chapter-backed reading state;
+- later allow editor-managed expected release metadata where a source/translation
+  provides reliable scheduling information;
 - account for different sources/translations having different release schedules;
-- later consider optional notifications;
-- later consider shared/editor-managed release metadata separately from personal overrides.
+- later consider optional notifications on top of durable release facts.
 
 Initial data direction:
 
-- personal `next_chapter_expected_at` associated with the user's reading state.
+- `comic_chapters`: stable ID, comic ID, display label/code, sort position, optional
+  title, optional source URL, optional released-at timestamp, publication state,
+  created/updated timestamps;
+- `user_chapter_state`: user ID + chapter ID with read state/timestamp;
+- chapter display label is never used as the relational key;
+- ordering constraints operate on the internal sort position, not on parsed label
+  semantics;
+- R8.4 extends the same chapter identity for ratings instead of inventing another
+  chapter-number key.
+
+Acceptance examples:
+
+- chapter labels `1`, `1.01`, `1.01а`, `1.01б`, `2` can be displayed exactly as
+  entered while ordered by explicit sort position;
+- a comic with 11 published chapters cannot record reader progress at chapter 12
+  or 211;
+- EDITOR/ADMIN can add a newly released shared chapter from the admin UI;
+- the new chapter becomes available to readers without rewriting existing reading
+  history;
+- every staff chapter mutation is visible through the administrative audit log;
+- another user's PRIVATE chapters remain invisible and immutable.
 
 ## R8.4 — Per-Chapter Ratings
 
 Goal:
 
-Capture how a title feels while it is being read instead of preserving only one
-final score.
+Capture how a title feels chapter by chapter using the canonical chapter records
+from R8.3 instead of a fragile numeric chapter counter.
 
 Planned behavior:
 
-- allow the reader to rate individual chapters;
-- associate every chapter rating with user, comic and chapter number;
-- keep the title-level/current overall opinion separate from the chapter rating;
+- allow the reader to rate individual existing chapter records;
+- associate every chapter rating with user + stable `chapter_id`, never with a
+  parsed/display chapter number;
+- allow chapters with or without an optional human-readable title;
+- keep the title-level/current overall opinion separate from chapter ratings;
 - do not silently derive one metric from the other;
-- define the rating scale at implementation time rather than coupling the schema prematurely;
+- do not allow ratings for nonexistent/future chapter identifiers;
+- preserve ratings when a chapter display label or title is edited;
+- if a chapter is archived after readers rated it, preserve the personal history
+  and show the archived state rather than orphaning or silently deleting ratings;
+- define the exact rating scale/fields at implementation time rather than coupling
+  the schema prematurely;
 - preserve timestamps needed for chronological analysis;
-- if chapter ratings become editable, preserve enough history that meaningful diary chronology is not silently destroyed.
+- if chapter ratings become editable, preserve enough history that meaningful
+  diary chronology is not silently destroyed.
 
-Candidate data model:
+Candidate data direction:
 
-- one current `user_chapter_rating` per user / comic / chapter;
-- optional rating-event history when edits need to be preserved.
+- extend `user_chapter_state` with current rating data or use a tightly-related
+  `user_chapter_rating` keyed by user + canonical chapter ID;
+- optional rating-event history when edits need to be preserved;
+- later analytics aggregate by canonical chapter ID / sequence, not display label.
 
 ## R8.5 — Reading Timeline & Opinion History
 
