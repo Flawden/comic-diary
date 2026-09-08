@@ -503,6 +503,104 @@ export default async function ComicPage({
               )}
             </section>
 
+            {comic.visibility ===
+              "PRIVATE" &&
+            currentUser?.id ===
+              comic.ownerUserId ? (
+              <section className="mt-8 rounded-xl border border-black/10 bg-[var(--background)] p-5">
+                <h2 className="font-semibold">
+                  Метаданные личного тайтла
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                  Название, ссылка и количество глав относятся только к вашему личному тайтлу. Его внутренний идентификатор не меняется.
+                </p>
+
+                <form
+                  action="/api/library/private-titles"
+                  method="post"
+                  className="mt-4 grid gap-4 sm:grid-cols-2"
+                >
+                  <input
+                    type="hidden"
+                    name="intent"
+                    value="edit"
+                  />
+
+                  <input
+                    type="hidden"
+                    name="comicId"
+                    value={comic.id}
+                  />
+
+                  <label className="block sm:col-span-2">
+                    <span className="mb-1 block text-sm font-medium">
+                      Название
+                    </span>
+
+                    <input
+                      required
+                      name="title"
+                      maxLength={255}
+                      defaultValue={comic.title}
+                      className="w-full rounded-xl border border-black/10 bg-[var(--surface)] px-3 py-2"
+                    />
+                  </label>
+
+                  <label className="block sm:col-span-2">
+                    <span className="mb-1 block text-sm font-medium">
+                      Ссылка для чтения
+                    </span>
+
+                    <input
+                      required
+                      type="url"
+                      name="sourceUrl"
+                      maxLength={2048}
+                      defaultValue={comic.sourceUrl}
+                      className="w-full rounded-xl border border-black/10 bg-[var(--surface)] px-3 py-2"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-medium">
+                      Количество глав
+                    </span>
+
+                    <input
+                      type="number"
+                      name="totalChapters"
+                      min={Math.max(
+                        1,
+                        readingState?.currentChapter ??
+                          0,
+                      )}
+                      step={1}
+                      defaultValue={
+                        comic.totalChapters ??
+                        ""
+                      }
+                      className="w-full rounded-xl border border-black/10 bg-[var(--surface)] px-3 py-2"
+                      placeholder="Неизвестно"
+                    />
+
+                    <span className="mt-1 block text-xs leading-5 text-[var(--muted)]">
+                      Можно оставить пустым. Значение не может быть меньше уже сохранённого прогресса: {readingState?.currentChapter ?? 0}.
+                    </span>
+                  </label>
+
+                  <div className="flex items-end">
+                    <button
+                      type="submit"
+                      className="w-full rounded-xl border border-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary)]"
+                    >
+                      Сохранить метаданные
+                    </button>
+                  </div>
+                </form>
+              </section>
+            ) : null}
+
             <div className="mt-8">
               <a
                 href={comic.sourceUrl}

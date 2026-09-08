@@ -15,6 +15,7 @@ import {
   createOwnPrivateTitle,
   deleteOwnPrivateTitle,
   PrivateTitleMutationError,
+  updateOwnPrivateTitleMetadata,
 } from "@/modules/private-catalog/private-title-mutations";
 
 export const dynamic =
@@ -43,6 +44,54 @@ function jsonError(
       },
     },
   );
+}
+
+function readMetadataInput(
+  formData: URLSearchParams,
+) {
+  const title =
+    formData.get(
+      "title",
+    );
+
+  const sourceUrl =
+    formData.get(
+      "sourceUrl",
+    );
+
+  const totalChaptersRaw =
+    formData.get(
+      "totalChapters",
+    );
+
+  if (
+    title === null ||
+    sourceUrl === null
+  ) {
+    return null;
+  }
+
+  let totalChapters:
+    number | null =
+    null;
+
+  if (
+    totalChaptersRaw !==
+      null &&
+    totalChaptersRaw.trim() !==
+      ""
+  ) {
+    totalChapters =
+      Number(
+        totalChaptersRaw,
+      );
+  }
+
+  return {
+    title,
+    sourceUrl,
+    totalChapters,
+  };
 }
 
 export async function POST(
@@ -144,55 +193,22 @@ export async function POST(
       intent ===
       "create"
     ) {
-      const title =
-        formData.get(
-          "title",
+      const input =
+        readMetadataInput(
+          formData,
         );
 
-      const sourceUrl =
-        formData.get(
-          "sourceUrl",
-        );
-
-      const totalChaptersRaw =
-        formData.get(
-          "totalChapters",
-        );
-
-      if (
-        title === null ||
-        sourceUrl === null
-      ) {
+      if (!input) {
         return jsonError(
           "invalid_request",
           400,
         );
       }
 
-      let totalChapters:
-        number | null =
-        null;
-
-      if (
-        totalChaptersRaw !==
-          null &&
-        totalChaptersRaw.trim() !==
-          ""
-      ) {
-        totalChapters =
-          Number(
-            totalChaptersRaw,
-          );
-      }
-
       const created =
         await createOwnPrivateTitle(
           user.id,
-          {
-            title,
-            sourceUrl,
-            totalChapters,
-          },
+          input,
         );
 
       return new Response(
@@ -205,6 +221,52 @@ export async function POST(
             Location:
               `/comics/${encodeURIComponent(
                 created.slug,
+              )}`,
+          },
+        },
+      );
+    }
+
+    if (
+      intent ===
+      "edit"
+    ) {
+      const comicId =
+        Number(
+          formData.get(
+            "comicId",
+          ),
+        );
+
+      const input =
+        readMetadataInput(
+          formData,
+        );
+
+      if (!input) {
+        return jsonError(
+          "invalid_request",
+          400,
+        );
+      }
+
+      const updated =
+        await updateOwnPrivateTitleMetadata(
+          user.id,
+          comicId,
+          input,
+        );
+
+      return new Response(
+        null,
+        {
+          status:
+            303,
+
+          headers: {
+            Location:
+              `/comics/${encodeURIComponent(
+                updated.slug,
               )}`,
           },
         },

@@ -17,17 +17,21 @@ import {
   userEntitlements,
 } from "@/db/schema";
 
-export type PrivateTitleCreateInput = {
+export type PrivateTitleMetadataInput = {
   title: string;
   sourceUrl: string;
   totalChapters: number | null;
 };
+
+export type PrivateTitleCreateInput =
+  PrivateTitleMetadataInput;
 
 export type PrivateTitleMutationErrorKind =
   | "entitlement-required"
   | "invalid-title"
   | "invalid-source-url"
   | "invalid-total-chapters"
+  | "total-chapters-below-progress"
   | "private-title-not-found";
 
 export class PrivateTitleMutationError
@@ -46,7 +50,7 @@ export class PrivateTitleMutationError
 }
 
 function normalizePrivateTitle(
-  input: PrivateTitleCreateInput,
+  input: PrivateTitleMetadataInput,
 ) {
   const title =
     input.title.trim();
@@ -242,6 +246,152 @@ export async function createOwnPrivateTitle(
         });
 
       return created;
+    },
+  );
+}
+
+export async function updateOwnPrivateTitleMetadata(
+  userId: number,
+  comicId: number,
+  input: PrivateTitleMetadataInput,
+) {
+  if (
+    !Number.isInteger(userId) ||
+    userId <= 0 ||
+    !Number.isInteger(comicId) ||
+    comicId <= 0
+  ) {
+    throw new PrivateTitleMutationError(
+      "private-title-not-found",
+    );
+  }
+
+  const normalized =
+    normalizePrivateTitle(
+      input,
+    );
+
+  return db.transaction(
+    async (
+      tx,
+    ) => {
+      const rows =
+        await tx
+          .select({
+            id:
+              comics.id,
+
+            slug:
+              comics.slug,
+
+            currentChapter:
+              userComics.currentChapter,
+          })
+          .from(
+            comics,
+          )
+          .innerJoin(
+            userComics,
+            and(
+              eq(
+                userComics.comicId,
+                comics.id,
+              ),
+              eq(
+                userComics.userId,
+                userId,
+              ),
+            ),
+          )
+          .where(
+            and(
+              eq(
+                comics.id,
+                comicId,
+              ),
+              eq(
+                comics.visibility,
+                "PRIVATE",
+              ),
+              eq(
+                comics.ownerUserId,
+                userId,
+              ),
+            ),
+          )
+          .limit(
+            1,
+          );
+
+      const current =
+        rows[0];
+
+      if (!current) {
+        throw new PrivateTitleMutationError(
+          "private-title-not-found",
+        );
+      }
+
+      if (
+        normalized.totalChapters !==
+          null &&
+        normalized.totalChapters <
+          current.currentChapter
+      ) {
+        throw new PrivateTitleMutationError(
+          "total-chapters-below-progress",
+        );
+      }
+
+      const updated =
+        await tx
+          .update(
+            comics,
+          )
+          .set({
+            title:
+              normalized.title,
+
+            sourceUrl:
+              normalized.sourceUrl,
+
+            totalChapters:
+              normalized.totalChapters,
+
+            updatedAt:
+              new Date(),
+          })
+          .where(
+            and(
+              eq(
+                comics.id,
+                current.id,
+              ),
+              eq(
+                comics.visibility,
+                "PRIVATE",
+              ),
+              eq(
+                comics.ownerUserId,
+                userId,
+              ),
+            ),
+          )
+          .returning({
+            slug:
+              comics.slug,
+          });
+
+      const result =
+        updated[0];
+
+      if (!result) {
+        throw new PrivateTitleMutationError(
+          "private-title-not-found",
+        );
+      }
+
+      return result;
     },
   );
 }
