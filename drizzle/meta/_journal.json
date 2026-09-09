@@ -92,6 +92,20 @@
       "when": 1788711600000,
       "tag": "0012_r8_2_private_catalog_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788860411064,
+      "tag": "0013_marvelous_masked_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1788871025275,
+      "tag": "0014_thick_franklin_storm",
+      "breakpoints": true
     }
   ]
 }

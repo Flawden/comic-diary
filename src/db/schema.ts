@@ -133,6 +133,16 @@ export const categories = pgTable("categories", {
     .notNull(),
 });
 
+
+
+export const chapterStatus = pgEnum(
+  "chapter_status",
+  [
+    "SCHEDULED",
+    "RELEASED",
+    "ARCHIVED",
+  ],
+);
 export const comics = pgTable(
   "comics",
   {
@@ -208,6 +218,89 @@ export const comics = pgTable(
         OR
         (${table.visibility} = 'PRIVATE' AND ${table.ownerUserId} IS NOT NULL)
       )`,
+    ),
+  ],
+);
+
+
+
+export const chapters = pgTable(
+  "chapters",
+  {
+    id: serial("id").primaryKey(),
+
+    comicId: integer("comic_id")
+      .notNull()
+      .references(
+        () => comics.id,
+        { onDelete: "cascade" },
+      ),
+
+    displayCode: varchar(
+      "display_code",
+      { length: 160 },
+    ).notNull(),
+
+    title: varchar(
+      "title",
+      { length: 255 },
+    ),
+
+    sortOrder: integer(
+      "sort_order",
+    ).notNull(),
+
+    status: chapterStatus(
+      "status",
+    )
+      .default("SCHEDULED")
+      .notNull(),
+
+    releasedAt: timestamp(
+      "released_at",
+      { withTimezone: true },
+    ),
+
+    createdAt: timestamp(
+      "created_at",
+      { withTimezone: true },
+    )
+      .defaultNow()
+      .notNull(),
+
+    updatedAt: timestamp(
+      "updated_at",
+      { withTimezone: true },
+    )
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    unique(
+      "chapters_comic_display_code_unique",
+    ).on(
+      table.comicId,
+      table.displayCode,
+    ),
+
+    index(
+      "chapters_comic_id_idx",
+    ).on(
+      table.comicId,
+    ),
+
+    index(
+      "chapters_comic_sort_order_idx",
+    ).on(
+      table.comicId,
+      table.sortOrder,
+    ),
+
+    index(
+      "chapters_status_released_idx",
+    ).on(
+      table.status,
+      table.releasedAt,
     ),
   ],
 );
