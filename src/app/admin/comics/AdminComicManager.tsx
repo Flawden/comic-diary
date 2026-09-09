@@ -587,6 +587,11 @@ export function AdminComicManager({
   } | null>(null);
 
   const [
+    archiveConfirmChapterId,
+    setArchiveConfirmChapterId,
+  ] = useState<number | null>(null);
+
+  const [
     message,
     setMessage,
   ] = useState<
@@ -747,6 +752,80 @@ export function AdminComicManager({
       setError(
         "Не удалось связаться с сервером.",
       );
+      setBusyKey(null);
+    }
+  }
+
+  async function archiveChapter(
+    comic: AdminComic,
+    chapterId: number,
+  ) {
+    if (busyKey) {
+      return;
+    }
+
+    const key =
+      `chapter-archive:${chapterId}`;
+
+    setBusyKey(key);
+    setMessage(null);
+    setError(null);
+
+    try {
+      const response =
+        await fetch(
+          `/api/admin/catalog/comics/${comic.id}/chapters`,
+          {
+            method:
+              "PATCH",
+
+            credentials:
+              "same-origin",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                intent:
+                  "archive",
+
+                chapterId,
+              }),
+          },
+        );
+
+      const body =
+        await response
+          .json()
+          .catch(
+            () => ({}),
+          );
+
+      if (!response.ok) {
+        setError(
+          "Не удалось архивировать главу.",
+        );
+
+        setBusyKey(null);
+        return;
+      }
+
+      setArchiveConfirmChapterId(null);
+
+      setMessage(
+        "Глава отправлена в архив.",
+      );
+
+      setBusyKey(null);
+      router.refresh();
+    } catch {
+      setError(
+        "Не удалось связаться с сервером.",
+      );
+
       setBusyKey(null);
     }
   }
@@ -1502,6 +1581,51 @@ export function AdminComicManager({
                                       >
                                         Редактировать
                                       </button>
+
+                                      {archiveConfirmChapterId ===
+                                      chapter.id ? (
+                                        <>
+                                          <button
+                                            type="button"
+                                            disabled={
+                                              busyKey !== null
+                                            }
+                                            onClick={() =>
+                                              void archiveChapter(
+                                                comic,
+                                                chapter.id,
+                                              )
+                                            }
+                                            className="text-sm font-semibold text-red-700"
+                                          >
+                                            Да, архивировать
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setArchiveConfirmChapterId(
+                                                null,
+                                              )
+                                            }
+                                            className="text-sm"
+                                          >
+                                            Отмена
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setArchiveConfirmChapterId(
+                                              chapter.id,
+                                            )
+                                          }
+                                          className="text-sm font-semibold text-red-700"
+                                        >
+                                          Архивировать
+                                        </button>
+                                      )}
                                     </div>
                                   </>
                                 )}
