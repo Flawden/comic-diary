@@ -2,6 +2,7 @@ import {
   asc,
   desc,
   eq,
+  inArray,
 } from "drizzle-orm";
 
 import {
@@ -11,6 +12,7 @@ import {
 import {
   administrativeAuditEvents,
   categories,
+  chapters,
   comics,
   userEntitlements,
   users,
@@ -46,7 +48,8 @@ export async function listAdminCategories() {
  * must not hide records from catalog administration.
  */
 export async function listAdminComics() {
-  return db
+  const comicRows =
+    await db
     .select({
       id:
         comics.id,
@@ -98,11 +101,118 @@ export async function listAdminComics() {
         comics.title,
       ),
     );
+
+  const chapterRows =
+    await getAdminComicChaptersByComicIds(
+      comicRows.map(
+        (comic) => comic.id,
+      ),
+    );
+
+  const chaptersByComic =
+    new Map();
+
+  for (const chapter of chapterRows) {
+    const current =
+      chaptersByComic.get(
+        chapter.comicId,
+      ) ?? [];
+
+    current.push(
+      chapter,
+    );
+
+    chaptersByComic.set(
+      chapter.comicId,
+      current,
+    );
+  }
+
+  return comicRows.map(
+    (comic) => ({
+      ...comic,
+
+      chapters:
+        chaptersByComic.get(
+          comic.id,
+        ) ?? [],
+    }),
+  );
 }
 
 /**
  * Never exposes password hashes or session token digests.
  */
+
+
+/**
+ * Admin chapter read model deliberately exposes
+ * every chapter state.
+ *
+ * Unlike public chapter reads, administration needs
+ * visibility into scheduled and archived records.
+ */
+export async function getAdminComicChaptersByComicIds(
+  comicIds: number[],
+) {
+  if (comicIds.length === 0) {
+    return [];
+  }
+
+  return db
+    .select({
+      id:
+        chapters.id,
+
+      comicId:
+        chapters.comicId,
+
+      displayCode:
+        chapters.displayCode,
+
+      title:
+        chapters.title,
+
+      sourceUrl:
+        chapters.sourceUrl,
+
+      sortOrder:
+        chapters.sortOrder,
+
+      status:
+        chapters.status,
+
+      releasedAt:
+        chapters.releasedAt,
+
+      updatedAt:
+        chapters.updatedAt,
+    })
+    .from(
+      chapters,
+    )
+    .where(
+      inArray(
+        chapters.comicId,
+        comicIds,
+      ),
+    )
+    .orderBy(
+      asc(
+        chapters.comicId,
+      ),
+      asc(
+        chapters.sortOrder,
+      ),
+      asc(
+        chapters.id,
+      ),
+    );
+}
+
+
+
+
 export async function listAdminUsers() {
   const [
     userRows,

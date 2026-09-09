@@ -20,6 +20,20 @@ type PublicationStatus =
   | "HIDDEN"
   | "ARCHIVED";
 
+type AdminChapter = {
+  id: number;
+  displayCode: string;
+  title: string | null;
+  sourceUrl: string | null;
+  sortOrder: number;
+  status:
+    | "SCHEDULED"
+    | "RELEASED"
+    | "ARCHIVED";
+  releasedAt: string | null;
+  updatedAt: string;
+};
+
 type AdminComic = {
   id: number;
   slug: string;
@@ -36,6 +50,7 @@ type AdminComic = {
   categorySlug: string | null;
   categoryName: string | null;
   updatedAt: string;
+  chapters: AdminChapter[];
 };
 
 type Props = {
@@ -775,6 +790,40 @@ export function AdminComicManager({
                         Выберите существующую категорию перед сохранением.
                       </p>
                     ) : null}
+
+                    <section className="mt-6 rounded-xl border border-black/5 bg-[var(--background)] p-4">
+                      <h4 className="font-semibold">
+                        Главы
+                      </h4>
+
+                      {comic.chapters.length > 0 ? (
+                        <ul className="mt-3 space-y-2">
+                          {comic.chapters.map(
+                            (chapter) => (
+                              <li
+                                key={chapter.id}
+                                className="rounded-lg border border-black/5 bg-[var(--surface)] p-3"
+                              >
+                                <div className="font-medium">
+                                  {chapter.displayCode}
+                                  {chapter.title
+                                    ? ` — ${chapter.title}`
+                                    : ""}
+                                </div>
+
+                                <div className="mt-1 text-sm text-[var(--muted)]">
+                                  {chapter.status}
+                                </div>
+                              </li>
+                            ),
+                          )}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-sm text-[var(--muted)]">
+                          Главы пока не добавлены.
+                        </p>
+                      )}
+                    </section>
 
                     <div className="mt-5 flex flex-wrap items-center gap-4">
                       <button
