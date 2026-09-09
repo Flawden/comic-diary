@@ -953,6 +953,9 @@ export function AdminComicManager({
 
             body:
               JSON.stringify({
+                intent:
+                  "update",
+
                 chapterId,
 
                 displayCode:
