@@ -20,6 +20,10 @@ type PublicationStatus =
   | "HIDDEN"
   | "ARCHIVED";
 
+type ChapterCreateStatus =
+  | "SCHEDULED"
+  | "RELEASED";
+
 type AdminChapter = {
   id: number;
   displayCode: string;
@@ -72,6 +76,14 @@ const publicationStatusLabels: Record<
   PUBLISHED: "Опубликован",
   HIDDEN: "Скрыт",
   ARCHIVED: "Архив",
+};
+
+const chapterCreateStatusLabels: Record<
+  ChapterCreateStatus,
+  string
+> = {
+  SCHEDULED: "Запланирована",
+  RELEASED: "Опубликована сейчас",
 };
 
 function nullableText(
@@ -129,6 +141,75 @@ function errorMessage(
 
     default:
       return "Не удалось сохранить комикс.";
+  }
+}
+
+function chapterErrorMessage(
+  kind: string | null,
+): string {
+  switch (kind) {
+    case "chapter-display-code-conflict":
+      return "Глава с таким кодом уже существует.";
+
+    case "invalid-chapter":
+    case "invalid-chapter-request":
+      return "Проверьте поля главы: данные не прошли валидацию.";
+
+    case "comic-not-found":
+      return "Комикс больше не найден. Обновите страницу.";
+
+    case "origin-not-allowed":
+      return "Запрос отклонён политикой same-origin.";
+
+    case "forbidden":
+      return "Недостаточно прав для изменения каталога.";
+
+    case "unauthorized":
+      return "Сессия закончилась. Войдите снова.";
+
+    default:
+      return "Не удалось добавить главу.";
+  }
+}
+
+function nextChapterSortOrder(
+  comic: AdminComic,
+): number {
+  if (
+    comic.chapters.length ===
+    0
+  ) {
+    return 1;
+  }
+
+  return (
+    Math.max(
+      ...comic.chapters.map(
+        (chapter) =>
+          chapter.sortOrder,
+      ),
+    ) + 1
+  );
+}
+
+function setFormControlValue(
+  form: HTMLFormElement,
+  name: string,
+  value: string,
+) {
+  const control =
+    form.elements.namedItem(
+      name,
+    );
+
+  if (
+    control instanceof
+      HTMLInputElement ||
+    control instanceof
+      HTMLSelectElement
+  ) {
+    control.value =
+      value;
   }
 }
 
@@ -648,6 +729,223 @@ export function AdminComicManager({
     }
   }
 
+  async function createChapter(
+    comic: AdminComic,
+    form: HTMLFormElement,
+  ) {
+    const key =
+      `chapter-create:${comic.id}`;
+
+    if (busyKey) {
+      return;
+    }
+
+    setBusyKey(
+      key,
+    );
+    setMessage(null);
+    setError(null);
+
+    const data =
+      new FormData(
+        form,
+      );
+
+    const displayCode =
+      textValue(
+        data,
+        "chapterDisplayCode",
+      );
+
+    const title =
+      nullableText(
+        data.get(
+          "chapterTitle",
+        ),
+      );
+
+    const sourceUrl =
+      nullableText(
+        data.get(
+          "chapterSourceUrl",
+        ),
+      );
+
+    const rawSortOrder =
+      textValue(
+        data,
+        "chapterSortOrder",
+      );
+
+    const statusRaw =
+      textValue(
+        data,
+        "chapterStatus",
+      );
+
+    const sortOrder =
+      Number(
+        rawSortOrder,
+      );
+
+    const status:
+      ChapterCreateStatus | null =
+      statusRaw ===
+        "SCHEDULED" ||
+      statusRaw ===
+        "RELEASED"
+        ? statusRaw
+        : null;
+
+    if (!displayCode) {
+      setError(
+        "Код главы обязателен.",
+      );
+      setBusyKey(null);
+      return;
+    }
+
+    if (
+      !Number.isSafeInteger(
+        sortOrder,
+      ) ||
+      sortOrder < 0
+    ) {
+      setError(
+        "Порядок главы должен быть целым неотрицательным числом.",
+      );
+      setBusyKey(null);
+      return;
+    }
+
+    if (!status) {
+      setError(
+        "Выберите корректный статус главы.",
+      );
+      setBusyKey(null);
+      return;
+    }
+
+    const payload = {
+      displayCode,
+      title,
+      sourceUrl,
+      sortOrder,
+      status,
+
+      releasedAt:
+        status ===
+        "RELEASED"
+          ? new Date()
+              .toISOString()
+          : null,
+    };
+
+    try {
+      const response =
+        await fetch(
+          `/api/admin/catalog/comics/${comic.id}/chapters`,
+          {
+            method:
+              "POST",
+
+            credentials:
+              "same-origin",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                payload,
+              ),
+          },
+        );
+
+      const body =
+        await response
+          .json()
+          .catch(
+            () =>
+              ({}) as ApiEnvelope,
+          ) as ApiEnvelope;
+
+      if (
+        response.status ===
+        401
+      ) {
+        router.replace(
+          "/login?next=%2Fadmin%2Fcomics",
+        );
+        router.refresh();
+        return;
+      }
+
+      if (!response.ok) {
+        setError(
+          chapterErrorMessage(
+            apiErrorKind(
+              body,
+            ),
+          ),
+        );
+        setBusyKey(null);
+        return;
+      }
+
+      setFormControlValue(
+        form,
+        "chapterDisplayCode",
+        "",
+      );
+
+      setFormControlValue(
+        form,
+        "chapterTitle",
+        "",
+      );
+
+      setFormControlValue(
+        form,
+        "chapterSourceUrl",
+        "",
+      );
+
+      setFormControlValue(
+        form,
+        "chapterSortOrder",
+        String(
+          Math.max(
+            nextChapterSortOrder(
+              comic,
+            ),
+            sortOrder + 1,
+          ),
+        ),
+      );
+
+      setFormControlValue(
+        form,
+        "chapterStatus",
+        "SCHEDULED",
+      );
+
+      setMessage(
+        `Глава ${displayCode} добавлена в ${comic.title}.`,
+      );
+
+      setBusyKey(null);
+      router.refresh();
+    } catch {
+      setError(
+        "Не удалось связаться с сервером.",
+      );
+      setBusyKey(null);
+    }
+  }
+
   return (
     <div className="mt-8 space-y-8">
       {error ? (
@@ -823,6 +1121,136 @@ export function AdminComicManager({
                           Главы пока не добавлены.
                         </p>
                       )}
+
+                      <div className="mt-5 border-t border-black/10 pt-4">
+                        <h5 className="text-sm font-semibold">
+                          Добавить главу
+                        </h5>
+
+                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                          <label className="block">
+                            <span className="mb-1 block text-xs font-medium">
+                              Код главы
+                            </span>
+
+                            <input
+                              name="chapterDisplayCode"
+                              placeholder="1, 1.01а, Extra…"
+                              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm"
+                            />
+                          </label>
+
+                          <label className="block">
+                            <span className="mb-1 block text-xs font-medium">
+                              Название
+                            </span>
+
+                            <input
+                              name="chapterTitle"
+                              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm"
+                            />
+                          </label>
+
+                          <label className="block">
+                            <span className="mb-1 block text-xs font-medium">
+                              Source URL
+                            </span>
+
+                            <input
+                              type="url"
+                              name="chapterSourceUrl"
+                              placeholder="Необязательно"
+                              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm"
+                            />
+                          </label>
+
+                          <label className="block">
+                            <span className="mb-1 block text-xs font-medium">
+                              Порядок
+                            </span>
+
+                            <input
+                              type="number"
+                              name="chapterSortOrder"
+                              min={0}
+                              step={1}
+                              defaultValue={
+                                nextChapterSortOrder(
+                                  comic,
+                                )
+                              }
+                              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm"
+                            />
+                          </label>
+
+                          <label className="block">
+                            <span className="mb-1 block text-xs font-medium">
+                              Статус
+                            </span>
+
+                            <select
+                              name="chapterStatus"
+                              defaultValue="SCHEDULED"
+                              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm"
+                            >
+                              {(
+                                Object.entries(
+                                  chapterCreateStatusLabels,
+                                ) as [
+                                  ChapterCreateStatus,
+                                  string,
+                                ][]
+                              ).map(
+                                ([
+                                  value,
+                                  label,
+                                ]) => (
+                                  <option
+                                    key={value}
+                                    value={value}
+                                  >
+                                    {label}
+                                  </option>
+                                ),
+                              )}
+                            </select>
+                          </label>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={
+                            busyKey !==
+                            null
+                          }
+                          onClick={(
+                            event,
+                          ) => {
+                            const form =
+                              event
+                                .currentTarget
+                                .form;
+
+                            if (!form) {
+                              setError(
+                                "Не удалось определить форму комикса.",
+                              );
+                              return;
+                            }
+
+                            void createChapter(
+                              comic,
+                              form,
+                            );
+                          }}
+                          className="mt-4 rounded-xl border border-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary)] disabled:cursor-wait disabled:opacity-60"
+                        >
+                          {busyKey ===
+                          `chapter-create:${comic.id}`
+                            ? "Добавляем…"
+                            : "+ Добавить главу"}
+                        </button>
+                      </div>
                     </section>
 
                     <div className="mt-5 flex flex-wrap items-center gap-4">
