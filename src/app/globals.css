@@ -1,11 +1,59 @@
 @import "tailwindcss";
 
 :root {
-    --background: #f5f2e9;
-    --foreground: #20241f;
-    --primary: #254f43;
-    --surface: #ffffff;
-    --muted: #68716b;
+    /*
+     * Comic Diary Design System v1
+     *
+     * R8.6 foundation:
+     * - new semantic tokens;
+     * - future dark mobile-first visual language;
+     * - compatibility aliases for existing screens.
+     */
+
+    /* Base */
+    --cd-background: #0f1012;
+    --cd-background-soft: #15171b;
+
+    /* Surfaces */
+    --cd-surface: #1b1e24;
+    --cd-surface-elevated: #232731;
+
+    /* Text */
+    --cd-foreground: #f4f4f5;
+    --cd-muted: #a1a1aa;
+    --cd-subtle: #71717a;
+
+    /* Accent */
+    --cd-primary: #8b5cf6;
+    --cd-primary-soft: #a78bfa;
+
+    /* Semantic */
+    --cd-success: #22c55e;
+    --cd-warning: #eab308;
+    --cd-danger: #ef4444;
+    --cd-info: #38bdf8;
+
+    /* Borders */
+    --cd-border: rgba(255, 255, 255, 0.08);
+
+    /* Shape */
+    --cd-radius-card: 24px;
+    --cd-radius-button: 14px;
+
+    /* Elevation */
+    --cd-shadow-card:
+        0 10px 30px rgba(0, 0, 0, 0.25);
+
+    /*
+     * Backward compatibility.
+     * Existing pages continue using old variables
+     * until migrated to the new system.
+     */
+    --background: var(--cd-background);
+    --foreground: var(--cd-foreground);
+    --primary: var(--cd-primary);
+    --surface: var(--cd-surface);
+    --muted: var(--cd-muted);
 }
 
 * {
