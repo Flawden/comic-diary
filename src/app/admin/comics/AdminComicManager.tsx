@@ -751,6 +751,94 @@ export function AdminComicManager({
     }
   }
 
+  async function moveChapter(
+    comic: AdminComic,
+    chapter: AdminChapter,
+    direction: "up" | "down",
+  ) {
+    if (busyKey) {
+      return;
+    }
+
+    const nextSortOrder =
+      direction === "up"
+        ? chapter.sortOrder - 1
+        : chapter.sortOrder + 1;
+
+    if (
+      nextSortOrder < 0
+    ) {
+      return;
+    }
+
+    const key =
+      `chapter-reorder:${chapter.id}`;
+
+    setBusyKey(key);
+    setMessage(null);
+    setError(null);
+
+    try {
+      const response =
+        await fetch(
+          `/api/admin/catalog/comics/${comic.id}/chapters`,
+          {
+            method:
+              "PATCH",
+
+            credentials:
+              "same-origin",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                intent:
+                  "reorder",
+
+                chapterId:
+                  chapter.id,
+
+                sortOrder:
+                  nextSortOrder,
+              }),
+          },
+        );
+
+      const body =
+        await response
+          .json()
+          .catch(
+            () => ({}),
+          );
+
+      if (!response.ok) {
+        setError(
+          "Не удалось изменить порядок главы.",
+        );
+
+        setBusyKey(null);
+        return;
+      }
+
+      setMessage(
+        "Порядок главы изменён.",
+      );
+
+      setBusyKey(null);
+      router.refresh();
+    } catch {
+      setError(
+        "Не удалось связаться с сервером.",
+      );
+
+      setBusyKey(null);
+    }
+  }
+
   async function updateChapter(
     comic: AdminComic,
     chapterId: number,
@@ -1352,33 +1440,69 @@ export function AdminComicManager({
                                       {chapter.status}
                                     </div>
 
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setEditingChapterId(
-                                          chapter.id,
-                                        );
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      <button
+                                        type="button"
+                                        disabled={
+                                          busyKey !== null
+                                        }
+                                        onClick={() =>
+                                          void moveChapter(
+                                            comic,
+                                            chapter,
+                                            "up",
+                                          )
+                                        }
+                                        className="rounded-lg border px-3 py-1 text-sm"
+                                      >
+                                        ↑
+                                      </button>
 
-                                        setChapterEditValues({
-                                          displayCode:
-                                            chapter.displayCode,
+                                      <button
+                                        type="button"
+                                        disabled={
+                                          busyKey !== null
+                                        }
+                                        onClick={() =>
+                                          void moveChapter(
+                                            comic,
+                                            chapter,
+                                            "down",
+                                          )
+                                        }
+                                        className="rounded-lg border px-3 py-1 text-sm"
+                                      >
+                                        ↓
+                                      </button>
 
-                                          title:
-                                            chapter.title ??
-                                            "",
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingChapterId(
+                                            chapter.id,
+                                          );
 
-                                          sourceUrl:
-                                            chapter.sourceUrl ??
-                                            "",
+                                          setChapterEditValues({
+                                            displayCode:
+                                              chapter.displayCode,
 
-                                          status:
-                                            chapter.status,
-                                        });
-                                      }}
-                                      className="mt-2 text-sm font-semibold text-[var(--primary)]"
-                                    >
-                                      Редактировать
-                                    </button>
+                                            title:
+                                              chapter.title ??
+                                              "",
+
+                                            sourceUrl:
+                                              chapter.sourceUrl ??
+                                              "",
+
+                                            status:
+                                              chapter.status,
+                                          });
+                                        }}
+                                        className="text-sm font-semibold text-[var(--primary)]"
+                                      >
+                                        Редактировать
+                                      </button>
+                                    </div>
                                   </>
                                 )}
                               </li>
