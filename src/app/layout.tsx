@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import { AppNav } from "@/shared/components/AppNav";
+import { AppShell } from "@/shared/components/shell";
 
 import "./globals.css";
 
@@ -18,8 +18,9 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body>
-        <AppNav />
-        {children}
+        <AppShell>
+          {children}
+        </AppShell>
       </body>
     </html>
   );
