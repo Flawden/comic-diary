@@ -797,12 +797,11 @@ export function AdminComicManager({
           },
         );
 
-      const body =
-        await response
-          .json()
-          .catch(
-            () => ({}),
-          );
+      await response
+        .json()
+        .catch(
+          () => null,
+        );
 
       if (!response.ok) {
         setError(
@@ -887,12 +886,11 @@ export function AdminComicManager({
           },
         );
 
-      const body =
-        await response
-          .json()
-          .catch(
-            () => ({}),
-          );
+      await response
+        .json()
+        .catch(
+          () => null,
+        );
 
       if (!response.ok) {
         setError(
