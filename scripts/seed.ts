@@ -8,6 +8,7 @@ import { importCatalog } from "../src/catalog/import-catalog";
 import {
   categories,
   comics,
+  chapters,
   userComics,
   users,
 } from "../src/db/schema";
@@ -95,6 +96,99 @@ async function seed() {
 
   const comicId = comicRows[0].id;
 
+  const r85ComicRows =
+    await db
+      .insert(comics)
+      .values({
+        slug: "r85-catalog-demo",
+        title: "Первый фонарь",
+        description:
+          "Реалистичный каталог для проверки Chapter Admin R8.5.",
+        authorName: null,
+        translatorName: null,
+        translatorNote: null,
+        sourceUrl: "https://vk.com/",
+        totalChapters: 5,
+        publicationStatus: "PUBLISHED",
+        categoryId: category.id,
+      })
+      .onConflictDoUpdate({
+        target: comics.slug,
+        set: {
+          title: "Первый фонарь",
+          description:
+            "Реалистичный каталог для проверки Chapter Admin R8.5.",
+          updatedAt: new Date(),
+        },
+      })
+      .returning({
+        id: comics.id,
+      });
+
+  const r85ComicId = r85ComicRows[0].id;
+
+  const r85Chapters = [
+    {
+      displayCode: "001",
+      title: "Начало пути",
+      sortOrder: 1,
+      status: "RELEASED" as const,
+    },
+    {
+      displayCode: "002",
+      title: "Старая библиотека",
+      sortOrder: 2,
+      status: "RELEASED" as const,
+    },
+    {
+      displayCode: "003",
+      title: "Тайная комната",
+      sortOrder: 3,
+      status: "RELEASED" as const,
+    },
+    {
+      displayCode: "004",
+      title: "Испытание",
+      sortOrder: 4,
+      status: "SCHEDULED" as const,
+    },
+    {
+      displayCode: "005",
+      title: "Последняя дверь",
+      sortOrder: 5,
+      status: "ARCHIVED" as const,
+    },
+  ];
+
+  for (const chapter of r85Chapters) {
+    await db
+      .insert(chapters)
+      .values({
+        comicId: r85ComicId,
+        ...chapter,
+        releasedAt:
+          chapter.status === "RELEASED"
+            ? new Date()
+            : null,
+      })
+      .onConflictDoUpdate({
+        target: [
+          chapters.comicId,
+          chapters.displayCode,
+        ],
+        set: {
+          title: chapter.title,
+          sortOrder: chapter.sortOrder,
+          status: chapter.status,
+          releasedAt:
+            chapter.status === "RELEASED"
+              ? new Date()
+              : null,
+          updatedAt: new Date(),
+        },
+      });
+  }
+
   const userRows = await db
     .insert(users)
     .values({
@@ -159,6 +253,12 @@ async function seed() {
   );
   console.log(
     "Reading state: READING, chapter 3 / 12",
+  );
+  console.log(
+    "R8.5 fixture: Первый фонарь",
+  );
+  console.log(
+    "R8.5 chapters: 5 (3 RELEASED, 1 SCHEDULED, 1 ARCHIVED)",
   );
 }
 
