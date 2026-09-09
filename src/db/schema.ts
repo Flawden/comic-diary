@@ -64,6 +64,10 @@ export const administrativeAuditAction = pgEnum(
     "CATEGORY_UPDATE",
     "COMIC_CREATE",
     "COMIC_UPDATE",
+    "CHAPTER_CREATE",
+    "CHAPTER_UPDATE",
+    "CHAPTER_REORDER",
+    "CHAPTER_ARCHIVE",
     "VK_IMPORT_APPLY",
     "ACCOUNT_ROLE_CHANGE",
     "ACCOUNT_ACTIVE_CHANGE",
@@ -76,6 +80,7 @@ export const administrativeAuditTarget = pgEnum(
   [
     "CATEGORY",
     "COMIC",
+    "CHAPTER",
     "IMPORT_BATCH",
     "USER",
   ],
@@ -244,6 +249,10 @@ export const chapters = pgTable(
     title: varchar(
       "title",
       { length: 255 },
+    ),
+
+    sourceUrl: text(
+      "source_url",
     ),
 
     sortOrder: integer(
