@@ -24,6 +24,11 @@ type ChapterCreateStatus =
   | "SCHEDULED"
   | "RELEASED";
 
+type ChapterEditStatus =
+  | "SCHEDULED"
+  | "RELEASED"
+  | "ARCHIVED";
+
 type AdminChapter = {
   id: number;
   displayCode: string;
@@ -565,6 +570,23 @@ export function AdminComicManager({
   >(null);
 
   const [
+    editingChapterId,
+    setEditingChapterId,
+  ] = useState<
+    number | null
+  >(null);
+
+  const [
+    chapterEditValues,
+    setChapterEditValues,
+  ] = useState<{
+    displayCode: string;
+    title: string;
+    sourceUrl: string;
+    status: ChapterEditStatus;
+  } | null>(null);
+
+  const [
     message,
     setMessage,
   ] = useState<
@@ -725,6 +747,119 @@ export function AdminComicManager({
       setError(
         "Не удалось связаться с сервером.",
       );
+      setBusyKey(null);
+    }
+  }
+
+  async function updateChapter(
+    comic: AdminComic,
+    chapterId: number,
+  ) {
+    if (!chapterEditValues) {
+      return;
+    }
+
+    const key =
+      `chapter-update:${chapterId}`;
+
+    if (busyKey) {
+      return;
+    }
+
+    setBusyKey(key);
+    setMessage(null);
+    setError(null);
+
+    try {
+      const response =
+        await fetch(
+          `/api/admin/catalog/comics/${comic.id}/chapters`,
+          {
+            method:
+              "PATCH",
+
+            credentials:
+              "same-origin",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                chapterId,
+
+                displayCode:
+                  chapterEditValues.displayCode,
+
+                title:
+                  chapterEditValues.title ||
+                  null,
+
+                sourceUrl:
+                  chapterEditValues.sourceUrl ||
+                  null,
+
+                status:
+                  chapterEditValues.status,
+
+                releasedAt:
+                  chapterEditValues.status ===
+                  "RELEASED"
+                    ? new Date()
+                        .toISOString()
+                    : null,
+              }),
+          },
+        );
+
+      const body =
+        await response
+          .json()
+          .catch(
+            () =>
+              ({}) as ApiEnvelope,
+          ) as ApiEnvelope;
+
+      if (
+        response.status ===
+        401
+      ) {
+        router.replace(
+          "/login?next=%2Fadmin%2Fcomics",
+        );
+        router.refresh();
+        return;
+      }
+
+      if (!response.ok) {
+        setError(
+          chapterErrorMessage(
+            apiErrorKind(
+              body,
+            ),
+          ),
+        );
+
+        setBusyKey(null);
+        return;
+      }
+
+      setEditingChapterId(null);
+      setChapterEditValues(null);
+
+      setMessage(
+        "Глава обновлена.",
+      );
+
+      setBusyKey(null);
+      router.refresh();
+    } catch {
+      setError(
+        "Не удалось связаться с сервером.",
+      );
+
       setBusyKey(null);
     }
   }
@@ -1102,16 +1237,150 @@ export function AdminComicManager({
                                 key={chapter.id}
                                 className="rounded-lg border border-black/5 bg-[var(--surface)] p-3"
                               >
-                                <div className="font-medium">
-                                  {chapter.displayCode}
-                                  {chapter.title
-                                    ? ` — ${chapter.title}`
-                                    : ""}
-                                </div>
+                                {editingChapterId ===
+                                chapter.id &&
+                                chapterEditValues ? (
+                                  <div className="space-y-3">
+                                    <input
+                                      value={
+                                        chapterEditValues.displayCode
+                                      }
+                                      onChange={(event) =>
+                                        setChapterEditValues({
+                                          ...chapterEditValues,
+                                          displayCode:
+                                            event.target.value,
+                                        })
+                                      }
+                                      className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm"
+                                    />
 
-                                <div className="mt-1 text-sm text-[var(--muted)]">
-                                  {chapter.status}
-                                </div>
+                                    <input
+                                      value={
+                                        chapterEditValues.title
+                                      }
+                                      onChange={(event) =>
+                                        setChapterEditValues({
+                                          ...chapterEditValues,
+                                          title:
+                                            event.target.value,
+                                        })
+                                      }
+                                      className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm"
+                                    />
+
+                                    <input
+                                      value={
+                                        chapterEditValues.sourceUrl
+                                      }
+                                      onChange={(event) =>
+                                        setChapterEditValues({
+                                          ...chapterEditValues,
+                                          sourceUrl:
+                                            event.target.value,
+                                        })
+                                      }
+                                      className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm"
+                                    />
+
+                                    <select
+                                      value={
+                                        chapterEditValues.status
+                                      }
+                                      onChange={(event) =>
+                                        setChapterEditValues({
+                                          ...chapterEditValues,
+                                          status:
+                                            event.target.value as ChapterEditStatus,
+                                        })
+                                      }
+                                      className="rounded-xl border border-black/10 px-3 py-2 text-sm"
+                                    >
+                                      <option value="SCHEDULED">
+                                        SCHEDULED
+                                      </option>
+
+                                      <option value="RELEASED">
+                                        RELEASED
+                                      </option>
+
+                                      <option value="ARCHIVED">
+                                        ARCHIVED
+                                      </option>
+                                    </select>
+
+                                    <div className="flex gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          void updateChapter(
+                                            comic,
+                                            chapter.id,
+                                          )
+                                        }
+                                        disabled={
+                                          busyKey !==
+                                          null
+                                        }
+                                        className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm text-white disabled:opacity-60"
+                                      >
+                                        Сохранить
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingChapterId(null);
+                                          setChapterEditValues(null);
+                                        }}
+                                        className="rounded-xl border px-4 py-2 text-sm"
+                                      >
+                                        Отмена
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="font-medium">
+                                      {chapter.displayCode}
+                                      {chapter.title
+                                        ? ` — ${chapter.title}`
+                                        : ""}
+                                    </div>
+
+                                    <div className="mt-1 text-sm text-[var(--muted)]">
+                                      {chapter.status}
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingChapterId(
+                                          chapter.id,
+                                        );
+
+                                        setChapterEditValues({
+                                          displayCode:
+                                            chapter.displayCode,
+
+                                          title:
+                                            chapter.title ??
+                                            "",
+
+                                          sourceUrl:
+                                            chapter.sourceUrl ??
+                                            "",
+
+                                          status:
+                                            chapter.status,
+                                        });
+                                      }}
+                                      className="mt-2 text-sm font-semibold text-[var(--primary)]"
+                                    >
+                                      Редактировать
+                                    </button>
+                                  </>
+                                )}
                               </li>
                             ),
                           )}
