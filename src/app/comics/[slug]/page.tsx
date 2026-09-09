@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { getComicBySlug } from "@/modules/comics/queries/get-comic-by-slug";
+import { getComicChapters } from "@/modules/comics/queries/get-comic-chapters";
 import { getCurrentUser } from "@/modules/auth/request-identity";
 import { getUserComicState } from "@/modules/library/queries/get-user-comic-state";
 import { calculateAverageRating } from "@/modules/library/ratings/calculate-average-rating";
@@ -18,6 +19,12 @@ const statusLabels = {
   READING: "Читаю",
   COMPLETED: "Прочитано",
   ON_HOLD: "Отложено",
+} as const;
+
+const chapterStatusLabels = {
+  SCHEDULED: "Запланирована",
+  RELEASED: "Опубликована",
+  ARCHIVED: "В архиве",
 } as const;
 
 const ratingFields = [
@@ -60,6 +67,19 @@ export default async function ComicPage({
   if (!comic) {
     notFound();
   }
+
+  const canSeeUnreleasedChapters =
+    comic.visibility === "PRIVATE" &&
+    currentUser?.id === comic.ownerUserId;
+
+  const chapters =
+    await getComicChapters(
+      comic.id,
+      {
+        includeUnreleased:
+          canSeeUnreleasedChapters,
+      },
+    );
 
   const readingState =
     currentUser
@@ -183,6 +203,68 @@ export default async function ComicPage({
                 Описание пока не добавлено.
               </p>
             )}
+
+            <section className="mt-8 rounded-xl bg-[var(--background)] p-5">
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="font-semibold">
+                  Главы
+                </h2>
+
+                {chapters.length > 0 ? (
+                  <span className="text-sm text-[var(--muted)]">
+                    {chapters.length}
+                  </span>
+                ) : null}
+              </div>
+
+              {chapters.length > 0 ? (
+                <ul className="mt-4 space-y-2">
+                  {chapters.map((chapter) => (
+                    <li
+                      key={chapter.id}
+                      className="rounded-xl border border-black/5 bg-[var(--surface)] p-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">
+                            {chapter.displayCode}
+                          </p>
+
+                          {chapter.title ? (
+                            <p className="mt-1 text-sm text-[var(--muted)]">
+                              {chapter.title}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        {canSeeUnreleasedChapters ? (
+                          <span className="rounded-full border border-black/10 px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
+                            {
+                              chapterStatusLabels[
+                                chapter.status
+                              ]
+                            }
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {chapter.releasedAt ? (
+                        <p className="mt-3 text-xs text-[var(--muted)]">
+                          Опубликована{" "}
+                          {chapter.releasedAt.toLocaleDateString(
+                            "ru-RU",
+                          )}
+                        </p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-sm text-[var(--muted)]">
+                  Главы пока не добавлены.
+                </p>
+              )}
+            </section>
 
             <section className="mt-8 rounded-xl bg-[var(--background)] p-5">
               <h2 className="font-semibold">
