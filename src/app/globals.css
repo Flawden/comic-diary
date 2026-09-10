@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@/shared/theme/tokens.css";
+@import "../shared/theme/tokens.css";
 
 :root {
   --background: var(--cd-background);
