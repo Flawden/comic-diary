@@ -1,4 +1,4 @@
-import { ChapterCard } from "@/shared/components/domain";
+import { ChapterCard, ComicCard } from "@/shared/components/domain";
 
 import {
   Badge,
@@ -345,6 +345,37 @@ export default function DesignSystemPage() {
           </Card>
         </Section>
       
+
+      <Section
+        title="05 · Comic Cards"
+        description="Domain representation of catalog objects."
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <ComicCard
+            title="Чайная территория"
+            author="Алексей Автор"
+            genres={[
+              "Драма",
+              "Повседневность",
+            ]}
+            rating={9}
+            status="reading"
+          />
+
+          <ComicCard
+            title="Ночной город"
+            author="Ирина Художник"
+            genres={[
+              "Нуар",
+              "Триллер",
+            ]}
+            rating={8}
+            status="completed"
+          />
+        </div>
+      </Section>
+
+
 
       <Section
         title="Domain Components"

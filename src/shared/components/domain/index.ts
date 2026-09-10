@@ -9,3 +9,12 @@ export {
 export type {
   ChapterStatus,
 } from "./ChapterCard";
+
+
+export {
+  ComicCard,
+} from "./ComicCard";
+
+export type {
+  ComicStatus,
+} from "./ComicCard";
