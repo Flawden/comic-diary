@@ -46,3 +46,67 @@
 
   --cd-primary: #86a65a;
 }
+
+
+/*
+  Theme Contract — shared design primitives.
+
+  Components must consume semantic aliases.
+  Themes override these values only.
+*/
+
+
+:root {
+
+  /*
+    Shape
+  */
+
+  --cd-radius-sm: 0.375rem;
+  --cd-radius-md: 0.75rem;
+  --cd-radius-card: 1rem;
+  --cd-radius-button: 0.75rem;
+  --cd-radius-pill: 9999px;
+
+
+  /*
+    Elevation
+  */
+
+  --cd-shadow-card:
+    0 10px 30px rgba(0, 0, 0, 0.28);
+
+  --cd-shadow-floating:
+    0 20px 50px rgba(0, 0, 0, 0.35);
+
+
+  /*
+    Spacing
+
+    Future components may use these
+    as semantic layout values.
+  */
+
+  --cd-space-1: 0.25rem;
+  --cd-space-2: 0.5rem;
+  --cd-space-3: 0.75rem;
+  --cd-space-4: 1rem;
+  --cd-space-6: 1.5rem;
+
+
+  /*
+    Typography hooks
+
+    Themes may override later.
+  */
+
+  --cd-font-ui:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  --cd-font-display:
+    Arial,
+    Helvetica,
+    sans-serif;
+}
