@@ -356,9 +356,6 @@ export default function DesignSystemPage() {
             title="Начало пути"
             pages={24}
             status="released"
-            onOpen={() => {
-              console.log("open chapter 001");
-            }}
           />
 
           <ChapterCard
