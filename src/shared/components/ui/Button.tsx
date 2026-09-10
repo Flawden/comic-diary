@@ -19,13 +19,13 @@ Record<
   string
 > = {
   primary:
-    "border-transparent bg-[var(--cd-primary)] text-white hover:opacity-90",
+    "border-transparent bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90",
   secondary:
-    "border-[var(--cd-border)] bg-[var(--cd-surface-elevated)] text-[var(--cd-foreground)] hover:bg-[var(--cd-surface)]",
+    "border-[var(--border)] bg-[var(--surface-raised)] text-[var(--foreground)] hover:bg-[var(--cd-surface)]",
   ghost:
-    "border-[var(--cd-border)] bg-transparent text-[var(--cd-foreground)] hover:bg-[var(--cd-surface-elevated)]",
+    "border-[var(--border)] bg-transparent text-[var(--foreground)] hover:bg-[var(--surface-raised)]",
   danger:
-    "border-transparent bg-[var(--cd-danger)] text-white hover:opacity-90",
+    "border-transparent bg-[var(--cd-danger)] text-[var(--primary-foreground)] hover:opacity-90",
 };
 
 export function Button({
@@ -46,9 +46,9 @@ export function Button({
         "transition",
         "focus-visible:outline-none",
         "focus-visible:ring-2",
-        "focus-visible:ring-[var(--cd-primary)]",
+        "focus-visible:ring-[var(--primary)]",
         "focus-visible:ring-offset-2",
-        "focus-visible:ring-offset-[var(--cd-background)]",
+        "focus-visible:ring-offset-[var(--background)]",
         "disabled:cursor-not-allowed",
         "disabled:opacity-50",
         variantClasses[

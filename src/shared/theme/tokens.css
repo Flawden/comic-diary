@@ -1,0 +1,48 @@
+:root {
+  --cd-background: #0f1014;
+  --cd-foreground: #f4f3f8;
+
+  --cd-surface: #181a21;
+  --cd-surface-raised: #20232d;
+
+  --cd-primary: #8b5cf6;
+  --cd-primary-foreground: #ffffff;
+
+  --cd-muted: #9b9ca8;
+
+  --cd-border: rgba(255, 255, 255, 0.08);
+
+  --cd-success: #22c55e;
+  --cd-warning: #eab308;
+  --cd-danger: #ef4444;
+  --cd-info: #38bdf8;
+}
+
+
+/*
+ Future themes.
+
+ Keep semantic names stable.
+ Components should never know actual colors.
+*/
+
+[data-theme="paper"] {
+  --cd-background: #f6efe3;
+  --cd-foreground: #241f1a;
+
+  --cd-surface: #fffaf0;
+  --cd-surface-raised: #ffffff;
+
+  --cd-primary: #b45309;
+}
+
+
+[data-theme="tea"] {
+  --cd-background: #151713;
+  --cd-foreground: #f3ead7;
+
+  --cd-surface: #20251d;
+  --cd-surface-raised: #2b3227;
+
+  --cd-primary: #86a65a;
+}
