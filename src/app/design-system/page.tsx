@@ -1,3 +1,5 @@
+import { ChapterCard } from "@/shared/components/domain";
+
 import {
   Badge,
   Button,
@@ -342,7 +344,32 @@ export default function DesignSystemPage() {
             </div>
           </Card>
         </Section>
-      </div>
+      
+
+      <Section
+        title="Domain Components"
+        description="Real application objects built from UI primitives."
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <ChapterCard
+            number="001"
+            title="Начало пути"
+            pages={24}
+            status="released"
+            onOpen={() => {
+              console.log("open chapter 001");
+            }}
+          />
+
+          <ChapterCard
+            number="002"
+            title="Первая встреча"
+            pages={32}
+            status="reading"
+          />
+        </div>
+      </Section>
+</div>
     </main>
   );
 }
