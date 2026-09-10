@@ -1,8 +1,11 @@
 import {
   Badge,
-  Button,
   Card,
 } from "@/shared/components/ui";
+
+import {
+  ChapterCardAction,
+} from "./ChapterCardAction";
 
 export type ChapterStatus =
   | "draft"
@@ -15,7 +18,6 @@ type ChapterCardProps = {
   title: string;
   pages?: number;
   status?: ChapterStatus;
-  onOpen?: () => void;
 };
 
 const statusLabels:
@@ -38,7 +40,6 @@ export function ChapterCard({
   title,
   pages,
   status = "released",
-  onOpen,
 }: ChapterCardProps) {
   return (
     <Card
@@ -77,12 +78,9 @@ export function ChapterCard({
         </div>
       ) : null}
 
-      <Button
-        variant="secondary"
-        onClick={onOpen}
-      >
-        Открыть
-      </Button>
+      <ChapterCardAction
+        chapterNumber={number}
+      />
     </Card>
   );
 }
