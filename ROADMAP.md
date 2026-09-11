@@ -939,7 +939,140 @@ These are different metrics and must not be silently mixed.
 
 ---
 
-# R9 — Production Reliability & Security---
+
+# Active Finish Workstream — Visual Product Completion
+
+Status: IN PROGRESS
+
+This is an implementation workstream for completing the current web product.
+It does **not** rename or replace the existing canonical R8.3-R8.6 milestones.
+
+Use `UI-F*` identifiers for this work so the already-defined roadmap numbering
+remains stable.
+
+## UI-F1 — Text Hierarchy & Surface Contrast
+
+Status: COMPLETE
+
+Goal:
+
+Make the visual hierarchy readable and intentional while preserving themeability.
+
+Scope:
+
+- establish primary, secondary, muted and accent text roles;
+- strengthen separation between background, surface and raised surface;
+- keep component colors semantic rather than hard-coded;
+- migrate remaining design-system preview references away from obsolete tokens;
+- keep future themes capable of changing palette, typography, shape and elevation.
+
+## UI-F2 — Covers & Media
+
+Status: IN PROGRESS
+
+Goal:
+
+Make comic imagery a first-class product capability rather than a demo-only prop.
+
+Scope:
+
+- define the canonical comic cover/media contract;
+- add a reusable `CoverImage` boundary;
+- support fallback, loading and broken-image states;
+- allow cover assignment/editing from administration;
+- support image upload as well as externally sourced media where appropriate;
+- decide persistent production storage separately from UI components;
+- keep comic pages externally hosted; this project stores catalog/media metadata
+  and reader data, not hosted comic-page content.
+
+## UI-F3 — Catalog Surface Migration
+
+Status: PLANNED
+
+- rebuild the real catalog using the shared design system;
+- use real catalog data rather than duplicated preview fixtures;
+- integrate cover imagery;
+- preserve search/filter/sort behavior;
+- keep responsive mobile-first presentation.
+
+## UI-F4 — Library Surface Migration
+
+Status: PLANNED
+
+- distinguish catalog metadata from per-user reading state;
+- show reading progress and personal state without contaminating catalog contracts;
+- compose library-specific surfaces from shared domain/UI primitives.
+
+## UI-F5 — Comic Detail & Chapter Surface Migration
+
+Status: PLANNED
+
+- rebuild `/comics/[slug]` around the new visual system;
+- integrate canonical chapter records;
+- surface release/read state clearly;
+- preserve future chapter-rating and diary capabilities.
+
+## UI-F6 — Admin Visual Migration
+
+Status: PLANNED
+
+- keep administration visually consistent with the reader application;
+- use compact cards, sheets/panels and contextual actions;
+- keep destructive actions explicit and confirmed;
+- preserve authorization and audit behavior;
+- avoid returning to giant always-open forms.
+
+## UI-F7 — Account & Theme Selector
+
+Status: PLANNED
+
+- migrate account/profile surfaces;
+- expose a user-facing diary style selector;
+- persist the selected theme;
+- initial style direction: Night Reader, Tea House and Paper Journal;
+- allow later Manga/Noir-style variants without rewriting components.
+
+## UI-F8 — UX Completion
+
+Status: PLANNED
+
+- loading and skeleton states;
+- empty states;
+- meaningful error states;
+- save/action feedback;
+- confirmation flows;
+- mobile/touch review;
+- keyboard/focus accessibility;
+- responsive regression.
+
+## UI-F9 — Web Release Hardening
+
+Status: PLANNED
+
+Before declaring the web application complete:
+
+- lint;
+- typecheck;
+- production build;
+- clean-database migration validation;
+- seed validation;
+- login/register smoke;
+- catalog smoke;
+- library smoke;
+- chapter workflow smoke;
+- cover/media smoke;
+- admin CRUD and authorization smoke;
+- audit smoke;
+- responsive smoke;
+- deployment verification;
+- backup/recovery verification where applicable.
+
+After UI-F9, avoid expanding the web application with new foundational UI
+abstractions unless required by a concrete product feature. The next major product
+surface should be the Android application using the established domain model,
+workflows and visual/UX decisions.
+
+---
 
 # R9 — Production Reliability & Security
 

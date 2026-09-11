@@ -1,22 +1,49 @@
 :root {
-  --cd-background: #0f1014;
-  --cd-foreground: #f4f3f8;
+  /*
+    Core surfaces.
+  */
 
-  --cd-surface: #181a21;
+  --cd-background: #0b0c10;
+
+  --cd-surface: #15171e;
   --cd-surface-raised: #20232d;
+
+
+  /*
+    Text hierarchy.
+  */
+
+  --cd-text-primary: #faf9ff;
+  --cd-text-secondary: #c7c9d4;
+  --cd-text-muted: #858895;
+  --cd-text-accent: #b7a0ff;
+
+  /*
+    Compatibility aliases.
+
+    Existing code may still consume foreground/muted while
+    migration to the richer text contract is in progress.
+  */
+
+  --cd-foreground: var(--cd-text-primary);
+  --cd-muted: var(--cd-text-muted);
+
+
+  /*
+    Brand / semantic colors.
+  */
 
   --cd-primary: #8b5cf6;
   --cd-primary-foreground: #ffffff;
 
-  --cd-muted: #9b9ca8;
-
-  --cd-border: rgba(255, 255, 255, 0.08);
+  --cd-border: rgba(255, 255, 255, 0.11);
 
   --cd-success: #22c55e;
   --cd-warning: #eab308;
   --cd-danger: #ef4444;
   --cd-info: #38bdf8;
 }
+
 
 
 /*
@@ -28,23 +55,37 @@
 
 [data-theme="paper"] {
   --cd-background: #f6efe3;
-  --cd-foreground: #241f1a;
 
   --cd-surface: #fffaf0;
   --cd-surface-raised: #ffffff;
 
+  --cd-text-primary: #241f1a;
+  --cd-text-secondary: #5c5147;
+  --cd-text-muted: #807368;
+  --cd-text-accent: #9a4608;
+
   --cd-primary: #b45309;
+  --cd-primary-foreground: #ffffff;
+
+  --cd-border: rgba(36, 31, 26, 0.13);
 }
 
 
 [data-theme="tea"] {
-  --cd-background: #151713;
-  --cd-foreground: #f3ead7;
+  --cd-background: #121510;
 
-  --cd-surface: #20251d;
-  --cd-surface-raised: #2b3227;
+  --cd-surface: #1d221a;
+  --cd-surface-raised: #293025;
+
+  --cd-text-primary: #f5eddb;
+  --cd-text-secondary: #c9c0aa;
+  --cd-text-muted: #928c7d;
+  --cd-text-accent: #b6d48e;
 
   --cd-primary: #86a65a;
+  --cd-primary-foreground: #11150e;
+
+  --cd-border: rgba(243, 234, 215, 0.11);
 }
 
 

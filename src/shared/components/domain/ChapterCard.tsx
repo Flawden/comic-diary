@@ -51,13 +51,13 @@ export function ChapterCard({
       >
         <div>
           <div
-            className="text-sm text-[var(--muted)]"
+            className="text-sm text-[var(--text-secondary)]"
           >
             Глава {number}
           </div>
 
           <h3
-            className="mt-1 text-lg font-bold text-[var(--foreground)]"
+            className="mt-1 text-lg font-bold text-[var(--text-primary)]"
           >
             {title}
           </h3>
@@ -72,7 +72,7 @@ export function ChapterCard({
 
       {pages ? (
         <div
-          className="text-sm text-[var(--muted)]"
+          className="text-sm text-[var(--text-secondary)]"
         >
           {pages} страниц
         </div>

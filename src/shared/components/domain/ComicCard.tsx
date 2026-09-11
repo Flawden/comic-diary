@@ -58,7 +58,7 @@ export function ComicCard({
             rounded-xl
             bg-[var(--surface-raised)]
             text-xs
-            text-[var(--muted)]
+            text-[var(--text-secondary)]
           "
         >
           {cover ? (
@@ -85,7 +85,7 @@ export function ComicCard({
               className="
                 text-lg
                 font-bold
-                text-[var(--foreground)]
+                text-[var(--text-primary)]
               "
             >
               {title}
@@ -105,7 +105,7 @@ export function ComicCard({
               className="
                 mt-2
                 text-sm
-                text-[var(--muted)]
+                text-[var(--text-secondary)]
               "
             >
               {author}
@@ -132,7 +132,7 @@ export function ComicCard({
                     px-2
                     py-1
                     text-xs
-                    text-[var(--muted)]
+                    text-[var(--text-secondary)]
                   "
                 >
                   {genre}

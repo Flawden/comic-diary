@@ -79,13 +79,13 @@ export default function DesignSystemPage() {
         </Badge>
 
         <h1
-          className="mt-4 text-4xl font-black tracking-tight text-[var(--cd-foreground)] sm:text-5xl"
+          className="mt-4 text-4xl font-black tracking-tight text-[var(--text-primary)] sm:text-5xl"
         >
           Comic Diary
         </h1>
 
         <p
-          className="mt-3 max-w-2xl text-base leading-7 text-[var(--cd-muted)]"
+          className="mt-3 max-w-2xl text-base leading-7 text-[var(--text-secondary)]"
         >
           Внутренний визуальный стенд.
           Здесь проверяем токены,
@@ -115,7 +115,7 @@ export default function DesignSystemPage() {
                 >
                   <div
                     aria-hidden="true"
-                    className="h-20 rounded-2xl border border-[var(--cd-border)]"
+                    className="h-20 rounded-2xl border border-[var(--border)]"
                     style={{
                       background:
                         `var(${swatch.token})`,
@@ -123,13 +123,13 @@ export default function DesignSystemPage() {
                   />
 
                   <p
-                    className="mt-3 text-sm font-semibold text-[var(--cd-foreground)]"
+                    className="mt-3 text-sm font-semibold text-[var(--text-primary)]"
                   >
                     {swatch.label}
                   </p>
 
                   <code
-                    className="mt-1 block break-all text-xs text-[var(--cd-muted)]"
+                    className="mt-1 block break-all text-xs text-[var(--text-secondary)]"
                   >
                     {swatch.token}
                   </code>
@@ -148,7 +148,7 @@ export default function DesignSystemPage() {
           >
             <div>
               <p
-                className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--cd-primary-soft)]"
+                className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-accent)]"
               >
                 Display
               </p>
@@ -168,7 +168,7 @@ export default function DesignSystemPage() {
               </p>
 
               <p
-                className="mt-1 text-sm leading-6 text-[var(--cd-muted)]"
+                className="mt-1 text-sm leading-6 text-[var(--text-secondary)]"
               >
                 Объект → контекст →
                 статус → действие.
@@ -176,7 +176,7 @@ export default function DesignSystemPage() {
             </div>
 
             <p
-              className="text-xs text-[var(--cd-subtle)]"
+              className="text-xs text-[var(--text-muted)]"
             >
               Метаданные · 28 глав ·
               обновлено сегодня
@@ -190,7 +190,7 @@ export default function DesignSystemPage() {
         >
           <Card>
             <p
-              className="text-sm font-semibold text-[var(--cd-foreground)]"
+              className="text-sm font-semibold text-[var(--text-primary)]"
             >
               Status badges
             </p>
@@ -224,7 +224,7 @@ export default function DesignSystemPage() {
             </div>
 
             <p
-              className="mt-7 text-sm font-semibold text-[var(--cd-foreground)]"
+              className="mt-7 text-sm font-semibold text-[var(--text-primary)]"
             >
               Buttons
             </p>
@@ -266,7 +266,7 @@ export default function DesignSystemPage() {
           >
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--cd-primary)] to-transparent opacity-70"
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--primary)] to-transparent opacity-70"
             />
 
             <div
@@ -274,7 +274,7 @@ export default function DesignSystemPage() {
             >
               <div>
                 <p
-                  className="text-xs font-bold tracking-[0.16em] text-[var(--cd-primary-soft)]"
+                  className="text-xs font-bold tracking-[0.16em] text-[var(--text-accent)]"
                 >
                   004
                 </p>
@@ -286,7 +286,7 @@ export default function DesignSystemPage() {
                 </h3>
 
                 <p
-                  className="mt-2 text-sm text-[var(--cd-muted)]"
+                  className="mt-2 text-sm text-[var(--text-secondary)]"
                 >
                   Чайная территория ·
                   порядок 4
@@ -301,7 +301,7 @@ export default function DesignSystemPage() {
             </div>
 
             <div
-              className="mt-6 flex items-center justify-between gap-3 border-t border-[var(--cd-border)] pt-4"
+              className="mt-6 flex items-center justify-between gap-3 border-t border-[var(--border)] pt-4"
             >
               <div
                 className="flex gap-2"

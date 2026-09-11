@@ -26,10 +26,10 @@ Record<ButtonVariant, string> = {
     "bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90",
 
   secondary:
-    "border-[var(--border)] bg-[var(--surface-raised)] text-[var(--foreground)] hover:bg-[var(--surface)]",
+    "border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] hover:bg-[var(--surface)]",
 
   ghost:
-    "border-transparent bg-transparent text-[var(--foreground)] hover:bg-[var(--surface-raised)]",
+    "border-transparent bg-transparent text-[var(--text-primary)] hover:bg-[var(--surface-raised)]",
 
   danger:
     "bg-[var(--danger)] text-[var(--primary-foreground)] hover:opacity-90",

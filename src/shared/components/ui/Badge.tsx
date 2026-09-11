@@ -22,17 +22,17 @@ Record<
   string
 > = {
   neutral:
-    "--cd-muted",
+    "--text-secondary",
   primary:
-    "--cd-primary",
+    "--primary",
   success:
-    "--cd-success",
+    "--success",
   warning:
-    "--cd-warning",
+    "--warning",
   danger:
-    "--cd-danger",
+    "--danger",
   info:
-    "--cd-info",
+    "--info",
 };
 
 export function Badge({
