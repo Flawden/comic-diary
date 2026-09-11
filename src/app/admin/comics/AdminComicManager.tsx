@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  CoverUploadField,
+} from "@/shared/components/media/CoverUploadField";
+
+import {
   type FormEvent,
   useState,
 } from "react";
@@ -344,7 +348,7 @@ function ComicFields({
               comic?.slug ??
               ""
             }
-            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 read-only:bg-black/5"
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 read-only:bg-[var(--surface)]"
           />
         </label>
 
@@ -360,7 +364,7 @@ function ComicFields({
               comic?.title ??
               ""
             }
-            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
           />
         </label>
 
@@ -376,7 +380,7 @@ function ComicFields({
               comic?.categorySlug ??
               ""
             }
-            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
           >
             <option
               value=""
@@ -413,7 +417,7 @@ function ComicFields({
               comic?.publicationStatus ??
               "PUBLISHED"
             }
-            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
           >
             {(
               Object.entries(
@@ -449,7 +453,7 @@ function ComicFields({
               comic?.authorName ??
               ""
             }
-            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
           />
         </label>
 
@@ -464,7 +468,7 @@ function ComicFields({
               comic?.translatorName ??
               ""
             }
-            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
           />
         </label>
 
@@ -482,7 +486,7 @@ function ComicFields({
               comic?.totalChapters ??
               ""
             }
-            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
           />
         </label>
 
@@ -499,25 +503,20 @@ function ComicFields({
               comic?.sourceUrl ??
               ""
             }
-            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
           />
         </label>
 
-        <label className="block md:col-span-2">
-          <span className="mb-1 block text-sm font-medium">
-            Cover URL
-          </span>
-
-          <input
-            type="url"
-            name="coverUrl"
-            defaultValue={
-              comic?.coverUrl ??
-              ""
-            }
-            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
-          />
-        </label>
+        <CoverUploadField
+          key={
+            comic?.id ??
+            "new-comic"
+          }
+          defaultValue={
+            comic?.coverUrl ??
+            ""
+          }
+        />
       </div>
 
       <label className="mt-4 block">
@@ -532,7 +531,7 @@ function ComicFields({
             comic?.description ??
             ""
           }
-          className="w-full resize-y rounded-xl border border-black/10 bg-white px-3 py-2"
+          className="w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
         />
       </label>
 
@@ -548,7 +547,7 @@ function ComicFields({
             comic?.translatorNote ??
             ""
           }
-          className="w-full resize-y rounded-xl border border-black/10 bg-white px-3 py-2"
+          className="w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
         />
       </label>
     </>
@@ -1269,54 +1268,111 @@ export function AdminComicManager({
         </p>
       ) : null}
 
-      <section className="rounded-2xl bg-[var(--surface)] p-6 shadow-sm">
-        <h2 className="text-xl font-semibold">
-          Новый комикс
-        </h2>
+      <details
+        className={[
+          "group rounded-2xl",
+          "border border-[var(--border)]",
+          "bg-[var(--surface)]",
+          "shadow-[var(--cd-shadow-card)]",
+        ].join(" ")}
+      >
+        <summary
+          className={[
+            "flex min-h-14 cursor-pointer list-none",
+            "items-center justify-between gap-3",
+            "px-5 py-4",
+            "text-sm font-semibold",
+            "text-[var(--text-primary)]",
+          ].join(" ")}
+        >
+          <span>
+            + Добавить комикс
+          </span>
 
-        {categories.length ===
-        0 ? (
-          <p className="mt-3 text-sm text-red-700">
-            Создание недоступно: в PostgreSQL нет категорий.
-          </p>
-        ) : (
-          <form
-            onSubmit={(
-              event,
-            ) =>
-              saveComic(
-                event,
-                "create",
-              )
-            }
-            className="mt-6"
+          <span
+            aria-hidden="true"
+            className={[
+              "text-lg text-[var(--text-muted)]",
+              "transition-transform",
+              "group-open:rotate-45",
+            ].join(" ")}
           >
-            <ComicFields
-              categories={
-                categories
-              }
-              create
-            />
+            +
+          </span>
+        </summary>
 
-            <button
-              type="submit"
-              disabled={
-                busyKey !==
-                null
+        <div
+          className={[
+            "border-t border-[var(--border)]",
+            "px-5 pb-5 pt-5",
+          ].join(" ")}
+        >
+          <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+            Новый комикс
+          </h2>
+
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            Заполни только нужные данные. Обложку можно выбрать с устройства.
+          </p>
+
+          {categories.length ===
+          0 ? (
+            <p className="mt-4 rounded-xl border border-[var(--danger)] p-3 text-sm text-[var(--danger)]">
+              Создание недоступно: в PostgreSQL нет категорий.
+            </p>
+          ) : (
+            <form
+              onSubmit={(
+                event,
+              ) =>
+                saveComic(
+                  event,
+                  "create",
+                )
               }
-              className="mt-5 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+              className="mt-6"
             >
-              Создать комикс
-            </button>
-          </form>
-        )}
-      </section>
+              <ComicFields
+                categories={
+                  categories
+                }
+                create
+              />
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  type="submit"
+                  disabled={
+                    busyKey !==
+                    null
+                  }
+                  className={[
+                    "min-h-11 rounded-[var(--cd-radius-button)]",
+                    "bg-[var(--primary)] px-5 py-3",
+                    "text-sm font-semibold",
+                    "text-[var(--primary-foreground)]",
+                    "disabled:cursor-wait disabled:opacity-60",
+                  ].join(" ")}
+                >
+                  Создать комикс
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </details>
 
       <section>
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="text-xl font-semibold">
-            Каталог
-          </h2>
+          <div>
+            <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+              Комиксы
+            </h2>
+
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              Открой комикс, чтобы изменить данные или управлять главами.
+            </p>
+          </div>
 
           <p className="text-sm text-[var(--muted)]">
             Всего: {initialComics.length}
@@ -1336,7 +1392,7 @@ export function AdminComicManager({
                   key={
                     comic.id
                   }
-                  className="rounded-2xl border border-black/5 bg-[var(--surface)] p-5 shadow-sm"
+                  className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--cd-shadow-card)]"
                 >
                   <summary className="cursor-pointer list-none">
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1372,7 +1428,7 @@ export function AdminComicManager({
                         comic.slug,
                       )
                     }
-                    className="mt-6 border-t border-black/10 pt-6"
+                    className="mt-6 border-t border-[var(--border)] pt-6"
                   >
                     <ComicFields
                       categories={
@@ -1392,7 +1448,7 @@ export function AdminComicManager({
                       </p>
                     ) : null}
 
-                    <section className="mt-6 rounded-xl border border-black/5 bg-[var(--background)] p-4">
+                    <section className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--background)] p-4">
                       <h4 className="font-semibold">
                         Главы
                       </h4>
@@ -1403,7 +1459,7 @@ export function AdminComicManager({
                             (chapter) => (
                               <li
                                 key={chapter.id}
-                                className="rounded-lg border border-black/5 bg-[var(--surface)] p-3"
+                                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
                               >
                                 {editingChapterId ===
                                 chapter.id &&
@@ -1654,7 +1710,7 @@ export function AdminComicManager({
                             <input
                               name="chapterDisplayCode"
                               placeholder="1, 1.01а, Extra…"
-                              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
                             />
                           </label>
 
@@ -1665,7 +1721,7 @@ export function AdminComicManager({
 
                             <input
                               name="chapterTitle"
-                              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
                             />
                           </label>
 
@@ -1678,7 +1734,7 @@ export function AdminComicManager({
                               type="url"
                               name="chapterSourceUrl"
                               placeholder="Необязательно"
-                              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
                             />
                           </label>
 
@@ -1697,7 +1753,7 @@ export function AdminComicManager({
                                   comic,
                                 )
                               }
-                              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
                             />
                           </label>
 
@@ -1709,7 +1765,7 @@ export function AdminComicManager({
                             <select
                               name="chapterStatus"
                               defaultValue="SCHEDULED"
-                              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
                             >
                               {(
                                 Object.entries(

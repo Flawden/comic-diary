@@ -6,6 +6,9 @@ import {
   userComics,
   users,
 } from "@/db/schema";
+import {
+  getChapterProgressCeiling,
+} from "@/modules/comics/queries/get-chapter-progress-ceiling";
 import type { PersonalRatings } from "@/modules/library/ratings/calculate-average-rating";
 
 export type ReadingStatus =
@@ -137,7 +140,25 @@ async function getUserComicContext(
     );
   }
 
-  return context;
+  const progressCeiling =
+    await getChapterProgressCeiling(
+      comicId,
+      context.totalChapters,
+    );
+
+  const currentChapter =
+    progressCeiling === null
+      ? context.currentChapter
+      : Math.min(
+          context.currentChapter,
+          progressCeiling,
+        );
+
+  return {
+    ...context,
+    currentChapter,
+    progressCeiling,
+  };
 }
 
 export async function addComicToUserLibrary(
@@ -238,9 +259,12 @@ export async function setUserComicStatus(
       values.startedAt = now;
     }
 
-    if (context.totalChapters !== null) {
+    if (
+      context.progressCeiling !==
+      null
+    ) {
       values.currentChapter =
-        context.totalChapters;
+        context.progressCeiling;
     }
   }
 
@@ -295,10 +319,13 @@ export async function changeUserComicProgress(
     nextChapter,
   );
 
-  if (context.totalChapters !== null) {
+  if (
+    context.progressCeiling !==
+    null
+  ) {
     nextChapter = Math.min(
       nextChapter,
-      context.totalChapters,
+      context.progressCeiling,
     );
   }
 
@@ -317,9 +344,11 @@ export async function changeUserComicProgress(
   }
 
   if (
-    context.totalChapters !== null &&
+    context.progressCeiling !==
+      null &&
+    context.progressCeiling > 0 &&
     nextChapter >=
-      context.totalChapters
+      context.progressCeiling
   ) {
     nextStatus = "COMPLETED";
     completedAt = now;

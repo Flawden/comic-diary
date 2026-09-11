@@ -10,22 +10,48 @@ import {
   userComics,
 } from "@/db/schema";
 
+import {
+  getChapterProgressCeiling,
+} from "@/modules/comics/queries/get-chapter-progress-ceiling";
+
 export async function getUserComicState(
   userId: number,
   comicId: number,
 ) {
   const result = await db
     .select({
-      status: userComics.status,
-      currentChapter: userComics.currentChapter,
-      ratingPlot: userComics.ratingPlot,
-      ratingCharacters: userComics.ratingCharacters,
-      ratingArt: userComics.ratingArt,
-      ratingDepth: userComics.ratingDepth,
-      ratingWorld: userComics.ratingWorld,
-      personalNote: userComics.personalNote,
-      startedAt: userComics.startedAt,
-      completedAt: userComics.completedAt,
+      status:
+        userComics.status,
+
+      currentChapter:
+        userComics.currentChapter,
+
+      totalChapters:
+        comics.totalChapters,
+
+      ratingPlot:
+        userComics.ratingPlot,
+
+      ratingCharacters:
+        userComics.ratingCharacters,
+
+      ratingArt:
+        userComics.ratingArt,
+
+      ratingDepth:
+        userComics.ratingDepth,
+
+      ratingWorld:
+        userComics.ratingWorld,
+
+      personalNote:
+        userComics.personalNote,
+
+      startedAt:
+        userComics.startedAt,
+
+      completedAt:
+        userComics.completedAt,
     })
     .from(userComics)
     .innerJoin(
@@ -65,5 +91,57 @@ export async function getUserComicState(
     )
     .limit(1);
 
-  return result[0] ?? null;
+  const state =
+    result[0];
+
+  if (!state) {
+    return null;
+  }
+
+  const progressCeiling =
+    await getChapterProgressCeiling(
+      comicId,
+      state.totalChapters,
+    );
+
+  const currentChapter =
+    progressCeiling === null
+      ? state.currentChapter
+      : Math.min(
+          state.currentChapter,
+          progressCeiling,
+        );
+
+  return {
+    status:
+      state.status,
+
+    currentChapter,
+
+    progressCeiling,
+
+    ratingPlot:
+      state.ratingPlot,
+
+    ratingCharacters:
+      state.ratingCharacters,
+
+    ratingArt:
+      state.ratingArt,
+
+    ratingDepth:
+      state.ratingDepth,
+
+    ratingWorld:
+      state.ratingWorld,
+
+    personalNote:
+      state.personalNote,
+
+    startedAt:
+      state.startedAt,
+
+    completedAt:
+      state.completedAt,
+  };
 }

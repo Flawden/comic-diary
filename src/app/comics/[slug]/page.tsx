@@ -89,6 +89,10 @@ export default async function ComicPage({
         )
       : null;
 
+  const progressCeiling =
+    readingState?.progressCeiling ??
+    null;
+
   const canDecreaseProgress =
     readingState !== null &&
     readingState.currentChapter > 0;
@@ -96,9 +100,9 @@ export default async function ComicPage({
   const canIncreaseProgress =
     readingState !== null &&
     (
-      comic.totalChapters === null ||
+      progressCeiling === null ||
       readingState.currentChapter <
-        comic.totalChapters
+        progressCeiling
     );
 
   const averageRating = readingState
@@ -140,7 +144,7 @@ export default async function ComicPage({
             <p className="mt-3 text-sm text-[var(--muted)]">
               {comic.totalChapters === null
                 ? "Количество глав пока не указано"
-                : `Глав: ${comic.totalChapters}`}
+                : `Глав: ${(chapters.length > 0 ? chapters.length : comic.totalChapters)}`}
             </p>
 
             {comic.visibility === "PRIVATE" ? (
@@ -150,7 +154,7 @@ export default async function ComicPage({
             ) : null}
 
             {comic.publicationStatus !== "PUBLISHED" ? (
-              <p className="mt-4 inline-flex rounded-full border border-black/10 bg-[var(--background)] px-3 py-1 text-xs font-semibold text-[var(--muted)]">
+              <p className="mt-4 inline-flex rounded-full border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-1 text-xs font-semibold text-[var(--muted)]">
                 {comic.publicationStatus === "HIDDEN"
                   ? "Скрыт из публичного каталога"
                   : "Архивный комикс"}
@@ -336,9 +340,9 @@ export default async function ComicPage({
 
                     <p className="mt-1 text-lg font-semibold">
                       {readingState.currentChapter}
-                      {comic.totalChapters === null
+                      {progressCeiling === null
                         ? ""
-                        : ` / ${comic.totalChapters}`}
+                        : ` / ${progressCeiling}`}
                     </p>
 
                     <div className="mt-3 flex gap-2">
@@ -589,7 +593,7 @@ export default async function ComicPage({
               "PRIVATE" &&
             currentUser?.id ===
               comic.ownerUserId ? (
-              <section className="mt-8 rounded-xl border border-black/10 bg-[var(--background)] p-5">
+              <section className="mt-8 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] p-5">
                 <h2 className="font-semibold">
                   Метаданные личного тайтла
                 </h2>

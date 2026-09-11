@@ -145,7 +145,7 @@ export function LoginForm({
           required
           maxLength={320}
           disabled={submitting}
-          className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-4 py-3 outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
         />
       </label>
 
@@ -160,7 +160,7 @@ export function LoginForm({
           autoComplete="current-password"
           required
           disabled={submitting}
-          className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-4 py-3 outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
         />
       </label>
 

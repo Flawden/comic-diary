@@ -54,3 +54,81 @@ body {
   color: var(--text-primary);
   font-family: var(--cd-font-ui);
 }
+
+
+/* Comic Diary autofill theme contract */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-primary);
+  -webkit-box-shadow:
+    0 0 0 1000px var(--surface-raised) inset;
+  caret-color: var(--text-primary);
+}
+
+/* Comic Diary form-control contract */
+:is(
+  input:not([type]),
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  input[type="search"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="datetime-local"],
+  textarea,
+  select
+) {
+  background-color: var(--surface-raised);
+  color: var(--text-primary);
+  border-color: var(--border);
+  caret-color: var(--text-primary);
+}
+
+:is(
+  input:not([type]),
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  input[type="search"],
+  input[type="number"],
+  input[type="tel"],
+  textarea
+)::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+:is(
+  input:not([type]),
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  input[type="search"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="datetime-local"],
+  textarea,
+  select
+):focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow:
+    0 0 0 1px var(--primary);
+}
+
+select option {
+  background-color: var(--surface-raised);
+  color: var(--text-primary);
+}

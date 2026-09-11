@@ -968,7 +968,7 @@ Scope:
 
 ## UI-F2 — Covers & Media
 
-Status: IN PROGRESS
+Status: COMPLETE
 
 Goal:
 
@@ -987,7 +987,7 @@ Scope:
 
 ## UI-F3 — Catalog Surface Migration
 
-Status: PLANNED
+Status: IN PROGRESS
 
 - rebuild the real catalog using the shared design system;
 - use real catalog data rather than duplicated preview fixtures;

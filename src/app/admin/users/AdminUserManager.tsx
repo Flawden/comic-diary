@@ -382,7 +382,7 @@ export function AdminUserManager({
                     defaultValue={
                       user.role
                     }
-                    className="w-full rounded-xl border border-black/10 bg-white px-3 py-2"
+                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
                   >
                     {(
                       Object.entries(

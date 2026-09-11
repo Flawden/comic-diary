@@ -252,7 +252,7 @@ export function AccountPasswordForm() {
           autoComplete="current-password"
           required
           disabled={submitting}
-          className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-4 py-3 outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
         />
       </label>
 
@@ -269,7 +269,7 @@ export function AccountPasswordForm() {
           minLength={10}
           maxLength={256}
           disabled={submitting}
-          className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-4 py-3 outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
         />
 
         <span className="mt-2 block text-xs leading-5 text-[var(--muted)]">
@@ -290,7 +290,7 @@ export function AccountPasswordForm() {
           minLength={10}
           maxLength={256}
           disabled={submitting}
-          className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-4 py-3 outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
         />
       </label>
 

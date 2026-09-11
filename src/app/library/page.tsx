@@ -193,7 +193,7 @@ export default async function LibraryPage({
         progressPercent:
           getLibraryProgressPercent(
             item.currentChapter,
-            item.totalChapters,
+            item.progressCeiling,
           ),
         hasPersonalNote:
           item.personalNote !== null &&
@@ -261,7 +261,7 @@ export default async function LibraryPage({
                 required
                 name="title"
                 maxLength={255}
-                className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2"
+                className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
                 placeholder="Название комикса"
               />
             </label>
@@ -276,7 +276,7 @@ export default async function LibraryPage({
                 type="url"
                 name="sourceUrl"
                 maxLength={2048}
-                className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2"
+                className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
                 placeholder="https://..."
               />
             </label>
@@ -291,7 +291,7 @@ export default async function LibraryPage({
                 name="totalChapters"
                 min={1}
                 step={1}
-                className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2"
+                className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
                 placeholder="Необязательно"
               />
             </label>
@@ -402,7 +402,7 @@ export default async function LibraryPage({
               defaultValue={
                 activeSort
               }
-              className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
             >
               {(
                 Object.keys(
@@ -534,10 +534,10 @@ export default async function LibraryPage({
                       Прогресс:{" "}
                       <strong>
                         {item.currentChapter}
-                        {item.totalChapters ===
+                        {item.progressCeiling ===
                         null
                           ? ""
-                          : ` / ${item.totalChapters}`}
+                          : ` / ${item.progressCeiling}`}
                       </strong>
                     </p>
 

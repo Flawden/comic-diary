@@ -322,7 +322,7 @@ export default async function VkCatalogImportPage({
               name="communityUrl"
               required
               defaultValue={community}
-              className="w-full rounded-xl border border-black/15 bg-white px-4 py-3"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-4 py-3"
             />
           </label>
 
@@ -337,7 +337,7 @@ export default async function VkCatalogImportPage({
               autoComplete="off"
               spellCheck={false}
               required
-              className="w-full rounded-xl border border-black/15 bg-white px-4 py-3"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-4 py-3"
             />
 
             <span className="mt-2 block text-xs text-[var(--muted)]">
@@ -389,7 +389,7 @@ export default async function VkCatalogImportPage({
               autoComplete="off"
               spellCheck={false}
               required
-              className="w-full rounded-xl border border-black/15 bg-white px-4 py-3"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-4 py-3"
             />
 
             <span className="mt-2 block text-xs text-[var(--muted)]">
@@ -454,7 +454,7 @@ export default async function VkCatalogImportPage({
               autoComplete="off"
               spellCheck={false}
               required
-              className="w-full rounded-xl border border-black/15 bg-white px-4 py-3"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-4 py-3"
             />
 
             <span className="mt-2 block text-xs text-[var(--muted)]">
@@ -523,7 +523,7 @@ export default async function VkCatalogImportPage({
               autoComplete="off"
               spellCheck={false}
               required
-              className="w-full rounded-xl border border-black/15 bg-white px-4 py-3"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-4 py-3"
             />
 
             <span className="mt-2 block text-xs text-[var(--muted)]">

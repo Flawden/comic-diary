@@ -334,7 +334,7 @@ export default async function Home({
               defaultValue={search}
               maxLength={120}
               placeholder="Например, Берсерк"
-              className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
             />
           </label>
 
@@ -349,7 +349,7 @@ export default async function Home({
                 categorySlug ??
                 ""
               }
-              className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
             >
               <option value="">
                 Все категории
@@ -376,7 +376,7 @@ export default async function Home({
             <select
               name="sort"
               defaultValue={sort}
-              className="w-full rounded-xl border border-black/10 bg-[var(--background)] px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
             >
               {(
                 Object.keys(

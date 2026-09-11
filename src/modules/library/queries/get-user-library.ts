@@ -8,6 +8,10 @@ import {
 
 import { db } from "@/db";
 import {
+  getChapterProgressCeiling,
+} from "@/modules/comics/queries/get-chapter-progress-ceiling";
+
+import {
   categories,
   comics,
   userComics,
@@ -17,7 +21,7 @@ import {
 export async function getUserLibrary(
   userId: number,
 ) {
-  return db
+  const rows = await db
     .select({
       comicId: comics.id,
       slug: comics.slug,
@@ -87,6 +91,32 @@ export async function getUserLibrary(
       desc(userComics.updatedAt),
       asc(comics.title),
     );
+
+  return Promise.all(
+    rows.map(
+      async (item) => {
+        const progressCeiling =
+          await getChapterProgressCeiling(
+            item.comicId,
+            item.totalChapters,
+          );
+
+        const currentChapter =
+          progressCeiling === null
+            ? item.currentChapter
+            : Math.min(
+                item.currentChapter,
+                progressCeiling,
+              );
+
+        return {
+          ...item,
+          currentChapter,
+          progressCeiling,
+        };
+      },
+    ),
+  );
 }
 
 export type UserLibraryItem =

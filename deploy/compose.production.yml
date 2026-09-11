@@ -27,6 +27,26 @@ services:
     networks:
       - backend
 
+  media-init:
+    image: ${COMIC_DIARY_IMAGE:?COMIC_DIARY_IMAGE is required}
+    user: "0:0"
+    restart: "no"
+    network_mode: "none"
+    read_only: true
+
+    command:
+      [
+        "sh",
+        "-c",
+        "mkdir -p /media/covers && chown -R 1001:1001 /media"
+      ]
+
+    volumes:
+      - comic_diary_media:/media
+
+    security_opt:
+      - no-new-privileges:true
+
   app:
     image: ${COMIC_DIARY_IMAGE:?COMIC_DIARY_IMAGE is required}
     restart: unless-stopped
@@ -35,14 +55,21 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       ADMIN_IMPORT_ENABLED: ${ADMIN_IMPORT_ENABLED:-false}
+      MEDIA_ROOT: /app/data/media
       NEXT_TELEMETRY_DISABLED: "1"
 
     ports:
       - "127.0.0.1:${COMIC_DIARY_HOST_PORT:-18082}:3000"
 
+    volumes:
+      - comic_diary_media:/app/data/media
+
     depends_on:
       db:
         condition: service_healthy
+
+      media-init:
+        condition: service_completed_successfully
 
     healthcheck:
       test:
@@ -71,4 +98,5 @@ networks:
     driver: bridge
 
 volumes:
+  comic_diary_media:
   comic_diary_pgdata:
