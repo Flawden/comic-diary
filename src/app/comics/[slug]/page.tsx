@@ -144,7 +144,7 @@ export default async function ComicPage({
             <p className="mt-3 text-sm text-[var(--muted)]">
               {comic.totalChapters === null
                 ? "Количество глав пока не указано"
-                : `Глав: ${(chapters.length > 0 ? chapters.length : comic.totalChapters)}`}
+                : `Глав: ${(chapters.length > 0 ? chapters.length : (chapters.length > 0 ? chapters.length : comic.totalChapters))}`}
             </p>
 
             {comic.visibility === "PRIVATE" ? (
