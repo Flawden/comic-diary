@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { LibraryComicCard } from "@/modules/library/components/LibraryComicCard";
+import { Button } from "@/shared/components/ui";
 import {
   redirect,
 } from "next/navigation";
@@ -17,13 +19,6 @@ import {
 } from "@/modules/library/library-view";
 
 export const dynamic = "force-dynamic";
-
-const statusLabels = {
-  WANT_TO_READ: "Хочу прочитать",
-  READING: "Читаю",
-  COMPLETED: "Прочитано",
-  ON_HOLD: "Отложено",
-} as const;
 
 const filterLabels = {
   ALL: "Все",
@@ -210,7 +205,7 @@ export default async function LibraryPage({
     );
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-8 sm:py-10">
+    <div className="mx-auto max-w-5xl">
       <header>
         <p className="text-sm font-medium text-[var(--primary)]">
           Читательский дневник
@@ -220,13 +215,13 @@ export default async function LibraryPage({
           Моя библиотека
         </h1>
 
-        <p className="mt-3 max-w-2xl text-[var(--muted)]">
+        <p className="mt-3 max-w-2xl text-[var(--text-secondary)]">
           Комиксы, которые я добавил в личный список чтения.
         </p>
       </header>
 
       {canUsePrivateCatalog ? (
-        <section className="mt-8 rounded-2xl border border-black/5 bg-[var(--surface)] p-5 shadow-sm sm:p-6">
+        <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm sm:p-6">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">
               Личный каталог
@@ -236,7 +231,7 @@ export default async function LibraryPage({
               Добавить личный тайтл
             </h2>
 
-            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
               Личный тайтл видите только вы. Он не попадает в общий каталог и использует обычные статусы, прогресс, оценки и заметки.
             </p>
           </div>
@@ -297,12 +292,12 @@ export default async function LibraryPage({
             </label>
 
             <div className="flex items-end">
-              <button
+              <Button
                 type="submit"
-                className="w-full rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"
+                className="w-full"
               >
                 Создать личный тайтл
-              </button>
+              </Button>
             </div>
           </form>
         </section>
@@ -363,10 +358,11 @@ export default async function LibraryPage({
               <Link
                 key={filter}
                 href={href}
+                aria-current={isActive ? "page" : undefined}
                 className={
                   isActive
-                    ? "rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"
-                    : "rounded-xl border border-black/10 bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                    ? "rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)]"
+                    : "rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]"
                 }
               >
                 {filterLabels[filter]}{" "}
@@ -382,7 +378,7 @@ export default async function LibraryPage({
       {library.length > 1 ? (
         <form
           method="get"
-          className="mt-4 flex flex-col gap-3 rounded-2xl border border-black/5 bg-[var(--surface)] p-4 sm:flex-row sm:items-end sm:justify-between"
+          className="mt-4 flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:items-end sm:justify-between"
         >
           {activeFilter !== "ALL" ? (
             <input
@@ -425,39 +421,38 @@ export default async function LibraryPage({
             </select>
           </label>
 
-          <button
+          <Button
             type="submit"
-            className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"
           >
             Применить
-          </button>
+          </Button>
         </form>
       ) : null}
 
       {library.length === 0 ? (
-        <section className="mt-8 rounded-2xl border border-black/5 bg-[var(--surface)] p-8 text-center shadow-sm">
+        <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm">
           <h2 className="text-lg font-semibold">
             В библиотеке пока пусто
           </h2>
 
-          <p className="mt-2 text-sm text-[var(--muted)]">
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
             Добавьте комикс из каталога, и он появится здесь.
           </p>
 
           <Link
             href="/"
-            className="mt-5 inline-flex rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white"
+            className="mt-5 inline-flex rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)]"
           >
             Перейти в каталог
           </Link>
         </section>
       ) : filteredLibrary.length === 0 ? (
-        <section className="mt-8 rounded-2xl border border-black/5 bg-[var(--surface)] p-8 text-center shadow-sm">
+        <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm">
           <h2 className="text-lg font-semibold">
             В этом разделе пока пусто
           </h2>
 
-          <p className="mt-2 text-sm text-[var(--muted)]">
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
             Здесь появятся комиксы со статусом «{filterLabels[activeFilter]}».
           </p>
 
@@ -472,146 +467,12 @@ export default async function LibraryPage({
           </Link>
         </section>
       ) : (
-        <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredLibrary.map(
-            (item) => (
-              <article
-                key={item.comicId}
-                className="overflow-hidden rounded-2xl border border-black/5 bg-[var(--surface)] shadow-sm"
-              >
-                <Link
-                  href={`/comics/${item.slug}`}
-                  className="block"
-                >
-                  <div className="aspect-[3/2] bg-[#e4e1d7]">
-                    {item.coverUrl ? (
-                      <div
-                        role="img"
-                        aria-label={`Обложка ${item.title}`}
-                        className="h-full bg-cover bg-center"
-                        style={{
-                          backgroundImage:
-                            `url("${item.coverUrl}")`,
-                        }}
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center p-6 text-center text-sm text-[var(--muted)]">
-                        Обложка появится позже
-                      </div>
-                    )}
-                  </div>
-                </Link>
-
-                <div className="p-5">
-                  <p className="text-xs font-medium text-[var(--primary)]">
-                    {item.visibility ===
-                    "PRIVATE"
-                      ? "Личный тайтл"
-                      : item.categoryName ??
-                        "Без категории"}
-                  </p>
-
-                  <Link
-                    href={`/comics/${item.slug}`}
-                    className="mt-1 block text-lg font-bold hover:underline"
-                  >
-                    {item.title}
-                  </Link>
-
-                  <div className="mt-4 rounded-xl bg-[var(--background)] p-4">
-                    <p className="text-sm">
-                      Статус:{" "}
-                      <strong>
-                        {
-                          statusLabels[
-                            item.status
-                          ]
-                        }
-                      </strong>
-                    </p>
-
-                    <p className="mt-1 text-sm">
-                      Прогресс:{" "}
-                      <strong>
-                        {item.currentChapter}
-                        {item.progressCeiling ===
-                        null
-                          ? ""
-                          : ` / ${item.progressCeiling}`}
-                      </strong>
-                    </p>
-
-                    {item.progressPercent !==
-                    null ? (
-                      <div className="mt-3">
-                        <div className="flex items-center justify-between gap-3 text-xs text-[var(--muted)]">
-                          <span>
-                            Прочитано
-                          </span>
-
-                          <span>
-                            {
-                              item.progressPercent
-                            }
-                            %
-                          </span>
-                        </div>
-
-                        <div className="mt-1 h-2 overflow-hidden rounded-full bg-black/10">
-                          <div
-                            className="h-full rounded-full bg-[var(--primary)]"
-                            style={{
-                              width:
-                                `${item.progressPercent}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <div className="mt-3 border-t border-black/10 pt-3">
-                      <p className="text-sm">
-                        Оценка:{" "}
-                        {item.averageRating ===
-                        null ? (
-                          <span className="text-[var(--muted)]">
-                            Без оценки
-                          </span>
-                        ) : (
-                          <strong>
-                            ★{" "}
-                            {item.averageRating.toFixed(
-                              1,
-                            )}{" "}
-                            / 5
-                          </strong>
-                        )}
-                      </p>
-
-                      {item.hasPersonalNote ? (
-                        <p className="mt-2 max-h-10 overflow-hidden text-xs leading-5 text-[var(--muted)]">
-                          «
-                          {
-                            item.personalNote
-                          }
-                          »
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <Link
-                    href={`/comics/${item.slug}`}
-                    className="mt-4 inline-flex text-sm font-semibold text-[var(--primary)]"
-                  >
-                    Открыть комикс →
-                  </Link>
-                </div>
-              </article>
-            ),
-          )}
+        <section aria-label="Комиксы в библиотеке" className="mt-8 grid gap-4 lg:grid-cols-2">
+          {filteredLibrary.map((item) => (
+            <LibraryComicCard key={item.comicId} item={item} />
+          ))}
         </section>
       )}
-    </main>
+    </div>
   );
 }

@@ -987,11 +987,10 @@ Scope:
 
 ## UI-F3 — Catalog Surface Migration
 
-Status: IN PROGRESS
+Status: COMPLETE
 
-Implementation checkpoint: canonical chapter ceilings are used by the catalog,
-home progress and detail header; catalog cards use shared Card/Badge/CoverImage.
-Final responsive visual acceptance is pending on Windows before closure.
+Validated: typecheck, lint, webpack production build; Windows desktop and
+390px catalog screenshots reviewed. Committed and pushed as 2e56a25.
 
 - rebuild the real catalog using the shared design system;
 - use real catalog data rather than duplicated preview fixtures;
@@ -1001,7 +1000,12 @@ Final responsive visual acceptance is pending on Windows before closure.
 
 ## UI-F4 — Library Surface Migration
 
-Status: PLANNED
+Status: IN PROGRESS
+
+Implementation checkpoint: dedicated library cards compose shared Card, Badge
+and CoverImage with canonical progress, personal ratings and note previews.
+Semantic borders/text, responsive list layout and 2-column home statistics are
+applied. Authenticated Windows visual acceptance remains pending.
 
 - distinguish catalog metadata from per-user reading state;
 - show reading progress and personal state without contaminating catalog contracts;
