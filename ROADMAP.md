@@ -989,6 +989,10 @@ Scope:
 
 Status: IN PROGRESS
 
+Implementation checkpoint: canonical chapter ceilings are used by the catalog,
+home progress and detail header; catalog cards use shared Card/Badge/CoverImage.
+Final responsive visual acceptance is pending on Windows before closure.
+
 - rebuild the real catalog using the shared design system;
 - use real catalog data rather than duplicated preview fixtures;
 - integrate cover imagery;

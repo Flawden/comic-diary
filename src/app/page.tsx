@@ -1,5 +1,8 @@
 import Link from "next/link";
 
+import { getChapterProgressCeiling } from "@/modules/comics/queries/get-chapter-progress-ceiling";
+import { Button } from "@/shared/components/ui";
+
 import { ComicCard } from "@/modules/comics/components/ComicCard";
 import {
   getComics,
@@ -89,6 +92,13 @@ export default async function Home({
       : [],
   ]);
 
+  const catalogWithProgress = await Promise.all(
+    comicList.map(async (comic) => ({
+      comic,
+      progressCeiling: await getChapterProgressCeiling(comic.id, comic.totalChapters),
+    })),
+  );
+
   const hasCatalogFilters =
     search !== "" ||
     categorySlug !== null ||
@@ -146,24 +156,24 @@ export default async function Home({
 
   if (
     readingNow &&
-    readingNow.totalChapters !== null &&
-    readingNow.totalChapters > 0
+    readingNow.progressCeiling !== null &&
+    readingNow.progressCeiling > 0
   ) {
     progressPercent = Math.min(
       100,
       Math.round(
         (
           readingNow.currentChapter /
-          readingNow.totalChapters
+          readingNow.progressCeiling
         ) * 100,
       ),
     );
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-4 py-8 sm:px-8">
+    <div className="mx-auto max-w-5xl">
       <header className="mb-10">
-        <p className="mb-2 text-sm text-[var(--muted)]">
+        <p className="mb-2 text-sm text-[var(--text-secondary)]">
           Добро пожаловать
         </p>
 
@@ -202,10 +212,10 @@ export default async function Home({
                 Прогресс:{" "}
                 <strong>
                   {readingNow.currentChapter}
-                  {readingNow.totalChapters ===
+                  {readingNow.progressCeiling ===
                   null
                     ? ""
-                    : ` / ${readingNow.totalChapters}`}
+                    : ` / ${readingNow.progressCeiling}`}
                 </strong>
               </span>
 
@@ -217,7 +227,7 @@ export default async function Home({
             </div>
 
             {progressPercent !== null ? (
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-black/10">
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--surface-raised)]">
                 <div
                   className="h-full rounded-full bg-[var(--primary)]"
                   style={{
@@ -241,7 +251,7 @@ export default async function Home({
               Сейчас ничего не читаю
             </h3>
 
-            <p className="mt-2 text-sm text-[var(--muted)]">
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
               Выберите комикс из библиотеки или добавьте новый из каталога.
             </p>
 
@@ -261,7 +271,7 @@ export default async function Home({
             Моя библиотека
           </h2>
 
-          <p className="text-sm text-[var(--muted)]">
+          <p className="text-sm text-[var(--text-secondary)]">
             Всего: {library.length}
           </p>
         </div>
@@ -303,7 +313,7 @@ export default async function Home({
               Каталог
             </h2>
 
-            <p className="mt-1 text-sm text-[var(--muted)]">
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
               В каталоге показываются только опубликованные комиксы.
             </p>
           </div>
@@ -321,7 +331,7 @@ export default async function Home({
         <form
           method="get"
           action="/"
-          className="mt-5 grid gap-3 rounded-2xl border border-black/5 bg-[var(--surface)] p-4 md:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+          className="mt-5 grid gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 md:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
         >
           <label className="block">
             <span className="mb-2 block text-sm font-medium">
@@ -399,16 +409,13 @@ export default async function Home({
             </select>
           </label>
 
-          <button
-            type="submit"
-            className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white md:self-end"
-          >
+          <Button type="submit" className="md:self-end">
             Применить
-          </button>
+          </Button>
         </form>
 
         {hasCatalogFilters ? (
-          <p className="mt-4 text-sm text-[var(--muted)]">
+          <p className="mt-4 text-sm text-[var(--text-secondary)]">
             Найдено опубликованных комиксов:{" "}
             <strong>
               {comicList.length}
@@ -417,14 +424,14 @@ export default async function Home({
         ) : null}
 
         {comicList.length === 0 ? (
-          <div className="mt-5 rounded-2xl border border-black/5 bg-[var(--surface)] p-6">
+          <div className="mt-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
             <h3 className="font-semibold">
               {hasCatalogFilters
                 ? "Ничего не найдено"
                 : "Опубликованных комиксов пока нет"}
             </h3>
 
-            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
               {hasCatalogFilters
                 ? "Среди опубликованных комиксов нет совпадений по выбранным условиям."
                 : "Скрытые и архивные записи не отображаются в публичном каталоге."}
@@ -441,14 +448,15 @@ export default async function Home({
           </div>
         ) : (
           <ul className="mt-5 grid gap-4 lg:grid-cols-2">
-            {comicList.map(
-              (comic) => (
+            {catalogWithProgress.map(
+              ({ comic, progressCeiling }) => (
                 <li
                   key={comic.id}
                   className="min-w-0"
                 >
                   <ComicCard
                     comic={comic}
+                    progressCeiling={progressCeiling}
                     personalState={
                       libraryByComicId.get(
                         comic.id,
@@ -461,6 +469,6 @@ export default async function Home({
           </ul>
         )}
       </section>
-    </main>
+    </div>
   );
 }

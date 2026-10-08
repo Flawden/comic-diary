@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
 
+import { getChapterProgressCeiling } from "@/modules/comics/queries/get-chapter-progress-ceiling";
+import { CoverImage } from "@/shared/components/media";
+
 import { getComicBySlug } from "@/modules/comics/queries/get-comic-by-slug";
 import { getComicChapters } from "@/modules/comics/queries/get-comic-chapters";
 import { getCurrentUser } from "@/modules/auth/request-identity";
@@ -90,8 +93,9 @@ export default async function ComicPage({
       : null;
 
   const progressCeiling =
-    readingState?.progressCeiling ??
-    null;
+    readingState
+      ? readingState.progressCeiling
+      : await getChapterProgressCeiling(comic.id, comic.totalChapters);
 
   const canDecreaseProgress =
     readingState !== null &&
@@ -115,22 +119,11 @@ export default async function ComicPage({
     <main className="mx-auto min-h-screen max-w-5xl px-6 py-10">
       <article className="overflow-hidden rounded-2xl border border-black/5 bg-[var(--surface)] shadow-sm">
         <div className="grid md:grid-cols-[280px_1fr]">
-          <div className="aspect-[3/4] bg-[#e4e1d7] md:aspect-auto">
-            {comic.coverUrl ? (
-              <div
-                role="img"
-                aria-label={`Обложка ${comic.title}`}
-                className="h-full min-h-96 bg-cover bg-center"
-                style={{
-                  backgroundImage: `url("${comic.coverUrl}")`,
-                }}
-              />
-            ) : (
-              <div className="flex h-full min-h-96 items-center justify-center p-8 text-center text-[var(--muted)]">
-                Обложка появится позже
-              </div>
-            )}
-          </div>
+          <CoverImage
+            src={comic.coverUrl}
+            alt={`Обложка ${comic.title}`}
+            className="aspect-[3/4] mx-auto w-40 self-start md:mx-0 md:w-full"
+          />
 
           <div className="p-7 md:p-9">
             <p className="text-sm font-medium text-[var(--primary)]">
@@ -142,9 +135,9 @@ export default async function ComicPage({
             </h1>
 
             <p className="mt-3 text-sm text-[var(--muted)]">
-              {comic.totalChapters === null
+              {progressCeiling === null
                 ? "Количество глав пока не указано"
-                : `Глав: ${(chapters.length > 0 ? chapters.length : (chapters.length > 0 ? chapters.length : comic.totalChapters))}`}
+                : `Доступно глав: ${progressCeiling}`}
             </p>
 
             {comic.visibility === "PRIVATE" ? (

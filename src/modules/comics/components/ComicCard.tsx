@@ -1,21 +1,19 @@
 import Link from "next/link";
 
 import type { ComicListItem } from "@/modules/comics/queries/get-comics";
+import { getLibraryProgressPercent } from "@/modules/library/library-view";
+import { CoverImage } from "@/shared/components/media";
+import { Badge, Card } from "@/shared/components/ui";
 
-type ComicCardPersonalState = {
-  status:
-    | "WANT_TO_READ"
-    | "READING"
-    | "COMPLETED"
-    | "ON_HOLD";
+type PersonalState = {
+  status: "WANT_TO_READ" | "READING" | "COMPLETED" | "ON_HOLD";
   currentChapter: number;
 };
 
 type ComicCardProps = {
   comic: ComicListItem;
-  personalState?:
-    | ComicCardPersonalState
-    | null;
+  progressCeiling: number | null;
+  personalState?: PersonalState | null;
 };
 
 const statusLabels = {
@@ -25,162 +23,56 @@ const statusLabels = {
   ON_HOLD: "Отложено",
 } as const;
 
-function getProgressPercent(
-  currentChapter: number,
-  totalChapters: number | null,
-) {
-  if (
-    totalChapters === null ||
-    totalChapters <= 0
-  ) {
-    return null;
-  }
-
-  return Math.min(
-    100,
-    Math.max(
-      0,
-      Math.round(
-        (
-          currentChapter /
-          totalChapters
-        ) * 100,
-      ),
-    ),
-  );
-}
-
-export function ComicCard({
-  comic,
-  personalState = null,
-}: ComicCardProps) {
-  const progressPercent =
-    personalState
-      ? getProgressPercent(
-          personalState.currentChapter,
-          comic.totalChapters,
-        )
-      : null;
+export function ComicCard({ comic, progressCeiling, personalState = null }: ComicCardProps) {
+  const currentChapter = personalState
+    ? progressCeiling === null
+      ? personalState.currentChapter
+      : Math.min(personalState.currentChapter, progressCeiling)
+    : 0;
+  const percent = personalState
+    ? getLibraryProgressPercent(currentChapter, progressCeiling)
+    : null;
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-black/5 bg-[var(--surface)] shadow-sm">
-      <div className="grid sm:grid-cols-[140px_1fr]">
-        <div className="aspect-[3/4] bg-[#e4e1d7] sm:aspect-auto">
-          {comic.coverUrl ? (
-            <div
-              role="img"
-              aria-label={`Обложка ${comic.title}`}
-              className="h-full min-h-48 bg-cover bg-center"
-              style={{
-                backgroundImage: `url("${comic.coverUrl}")`,
-              }}
-            />
-          ) : (
-            <div className="flex h-full min-h-48 items-center justify-center p-6 text-center text-sm text-[var(--muted)]">
-              Обложка появится позже
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col p-5">
-          <div>
-            <p className="text-sm font-medium text-[var(--primary)]">
-              {comic.categoryName ?? "Без категории"}
-            </p>
-
-            <h3 className="mt-1 text-xl font-semibold">
-              <Link
-                href={`/comics/${comic.slug}`}
-                className="hover:underline"
-              >
-                {comic.title}
-              </Link>
-            </h3>
-
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              {comic.totalChapters === null
-                ? "Количество глав пока не указано"
-                : `Глав: ${comic.totalChapters}`}
-            </p>
-
-            {personalState ? (
-              <div className="mt-4 rounded-xl bg-[var(--background)] p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <span className="rounded-full bg-[var(--surface)] px-2.5 py-1 font-semibold text-[var(--primary)]">
-                    {
-                      statusLabels[
-                        personalState.status
-                      ]
-                    }
-                  </span>
-
-                  <span className="text-[var(--muted)]">
-                    Глава{" "}
-                    <strong className="text-[var(--foreground)]">
-                      {
-                        personalState.currentChapter
-                      }
-                      {comic.totalChapters ===
-                      null
-                        ? ""
-                        : ` / ${comic.totalChapters}`}
-                    </strong>
-                  </span>
-                </div>
-
-                {progressPercent !==
-                null ? (
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between gap-3 text-xs text-[var(--muted)]">
-                      <span>
-                        Мой прогресс
-                      </span>
-
-                      <span>
-                        {progressPercent}%
-                      </span>
-                    </div>
-
-                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-black/10">
-                      <div
-                        className="h-full rounded-full bg-[var(--primary)]"
-                        style={{
-                          width:
-                            `${progressPercent}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ) : null}
+    <Card padding="sm" className="h-full">
+      <article className="flex h-full gap-4">
+        <Link href={`/comics/${comic.slug}`} className="w-24 shrink-0 self-start rounded-[var(--cd-radius-card)] focus-visible:outline-2 focus-visible:outline-[var(--primary)] sm:w-32">
+          <CoverImage src={comic.coverUrl} alt={`Обложка ${comic.title}`} className="aspect-[3/4] rounded-[var(--cd-radius-card)]" />
+        </Link>
+        <div className="flex min-w-0 flex-1 flex-col py-1">
+          <p className="text-xs font-medium text-[var(--text-accent)]">{comic.categoryName ?? "Без категории"}</p>
+          <h3 className="mt-1 text-lg font-bold leading-snug text-[var(--text-primary)]">
+            <Link href={`/comics/${comic.slug}`} className="break-words hover:underline">{comic.title}</Link>
+          </h3>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Badge variant="success">Опубликован</Badge>
+            <span className="text-xs text-[var(--text-secondary)]">
+              {progressCeiling === null ? "Главы не указаны" : `Доступно глав: ${progressCeiling}`}
+            </span>
+          </div>
+          {comic.description ? <p className="mt-3 line-clamp-3 text-sm leading-6 text-[var(--text-secondary)]">{comic.description}</p> : null}
+          {personalState ? (
+            <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <Badge variant="primary">{statusLabels[personalState.status]}</Badge>
+                <span className="text-[var(--text-secondary)]">Прочитано {currentChapter}{progressCeiling === null ? "" : ` / ${progressCeiling}`}</span>
               </div>
-            ) : null}
-
-            {comic.description ? (
-              <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
-                {comic.description}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href={`/comics/${comic.slug}`}
-              className="inline-flex rounded-xl border border-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary)]"
-            >
-              Подробнее
-            </Link>
-
-            <a
-              href={comic.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              Читать в VK
-            </a>
+              {percent !== null ? (
+                <div className="mt-3">
+                  <div className="mb-1 flex justify-between text-xs text-[var(--text-muted)]"><span>Мой прогресс</span><span>{percent}%</span></div>
+                  <div role="progressbar" aria-label={`Прогресс чтения: ${comic.title}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} className="h-1.5 overflow-hidden rounded-full bg-[var(--surface)]">
+                    <div className="h-full rounded-full bg-[var(--primary)]" style={{ width: `${percent}%` }} />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          <div className="mt-auto flex flex-wrap gap-2 pt-4 text-sm font-semibold">
+            <Link href={`/comics/${comic.slug}`} className="inline-flex min-h-11 items-center rounded-[var(--cd-radius-button)] border border-[var(--border)] px-3 text-[var(--text-primary)] hover:bg-[var(--surface-raised)]">Подробнее</Link>
+            <a href={comic.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-[var(--cd-radius-button)] bg-[var(--primary)] px-3 text-[var(--primary-foreground)] hover:opacity-90">Читать в источнике ↗</a>
           </div>
         </div>
-      </div>
-    </article>
+      </article>
+    </Card>
   );
 }
