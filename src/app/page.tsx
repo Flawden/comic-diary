@@ -1,3 +1,4 @@
+import { isSeriesStatus, seriesStatusLabels } from "@/modules/comics/series-status";
 import Link from "next/link";
 
 import { getChapterProgressCeiling } from "@/modules/comics/queries/get-chapter-progress-ceiling";
@@ -26,6 +27,7 @@ type HomePageProps = {
     q?: string | string[];
     category?: string | string[];
     sort?: string | string[];
+    series?: string | string[];
   }>;
 };
 
@@ -71,6 +73,9 @@ export default async function Home({
       ? rawSort
       : "TITLE_ASC";
 
+  const rawSeries = firstQueryValue(resolvedSearchParams.series);
+  const seriesStatus = rawSeries && isSeriesStatus(rawSeries) ? rawSeries : null;
+
   const currentUser =
     await getCurrentUser();
 
@@ -84,6 +89,7 @@ export default async function Home({
       search,
       categorySlug,
       sort,
+      seriesStatus,
     }),
     currentUser
       ? getUserLibrary(
@@ -102,6 +108,7 @@ export default async function Home({
   const hasCatalogFilters =
     search !== "" ||
     categorySlug !== null ||
+    seriesStatus !== null ||
     sort !== "TITLE_ASC";
 
   const readingNow =
@@ -331,8 +338,8 @@ export default async function Home({
 
         <form
           method="get"
-          action="/"
-          className="mt-5 grid gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 md:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+          action="/#catalog"
+          className="mt-5 grid gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 md:grid-cols-2 lg:grid-cols-4"
         >
           <label className="block">
             <span className="mb-2 block text-sm font-medium">
@@ -345,7 +352,7 @@ export default async function Home({
               defaultValue={search}
               maxLength={120}
               placeholder="Например, Берсерк"
-              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
+              className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
             />
           </label>
 
@@ -360,7 +367,7 @@ export default async function Home({
                 categorySlug ??
                 ""
               }
-              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
+              className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
             >
               <option value="">
                 Все категории
@@ -387,7 +394,7 @@ export default async function Home({
             <select
               name="sort"
               defaultValue={sort}
-              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
+              className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
             >
               {(
                 Object.keys(
@@ -410,7 +417,18 @@ export default async function Home({
             </select>
           </label>
 
-          <Button type="submit" className="md:self-end">
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium">Статус выпуска</span>
+            <select name="series" defaultValue={seriesStatus ?? ""}
+              className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]">
+              <option value="">Все статусы</option>
+              {Object.entries(seriesStatusLabels).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+
+          <Button type="submit" className="min-h-11 md:self-end">
             Применить
           </Button>
         </form>

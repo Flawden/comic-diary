@@ -1,3 +1,4 @@
+import { isSeriesStatus, type SeriesStatus } from "@/modules/comics/series-status";
 import {
   and,
   asc,
@@ -24,6 +25,7 @@ export type GetComicsOptions = {
   search?: string;
   categorySlug?: string | null;
   sort?: CatalogSort;
+  seriesStatus?: SeriesStatus | null;
 };
 
 export async function getComics(
@@ -62,6 +64,10 @@ export async function getComics(
         options.categorySlug,
       ),
     );
+  }
+
+  if (options.seriesStatus && isSeriesStatus(options.seriesStatus)) {
+    predicates.push(eq(comics.seriesStatus, options.seriesStatus));
   }
 
   const sort =

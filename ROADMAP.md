@@ -1343,3 +1343,14 @@ Status: IN PROGRESS. Publication state implementation ready; Windows PostgreSQL 
 - Completion snapshots include publication state. The transaction locks catalog and library records; stale chapter or publication snapshots are rejected before marks are inserted. Optional completion of MAIN never clears existing special marks.
 - Late releases, specials and revisions remain visible for tracked completed titles. Actual push/email delivery and automatic release on dates remain CD-08.
 - This slice does not complete all CD-04 catalog work: remaining search/filter/catalog acceptance and the global wording pass retain their roadmap scope. Verify all five publication labels, MAIN/ALL dialogs, cancellation, stale snapshots, legacy counters, ownership and narrow-screen layout before closing the slice.
+
+
+## CD-04 — Catalog publication filter (2026-10-09)
+
+Publication state forms accepted by the operator; commit 8c6e1db deployed successfully.
+Catalog filter implementation ready; Windows validation and visual acceptance pending.
+
+- Public catalog combines title search, category, publication state and sorting. All five states include UNKNOWN; default is all states. Filters persist in the URL, reload/share normally, and reset together.
+- Applying filters returns to the catalog section. Empty results retain the selected criteria and offer a full reset.
+- Series filters do not change the SHARED + PUBLISHED visibility boundary, personal state or tracking. Existing literal title search and deterministic sorting remain intact.
+- CD-04 remains IN PROGRESS: work type/format metadata and final catalog/detail/mobile acceptance remain. Global wording review is deferred.

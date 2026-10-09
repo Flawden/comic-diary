@@ -1,6 +1,6 @@
 import "dotenv/config";
 import assert from "node:assert/strict";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "../src/db";
 import { users, categories, comics, userComics, userEntitlements, administrativeAuditEvents } from "../src/db/schema";
 import { createSharedCatalogComic, updateSharedCatalogComic } from "../src/modules/catalog/shared-catalog-mutations";
@@ -8,6 +8,7 @@ import { createOwnPrivateTitle, updateOwnPrivateTitleMetadata } from "../src/mod
 import { getComicBySlug } from "../src/modules/comics/queries/get-comic-by-slug";
 import { getUserLibrary } from "../src/modules/library/queries/get-user-library";
 import { isSeriesStatus } from "../src/modules/comics/series-status";
+import { getComics } from "../src/modules/comics/queries/get-comics";
 import type { CatalogComic } from "../src/catalog/catalog-data";
 
 async function main() {
@@ -32,6 +33,11 @@ async function main() {
     for (const seriesStatus of ["ONGOING", "FINISHED", "HIATUS", "CANCELLED", "UNKNOWN"] as const) {
       await updateSharedCatalogComic({ ...input, seriesStatus }, actor);
       assert.equal((await getComicBySlug(stamp))!.seriesStatus, seriesStatus);
+      const matched = await getComics({ categorySlug: stamp, seriesStatus, search: "Publication" });
+      assert.deepEqual(matched.map(item => item.id), [shared.id]);
+      const mismatch = seriesStatus === "ONGOING" ? "FINISHED" : "ONGOING";
+      assert.equal((await getComics({ categorySlug: stamp, seriesStatus: mismatch })).length, 0);
+      assert.equal((await getComics({ categorySlug: stamp, seriesStatus, search: "%" })).length, 0, "search percent is literal");
       assert.equal((await getUserLibrary(owner.id))[0].seriesStatus, seriesStatus);
     }
     await updateSharedCatalogComic({ ...input, seriesStatus: "ONGOING" }, actor);
@@ -51,6 +57,14 @@ async function main() {
     await updateOwnPrivateTitleMetadata(owner.id, privateComic.id, { title: stamp, sourceUrl: "https://example.com", totalChapters: null });
     assert.equal((await getComicBySlug(privateTitle.slug, owner.id))!.seriesStatus, "FINISHED");
     await assert.rejects(updateOwnPrivateTitleMetadata(other.id, privateComic.id, { title: stamp, sourceUrl: "https://example.com", totalChapters: null, seriesStatus: "ONGOING" }));
+    assert.equal((await getComics({ search: stamp, seriesStatus: "FINISHED" })).some(item => item.id === privateComic.id), false, "private titles never enter public filters");
+    for (const publicationStatus of ["HIDDEN", "ARCHIVED"] as const) {
+      await db.update(comics).set({ publicationStatus }).where(eq(comics.id, shared.id));
+      assert.equal((await getComics({ categorySlug: stamp, seriesStatus: "ONGOING" })).length, 0);
+    }
+    await db.update(comics).set({ publicationStatus: "PUBLISHED" }).where(eq(comics.id, shared.id));
+    assert.equal((await getComics({ categorySlug: stamp })).length, 1, "default includes all states");
+    console.log("PASS: combined catalog filters, literal search and public visibility boundary");
     console.log("PASS: shared/private publication metadata, unknown default, import compatibility, invalid state rejection, diary preservation and owner isolation");
   } finally {
     if (userIds.length) { await db.delete(administrativeAuditEvents).where(inArray(administrativeAuditEvents.actorUserId, userIds)); }
