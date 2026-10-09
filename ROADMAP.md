@@ -1252,3 +1252,23 @@ Account page provides a server-rendered workspace link for EDIT_SHARED_CATALOG
 permission holders (current ADMIN and EDITOR roles). USER sees no workspace card.
 Existing /admin and mutation authorization remain authoritative. The account
 page uses the existing shell main/container instead of nesting another main.
+
+
+## CD-03 — Compact Library (first delivery)
+Status: IN PROGRESS
+
+Compact single-column title rows with portrait covers, personal status, main and
+special progress and rating. Native keyboard-accessible disclosure retains full
+progress, revision counts and personal note. Title search combines with status
+and sort; status links preserve the search. Empty search and empty status states
+are distinct. Private-title creation is collapsed by default.
+No diary deletion or subscription mutation is included. Separating tracking
+from diary data remains a required follow-up before removal can be offered.
+Registered chapter desktop screenshots reviewed: arbitrary display codes,
+MAIN/SPECIAL separation and 1/2 main + 0/1 special progress are visible.
+Updates populated/mobile acceptance remains pending.
+
+Release scheduling is specified for CD-05 input and CD-08 server processing:
+explicit planned date/time/timezone plus opt-in automatic publication; date
+alone never changes state. Archive/manual override cancels automatic action.
+Replacement archives the predecessor only when the replacement is published.

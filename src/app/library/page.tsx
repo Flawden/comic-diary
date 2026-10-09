@@ -35,6 +35,7 @@ type LibraryPageProps = {
   searchParams: Promise<{
     status?: string | string[];
     sort?: string | string[];
+    q?: string | string[];
   }>;
 };
 
@@ -50,6 +51,7 @@ function isLibraryFilter(
 function libraryHref(
   filter: LibraryFilter,
   sort: LibrarySort,
+  query = "",
 ) {
   const params =
     new URLSearchParams();
@@ -68,12 +70,13 @@ function libraryHref(
     );
   }
 
-  const query =
-    params.toString();
+  if (query) params.set("q", query);
 
-  return query === ""
+  const encoded = params.toString();
+
+  return encoded === ""
     ? "/library"
-    : `/library?${query}`;
+    : `/library?${encoded}`;
 }
 
 export default async function LibraryPage({
@@ -130,6 +133,10 @@ export default async function LibraryPage({
       ? requestedSort
       : "UPDATED";
 
+  const rawQuery = resolvedSearchParams.q;
+  const query = (Array.isArray(rawQuery) ? rawQuery[0] : rawQuery ?? "").trim().slice(0, 160);
+  const queryLower = query.toLocaleLowerCase("ru");
+
   const readingCount =
     library.filter(
       (item) =>
@@ -176,6 +183,7 @@ export default async function LibraryPage({
             activeFilter,
         )
   )
+    .filter((item) => !query || item.title.toLocaleLowerCase("ru").includes(queryLower))
     .map((item) => {
       const averageRating =
         calculateAverageRating(
@@ -221,8 +229,9 @@ export default async function LibraryPage({
       </header>
 
       {canUsePrivateCatalog ? (
-        <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm sm:p-6">
-          <div className="max-w-2xl">
+        <details className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm sm:p-6">
+          <summary className="min-h-11 cursor-pointer text-lg font-bold focus-visible:outline-2 focus-visible:outline-[var(--primary)]">Добавить личный тайтл</summary>
+          <div className="mt-3 max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">
               Личный каталог
             </p>
@@ -300,7 +309,7 @@ export default async function LibraryPage({
               </Button>
             </div>
           </form>
-        </section>
+        </details>
       ) : null}
 
       <section className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -352,6 +361,7 @@ export default async function LibraryPage({
               libraryHref(
                 filter,
                 activeSort,
+                query,
               );
 
             return (
@@ -375,9 +385,10 @@ export default async function LibraryPage({
         </nav>
       ) : null}
 
-      {library.length > 1 ? (
+      {library.length > 0 ? (
         <form
           method="get"
+          key={`${activeFilter}:${activeSort}:${query}`}
           className="mt-4 flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:items-end sm:justify-between"
         >
           {activeFilter !== "ALL" ? (
@@ -388,6 +399,10 @@ export default async function LibraryPage({
             />
           ) : null}
 
+          <label className="block flex-1">
+            <span className="mb-2 block text-sm font-medium">Поиск в библиотеке</span>
+            <input type="search" name="q" defaultValue={query} maxLength={160} placeholder="Название тайтла" className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]" />
+          </label>
           <label className="block flex-1">
             <span className="mb-2 block text-sm font-medium">
               Сортировка библиотеки
@@ -449,11 +464,11 @@ export default async function LibraryPage({
       ) : filteredLibrary.length === 0 ? (
         <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm">
           <h2 className="text-lg font-semibold">
-            В этом разделе пока пусто
+            {query ? "Ничего не найдено" : "В этом разделе пока пусто"}
           </h2>
 
           <p className="mt-2 text-sm text-[var(--text-secondary)]">
-            Здесь появятся комиксы со статусом «{filterLabels[activeFilter]}».
+            {query ? `По запросу «${query}» нет тайтлов в выбранном разделе.` : `Здесь появятся комиксы со статусом «${filterLabels[activeFilter]}».`}
           </p>
 
           <Link
@@ -463,11 +478,11 @@ export default async function LibraryPage({
             )}
             className="mt-5 inline-flex rounded-xl border border-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary)]"
           >
-            Показать все
+            Сбросить фильтры
           </Link>
         </section>
       ) : (
-        <section aria-label="Комиксы в библиотеке" className="mt-8 grid gap-4 lg:grid-cols-2">
+        <section aria-label="Комиксы в библиотеке" className="mt-6 space-y-3">
           {filteredLibrary.map((item) => (
             <LibraryComicCard key={item.comicId} item={item} />
           ))}

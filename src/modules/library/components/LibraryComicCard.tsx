@@ -21,10 +21,10 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
   const note = item.personalNote?.trim();
 
   return (
-    <Card padding="sm" className="h-full">
-      <article aria-label={item.title} className="flex h-full flex-col">
+    <Card padding="sm">
+      <article aria-label={item.title}>
         <div className="flex gap-4">
-          <Link href={href} className="w-24 shrink-0 self-start rounded-xl focus-visible:outline-2 focus-visible:outline-[var(--primary)] sm:w-28">
+          <Link href={href} className="w-16 shrink-0 self-start rounded-xl focus-visible:outline-2 focus-visible:outline-[var(--primary)] sm:w-20">
             <CoverImage src={item.coverUrl} alt={`Обложка ${item.title}`} className="aspect-[3/4] rounded-xl" />
           </Link>
           <div className="min-w-0 flex-1 py-1">
@@ -34,13 +34,22 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
             <h2 className="mt-1 break-words text-lg font-bold leading-snug text-[var(--text-primary)]">
               <Link href={href} className="hover:underline">{item.title}</Link>
             </h2>
-            <div className="mt-3"><Badge variant={status.variant}>{status.label}</Badge></div>
-            <p className="mt-3 text-sm text-[var(--text-secondary)]">
+            <div className="mt-2"><Badge variant={status.variant}>{status.label}</Badge></div>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+              {item.chapterReading.registered ? "Основные главы" : "Прочитано"}: <strong className="text-[var(--text-primary)]">{item.currentChapter}{item.progressCeiling === null ? "" : ` / ${item.progressCeiling}`}</strong>
+              {item.chapterReading.specialCount > 0 ? ` · Спешиалы ${item.chapterReading.specialReadCount}/${item.chapterReading.specialCount}` : ""}
+            </p>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
               {rating === null ? "Без оценки" : `★ ${rating.toFixed(1)} / 5`}
             </p>
           </div>
         </div>
-        <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-3">
+        <details className="group mt-3">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-2 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-raised)] focus-visible:outline-2 focus-visible:outline-[var(--primary)] [&::-webkit-details-marker]:hidden">
+            <span>Прогресс и дневник{note ? " · Есть заметка" : ""}</span>
+            <span aria-hidden="true" className="transition-transform group-open:rotate-180">⌄</span>
+          </summary>
+        <div className="mt-2 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-3">
           <div className="flex flex-wrap justify-between gap-2 text-sm">
             <span className="text-[var(--text-secondary)]">{item.chapterReading.registered ? "Основных глав прочитано" : "Прочитано глав"}</span>
             <strong>{item.currentChapter}{item.progressCeiling === null ? "" : ` / ${item.progressCeiling}`}</strong>
@@ -61,9 +70,10 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
           </div> : null}
           {note ? <p className="mt-3 line-clamp-2 break-words border-t border-[var(--border)] pt-3 text-sm leading-6 text-[var(--text-secondary)]">«{note}»</p> : null}
         </div>
-        <Link href={href} className="mt-auto inline-flex min-h-11 items-center justify-center rounded-[var(--cd-radius-button)] border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-raised)] focus-visible:outline-2 focus-visible:outline-[var(--primary)]">
+        <Link href={href} className="mt-3 inline-flex min-h-11 items-center justify-center rounded-[var(--cd-radius-button)] border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-raised)] focus-visible:outline-2 focus-visible:outline-[var(--primary)]">
           Открыть комикс →
         </Link>
+        </details>
       </article>
     </Card>
   );
