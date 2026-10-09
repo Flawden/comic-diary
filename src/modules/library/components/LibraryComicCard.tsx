@@ -1,3 +1,4 @@
+import { workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
 import { seriesStatusLabels, caughtUpLabel } from "@/modules/comics/series-status";
 import { TrackingControl } from "./TrackingControl";
 import Link from "next/link";
@@ -36,7 +37,7 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
             <h2 className="mt-1 break-words text-lg font-bold leading-snug text-[var(--text-primary)]">
               <Link href={href} className="hover:underline">{item.title}</Link>
             </h2>
-            <div className="mt-2 flex flex-wrap gap-2"><Badge variant={status.variant}>{status.label}</Badge><Badge variant="neutral">{seriesStatusLabels[item.seriesStatus]}</Badge>{!item.trackingEnabled ? <Badge variant="neutral">Обновления отключены</Badge> : null}</div>
+            <div className="mt-2 flex flex-wrap gap-2"><Badge variant={status.variant}>{status.label}</Badge><Badge variant="neutral">{seriesStatusLabels[item.seriesStatus]}</Badge><span className="text-xs text-[var(--text-secondary)]">{workTypeLabels[item.workType]} · {workFormatLabels[item.workFormat]}</span>{!item.trackingEnabled ? <Badge variant="neutral">Обновления отключены</Badge> : null}</div>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
               {item.chapterReading.registered ? "Основные главы" : "Общий счётчик"}: <strong className="text-[var(--text-primary)]">{item.currentChapter}{item.progressCeiling === null ? "" : ` / ${item.progressCeiling}`}</strong>
               {item.chapterReading.specialCount > 0 ? ` · Спешиалы ${item.chapterReading.specialReadCount}/${item.chapterReading.specialCount}` : ""}

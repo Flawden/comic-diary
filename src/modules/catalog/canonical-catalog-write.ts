@@ -88,6 +88,8 @@ export function canonicalComicCreateValues(
     totalChapters:
       comic.totalChapters,
 
+    ...(comic.workType === undefined ? {} : { workType: comic.workType }),
+    ...(comic.workFormat === undefined ? {} : { workFormat: comic.workFormat }),
     ...(comic.seriesStatus === undefined ? {} : { seriesStatus: comic.seriesStatus }),
 
     publicationStatus:

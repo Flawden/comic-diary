@@ -1,3 +1,4 @@
+import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
 import { seriesStatusLabels } from "@/modules/comics/series-status";
 import Link from "next/link";
 import { LibraryComicCard } from "@/modules/library/components/LibraryComicCard";
@@ -286,7 +287,8 @@ export default async function LibraryPage({
               />
             </label>
 
-            <label className="block">
+            <WorkMetadataFields  />
+<label className="block">
                   <span className="mb-1 block text-sm font-medium">Статус выпуска</span>
                   <select name="seriesStatus" defaultValue={"UNKNOWN"} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
                     {Object.entries(seriesStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}

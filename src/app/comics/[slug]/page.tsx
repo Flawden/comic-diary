@@ -1,3 +1,5 @@
+import { workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
+import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
 import { seriesStatusLabels, caughtUpLabel } from "@/modules/comics/series-status";
 import { TrackingControl } from "@/modules/library/components/TrackingControl";
 import { ReadingStatusForm } from "@/modules/library/components/ReadingStatusForm";
@@ -172,6 +174,7 @@ export default async function ComicPage({
             ) : null}
 
             <p className="mt-4 text-sm font-semibold text-[var(--text-secondary)]">{seriesStatusLabels[comic.seriesStatus]}</p>
+<p className="mt-2 text-sm text-[var(--text-secondary)]">{workTypeLabels[comic.workType]} · {workFormatLabels[comic.workFormat]}</p>
 
             {comic.description ? (
               <p className="mt-6 max-w-2xl leading-7 text-[var(--text-secondary)]">
@@ -439,7 +442,8 @@ export default async function ComicPage({
                     />
                   </label>
 
-                  <label className="block">
+                  <WorkMetadataFields workType={comic.workType} workFormat={comic.workFormat} />
+<label className="block">
                   <span className="mb-1 block text-sm font-medium">Статус выпуска</span>
                   <select name="seriesStatus" defaultValue={comic.seriesStatus} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
                     {Object.entries(seriesStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}

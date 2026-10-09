@@ -1,4 +1,6 @@
 "use client";
+import type { WorkType, WorkFormat } from "@/modules/comics/work-metadata";
+import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
 
 import { seriesStatusLabels, type SeriesStatus } from "@/modules/comics/series-status";
 
@@ -63,6 +65,8 @@ type AdminComic = {
   sourceUrl: string;
   totalChapters: number | null;
   seriesStatus: SeriesStatus;
+  workType: WorkType;
+  workFormat: WorkFormat;
   publicationStatus:
     PublicationStatus;
   categorySlug: string | null;
@@ -314,6 +318,8 @@ function comicPayload(
             rawTotal,
           ),
 
+    workType: textValue(form, "workType"),
+    workFormat: textValue(form, "workFormat"),
     seriesStatus: textValue(form, "seriesStatus"),
     publicationStatus:
       textValue(
@@ -478,7 +484,8 @@ function ComicFields({
           />
         </label>
 
-        <label className="block">
+        <WorkMetadataFields workType={comic?.workType} workFormat={comic?.workFormat} />
+<label className="block">
           <span className="mb-1 block text-sm font-medium">Статус выпуска</span>
           <select name="seriesStatus" defaultValue={comic?.seriesStatus ?? "UNKNOWN"} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
             {Object.entries(seriesStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}

@@ -9,6 +9,7 @@ import { getComicBySlug } from "../src/modules/comics/queries/get-comic-by-slug"
 import { getUserLibrary } from "../src/modules/library/queries/get-user-library";
 import { isSeriesStatus } from "../src/modules/comics/series-status";
 import { getComics } from "../src/modules/comics/queries/get-comics";
+import { isWorkType, isWorkFormat } from "../src/modules/comics/work-metadata";
 import type { CatalogComic } from "../src/catalog/catalog-data";
 
 async function main() {
@@ -29,6 +30,24 @@ async function main() {
     const actor = { userId: owner.id, role: "ADMIN" as const };
     const shared = await createSharedCatalogComic(input, actor); comicIds.push(shared.id);
     assert.equal((await getComicBySlug(stamp))!.seriesStatus, "UNKNOWN", "declared count cannot infer publication state");
+    assert.equal((await getComicBySlug(stamp))!.workType, "UNKNOWN");
+    assert.equal((await getComicBySlug(stamp))!.workFormat, "UNKNOWN");
+    for (const workType of ["UNKNOWN", "MANGA", "MANHWA", "MANHUA", "COMIC", "OTHER"] as const) {
+      for (const workFormat of ["UNKNOWN", "PAGED", "WEBTOON", "OTHER"] as const) {
+        await updateSharedCatalogComic({ ...input, workType, workFormat }, actor);
+        const result = (await getComicBySlug(stamp))!;
+        assert.equal(result.workType, workType); assert.equal(result.workFormat, workFormat);
+        assert.deepEqual((await getComics({ categorySlug: stamp, workType, workFormat })).map(item => item.id), [shared.id]);
+        assert.equal((await getComics({ categorySlug: stamp, workType: workType === "MANGA" ? "MANHWA" : "MANGA", workFormat })).length, 0);
+      }
+    }
+    await updateSharedCatalogComic({ ...input, workType: "MANHWA", workFormat: "WEBTOON" }, actor);
+    await updateSharedCatalogComic(input, actor);
+    assert.equal((await getComicBySlug(stamp))!.workType, "MANHWA", "old importer preserves type");
+    assert.equal((await getComicBySlug(stamp))!.workFormat, "WEBTOON", "old importer preserves format");
+    await assert.rejects(updateSharedCatalogComic({ ...input, workType: "INVALID" as never }, actor));
+    await assert.rejects(updateSharedCatalogComic({ ...input, workFormat: "INVALID" as never }, actor));
+    assert.equal(isWorkType("toString"), false); assert.equal(isWorkFormat("__proto__"), false);
     await db.insert(userComics).values({ userId: owner.id, comicId: shared.id, status: "COMPLETED", ratingArt: 5, personalNote: "Keep", trackingEnabled: false });
     for (const seriesStatus of ["ONGOING", "FINISHED", "HIATUS", "CANCELLED", "UNKNOWN"] as const) {
       await updateSharedCatalogComic({ ...input, seriesStatus }, actor);
@@ -51,6 +70,10 @@ async function main() {
     const privateTitle = await createOwnPrivateTitle(owner.id, { title: stamp, sourceUrl: "https://example.com", totalChapters: null, seriesStatus: "HIATUS" });
     const privateComic = (await getComicBySlug(privateTitle.slug, owner.id))!; comicIds.push(privateComic.id);
     assert.equal(privateComic.seriesStatus, "HIATUS");
+    assert.equal(privateComic.workType, "UNKNOWN"); assert.equal(privateComic.workFormat, "UNKNOWN");
+    await updateOwnPrivateTitleMetadata(owner.id, privateComic.id, { title: stamp, sourceUrl: "https://example.com", totalChapters: null, workType: "MANGA", workFormat: "WEBTOON" });
+    await assert.rejects(updateOwnPrivateTitleMetadata(owner.id, privateComic.id, { title: stamp, sourceUrl: "https://example.com", totalChapters: null, workType: "BAD" as never }));
+    await assert.rejects(updateOwnPrivateTitleMetadata(other.id, privateComic.id, { title: stamp, sourceUrl: "https://example.com", totalChapters: null, workType: "MANHUA" }));
     assert.equal(await getComicBySlug(privateTitle.slug, other.id), null);
     await updateOwnPrivateTitleMetadata(owner.id, privateComic.id, { title: stamp, sourceUrl: "https://example.com", totalChapters: null, seriesStatus: "FINISHED" });
     assert.equal((await getComicBySlug(privateTitle.slug, owner.id))!.seriesStatus, "FINISHED");
@@ -64,6 +87,12 @@ async function main() {
     }
     await db.update(comics).set({ publicationStatus: "PUBLISHED" }).where(eq(comics.id, shared.id));
     assert.equal((await getComics({ categorySlug: stamp })).length, 1, "default includes all states");
+    assert.equal((await getComicBySlug(privateTitle.slug, owner.id))!.workType, "MANGA");
+    assert.equal((await getComicBySlug(privateTitle.slug, owner.id))!.workFormat, "WEBTOON");
+    const finalDiary = (await getUserLibrary(owner.id)).find(item => item.comicId === shared.id)!;
+    assert.equal(finalDiary.workType, "MANHWA"); assert.equal(finalDiary.workFormat, "WEBTOON");
+    assert.equal(finalDiary.personalNote, "Keep"); assert.equal(finalDiary.trackingEnabled, false);
+    console.log("PASS: independent type/format combinations, UNKNOWN defaults, old imports, invalid values and private ownership");
     console.log("PASS: combined catalog filters, literal search and public visibility boundary");
     console.log("PASS: shared/private publication metadata, unknown default, import compatibility, invalid state rejection, diary preservation and owner isolation");
   } finally {

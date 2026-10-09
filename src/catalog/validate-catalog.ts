@@ -1,3 +1,4 @@
+import { isWorkType, isWorkFormat } from "@/modules/comics/work-metadata";
 import { isSeriesStatus } from "@/modules/comics/series-status";
 import type {
   CatalogCategory,
@@ -146,6 +147,8 @@ export function validateCatalogData(
     );
 
     if (
+      (comic.workType !== undefined && !isWorkType(comic.workType)) ||
+      (comic.workFormat !== undefined && !isWorkFormat(comic.workFormat)) ||
       (comic.seriesStatus !== undefined && !isSeriesStatus(comic.seriesStatus)) ||
       !publicationStatuses.has(
         comic.publicationStatus,

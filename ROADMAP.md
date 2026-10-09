@@ -1354,3 +1354,14 @@ Catalog filter implementation ready; Windows validation and visual acceptance pe
 - Applying filters returns to the catalog section. Empty results retain the selected criteria and offer a full reset.
 - Series filters do not change the SHARED + PUBLISHED visibility boundary, personal state or tracking. Existing literal title search and deterministic sorting remain intact.
 - CD-04 remains IN PROGRESS: work type/format metadata and final catalog/detail/mobile acceptance remain. Global wording review is deferred.
+
+
+## CD-04 — Independent work type and format (2026-10-09)
+
+Status: IN PROGRESS. Catalog publication filter accepted by the operator after b0f9d91. Type/format implementation ready; Windows PostgreSQL and visual acceptance pending.
+
+- Work type: UNKNOWN / MANGA / MANHWA / MANHUA / COMIC / OTHER. Format: UNKNOWN / PAGED / WEBTOON / OTHER. Every combination is valid; WEBTOON is a vertical format, not a mutually exclusive work type.
+- Migration 0019 initializes both fields to UNKNOWN without inferring values from titles/categories. Shared editors and private owners can set them in metadata forms; cards and detail display both.
+- Catalog type/format filters combine with publication state, title, category and sort in the URL. Public visibility remains SHARED + PUBLISHED.
+- Missing fields in older imports/clients preserve existing metadata on update and use UNKNOWN on creation. Invalid supplied values are rejected. Changes do not rewrite personal reading status, marks, ratings, notes or tracking.
+- Publication state forms and catalog state filter were accepted by the operator; build/PG tests passed on Windows for previous deliveries. CD-04 final responsive catalog/detail and type/format acceptance remain pending; wording pass deferred.

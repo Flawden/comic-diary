@@ -1,3 +1,4 @@
+import { isWorkType, isWorkFormat, workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
 import { isSeriesStatus, seriesStatusLabels } from "@/modules/comics/series-status";
 import Link from "next/link";
 
@@ -28,6 +29,8 @@ type HomePageProps = {
     category?: string | string[];
     sort?: string | string[];
     series?: string | string[];
+    type?: string | string[];
+    format?: string | string[];
   }>;
 };
 
@@ -76,6 +79,11 @@ export default async function Home({
   const rawSeries = firstQueryValue(resolvedSearchParams.series);
   const seriesStatus = rawSeries && isSeriesStatus(rawSeries) ? rawSeries : null;
 
+  const rawType = firstQueryValue(resolvedSearchParams.type);
+  const rawFormat = firstQueryValue(resolvedSearchParams.format);
+  const workType = isWorkType(rawType) ? rawType : null;
+  const workFormat = isWorkFormat(rawFormat) ? rawFormat : null;
+
   const currentUser =
     await getCurrentUser();
 
@@ -90,6 +98,8 @@ export default async function Home({
       categorySlug,
       sort,
       seriesStatus,
+      workType,
+      workFormat,
     }),
     currentUser
       ? getUserLibrary(
@@ -109,6 +119,8 @@ export default async function Home({
     search !== "" ||
     categorySlug !== null ||
     seriesStatus !== null ||
+    workType !== null ||
+    workFormat !== null ||
     sort !== "TITLE_ASC";
 
   const readingNow =
@@ -428,6 +440,20 @@ export default async function Home({
             </select>
           </label>
 
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium">Тип произведения</span>
+            <select name="type" defaultValue={workType ?? ""} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]">
+              <option value="">Все типы</option>
+              {Object.entries(workTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium">Формат</span>
+            <select name="format" defaultValue={workFormat ?? ""} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]">
+              <option value="">Все форматы</option>
+              {Object.entries(workFormatLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
           <Button type="submit" className="min-h-11 md:self-end">
             Применить
           </Button>

@@ -1,3 +1,4 @@
+import { isWorkType, isWorkFormat } from "@/modules/comics/work-metadata";
 import { isSeriesStatus } from "@/modules/comics/series-status";
 import {
   type NextRequest,
@@ -148,8 +149,12 @@ function parseCatalogComic(
     return null;
   }
 
+  if (value.workType !== undefined && !isWorkType(value.workType)) return null;
+  if (value.workFormat !== undefined && !isWorkFormat(value.workFormat)) return null;
   if (value.seriesStatus !== undefined && !isSeriesStatus(value.seriesStatus)) return null;
   return {
+    workType: value.workType as CatalogComic["workType"],
+    workFormat: value.workFormat as CatalogComic["workFormat"],
     seriesStatus: value.seriesStatus as CatalogComic["seriesStatus"],
     slug:
       value.slug,

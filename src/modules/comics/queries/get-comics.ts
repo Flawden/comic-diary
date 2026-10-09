@@ -1,3 +1,4 @@
+import { isWorkType, isWorkFormat, type WorkType, type WorkFormat } from "@/modules/comics/work-metadata";
 import { isSeriesStatus, type SeriesStatus } from "@/modules/comics/series-status";
 import {
   and,
@@ -26,6 +27,8 @@ export type GetComicsOptions = {
   categorySlug?: string | null;
   sort?: CatalogSort;
   seriesStatus?: SeriesStatus | null;
+  workType?: WorkType | null;
+  workFormat?: WorkFormat | null;
 };
 
 export async function getComics(
@@ -70,6 +73,9 @@ export async function getComics(
     predicates.push(eq(comics.seriesStatus, options.seriesStatus));
   }
 
+  if (options.workType && isWorkType(options.workType)) predicates.push(eq(comics.workType, options.workType));
+  if (options.workFormat && isWorkFormat(options.workFormat)) predicates.push(eq(comics.workFormat, options.workFormat));
+
   const sort =
     options.sort ??
     "TITLE_ASC";
@@ -99,6 +105,8 @@ export async function getComics(
       sourceUrl:
         comics.sourceUrl,
       seriesStatus: comics.seriesStatus,
+      workType: comics.workType,
+      workFormat: comics.workFormat,
       totalChapters:
         comics.totalChapters,
       publicationStatus:

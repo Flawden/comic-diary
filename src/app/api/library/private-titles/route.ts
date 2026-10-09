@@ -1,3 +1,4 @@
+import { isWorkType, isWorkFormat } from "@/modules/comics/work-metadata";
 import { isSeriesStatus } from "@/modules/comics/series-status";
 import {
   type NextRequest,
@@ -88,9 +89,15 @@ function readMetadataInput(
       );
   }
 
+  const workType = formData.get("workType");
+  const workFormat = formData.get("workFormat");
+  if (workType !== null && !isWorkType(workType)) return null;
+  if (workFormat !== null && !isWorkFormat(workFormat)) return null;
   const seriesStatus = formData.get("seriesStatus");
   if (seriesStatus !== null && !isSeriesStatus(seriesStatus)) return null;
   return {
+    workType: workType ?? undefined,
+    workFormat: workFormat ?? undefined,
     seriesStatus: seriesStatus ?? undefined,
     title,
     sourceUrl,

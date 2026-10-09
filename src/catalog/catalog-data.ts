@@ -1,3 +1,4 @@
+import type { WorkType, WorkFormat } from "@/modules/comics/work-metadata";
 import type { SeriesStatus } from "@/modules/comics/series-status";
 export type CatalogCategory = {
   slug: string;
@@ -22,6 +23,8 @@ export type CatalogComic = {
   totalChapters: number | null;
   publicationStatus: ComicPublicationStatus;
   seriesStatus?: SeriesStatus;
+  workType?: WorkType;
+  workFormat?: WorkFormat;
   categorySlug: string;
 };
 

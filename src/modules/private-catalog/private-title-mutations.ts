@@ -1,3 +1,4 @@
+import { isWorkType, isWorkFormat, type WorkType, type WorkFormat } from "@/modules/comics/work-metadata";
 import { isSeriesStatus, type SeriesStatus } from "@/modules/comics/series-status";
 import {
   randomUUID,
@@ -23,6 +24,8 @@ export type PrivateTitleMetadataInput = {
   sourceUrl: string;
   totalChapters: number | null;
   seriesStatus?: SeriesStatus;
+  workType?: WorkType;
+  workFormat?: WorkFormat;
 };
 
 export type PrivateTitleCreateInput =
@@ -66,6 +69,8 @@ function normalizePrivateTitle(
     );
   }
 
+  if (input.workType !== undefined && !isWorkType(input.workType)) throw new PrivateTitleMutationError("invalid-title");
+  if (input.workFormat !== undefined && !isWorkFormat(input.workFormat)) throw new PrivateTitleMutationError("invalid-title");
   if (input.seriesStatus !== undefined && !isSeriesStatus(input.seriesStatus)) throw new PrivateTitleMutationError("invalid-title");
 
   const sourceUrl =
@@ -121,6 +126,8 @@ function normalizePrivateTitle(
 
   return {
     seriesStatus: input.seriesStatus,
+    workType: input.workType,
+    workFormat: input.workFormat,
     title,
     sourceUrl:
       parsedSourceUrl.toString(),
@@ -208,6 +215,8 @@ export async function createOwnPrivateTitle(
               normalized.totalChapters,
 
             seriesStatus: normalized.seriesStatus,
+            workType: normalized.workType,
+            workFormat: normalized.workFormat,
 
             publicationStatus:
               "PUBLISHED",
@@ -366,6 +375,8 @@ export async function updateOwnPrivateTitleMetadata(
               normalized.totalChapters,
 
             seriesStatus: normalized.seriesStatus,
+            workType: normalized.workType,
+            workFormat: normalized.workFormat,
 
             updatedAt:
               new Date(),
