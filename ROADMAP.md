@@ -1288,3 +1288,33 @@ Direct set-status COMPLETED is rejected. Return to READING preserves reads.
 Local typecheck/lint/webpack build and PostgreSQL-compatible integration checks
 passed. Actual Windows PostgreSQL and dialog/mobile visual acceptance pending.
 Safe unsubscription remains outstanding.
+
+
+## CD-03/CD-04 — Registry Counts and Independent Tracking
+Status: IN PROGRESS
+
+Confirmed completion committed and pushed as f90bb2b; Windows typecheck/lint/
+webpack build and actual PostgreSQL completion probe passed. Desktop legacy
+dialog and cancellation screenshots reviewed.
+
+Delivery 1: available MAIN/SPECIAL counts derive only from RELEASED registry
+records; totalChapters is descriptive metadata, never a progress denominator.
+Empty registry shows zero available records and retains legacy personal count
+without percentage. Completion without registry changes status only, never
+raises the old counter to a declared total. Existing diary data is preserved.
+
+Delivery 2 (CD-03): tracking opt-in independent of personal reading status.
+Unsubscribe preserves marks, ratings and notes. Tracked titles with any reading
+status are eligible for updates; READING remains a filter, not subscription.
+Delivery 3 (CD-04): explicit publication state ONGOING/FINISHED/HIATUS/
+CANCELLED/UNKNOWN, separate from catalog visibility and reader status.
+Caught up on an ongoing title remains READING; a new chapter restores unread
+state. FINISHED plus completed MAIN reading permits explicit completion,
+with specials chosen separately. Existing unknown-state titles need an honest
+compatibility path, not inferred publication state from declared chapter count.
+Delivery 4 (CD-08): notification delivery for newly published chapters and
+revisions of tracked titles, plus release calendar. Updates list is already
+available; push/email notifications are not implemented.
+
+CD-03 remains IN PROGRESS until independent tracking and safe unsubscribe
+are delivered and accepted; CD-04 publication metadata is still planned.

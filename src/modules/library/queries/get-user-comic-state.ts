@@ -98,7 +98,7 @@ export async function getUserComicState(
 
   const chapterReading = await getChapterReading(userId, comicId);
 
-  const progressCeiling = chapterReading.registered ? chapterReading.progressCeiling : state.totalChapters;
+  const progressCeiling = chapterReading.registered ? chapterReading.progressCeiling : null;
   const currentChapter = progressCeiling === null ? state.currentChapter : Math.min(state.currentChapter, progressCeiling);
 
   return {

@@ -68,8 +68,8 @@ export function ReadingStatusForm(props: Props) {
           </button>
         </> : <>
           <p className="text-sm text-[var(--text-secondary)]">Список глав ещё не заполнен. Конкретные главы и спешиалы определить нельзя.</p>
-          <button type="button" disabled={pending} onClick={() => void save(props.legacyTotal === null ? "STATUS_ONLY" : "LEGACY")} className={`${button} text-left`}>
-            {props.legacyTotal === null ? "Завершить без изменения счётчика" : `Отметить все ${props.legacyTotal} глав по общему счётчику`}
+          <button type="button" disabled={pending} onClick={() => void save("STATUS_ONLY")} className={`${button} text-left`}>
+            Завершить без изменения общего счётчика
           </button>
         </>}
         <button type="button" autoFocus disabled={pending} onClick={cancel} className={button}>Отмена, выбрал по ошибке</button>

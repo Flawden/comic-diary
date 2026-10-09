@@ -7,5 +7,5 @@ export function completionSnapshot(registry: { id: number; kind: string; status:
 }
 
 export function isCompletionScope(value: unknown): value is CompletionScope {
-  return value === "MAIN" || value === "ALL" || value === "LEGACY" || value === "STATUS_ONLY";
+  return value === "MAIN" || value === "ALL" || value === "STATUS_ONLY";
 }

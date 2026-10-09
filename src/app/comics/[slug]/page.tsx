@@ -86,7 +86,7 @@ export default async function ComicPage({
   const progressCeiling =
     readingState
       ? readingState.progressCeiling
-      : await getChapterProgressCeiling(comic.id, comic.totalChapters);
+      : await getChapterProgressCeiling(comic.id);
 
   const averageRating = readingState
     ? calculateAverageRating(
@@ -114,9 +114,8 @@ export default async function ComicPage({
             </h1>
 
             <p className="mt-3 text-sm text-[var(--text-secondary)]">
-              {progressCeiling === null
-                ? "Количество глав пока не указано"
-                : `${chapters.length === 0 ? "Заявлено" : "Основных глав доступно"}: ${progressCeiling}`}
+              Основных глав доступно: {chapters.filter((c) => c.status === "RELEASED" && c.kind === "MAIN").length}
+              {comic.totalChapters !== null ? ` · Заявлено (справочно): ${comic.totalChapters}` : ""}
             </p>
 
             {comic.visibility === "PRIVATE" ? (
@@ -205,7 +204,7 @@ export default async function ComicPage({
 
                   <div>
                     <h3 className="font-semibold">Мой прогресс</h3>
-                    <p className="mt-2 text-lg font-semibold">{readingState.currentChapter}{progressCeiling === null ? "" : ` / ${progressCeiling}`}</p>
+                    <p className="mt-2 text-lg font-semibold">{!readingState.chapterReading.registered ? "Общий счётчик: " : ""}{readingState.currentChapter}{progressCeiling === null ? "" : ` / ${progressCeiling}`}</p>
                     {readingState.unresolvedLegacyProgress ? <p className="mt-2 text-sm text-[var(--text-secondary)]">Ранее сохранён общий счётчик: {readingState.unresolvedLegacyProgress}. Появился список глав — выберите «Прочитано до», чтобы связать чтение с конкретными главами.</p> : null}
                     {readingState.chapterReading.registered ? (
                       <div className="mt-2 space-y-2 text-sm text-[var(--text-secondary)]">
@@ -219,7 +218,7 @@ export default async function ComicPage({
                       <form action="/api/library/reading-state" method="post" className="mt-3">
                         <input type="hidden" name="comicId" value={comic.id} />
                         <input type="hidden" name="intent" value="set-legacy-progress" />
-                        <label className="block text-sm">Прочитано глав
+                        <label className="block text-sm">Общий счётчик без привязки к главам
                           <input type="number" name="count" min={0} max={progressCeiling ?? 2147483647} required defaultValue={readingState.currentChapter} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2" />
                         </label>
                         <p className="mt-2 text-sm text-[var(--text-secondary)]">Список глав пока не заполнен. Можно сохранить общий счётчик; он не определяет конкретные главы или редакции.</p>

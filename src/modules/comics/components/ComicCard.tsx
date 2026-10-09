@@ -8,6 +8,7 @@ import { Badge, Card } from "@/shared/components/ui";
 type PersonalState = {
   status: "WANT_TO_READ" | "READING" | "COMPLETED" | "ON_HOLD";
   currentChapter: number;
+  chapterReading: { registered: boolean };
 };
 
 type ComicCardProps = {
@@ -25,11 +26,11 @@ const statusLabels = {
 
 export function ComicCard({ comic, progressCeiling, personalState = null }: ComicCardProps) {
   const currentChapter = personalState
-    ? progressCeiling === null
+    ? !personalState.chapterReading.registered || progressCeiling === null
       ? personalState.currentChapter
       : Math.min(personalState.currentChapter, progressCeiling)
     : 0;
-  const percent = personalState
+  const percent = personalState?.chapterReading.registered
     ? getLibraryProgressPercent(currentChapter, progressCeiling)
     : null;
 
@@ -47,7 +48,7 @@ export function ComicCard({ comic, progressCeiling, personalState = null }: Comi
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Badge variant="success">Опубликован</Badge>
             <span className="text-xs text-[var(--text-secondary)]">
-              {progressCeiling === null ? "Главы не указаны" : `Доступно глав: ${progressCeiling}`}
+              {progressCeiling === null ? "Главы не указаны" : `Основных глав доступно: ${progressCeiling}`}
             </span>
           </div>
           {comic.description ? <p className="mt-3 line-clamp-3 text-sm leading-6 text-[var(--text-secondary)]">{comic.description}</p> : null}
@@ -55,7 +56,7 @@ export function ComicCard({ comic, progressCeiling, personalState = null }: Comi
             <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-3">
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                 <Badge variant="primary">{statusLabels[personalState.status]}</Badge>
-                <span className="text-[var(--text-secondary)]">Прочитано {currentChapter}{progressCeiling === null ? "" : ` / ${progressCeiling}`}</span>
+                <span className="text-[var(--text-secondary)]">{personalState.chapterReading.registered ? "Прочитано" : "Общий счётчик"} {currentChapter}{!personalState.chapterReading.registered || progressCeiling === null ? "" : ` / ${progressCeiling}`}</span>
               </div>
               {percent !== null ? (
                 <div className="mt-3">

@@ -16,7 +16,7 @@ const statuses = {
 export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
   const href = `/comics/${item.slug}`;
   const status = statuses[item.status];
-  const percent = getLibraryProgressPercent(item.currentChapter, item.progressCeiling);
+  const percent = item.chapterReading.registered ? getLibraryProgressPercent(item.currentChapter, item.progressCeiling) : null;
   const rating = calculateAverageRating(item);
   const note = item.personalNote?.trim();
 
@@ -36,7 +36,7 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
             </h2>
             <div className="mt-2"><Badge variant={status.variant}>{status.label}</Badge></div>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
-              {item.chapterReading.registered ? "Основные главы" : "Прочитано"}: <strong className="text-[var(--text-primary)]">{item.currentChapter}{item.progressCeiling === null ? "" : ` / ${item.progressCeiling}`}</strong>
+              {item.chapterReading.registered ? "Основные главы" : "Общий счётчик"}: <strong className="text-[var(--text-primary)]">{item.currentChapter}{item.progressCeiling === null ? "" : ` / ${item.progressCeiling}`}</strong>
               {item.chapterReading.specialCount > 0 ? ` · Спешиалы ${item.chapterReading.specialReadCount}/${item.chapterReading.specialCount}` : ""}
             </p>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
@@ -51,7 +51,7 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
           </summary>
         <div className="mt-2 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-3">
           <div className="flex flex-wrap justify-between gap-2 text-sm">
-            <span className="text-[var(--text-secondary)]">{item.chapterReading.registered ? "Основных глав прочитано" : "Прочитано глав"}</span>
+            <span className="text-[var(--text-secondary)]">{item.chapterReading.registered ? "Основных глав прочитано" : "Общий счётчик без привязки к главам"}</span>
             <strong>{item.currentChapter}{item.progressCeiling === null ? "" : ` / ${item.progressCeiling}`}</strong>
           </div>
           {percent !== null ? (
@@ -61,7 +61,7 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
                 <div className="h-full rounded-full bg-[var(--primary)]" style={{ width: `${percent}%` }} />
               </div>
             </div>
-          ) : <p className="mt-2 text-xs text-[var(--text-secondary)]">Общее количество глав не указано</p>}
+          ) : <p className="mt-2 text-xs text-[var(--text-secondary)]">{item.chapterReading.registered ? "Нет опубликованных основных глав" : "Список глав не заполнен. Процент чтения не рассчитывается."}</p>}
           {item.chapterReading.registered ? <div className="mt-3 space-y-1 text-xs text-[var(--text-secondary)]">
             {item.chapterReading.lastReadLabel ? <p className="break-words">Последняя отмеченная: {item.chapterReading.lastReadLabel}</p> : null}
             <p>{item.chapterReading.caughtUp ? "Все вышедшие основные главы прочитаны" : `Непрочитанных основных: ${item.chapterReading.unreadChapters}`}</p>

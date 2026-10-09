@@ -95,7 +95,7 @@ export default async function Home({
   const catalogWithProgress = await Promise.all(
     comicList.map(async (comic) => ({
       comic,
-      progressCeiling: await getChapterProgressCeiling(comic.id, comic.totalChapters),
+      progressCeiling: await getChapterProgressCeiling(comic.id),
     })),
   );
 
@@ -144,6 +144,7 @@ export default async function Home({
             item.comicId,
             {
               status: item.status,
+              chapterReading: { registered: item.chapterReading.registered },
               currentChapter:
                 item.currentChapter,
             },
@@ -209,7 +210,7 @@ export default async function Home({
 
             <div className="mt-4 flex flex-wrap justify-between gap-2 text-sm">
               <span>
-                Прогресс:{" "}
+                {readingNow.chapterReading.registered ? "Прогресс:" : "Общий счётчик:"}{" "}
                 <strong>
                   {readingNow.currentChapter}
                   {readingNow.progressCeiling ===

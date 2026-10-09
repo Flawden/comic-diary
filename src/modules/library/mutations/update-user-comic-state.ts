@@ -145,11 +145,10 @@ async function getUserComicContext(
   const progressCeiling =
     await getChapterProgressCeiling(
       comicId,
-      context.totalChapters,
     );
 
   const currentChapter =
-    progressCeiling === null
+    !chapterReading.registered || progressCeiling === null
       ? context.currentChapter
       : Math.min(
           context.currentChapter,
@@ -159,7 +158,7 @@ async function getUserComicContext(
   return {
     ...context,
     currentChapter,
-    progressCeiling,
+    progressCeiling: chapterReading.registered ? progressCeiling : null,
     hasRegistry: chapterReading.registered,
   };
 }

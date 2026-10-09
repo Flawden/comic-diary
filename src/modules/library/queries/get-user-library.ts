@@ -94,7 +94,7 @@ export async function getUserLibrary(
     rows.map(
       async (item) => {
         const chapterReading = await getChapterReading(userId, item.comicId);
-        const progressCeiling = chapterReading.registered ? chapterReading.progressCeiling : item.totalChapters;
+        const progressCeiling = chapterReading.registered ? chapterReading.progressCeiling : null;
         const currentChapter = progressCeiling === null ? item.currentChapter : Math.min(item.currentChapter, progressCeiling);
 
         return {
