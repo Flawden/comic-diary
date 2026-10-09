@@ -9,6 +9,8 @@ import { getUserLibrary } from "../src/modules/library/queries/get-user-library"
 import { setLegacyComicProgress, setUserComicStatus } from "../src/modules/library/mutations/update-user-comic-state";
 import { createSharedCatalogChapter, reorderSharedCatalogChapter, updateSharedCatalogChapter } from "../src/modules/catalog/shared-chapter-mutations";
 
+import { getReadingUpdates, getUnreadChapters, parseUpdatesOptions } from "../src/modules/library/queries/get-reading-updates";
+
 async function main() {
   if (process.env.COMIC_DIARY_TEST_ADAPTER) {
     const harness = await import(process.env.COMIC_DIARY_TEST_ADAPTER);
@@ -37,10 +39,18 @@ async function main() {
       { comicId: privateComic.id, displayCode: "Private", sortOrder: 1, status: "RELEASED" },
     ]).returning();
     const state = async () => (await getUserComicState(reader.id, comic.id))!;
+    const options = parseUpdatesOptions({ status: "ALL", q: "Reading probe" });
+    assert.equal((await getReadingUpdates(reader.id, options)).titles[0].mainCount, 2);
+    assert.equal((await getUnreadChapters(reader.id, comic.id, "ALL", 0)).total, 3);
+    assert.equal((await getUnreadChapters(reader.id, privateComic.id, "ALL", 0)).total, 0);
+    assert.equal((await getUnreadChapters(other.id, comic.id, "ALL", 0)).total, 0);
+    assert.equal((await getUnreadChapters(reader.id, comic.id, "MAIN", 0)).chapters[1].throughCount, 2);
     await updateChapterReading(reader.id, comic.id, two.id, "read-through");
     assert.equal((await state()).currentChapter, 2); assert.equal((await state()).progressCeiling, 2);
     assert.equal((await state()).status, "READING"); assert.equal((await state()).chapterReading.specialReadCount, 0);
     assert.equal((await state()).chapterReading.caughtUp, true);
+    assert.equal((await getReadingUpdates(reader.id, options)).total, 0);
+    assert.equal((await getUnreadChapters(reader.id, comic.id, "SPECIAL", 0)).total, 1);
     await updateChapterReading(reader.id, comic.id, special.id, "read");
     assert.equal((await state()).chapterReading.specialReadCount, 1);
     const actor = { userId: reader.id, role: "ADMIN" as const };
@@ -60,6 +70,8 @@ async function main() {
     const revision2 = await createSharedCatalogChapter(comic.id, { displayCode: "New name", title: "Revision 2", sourceUrl: null,
       status: "RELEASED", releasedAt: new Date(), sortOrder: 3, supersedesChapterId: revision.id }, actor);
     assert.equal((await state()).chapterReading.updatedChapters, 1);
+    assert.equal((await getUnreadChapters(reader.id, comic.id, "UPDATED", 0)).chapters[0].id, revision2.id);
+    assert.equal((await getReadingUpdates(reader.id, { ...options, kind: "UPDATED" })).titles[0].updatedCount, 1);
     for (const [uid, cid, chid, action] of [
       [reader.id, comic.id, scheduled.id, "read"], [other.id, comic.id, revision2.id, "read"],
       [reader.id, comic.id, privateChapter.id, "read"], [reader.id, privateComic.id, privateChapter.id, "read"],
@@ -75,6 +87,20 @@ async function main() {
     await updateChapterReading(reader.id, comic.id, one.id, "unread"); assert.equal((await state()).currentChapter, 0);
     const entry = (await getUserLibrary(reader.id)).find((i) => i.comicId === comic.id)!;
     assert.equal(entry.currentChapter, 0); assert.equal(entry.ratingArt, 4); assert.equal(entry.personalNote, "Keep this note");
+    const moreTitles = await db.insert(comics).values(Array.from({ length: 21 }, (_, i) => ({ slug: `${stamp}-page-${i}`, title: `${stamp} Page ${i}`, sourceUrl: "https://example.com" }))).returning();
+    comicIds.push(...moreTitles.map((c) => c.id));
+    await db.insert(userComics).values(moreTitles.map((c) => ({ userId: reader.id, comicId: c.id, status: "READING" as const })));
+    await db.insert(chapters).values(moreTitles.flatMap((c, i) => Array.from({ length: i === 0 ? 61 : 1 }, (_, n) => ({ comicId: c.id, displayCode: String(n + 1), sortOrder: n, status: "RELEASED" as const }))));
+    const paged = parseUpdatesOptions({ q: `${stamp} Page` });
+    const page1 = await getReadingUpdates(reader.id, paged), page2 = await getReadingUpdates(reader.id, { ...paged, page: 2 });
+    assert.equal(page1.total, 21); assert.equal(page1.titles.length, 20); assert.equal(page2.titles.length, 1);
+    assert.equal((await getReadingUpdates(reader.id, { ...paged, page: 99 })).total, 21);
+    const chunk1 = await getUnreadChapters(reader.id, moreTitles[0].id, "MAIN", 0), chunk2 = await getUnreadChapters(reader.id, moreTitles[0].id, "MAIN", 30);
+    assert.equal(chunk1.total, 61); assert.equal(chunk1.chapters.length, 30); assert.equal(chunk2.chapters.length, 30);
+    assert(!chunk1.chapters.some((c) => chunk2.chapters.some((d) => c.id === d.id)));
+    assert.equal((await getReadingUpdates(reader.id, parseUpdatesOptions({ status: "ALL", q: "%_'" }))).total, 0);
+    assert.equal((await getReadingUpdates(reader.id, parseUpdatesOptions({ status: "ALL" }))).missingCount, 1);
+    console.log("PASS: updates filters, counts, pagination, revision ancestry and access isolation");
     console.log("PASS: read-through, specials, rename/reorder, two revisions, history, idempotency, access isolation, legacy, explicit completion, ratings/notes");
   } finally {
     if (userIds.length) {

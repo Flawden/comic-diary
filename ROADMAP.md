@@ -1020,7 +1020,9 @@ Chapter-reading checkpoint: stable chapter IDs, MAIN/SPECIAL classification,
 read-through actions, source links/search, separate read history, explicit completion
 and revision replacement with archived predecessors. Migration 0016 imports the
 existing ordered-count interpretation once; titles without a registry retain a
-numeric fallback. Windows migration/runtime and responsive acceptance pending.
+numeric fallback. Windows migration and real PostgreSQL probe passed at 6aa6199; desktop legacy
+7/12, rating and note screenshot reviewed. Registered chapter and mobile
+visual acceptance remain pending.
 
 - rebuild `/comics/[slug]` around the new visual system;
 - integrate canonical chapter records;
@@ -1186,3 +1188,55 @@ They should not expand current milestones unless explicitly promoted into the ro
    - Git commit;
    - push;
    - green CI.
+
+
+# Comic Diary Product Direction — CD Workstream
+
+Canonical product specification: [docs/product-spec.md](docs/product-spec.md).
+The MyShows-inspired daily reader workflow adds CD-* milestones without
+renaming or deleting historical R8/R9 and UI-F* work.
+
+## CD-00 — Baseline Acceptance
+Status: IN PROGRESS
+
+Confirmed HEAD 6aa6199 was pushed. Windows typecheck/lint/webpack build,
+migration 0016 and actual PostgreSQL chapter-reading probe passed.
+Legacy title desktop screenshot preserves 7/12, ratings and note.
+Registered chapter desktop/mobile visual acceptance remains pending.
+
+## CD-01 — Responsive Navigation
+Status: IN PROGRESS
+
+Implementation: four destinations (Updates, Library, Catalog, Profile), mobile
+bottom navigation, safe-area content padding and desktop navigation.
+Catalog remains at / to preserve existing links. /updates is a separate route;
+automatic homepage/login default changes and navigation count badges are deferred.
+Local typecheck/lint/webpack production build passed. Windows build and
+responsive visual acceptance pending.
+
+## CD-02 — Reading Updates
+Status: IN PROGRESS
+
+Implementation: /updates lists unread released chapters grouped by owned-library
+titles, READING + MAIN defaults, status/kind/title filters, 20-title pages,
+30-chapter lazy pages, source links, read-through counts and direct read actions.
+Revision ancestry includes earlier read versions; specials remain separate.
+Single read undo, load/save/error/empty/missing-registry states are provided.
+No migration or fabricated release dates. Local PostgreSQL-compatible integration
+probe passed for filters/counts, title/chapter pagination, revision ancestry and
+private access. Browser and actual Windows PostgreSQL acceptance pending.
+
+## CD-03–CD-11 — Planned Product Delivery
+Status: PLANNED
+
+- CD-03: compact library and explicit removal/diary policy.
+- CD-04: catalog/title composition and release/type metadata.
+- CD-05: administration, chapter input/import and cover save integrity.
+- CD-06: profile/settings/export; event model before activity heatmaps.
+- CD-07: release checks, deployment, backups and restoration.
+- CD-08: source synchronization and reliable release calendar.
+- CD-09: chapter pages, ratings/discussions and moderation.
+- CD-10: opt-in social profiles, following, feed and achievements.
+- CD-11: Android after stable web domain and API contract.
+
+See the specification for dependencies, acceptance criteria and open decisions.

@@ -279,6 +279,10 @@ export async function POST(
       );
     }
 
+    if (intent === "chapter-reading" && request.headers.get("accept")?.includes("application/json")) {
+      return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
+    }
+
     return new Response(
       null,
       {
