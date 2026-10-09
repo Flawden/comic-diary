@@ -1,3 +1,5 @@
+import { ReadingStatusForm } from "@/modules/library/components/ReadingStatusForm";
+import { completionSnapshot } from "@/modules/library/completion-model";
 import { ChapterReadingPanel } from "@/modules/library/components/ChapterReadingPanel";
 import { Button } from "@/shared/components/ui";
 import { notFound } from "next/navigation";
@@ -18,13 +20,6 @@ type ComicPageProps = {
     slug: string;
   }>;
 };
-
-const statusLabels = {
-  WANT_TO_READ: "Хочу прочитать",
-  READING: "Читаю",
-  COMPLETED: "Прочитано",
-  ON_HOLD: "Отложено",
-} as const;
 
 const ratingFields = [
   {
@@ -201,61 +196,12 @@ export default async function ComicPage({
 
               {readingState ? (
                 <div className="mt-4 space-y-5">
-                  <form
-                    action="/api/library/reading-state"
-                    method="post"
-                    className="space-y-2"
-                  >
-                    <input
-                      type="hidden"
-                      name="comicId"
-                      value={comic.id}
-                    />
-
-                    <input
-                      type="hidden"
-                      name="intent"
-                      value="set-status"
-                    />
-
-                    <label
-                      htmlFor="reading-status"
-                      className="block text-sm font-medium"
-                    >
-                      Статус
-                    </label>
-
-                    <div className="flex flex-wrap gap-2">
-                      <select
-                        id="reading-status"
-                        name="status"
-                        defaultValue={
-                          readingState.status
-                        }
-                        className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
-                      >
-                        {Object.entries(
-                          statusLabels,
-                        ).map(
-                          ([value, label]) => (
-                            <option
-                              key={value}
-                              value={value}
-                            >
-                              {label}
-                            </option>
-                          ),
-                        )}
-                      </select>
-
-                      <button
-                        type="submit"
-                        className="rounded-xl border border-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary)]"
-                      >
-                        Сохранить статус
-                      </button>
-                    </div>
-                  </form>
+                  <ReadingStatusForm key={`${comic.id}:${readingState.status}:${readingState.currentChapter}:${readingState.chapterReading.specialReadCount}`}
+                    comicId={comic.id} status={readingState.status}
+                    registered={readingState.chapterReading.registered} legacyTotal={comic.totalChapters}
+                    unreadMain={readingState.chapterReading.unreadChapters}
+                    unreadSpecial={readingState.chapterReading.specialCount - readingState.chapterReading.specialReadCount}
+                    snapshot={completionSnapshot(readingState.chapterReading.registry, comic.totalChapters)} />
 
                   <div>
                     <h3 className="font-semibold">Мой прогресс</h3>

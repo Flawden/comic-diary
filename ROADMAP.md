@@ -1272,3 +1272,19 @@ Release scheduling is specified for CD-05 input and CD-08 server processing:
 explicit planned date/time/timezone plus opt-in automatic publication; date
 alone never changes state. Archive/manual override cancels automatic action.
 Replacement archives the predecessor only when the replacement is published.
+
+
+## CD-03 — Confirmed Completion
+Status: IN PROGRESS
+
+Windows compact library checks passed; committed/pushed as 324460f. Desktop
+collapsed/expanded legacy row reviewed: 7/12, rating and note preserved.
+Confirmed COMPLETED now requires explicit MAIN/ALL scope; cancellation preserves
+state. Completion adds missing RELEASED marks and status in one transaction
+under catalog/library locks. Scheduled/archive records excluded, old mark dates
+and diary preserved. Registry snapshot mismatch rejects a stale confirmation.
+Legacy known total sets the counter only; unknown total preserves the counter.
+Direct set-status COMPLETED is rejected. Return to READING preserves reads.
+Local typecheck/lint/webpack build and PostgreSQL-compatible integration checks
+passed. Actual Windows PostgreSQL and dialog/mobile visual acceptance pending.
+Safe unsubscription remains outstanding.

@@ -1,3 +1,5 @@
+import { completeComicReading } from "@/modules/library/mutations/complete-comic-reading";
+import { isCompletionScope } from "@/modules/library/completion-model";
 import { updateChapterReading } from "@/modules/library/mutations/update-chapter-reading";
 import {
   NextRequest,
@@ -104,7 +106,13 @@ export async function POST(
   try {
     let slug: string;
 
-    if (intent === "chapter-reading") {
+    if (intent === "complete-reading") {
+      const scope = formData.get("scope"), snapshot = formData.get("snapshot");
+      if (!isCompletionScope(scope) || typeof snapshot !== "string") {
+        return NextResponse.json({ error: "Completion requires an explicit scope and chapter snapshot" }, { status: 400 });
+      }
+      slug = await completeComicReading(currentUser.id, comicId, scope, snapshot);
+    } else if (intent === "chapter-reading") {
       const action = formData.get("action");
       const chapterId = Number(formData.get("chapterId"));
       if (action !== "read" && action !== "unread" && action !== "read-through") {
@@ -279,7 +287,7 @@ export async function POST(
       );
     }
 
-    if (intent === "chapter-reading" && request.headers.get("accept")?.includes("application/json")) {
+    if ((intent === "chapter-reading" || intent === "set-status" || intent === "complete-reading") && request.headers.get("accept")?.includes("application/json")) {
       return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
     }
 

@@ -232,6 +232,8 @@ export async function setUserComicStatus(
   comicId: number,
   status: ReadingStatus,
 ) {
+  if (status === "COMPLETED") throw new Error("Use confirmed completion with an explicit scope");
+
   const context =
     await getUserComicContext(
       userId,
@@ -253,16 +255,6 @@ export async function setUserComicStatus(
     if (!context.startedAt) {
       values.startedAt = now;
     }
-  }
-
-  if (status === "COMPLETED") {
-    values.completedAt = now;
-
-    if (!context.startedAt) {
-      values.startedAt = now;
-    }
-
-
   }
 
   if (
