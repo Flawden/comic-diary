@@ -1240,3 +1240,15 @@ Status: PLANNED
 - CD-11: Android after stable web domain and API contract.
 
 See the specification for dependencies, acceptance criteria and open decisions.
+
+
+## CD Navigation Checkpoint — Account Workspace Entry
+
+Windows CD-01/CD-02 typecheck/lint/webpack build and actual PostgreSQL probe
+passed; committed and pushed as fdb214a. Desktop empty-registry Updates screenshot
+reviewed. Registered chapter and mobile visual acceptance still pending.
+
+Account page provides a server-rendered workspace link for EDIT_SHARED_CATALOG
+permission holders (current ADMIN and EDITOR roles). USER sees no workspace card.
+Existing /admin and mutation authorization remain authoritative. The account
+page uses the existing shell main/container instead of nesting another main.

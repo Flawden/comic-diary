@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { hasPermission } from "@/modules/auth/permissions";
 
 import {
   redirect,
@@ -48,7 +49,7 @@ export default async function AccountPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl px-4 py-10 sm:px-8">
+    <div className="mx-auto max-w-3xl">
       <p className="text-sm font-semibold text-[var(--primary)]">
         Comic Diary
       </p>
@@ -101,6 +102,20 @@ export default async function AccountPage() {
         </dl>
       </section>
 
+      {hasPermission(user.role, "EDIT_SHARED_CATALOG") ? (
+        <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8">
+          <h2 className="text-lg font-semibold">Панель управления</h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+            {user.role === "ADMIN"
+              ? "Управление каталогом, главами, пользователями и журналом изменений."
+              : "Редактирование каталога и глав в пределах прав редактора."}
+          </p>
+          <Link href="/admin" className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]">
+            Открыть панель управления →
+          </Link>
+        </section>
+      ) : null}
+
       <section className="mt-6 rounded-2xl bg-[var(--surface)] p-6 shadow-sm sm:p-8">
         <h2 className="text-lg font-semibold">
           Профиль
@@ -149,6 +164,6 @@ export default async function AccountPage() {
           В каталог
         </Link>
       </div>
-    </main>
+    </div>
   );
 }
