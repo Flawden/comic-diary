@@ -1,3 +1,4 @@
+import { isSeriesStatus, type SeriesStatus } from "@/modules/comics/series-status";
 import {
   randomUUID,
 } from "node:crypto";
@@ -21,6 +22,7 @@ export type PrivateTitleMetadataInput = {
   title: string;
   sourceUrl: string;
   totalChapters: number | null;
+  seriesStatus?: SeriesStatus;
 };
 
 export type PrivateTitleCreateInput =
@@ -63,6 +65,8 @@ function normalizePrivateTitle(
       "invalid-title",
     );
   }
+
+  if (input.seriesStatus !== undefined && !isSeriesStatus(input.seriesStatus)) throw new PrivateTitleMutationError("invalid-title");
 
   const sourceUrl =
     input.sourceUrl.trim();
@@ -116,6 +120,7 @@ function normalizePrivateTitle(
   }
 
   return {
+    seriesStatus: input.seriesStatus,
     title,
     sourceUrl:
       parsedSourceUrl.toString(),
@@ -201,6 +206,8 @@ export async function createOwnPrivateTitle(
 
             totalChapters:
               normalized.totalChapters,
+
+            seriesStatus: normalized.seriesStatus,
 
             publicationStatus:
               "PUBLISHED",
@@ -357,6 +364,8 @@ export async function updateOwnPrivateTitleMetadata(
 
             totalChapters:
               normalized.totalChapters,
+
+            seriesStatus: normalized.seriesStatus,
 
             updatedAt:
               new Date(),

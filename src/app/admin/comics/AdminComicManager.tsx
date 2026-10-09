@@ -1,5 +1,7 @@
 "use client";
 
+import { seriesStatusLabels, type SeriesStatus } from "@/modules/comics/series-status";
+
 import {
   CoverUploadField,
 } from "@/shared/components/media/CoverUploadField";
@@ -60,6 +62,7 @@ type AdminComic = {
   coverUrl: string | null;
   sourceUrl: string;
   totalChapters: number | null;
+  seriesStatus: SeriesStatus;
   publicationStatus:
     PublicationStatus;
   categorySlug: string | null;
@@ -311,6 +314,7 @@ function comicPayload(
             rawTotal,
           ),
 
+    seriesStatus: textValue(form, "seriesStatus"),
     publicationStatus:
       textValue(
         form,
@@ -475,8 +479,16 @@ function ComicFields({
         </label>
 
         <label className="block">
+          <span className="mb-1 block text-sm font-medium">Статус выпуска</span>
+          <select name="seriesStatus" defaultValue={comic?.seriesStatus ?? "UNKNOWN"} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
+            {Object.entries(seriesStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+          <span className="mt-1 block text-xs text-[var(--text-secondary)]">Выпуск произведения. Видимость в каталоге задаётся отдельно.</span>
+        </label>
+
+        <label className="block">
           <span className="mb-1 block text-sm font-medium">
-            Глав
+            Заявлено глав (справочно)
           </span>
 
           <input

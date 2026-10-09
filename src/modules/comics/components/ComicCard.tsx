@@ -1,3 +1,4 @@
+import { seriesStatusLabels } from "@/modules/comics/series-status";
 import Link from "next/link";
 
 import type { ComicListItem } from "@/modules/comics/queries/get-comics";
@@ -46,7 +47,7 @@ export function ComicCard({ comic, progressCeiling, personalState = null }: Comi
             <Link href={`/comics/${comic.slug}`} className="break-words hover:underline">{comic.title}</Link>
           </h3>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Badge variant="success">Опубликован</Badge>
+            <Badge variant={comic.seriesStatus === "FINISHED" ? "success" : "neutral"}>{seriesStatusLabels[comic.seriesStatus]}</Badge>
             <span className="text-xs text-[var(--text-secondary)]">
               {progressCeiling === null ? "Главы не указаны" : `Основных глав доступно: ${progressCeiling}`}
             </span>

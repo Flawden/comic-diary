@@ -88,6 +88,8 @@ export function canonicalComicCreateValues(
     totalChapters:
       comic.totalChapters,
 
+    ...(comic.seriesStatus === undefined ? {} : { seriesStatus: comic.seriesStatus }),
+
     publicationStatus:
       comic.publicationStatus,
 

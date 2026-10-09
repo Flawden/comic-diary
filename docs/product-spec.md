@@ -535,3 +535,16 @@ Implementation ready; Windows PostgreSQL validation and desktop/mobile visual ac
 - Library cards and comic details offer explicit “Включить/Отключить обновления”; disabled titles stay visible with a badge. Default updates filters are ALL statuses and ALL chapter kinds so completed titles, extras and revisions remain discoverable; optional filters only narrow the view.
 - This delivers in-app updates. Push/email notification delivery and scheduled chapter publication remain CD-08. Publication state ONGOING/FINISHED/HIATUS/CANCELLED/UNKNOWN and publication-aware completion remain CD-04; COMPLETED must not be inferred from caught-up counts.
 - CD-03 remains IN PROGRESS until registered completion, safe unsubscribe and mobile visual acceptance are complete. Next: CD-04 publication metadata and honest ongoing/finished reading semantics.
+
+
+## CD-04 — Publication state and available-only reading (2026-10-09)
+
+Status: IN PROGRESS. Publication state implementation ready; Windows PostgreSQL and desktop/mobile acceptance pending. Tracking was accepted by the operator after d7e2e93; global UI terminology review is deferred.
+
+- `comics.series_status`: UNKNOWN / ONGOING / FINISHED / HIATUS / CANCELLED. This describes the release of the work, independent of catalog visibility (`publication_status`) and personal reading status. Migration 0018 assigns UNKNOWN to existing titles. Neither declared totals nor 100% available reading imply FINISHED.
+- Shared catalog editors and private owners edit the state in existing metadata forms. Invalid values are rejected. Older catalog imports and metadata clients omitting the field preserve an existing state; new records use UNKNOWN. Metadata changes never rewrite personal status, chapter reads, tracking, ratings or notes.
+- “Отметить всё вышедшее” confirms MAIN versus ALL (including specials), marks only current RELEASED registry entries, and explicitly sets personal READING. It retains tracking and read dates; scheduled and archived chapters are excluded. Caught-up is computed, not a new persistent personal status. ONGOING caught-up reads “Всё вышедшее прочитано · Жду продолжения”.
+- COMPLETED requires explicit confirmation and FINISHED publication state. Registered titles with SCHEDULED MAIN chapters or no RELEASED MAIN chapters cannot complete. FINISHED with no registry may explicitly finish the personal diary without modifying its legacy counter; the UI says chapter identities are unavailable. Scheduled specials remain unmarked. Existing historical COMPLETED entries are preserved, even when publication state remains UNKNOWN.
+- Completion snapshots include publication state. The transaction locks catalog and library records; stale chapter or publication snapshots are rejected before marks are inserted. Optional completion of MAIN never clears existing special marks.
+- Late releases, specials and revisions remain visible for tracked completed titles. Actual push/email delivery and automatic release on dates remain CD-08.
+- This slice does not complete all CD-04 catalog work: remaining search/filter/catalog acceptance and the global wording pass retain their roadmap scope. Verify all five publication labels, MAIN/ALL dialogs, cancellation, stale snapshots, legacy counters, ownership and narrow-screen layout before closing the slice.

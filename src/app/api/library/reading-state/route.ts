@@ -112,7 +112,9 @@ export async function POST(
       if (!isCompletionScope(scope) || typeof snapshot !== "string") {
         return NextResponse.json({ error: "Completion requires an explicit scope and chapter snapshot" }, { status: 400 });
       }
-      slug = await completeComicReading(currentUser.id, comicId, scope, snapshot);
+      const mode = formData.get("mode") ?? "COMPLETE";
+      if (mode !== "COMPLETE" && mode !== "AVAILABLE") return NextResponse.json({ error: "Invalid completion mode" }, { status: 400 });
+      slug = await completeComicReading(currentUser.id, comicId, scope, snapshot, mode);
     } else if (intent === "chapter-reading") {
       const action = formData.get("action");
       const chapterId = Number(formData.get("chapterId"));

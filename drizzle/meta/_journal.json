@@ -127,6 +127,13 @@
       "when": 1791548078993,
       "tag": "0017_independent_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791556991146,
+      "tag": "0018_series_publication_state",
+      "breakpoints": true
     }
   ]
 }

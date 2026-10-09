@@ -26,8 +26,8 @@ async function main() {
     const [reader, other] = await db.insert(users).values([{ email: `${stamp}@test.invalid` }, { email: `${stamp}-other@test.invalid` }]).returning();
     userIds.push(reader.id, other.id);
     const [comic, legacy, privateComic] = await db.insert(comics).values([
-      { slug: stamp, title: "Reading probe", sourceUrl: "https://example.com", totalChapters: 999 },
-      { slug: `${stamp}-legacy`, title: "Legacy", sourceUrl: "https://example.com", totalChapters: 12 },
+      { slug: stamp, title: "Reading probe", sourceUrl: "https://example.com", totalChapters: 999, seriesStatus: "FINISHED" },
+      { slug: `${stamp}-legacy`, title: "Legacy", sourceUrl: "https://example.com", totalChapters: 12, seriesStatus: "FINISHED" },
       { slug: `${stamp}-private`, title: "Private", sourceUrl: "https://example.com", visibility: "PRIVATE", ownerUserId: other.id },
     ]).returning();
     comicIds.push(comic.id, legacy.id, privateComic.id);
@@ -94,7 +94,29 @@ async function main() {
     await assert.rejects(setUserComicStatus(reader.id, comic.id, "COMPLETED"));
     assert.equal((await state()).status, "READING", "unconfirmed completion changes nothing");
     await updateChapterReading(reader.id, comic.id, special.id, "unread");
-    const snapshot = completionSnapshot((await state()).chapterReading.registry, comic.totalChapters);
+    const beforeAvailable = await state();
+    for (const seriesStatus of ["UNKNOWN", "ONGOING", "HIATUS", "CANCELLED"] as const) {
+      await db.update(comics).set({ seriesStatus }).where(eq(comics.id, comic.id));
+      const pendingSnapshot = completionSnapshot((await state()).chapterReading.registry, comic.totalChapters, seriesStatus);
+      await assert.rejects(completeComicReading(reader.id, comic.id, "ALL", pendingSnapshot));
+      assert.equal((await state()).status, "READING");
+      assert.equal((await state()).chapterReading.specialReadCount, 0, "rejected completion must not read specials");
+      await completeComicReading(reader.id, comic.id, "MAIN", pendingSnapshot, "AVAILABLE");
+      assert.equal((await state()).status, "READING");
+      assert.equal((await state()).completedAt, null);
+      assert.equal((await state()).chapterReading.caughtUp, true);
+      assert.equal((await state()).trackingEnabled, true);
+      await updateChapterReading(reader.id, comic.id, revision2.id, "unread");
+    }
+    await db.update(comics).set({ seriesStatus: "FINISHED" }).where(eq(comics.id, comic.id));
+    assert.deepEqual((await state()).chapterReading.readIds, beforeAvailable.chapterReading.readIds);
+    await assert.rejects(completeComicReading(reader.id, comic.id, "MAIN", completionSnapshot((await state()).chapterReading.registry, comic.totalChapters, "FINISHED")), "scheduled main chapter blocks completion");
+    await db.update(chapters).set({ kind: "SPECIAL" }).where(eq(chapters.id, scheduled.id));
+    const snapshot = completionSnapshot((await state()).chapterReading.registry, comic.totalChapters, "FINISHED");
+    await db.update(comics).set({ seriesStatus: "ONGOING" }).where(eq(comics.id, comic.id));
+    await assert.rejects(completeComicReading(reader.id, comic.id, "ALL", snapshot));
+    await db.update(comics).set({ seriesStatus: "FINISHED" }).where(eq(comics.id, comic.id));
+    console.log("PASS: publication-aware completion, available-only reading, all non-finished states, stale publication snapshot and tracking retention");
     const oldMark = (await db.select().from(userChapterReads).where(eq(userChapterReads.chapterId, one.id)))[0].readAt;
     await assert.rejects(completeComicReading(reader.id, comic.id, "ALL", "stale"));
     assert.equal((await state()).currentChapter, 1, "stale snapshot must roll back");
@@ -142,19 +164,19 @@ async function main() {
     assert.equal((await state()).completedAt?.getTime(), completedAt?.getTime());
     await setUserComicStatus(reader.id, comic.id, "READING");
     assert.equal((await state()).currentChapter, 2, "returning to reading preserves marks");
-    await assert.rejects(completeComicReading(reader.id, legacy.id, "LEGACY", completionSnapshot([], 12)));
-    await completeComicReading(reader.id, legacy.id, "STATUS_ONLY", completionSnapshot([], 12));
+    await assert.rejects(completeComicReading(reader.id, legacy.id, "LEGACY", completionSnapshot([], 12, "FINISHED")));
+    await completeComicReading(reader.id, legacy.id, "STATUS_ONLY", completionSnapshot([], 12, "FINISHED"));
     assert.equal((await getUserComicState(reader.id, legacy.id))!.currentChapter, 7);
     await updateChapterReading(reader.id, comic.id, one.id, "unread");
     await updateChapterReading(reader.id, comic.id, revision2.id, "unread");
     const entry = (await getUserLibrary(reader.id)).find((i) => i.comicId === comic.id)!;
     assert.equal(entry.currentChapter, 0); assert.equal(entry.ratingArt, 4); assert.equal(entry.personalNote, "Keep this note");
     console.log("PASS: confirmed MAIN/ALL completion, stale snapshot rollback, ownership, old read dates, repeat completion and legacy counter");
-    const [unknown] = await db.insert(comics).values({ slug: `${stamp}-unknown`, title: "Unknown count", sourceUrl: "https://example.com" }).returning();
+    const [unknown] = await db.insert(comics).values({ slug: `${stamp}-unknown`, title: "Unknown count", sourceUrl: "https://example.com", seriesStatus: "FINISHED" }).returning();
     comicIds.push(unknown.id);
     await db.insert(userComics).values({ userId: reader.id, comicId: unknown.id, currentChapter: 7 });
-    await assert.rejects(completeComicReading(reader.id, unknown.id, "LEGACY", completionSnapshot([], null)));
-    await completeComicReading(reader.id, unknown.id, "STATUS_ONLY", completionSnapshot([], null));
+    await assert.rejects(completeComicReading(reader.id, unknown.id, "LEGACY", completionSnapshot([], null, "FINISHED")));
+    await completeComicReading(reader.id, unknown.id, "STATUS_ONLY", completionSnapshot([], null, "FINISHED"));
     assert.equal((await getUserComicState(reader.id, unknown.id))!.currentChapter, 7);
     await db.delete(userComics).where(eq(userComics.comicId, unknown.id));
     const moreTitles = await db.insert(comics).values(Array.from({ length: 21 }, (_, i) => ({ slug: `${stamp}-page-${i}`, title: `${stamp} Page ${i}`, sourceUrl: "https://example.com" }))).returning();

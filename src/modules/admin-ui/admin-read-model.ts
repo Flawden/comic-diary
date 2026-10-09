@@ -69,6 +69,7 @@ export async function listAdminComics() {
         comics.coverUrl,
       sourceUrl:
         comics.sourceUrl,
+      seriesStatus: comics.seriesStatus,
       totalChapters:
         comics.totalChapters,
       publicationStatus:

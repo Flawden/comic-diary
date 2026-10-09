@@ -1,3 +1,4 @@
+import { isSeriesStatus } from "@/modules/comics/series-status";
 import type {
   CatalogCategory,
   CatalogComic,
@@ -145,6 +146,7 @@ export function validateCatalogData(
     );
 
     if (
+      (comic.seriesStatus !== undefined && !isSeriesStatus(comic.seriesStatus)) ||
       !publicationStatuses.has(
         comic.publicationStatus,
       )

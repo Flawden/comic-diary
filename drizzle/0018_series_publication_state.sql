@@ -1,0 +1,2 @@
+CREATE TYPE "public"."comic_series_status" AS ENUM('UNKNOWN', 'ONGOING', 'FINISHED', 'HIATUS', 'CANCELLED');--> statement-breakpoint
+ALTER TABLE "comics" ADD COLUMN "series_status" "comic_series_status" DEFAULT 'UNKNOWN' NOT NULL;

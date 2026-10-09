@@ -1,3 +1,4 @@
+import type { SeriesStatus } from "@/modules/comics/series-status";
 export type CatalogCategory = {
   slug: string;
   name: string;
@@ -20,6 +21,7 @@ export type CatalogComic = {
   sourceUrl: string;
   totalChapters: number | null;
   publicationStatus: ComicPublicationStatus;
+  seriesStatus?: SeriesStatus;
   categorySlug: string;
 };
 

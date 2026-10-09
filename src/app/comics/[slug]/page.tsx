@@ -1,3 +1,4 @@
+import { seriesStatusLabels, caughtUpLabel } from "@/modules/comics/series-status";
 import { TrackingControl } from "@/modules/library/components/TrackingControl";
 import { ReadingStatusForm } from "@/modules/library/components/ReadingStatusForm";
 import { completionSnapshot } from "@/modules/library/completion-model";
@@ -170,6 +171,8 @@ export default async function ComicPage({
               </section>
             ) : null}
 
+            <p className="mt-4 text-sm font-semibold text-[var(--text-secondary)]">{seriesStatusLabels[comic.seriesStatus]}</p>
+
             {comic.description ? (
               <p className="mt-6 max-w-2xl leading-7 text-[var(--text-secondary)]">
                 {comic.description}
@@ -196,12 +199,13 @@ export default async function ComicPage({
 
               {readingState ? (
                 <div className="mt-4 space-y-5">
-                  <ReadingStatusForm key={`${comic.id}:${readingState.status}:${readingState.currentChapter}:${readingState.chapterReading.specialReadCount}`}
+                  <ReadingStatusForm key={`${comic.id}:${comic.seriesStatus}:${readingState.status}:${readingState.currentChapter}:${readingState.chapterReading.specialReadCount}`}
                     comicId={comic.id} status={readingState.status}
-                    registered={readingState.chapterReading.registered} legacyTotal={comic.totalChapters}
+                    registered={readingState.chapterReading.registered} seriesStatus={comic.seriesStatus}
+                    completionBlocked={readingState.chapterReading.registered && (readingState.chapterReading.registry.some(c => c.kind === "MAIN" && c.status === "SCHEDULED") || !readingState.chapterReading.registry.some(c => c.kind === "MAIN" && c.status === "RELEASED"))}
                     unreadMain={readingState.chapterReading.unreadChapters}
                     unreadSpecial={readingState.chapterReading.specialCount - readingState.chapterReading.specialReadCount}
-                    snapshot={completionSnapshot(readingState.chapterReading.registry, comic.totalChapters)} />
+                    snapshot={completionSnapshot(readingState.chapterReading.registry, comic.totalChapters, comic.seriesStatus)} />
 
                   <div>
                     <h3 className="font-semibold">Мой прогресс</h3>
@@ -210,7 +214,7 @@ export default async function ComicPage({
                     {readingState.chapterReading.registered ? (
                       <div className="mt-2 space-y-2 text-sm text-[var(--text-secondary)]">
                         {readingState.chapterReading.lastReadLabel ? <p>Последняя отмеченная: {readingState.chapterReading.lastReadLabel}</p> : null}
-                        <p>{readingState.chapterReading.caughtUp ? "Все вышедшие основные главы прочитаны" : `Непрочитанных основных глав: ${readingState.chapterReading.unreadChapters}`}</p>
+                        <p>{readingState.chapterReading.caughtUp ? caughtUpLabel(comic.seriesStatus) : `Непрочитанных основных глав: ${readingState.chapterReading.unreadChapters}`}</p>
                         {readingState.chapterReading.updatedChapters ? <p>Непрочитанных новых редакций: {readingState.chapterReading.updatedChapters}</p> : null}
                         {readingState.chapterReading.specialCount ? <p>Спешиалы: {readingState.chapterReading.specialReadCount} / {readingState.chapterReading.specialCount}</p> : null}
                         <p>Отмечайте чтение в списке глав выше. Статус «Прочитано» выбирается отдельно.</p>
@@ -436,6 +440,13 @@ export default async function ComicPage({
                   </label>
 
                   <label className="block">
+                  <span className="mb-1 block text-sm font-medium">Статус выпуска</span>
+                  <select name="seriesStatus" defaultValue={comic.seriesStatus} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
+                    {Object.entries(seriesStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </label>
+
+                <label className="block">
                     <span className="mb-1 block text-sm font-medium">
                       Количество глав
                     </span>

@@ -150,6 +150,8 @@ export const chapterStatus = pgEnum(
     "ARCHIVED",
   ],
 );
+export const comicSeriesStatus = pgEnum("comic_series_status", ["UNKNOWN", "ONGOING", "FINISHED", "HIATUS", "CANCELLED"]);
+
 export const comics = pgTable(
   "comics",
   {
@@ -178,6 +180,8 @@ export const comics = pgTable(
     sourceUrl: text("source_url").notNull(),
 
     totalChapters: integer("total_chapters"),
+
+    seriesStatus: comicSeriesStatus("series_status").default("UNKNOWN").notNull(),
 
     publicationStatus: comicPublicationStatus(
       "publication_status",

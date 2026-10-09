@@ -1,3 +1,4 @@
+import { seriesStatusLabels, caughtUpLabel } from "@/modules/comics/series-status";
 import { TrackingControl } from "./TrackingControl";
 import Link from "next/link";
 
@@ -35,7 +36,7 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
             <h2 className="mt-1 break-words text-lg font-bold leading-snug text-[var(--text-primary)]">
               <Link href={href} className="hover:underline">{item.title}</Link>
             </h2>
-            <div className="mt-2 flex flex-wrap gap-2"><Badge variant={status.variant}>{status.label}</Badge>{!item.trackingEnabled ? <Badge variant="neutral">Обновления отключены</Badge> : null}</div>
+            <div className="mt-2 flex flex-wrap gap-2"><Badge variant={status.variant}>{status.label}</Badge><Badge variant="neutral">{seriesStatusLabels[item.seriesStatus]}</Badge>{!item.trackingEnabled ? <Badge variant="neutral">Обновления отключены</Badge> : null}</div>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
               {item.chapterReading.registered ? "Основные главы" : "Общий счётчик"}: <strong className="text-[var(--text-primary)]">{item.currentChapter}{item.progressCeiling === null ? "" : ` / ${item.progressCeiling}`}</strong>
               {item.chapterReading.specialCount > 0 ? ` · Спешиалы ${item.chapterReading.specialReadCount}/${item.chapterReading.specialCount}` : ""}
@@ -65,7 +66,7 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
           ) : <p className="mt-2 text-xs text-[var(--text-secondary)]">{item.chapterReading.registered ? "Нет опубликованных основных глав" : "Список глав не заполнен. Процент чтения не рассчитывается."}</p>}
           {item.chapterReading.registered ? <div className="mt-3 space-y-1 text-xs text-[var(--text-secondary)]">
             {item.chapterReading.lastReadLabel ? <p className="break-words">Последняя отмеченная: {item.chapterReading.lastReadLabel}</p> : null}
-            <p>{item.chapterReading.caughtUp ? "Все вышедшие основные главы прочитаны" : `Непрочитанных основных: ${item.chapterReading.unreadChapters}`}</p>
+            <p>{item.chapterReading.caughtUp ? caughtUpLabel(item.seriesStatus) : `Непрочитанных основных: ${item.chapterReading.unreadChapters}`}</p>
             {item.chapterReading.updatedChapters ? <p>Новых редакций к чтению: {item.chapterReading.updatedChapters}</p> : null}
             {item.chapterReading.specialCount ? <p>Спешиалы: {item.chapterReading.specialReadCount} / {item.chapterReading.specialCount}</p> : null}
           </div> : null}

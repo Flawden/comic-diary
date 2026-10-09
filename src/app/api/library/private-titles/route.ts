@@ -1,3 +1,4 @@
+import { isSeriesStatus } from "@/modules/comics/series-status";
 import {
   type NextRequest,
   NextResponse,
@@ -87,7 +88,10 @@ function readMetadataInput(
       );
   }
 
+  const seriesStatus = formData.get("seriesStatus");
+  if (seriesStatus !== null && !isSeriesStatus(seriesStatus)) return null;
   return {
+    seriesStatus: seriesStatus ?? undefined,
     title,
     sourceUrl,
     totalChapters,

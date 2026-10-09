@@ -1,3 +1,4 @@
+import { isSeriesStatus } from "@/modules/comics/series-status";
 import {
   type NextRequest,
   NextResponse,
@@ -147,7 +148,9 @@ function parseCatalogComic(
     return null;
   }
 
+  if (value.seriesStatus !== undefined && !isSeriesStatus(value.seriesStatus)) return null;
   return {
+    seriesStatus: value.seriesStatus as CatalogComic["seriesStatus"],
     slug:
       value.slug,
 
