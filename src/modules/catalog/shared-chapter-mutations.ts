@@ -39,6 +39,7 @@ export type SharedChapterStatus =
   >;
 
 export type SharedChapterMetadataInput = {
+  kind?: "MAIN" | "SPECIAL";
   displayCode: string;
   title: string | null;
   sourceUrl: string | null;
@@ -51,6 +52,7 @@ export type SharedChapterMetadataInput = {
 export type SharedChapterCreateInput =
   SharedChapterMetadataInput & {
     sortOrder: number;
+    supersedesChapterId?: number | null;
   };
 
 export type SharedChapterMutationErrorKind =
@@ -180,6 +182,9 @@ function normalizeReleasedAt(
 function normalizeMetadata(
   input: SharedChapterMetadataInput,
 ) {
+  if (input.kind !== undefined && input.kind !== "MAIN" && input.kind !== "SPECIAL") {
+    throw new SharedChapterMutationError("invalid-chapter");
+  }
   const displayCode =
     input.displayCode.trim();
 
@@ -221,6 +226,7 @@ function normalizeMetadata(
   }
 
   return {
+    ...(input.kind === undefined ? {} : { kind: input.kind }),
     displayCode,
 
     title:
@@ -261,6 +267,8 @@ function chapterSnapshot(
   chapter: ChapterRow,
 ) {
   return {
+    kind: chapter.kind,
+    supersedesChapterId: chapter.supersedesChapterId,
     id:
       chapter.id,
 
@@ -379,6 +387,27 @@ export async function createSharedCatalogChapter(
           );
         }
 
+        const supersedesChapterId = input.supersedesChapterId ?? null;
+        let replaced: ChapterRow | null = null;
+        if (supersedesChapterId !== null) {
+          requirePositiveId(supersedesChapterId);
+          const [previous] = await tx.select().from(chapters)
+            .where(and(eq(chapters.id, supersedesChapterId), eq(chapters.comicId, comic.id)));
+          if (!previous || previous.status !== "RELEASED" || metadata.status !== "RELEASED" ||
+              previous.kind !== (metadata.kind ?? "MAIN")) {
+            throw new SharedChapterMutationError("invalid-chapter");
+          }
+          replaced = previous;
+          await tx.update(chapters).set({ status: "ARCHIVED", updatedAt: new Date() })
+            .where(eq(chapters.id, previous.id));
+          await tx.insert(administrativeAuditEvents).values({
+            actorUserId: actor.userId, actorRole: actor.role, action: "CHAPTER_ARCHIVE",
+            targetType: "CHAPTER", targetId: previous.id,
+            targetKey: chapterTargetKey(comic.slug, previous.id),
+            details: { channel: "manual-revision", before: chapterSnapshot(previous) },
+          });
+        }
+
         const inserted =
           await tx
             .insert(
@@ -389,7 +418,7 @@ export async function createSharedCatalogChapter(
                 comic.id,
 
               ...metadata,
-
+              supersedesChapterId,
               sortOrder,
             })
             .returning();
@@ -439,6 +468,7 @@ export async function createSharedCatalogChapter(
               comicSlug:
                 comic.slug,
 
+              replaces: replaced ? chapterSnapshot(replaced) : null,
               after:
                 chapterSnapshot(
                   created,

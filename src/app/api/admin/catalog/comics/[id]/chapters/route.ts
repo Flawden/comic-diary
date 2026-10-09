@@ -317,6 +317,7 @@ async function readJson(
 function parseMetadata(
   body: Record<string, unknown>,
 ) {
+  if (body.kind !== undefined && body.kind !== "MAIN" && body.kind !== "SPECIAL") return null;
   if (
     typeof body.displayCode !==
       "string"
@@ -357,6 +358,7 @@ function parseMetadata(
   }
 
   return {
+    kind: body.kind as "MAIN" | "SPECIAL" | undefined,
     displayCode:
       body.displayCode,
 
@@ -479,12 +481,19 @@ export async function POST(
     );
   }
 
+  const supersedesChapterId = parsed.body.supersedesChapterId == null
+    ? null : parsePositiveId(parsed.body.supersedesChapterId);
+  if (parsed.body.supersedesChapterId != null && supersedesChapterId === null) {
+    return errorResponse("invalid-chapter-request", 400);
+  }
+
   try {
     const chapter =
       await createSharedCatalogChapter(
         comicId,
         {
           ...metadata,
+          supersedesChapterId,
           sortOrder,
         },
         {

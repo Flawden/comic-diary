@@ -42,7 +42,7 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
         </div>
         <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-3">
           <div className="flex flex-wrap justify-between gap-2 text-sm">
-            <span className="text-[var(--text-secondary)]">Прочитано глав</span>
+            <span className="text-[var(--text-secondary)]">{item.chapterReading.registered ? "Основных глав прочитано" : "Прочитано глав"}</span>
             <strong>{item.currentChapter}{item.progressCeiling === null ? "" : ` / ${item.progressCeiling}`}</strong>
           </div>
           {percent !== null ? (
@@ -53,6 +53,12 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
               </div>
             </div>
           ) : <p className="mt-2 text-xs text-[var(--text-secondary)]">Общее количество глав не указано</p>}
+          {item.chapterReading.registered ? <div className="mt-3 space-y-1 text-xs text-[var(--text-secondary)]">
+            {item.chapterReading.lastReadLabel ? <p className="break-words">Последняя отмеченная: {item.chapterReading.lastReadLabel}</p> : null}
+            <p>{item.chapterReading.caughtUp ? "Все вышедшие основные главы прочитаны" : `Непрочитанных основных: ${item.chapterReading.unreadChapters}`}</p>
+            {item.chapterReading.updatedChapters ? <p>Новых редакций к чтению: {item.chapterReading.updatedChapters}</p> : null}
+            {item.chapterReading.specialCount ? <p>Спешиалы: {item.chapterReading.specialReadCount} / {item.chapterReading.specialCount}</p> : null}
+          </div> : null}
           {note ? <p className="mt-3 line-clamp-2 break-words border-t border-[var(--border)] pt-3 text-sm leading-6 text-[var(--text-secondary)]">«{note}»</p> : null}
         </div>
         <Link href={href} className="mt-auto inline-flex min-h-11 items-center justify-center rounded-[var(--cd-radius-button)] border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-raised)] focus-visible:outline-2 focus-visible:outline-[var(--primary)]">

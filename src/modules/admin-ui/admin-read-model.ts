@@ -167,6 +167,8 @@ export async function getAdminComicChaptersByComicIds(
       comicId:
         chapters.comicId,
 
+      kind: chapters.kind,
+      supersedesChapterId: chapters.supersedesChapterId,
       displayCode:
         chapters.displayCode,
 

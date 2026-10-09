@@ -1,3 +1,4 @@
+import { updateChapterReading } from "@/modules/library/mutations/update-chapter-reading";
 import {
   NextRequest,
   NextResponse,
@@ -12,6 +13,7 @@ import {
   removeComicFromUserLibrary,
   isReadingStatus,
   setUserComicStatus,
+  setLegacyComicProgress,
   updateUserComicDiary,
 } from "@/modules/library/mutations/update-user-comic-state";
 
@@ -102,7 +104,20 @@ export async function POST(
   try {
     let slug: string;
 
-    if (intent === "add-to-library") {
+    if (intent === "chapter-reading") {
+      const action = formData.get("action");
+      const chapterId = Number(formData.get("chapterId"));
+      if (action !== "read" && action !== "unread" && action !== "read-through") {
+        return NextResponse.json({ error: "Invalid chapter action" }, { status: 400 });
+      }
+      slug = await updateChapterReading(currentUser.id, comicId, chapterId, action);
+    } else if (intent === "set-legacy-progress") {
+      const count = formData.get("count");
+      if (typeof count !== "string" || !/^\d+$/.test(count)) {
+        return NextResponse.json({ error: "Invalid progress" }, { status: 400 });
+      }
+      slug = await setLegacyComicProgress(currentUser.id, comicId, Number(count));
+    } else if (intent === "add-to-library") {
       slug =
         await addComicToUserLibrary(
           currentUser.id,

@@ -34,6 +34,8 @@ export async function getComicChapters(
   return db
     .select({
       id: chapters.id,
+      kind: chapters.kind,
+      supersedesChapterId: chapters.supersedesChapterId,
       displayCode:
         chapters.displayCode,
       title:

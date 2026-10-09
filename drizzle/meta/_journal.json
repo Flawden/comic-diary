@@ -113,6 +113,13 @@
       "when": 1788927752474,
       "tag": "0015_romantic_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791483596636,
+      "tag": "0016_chapter_reading_identity",
+      "breakpoints": true
     }
   ]
 }

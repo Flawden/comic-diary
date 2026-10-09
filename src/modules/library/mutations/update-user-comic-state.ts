@@ -1,3 +1,4 @@
+import { getChapterReading } from "../queries/get-chapter-reading";
 import { and, eq, or } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -140,6 +141,7 @@ async function getUserComicContext(
     );
   }
 
+  const chapterReading = await getChapterReading(userId, comicId);
   const progressCeiling =
     await getChapterProgressCeiling(
       comicId,
@@ -158,6 +160,7 @@ async function getUserComicContext(
     ...context,
     currentChapter,
     progressCeiling,
+    hasRegistry: chapterReading.registered,
   };
 }
 
@@ -259,13 +262,7 @@ export async function setUserComicStatus(
       values.startedAt = now;
     }
 
-    if (
-      context.progressCeiling !==
-      null
-    ) {
-      values.currentChapter =
-        context.progressCeiling;
-    }
+
   }
 
   if (
@@ -311,6 +308,8 @@ export async function changeUserComicProgress(
       comicId,
     );
 
+  if (context.hasRegistry) throw new Error("Use chapter reading actions for registered titles");
+
   let nextChapter =
     context.currentChapter + delta;
 
@@ -333,7 +332,7 @@ export async function changeUserComicProgress(
 
   let nextStatus = context.status;
   let startedAt = context.startedAt;
-  let completedAt = context.completedAt;
+  const completedAt = context.completedAt;
 
   if (
     nextChapter > 0 &&
@@ -343,22 +342,6 @@ export async function changeUserComicProgress(
     startedAt ??= now;
   }
 
-  if (
-    context.progressCeiling !==
-      null &&
-    context.progressCeiling > 0 &&
-    nextChapter >=
-      context.progressCeiling
-  ) {
-    nextStatus = "COMPLETED";
-    completedAt = now;
-    startedAt ??= now;
-  } else if (
-    nextStatus === "COMPLETED"
-  ) {
-    nextStatus = "READING";
-    completedAt = null;
-  }
 
   await db
     .update(userComics)
@@ -443,5 +426,17 @@ export async function updateUserComicDiary(
       ),
     );
 
+  return context.slug;
+}
+
+
+export async function setLegacyComicProgress(userId: number, comicId: number, count: number) {
+  const context = await getUserComicContext(userId, comicId);
+  if (context.hasRegistry || !Number.isSafeInteger(count) || count < 0 || count > 2147483647 ||
+      (context.progressCeiling !== null && count > context.progressCeiling)) throw new Error("Invalid legacy progress");
+  await db.update(userComics).set({ currentChapter: count, updatedAt: new Date(),
+    status: count > 0 && context.status === "WANT_TO_READ" ? "READING" : context.status,
+    startedAt: count > 0 ? context.startedAt ?? new Date() : context.startedAt,
+  }).where(and(eq(userComics.userId, userId), eq(userComics.comicId, comicId)));
   return context.slug;
 }

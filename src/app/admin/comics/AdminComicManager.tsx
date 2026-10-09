@@ -35,6 +35,8 @@ type ChapterEditStatus =
 
 type AdminChapter = {
   id: number;
+  kind: string;
+  supersedesChapterId: number | null;
   displayCode: string;
   title: string | null;
   sourceUrl: string | null;
@@ -579,6 +581,7 @@ export function AdminComicManager({
     chapterEditValues,
     setChapterEditValues,
   ] = useState<{
+    kind: "MAIN" | "SPECIAL";
     displayCode: string;
     title: string;
     sourceUrl: string;
@@ -957,6 +960,7 @@ export function AdminComicManager({
 
                 chapterId,
 
+                kind: chapterEditValues.kind,
                 displayCode:
                   chapterEditValues.displayCode,
 
@@ -1128,7 +1132,10 @@ export function AdminComicManager({
       return;
     }
 
+    const rawReplacement = textValue(data, "chapterSupersedesId");
     const payload = {
+      kind: textValue(data, "chapterKind") || "MAIN",
+      supersedesChapterId: rawReplacement ? Number(rawReplacement) : null,
       displayCode,
       title,
       sourceUrl,
@@ -1233,6 +1240,9 @@ export function AdminComicManager({
         "chapterStatus",
         "SCHEDULED",
       );
+
+      setFormControlValue(form, "chapterSupersedesId", "");
+      setFormControlValue(form, "chapterKind", "MAIN");
 
       setMessage(
         `Глава ${displayCode} добавлена в ${comic.title}.`,
@@ -1465,6 +1475,11 @@ export function AdminComicManager({
                                 chapter.id &&
                                 chapterEditValues ? (
                                   <div className="space-y-3">
+                                    <label className="block text-sm">Тип главы
+                                      <select value={chapterEditValues.kind} onChange={(event) => setChapterEditValues({ ...chapterEditValues, kind: event.target.value as "MAIN" | "SPECIAL" })} className="ml-2 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
+                                        <option value="MAIN">Основная</option><option value="SPECIAL">Спешиал / бонус</option>
+                                      </select>
+                                    </label>
                                     <input
                                       value={
                                         chapterEditValues.displayCode
@@ -1566,7 +1581,7 @@ export function AdminComicManager({
                                 ) : (
                                   <>
                                     <div className="font-medium">
-                                      {chapter.displayCode}
+                                      {chapter.displayCode}{chapter.kind === "SPECIAL" ? " · Спешиал" : ""}{chapter.supersedesChapterId ? " · Новая редакция" : ""}
                                       {chapter.title
                                         ? ` — ${chapter.title}`
                                         : ""}
@@ -1619,6 +1634,7 @@ export function AdminComicManager({
                                           );
 
                                           setChapterEditValues({
+                                            kind: chapter.kind === "SPECIAL" ? "SPECIAL" : "MAIN",
                                             displayCode:
                                               chapter.displayCode,
 
@@ -1698,10 +1714,28 @@ export function AdminComicManager({
 
                       <div className="mt-5 border-t border-black/10 pt-4">
                         <h5 className="text-sm font-semibold">
-                          Добавить главу
+                          Добавить главу / новую редакцию
                         </h5>
 
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
+                          <label className="block">
+                            <span className="mb-1 block text-xs font-medium">Тип главы</span>
+                            <select name="chapterKind" className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm">
+                              <option value="MAIN">Основная</option>
+                              <option value="SPECIAL">Спешиал / бонус</option>
+                            </select>
+                          </label>
+                          <label className="block">
+                            <span className="mb-1 block text-xs font-medium">Заменяет старую редакцию</span>
+                            <select name="chapterSupersedesId" className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm">
+                              <option value="">Новая глава без замены</option>
+                              {comic.chapters.filter((c) => c.status === "RELEASED").map((c) => (
+                                <option key={c.id} value={c.id}>{c.displayCode}{c.title ? ` — ${c.title}` : ""}</option>
+                              ))}
+                            </select>
+                            <p className="mt-1 text-xs text-[var(--text-secondary)]">Для замены выберите статус «Опубликована» и тот же тип главы. Старая редакция уйдёт в архив; её история чтения сохранится.</p>
+                          </label>
+
                           <label className="block">
                             <span className="mb-1 block text-xs font-medium">
                               Код главы

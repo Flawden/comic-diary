@@ -1,3 +1,4 @@
+import { getChapterReading } from "./get-chapter-reading";
 import {
   and,
   asc,
@@ -7,9 +8,6 @@ import {
 } from "drizzle-orm";
 
 import { db } from "@/db";
-import {
-  getChapterProgressCeiling,
-} from "@/modules/comics/queries/get-chapter-progress-ceiling";
 
 import {
   categories,
@@ -95,24 +93,15 @@ export async function getUserLibrary(
   return Promise.all(
     rows.map(
       async (item) => {
-        const progressCeiling =
-          await getChapterProgressCeiling(
-            item.comicId,
-            item.totalChapters,
-          );
-
-        const currentChapter =
-          progressCeiling === null
-            ? item.currentChapter
-            : Math.min(
-                item.currentChapter,
-                progressCeiling,
-              );
+        const chapterReading = await getChapterReading(userId, item.comicId);
+        const progressCeiling = chapterReading.registered ? chapterReading.progressCeiling : item.totalChapters;
+        const currentChapter = progressCeiling === null ? item.currentChapter : Math.min(item.currentChapter, progressCeiling);
 
         return {
           ...item,
-          currentChapter,
+          currentChapter: chapterReading.registered ? chapterReading.currentChapter : currentChapter,
           progressCeiling,
+          chapterReading,
         };
       },
     ),

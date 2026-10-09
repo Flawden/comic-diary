@@ -1005,7 +1005,8 @@ Status: IN PROGRESS
 Implementation checkpoint: dedicated library cards compose shared Card, Badge
 and CoverImage with canonical progress, personal ratings and note previews.
 Semantic borders/text, responsive list layout and 2-column home statistics are
-applied. Authenticated Windows visual acceptance remains pending.
+applied. Windows desktop empty/populated/ratings-note states reviewed at cef92f8.
+Mobile authenticated acceptance remains pending.
 
 - distinguish catalog metadata from per-user reading state;
 - show reading progress and personal state without contaminating catalog contracts;
@@ -1013,7 +1014,13 @@ applied. Authenticated Windows visual acceptance remains pending.
 
 ## UI-F5 — Comic Detail & Chapter Surface Migration
 
-Status: PLANNED
+Status: IN PROGRESS
+
+Chapter-reading checkpoint: stable chapter IDs, MAIN/SPECIAL classification,
+read-through actions, source links/search, separate read history, explicit completion
+and revision replacement with archived predecessors. Migration 0016 imports the
+existing ordered-count interpretation once; titles without a registry retain a
+numeric fallback. Windows migration/runtime and responsive acceptance pending.
 
 - rebuild `/comics/[slug]` around the new visual system;
 - integrate canonical chapter records;

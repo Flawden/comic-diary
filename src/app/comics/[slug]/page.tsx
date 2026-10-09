@@ -1,3 +1,5 @@
+import { ChapterReadingPanel } from "@/modules/library/components/ChapterReadingPanel";
+import { Button } from "@/shared/components/ui";
 import { notFound } from "next/navigation";
 
 import { getChapterProgressCeiling } from "@/modules/comics/queries/get-chapter-progress-ceiling";
@@ -22,12 +24,6 @@ const statusLabels = {
   READING: "Читаю",
   COMPLETED: "Прочитано",
   ON_HOLD: "Отложено",
-} as const;
-
-const chapterStatusLabels = {
-  SCHEDULED: "Запланирована",
-  RELEASED: "Опубликована",
-  ARCHIVED: "В архиве",
 } as const;
 
 const ratingFields = [
@@ -97,18 +93,6 @@ export default async function ComicPage({
       ? readingState.progressCeiling
       : await getChapterProgressCeiling(comic.id, comic.totalChapters);
 
-  const canDecreaseProgress =
-    readingState !== null &&
-    readingState.currentChapter > 0;
-
-  const canIncreaseProgress =
-    readingState !== null &&
-    (
-      progressCeiling === null ||
-      readingState.currentChapter <
-        progressCeiling
-    );
-
   const averageRating = readingState
     ? calculateAverageRating(
         readingState,
@@ -116,8 +100,8 @@ export default async function ComicPage({
     : null;
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-6 py-10">
-      <article className="overflow-hidden rounded-2xl border border-black/5 bg-[var(--surface)] shadow-sm">
+    <div className="mx-auto max-w-5xl">
+      <article className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
         <div className="grid md:grid-cols-[280px_1fr]">
           <CoverImage
             src={comic.coverUrl}
@@ -125,7 +109,7 @@ export default async function ComicPage({
             className="aspect-[3/4] mx-auto w-40 self-start md:mx-0 md:w-full"
           />
 
-          <div className="p-7 md:p-9">
+          <div className="min-w-0 p-4 sm:p-6 md:p-8">
             <p className="text-sm font-medium text-[var(--primary)]">
               {comic.categoryName ?? "Без категории"}
             </p>
@@ -134,10 +118,10 @@ export default async function ComicPage({
               {comic.title}
             </h1>
 
-            <p className="mt-3 text-sm text-[var(--muted)]">
+            <p className="mt-3 text-sm text-[var(--text-secondary)]">
               {progressCeiling === null
                 ? "Количество глав пока не указано"
-                : `Доступно глав: ${progressCeiling}`}
+                : `${chapters.length === 0 ? "Заявлено" : "Основных глав доступно"}: ${progressCeiling}`}
             </p>
 
             {comic.visibility === "PRIVATE" ? (
@@ -147,7 +131,7 @@ export default async function ComicPage({
             ) : null}
 
             {comic.publicationStatus !== "PUBLISHED" ? (
-              <p className="mt-4 inline-flex rounded-full border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-1 text-xs font-semibold text-[var(--muted)]">
+              <p className="mt-4 inline-flex rounded-full border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
                 {comic.publicationStatus === "HIDDEN"
                   ? "Скрыт из публичного каталога"
                   : "Архивный комикс"}
@@ -158,7 +142,7 @@ export default async function ComicPage({
               <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
                 {comic.authorName ? (
                   <div className="rounded-xl bg-[var(--background)] p-4">
-                    <dt className="text-[var(--muted)]">
+                    <dt className="text-[var(--text-secondary)]">
                       Автор
                     </dt>
                     <dd className="mt-1 font-semibold">
@@ -169,7 +153,7 @@ export default async function ComicPage({
 
                 {comic.translatorName ? (
                   <div className="rounded-xl bg-[var(--background)] p-4">
-                    <dt className="text-[var(--muted)]">
+                    <dt className="text-[var(--text-secondary)]">
                       Перевод
                     </dt>
                     <dd className="mt-1 font-semibold">
@@ -181,87 +165,34 @@ export default async function ComicPage({
             ) : null}
 
             {comic.translatorNote ? (
-              <section className="mt-6 rounded-xl border border-black/5 bg-[var(--background)] p-5">
+              <section className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--background)] p-5">
                 <h2 className="font-semibold">
                   Примечание переводчика
                 </h2>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--muted)]">
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--text-secondary)]">
                   {comic.translatorNote}
                 </p>
               </section>
             ) : null}
 
             {comic.description ? (
-              <p className="mt-6 max-w-2xl leading-7 text-[var(--muted)]">
+              <p className="mt-6 max-w-2xl leading-7 text-[var(--text-secondary)]">
                 {comic.description}
               </p>
             ) : (
-              <p className="mt-6 text-[var(--muted)]">
+              <p className="mt-6 text-[var(--text-secondary)]">
                 Описание пока не добавлено.
               </p>
             )}
 
-            <section className="mt-8 rounded-xl bg-[var(--background)] p-5">
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="font-semibold">
-                  Главы
-                </h2>
-
-                {chapters.length > 0 ? (
-                  <span className="text-sm text-[var(--muted)]">
-                    {chapters.length}
-                  </span>
-                ) : null}
-              </div>
-
-              {chapters.length > 0 ? (
-                <ul className="mt-4 space-y-2">
-                  {chapters.map((chapter) => (
-                    <li
-                      key={chapter.id}
-                      className="rounded-xl border border-black/5 bg-[var(--surface)] p-4"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium">
-                            {chapter.displayCode}
-                          </p>
-
-                          {chapter.title ? (
-                            <p className="mt-1 text-sm text-[var(--muted)]">
-                              {chapter.title}
-                            </p>
-                          ) : null}
-                        </div>
-
-                        {canSeeUnreleasedChapters ? (
-                          <span className="rounded-full border border-black/10 px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
-                            {
-                              chapterStatusLabels[
-                                chapter.status
-                              ]
-                            }
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {chapter.releasedAt ? (
-                        <p className="mt-3 text-xs text-[var(--muted)]">
-                          Опубликована{" "}
-                          {chapter.releasedAt.toLocaleDateString(
-                            "ru-RU",
-                          )}
-                        </p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-3 text-sm text-[var(--muted)]">
-                  Главы пока не добавлены.
-                </p>
-              )}
-            </section>
+            <ChapterReadingPanel
+              comicId={comic.id}
+              chapters={(readingState?.chapterReading.registry ?? chapters)
+                .filter((c) => c.status === "RELEASED" || (c.status === "ARCHIVED" && readingState?.chapterReading.readIds.includes(c.id)))
+                .map((c) => ({ id: c.id, displayCode: c.displayCode, title: c.title, sourceUrl: c.sourceUrl, sortOrder: c.sortOrder, status: c.status, kind: c.kind, supersedesChapterId: c.supersedesChapterId }))}
+              readIds={readingState?.chapterReading.readIds ?? []}
+              canMark={readingState !== null}
+            />
 
             <section className="mt-8 rounded-xl bg-[var(--background)] p-5">
               <h2 className="font-semibold">
@@ -301,7 +232,7 @@ export default async function ComicPage({
                         defaultValue={
                           readingState.status
                         }
-                        className="rounded-xl border border-black/10 bg-[var(--surface)] px-3 py-2 text-sm"
+                        className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
                       >
                         {Object.entries(
                           statusLabels,
@@ -327,90 +258,33 @@ export default async function ComicPage({
                   </form>
 
                   <div>
-                    <p className="text-sm font-medium">
-                      Прогресс
-                    </p>
-
-                    <p className="mt-1 text-lg font-semibold">
-                      {readingState.currentChapter}
-                      {progressCeiling === null
-                        ? ""
-                        : ` / ${progressCeiling}`}
-                    </p>
-
-                    <div className="mt-3 flex gap-2">
-                      <form
-                        action="/api/library/reading-state"
-                        method="post"
-                      >
-                        <input
-                          type="hidden"
-                          name="comicId"
-                          value={comic.id}
-                        />
-
-                        <input
-                          type="hidden"
-                          name="intent"
-                          value="change-progress"
-                        />
-
-                        <input
-                          type="hidden"
-                          name="delta"
-                          value="-1"
-                        />
-
-                        <button
-                          type="submit"
-                          disabled={
-                            !canDecreaseProgress
-                          }
-                          className="rounded-xl border border-black/10 bg-[var(--surface)] px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          −1 глава
-                        </button>
+                    <h3 className="font-semibold">Мой прогресс</h3>
+                    <p className="mt-2 text-lg font-semibold">{readingState.currentChapter}{progressCeiling === null ? "" : ` / ${progressCeiling}`}</p>
+                    {readingState.unresolvedLegacyProgress ? <p className="mt-2 text-sm text-[var(--text-secondary)]">Ранее сохранён общий счётчик: {readingState.unresolvedLegacyProgress}. Появился список глав — выберите «Прочитано до», чтобы связать чтение с конкретными главами.</p> : null}
+                    {readingState.chapterReading.registered ? (
+                      <div className="mt-2 space-y-2 text-sm text-[var(--text-secondary)]">
+                        {readingState.chapterReading.lastReadLabel ? <p>Последняя отмеченная: {readingState.chapterReading.lastReadLabel}</p> : null}
+                        <p>{readingState.chapterReading.caughtUp ? "Все вышедшие основные главы прочитаны" : `Непрочитанных основных глав: ${readingState.chapterReading.unreadChapters}`}</p>
+                        {readingState.chapterReading.updatedChapters ? <p>Непрочитанных новых редакций: {readingState.chapterReading.updatedChapters}</p> : null}
+                        {readingState.chapterReading.specialCount ? <p>Спешиалы: {readingState.chapterReading.specialReadCount} / {readingState.chapterReading.specialCount}</p> : null}
+                        <p>Отмечайте чтение в списке глав выше. Статус «Прочитано» выбирается отдельно.</p>
+                      </div>
+                    ) : (
+                      <form action="/api/library/reading-state" method="post" className="mt-3">
+                        <input type="hidden" name="comicId" value={comic.id} />
+                        <input type="hidden" name="intent" value="set-legacy-progress" />
+                        <label className="block text-sm">Прочитано глав
+                          <input type="number" name="count" min={0} max={progressCeiling ?? 2147483647} required defaultValue={readingState.currentChapter} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2" />
+                        </label>
+                        <p className="mt-2 text-sm text-[var(--text-secondary)]">Список глав пока не заполнен. Можно сохранить общий счётчик; он не определяет конкретные главы или редакции.</p>
+                        <Button type="submit" className="mt-3">Сохранить прогресс</Button>
                       </form>
-
-                      <form
-                        action="/api/library/reading-state"
-                        method="post"
-                      >
-                        <input
-                          type="hidden"
-                          name="comicId"
-                          value={comic.id}
-                        />
-
-                        <input
-                          type="hidden"
-                          name="intent"
-                          value="change-progress"
-                        />
-
-                        <input
-                          type="hidden"
-                          name="delta"
-                          value="1"
-                        />
-
-                        <button
-                          type="submit"
-                          disabled={
-                            !canIncreaseProgress
-                          }
-                          className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          +1 глава
-                        </button>
-                      </form>
-                    </div>
+                    )}
                   </div>
-
                   <form
                     action="/api/library/reading-state"
                     method="post"
-                    className="border-t border-black/10 pt-5"
+                    className="border-t border-[var(--border)] pt-5"
                   >
                     <input
                       type="hidden"
@@ -430,7 +304,7 @@ export default async function ComicPage({
                           Моя оценка
                         </h3>
 
-                        <p className="mt-1 text-sm text-[var(--muted)]">
+                        <p className="mt-1 text-sm text-[var(--text-secondary)]">
                           Можно оценить только те критерии, по которым уже есть мнение.
                         </p>
                       </div>
@@ -443,7 +317,7 @@ export default async function ComicPage({
                           </strong>
                         </p>
                       ) : (
-                        <p className="text-sm text-[var(--muted)]">
+                        <p className="text-sm text-[var(--text-secondary)]">
                           Пока без средней оценки
                         </p>
                       )}
@@ -469,7 +343,7 @@ export default async function ComicPage({
                                   field.name
                                 ] ?? ""
                               }
-                              className="w-full rounded-xl border border-black/10 bg-[var(--surface)] px-3 py-2"
+                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
                             >
                               <option value="">
                                 Не оценено
@@ -508,13 +382,13 @@ export default async function ComicPage({
                           ""
                         }
                         placeholder="Мысли, впечатления, что хочется запомнить..."
-                        className="w-full resize-y rounded-xl border border-black/10 bg-[var(--surface)] px-3 py-2 leading-6"
+                        className="w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 leading-6"
                       />
                     </label>
 
                     <button
                       type="submit"
-                      className="mt-4 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"
+                      className="mt-4 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)]"
                     >
                       Сохранить оценку и заметку
                     </button>
@@ -525,7 +399,7 @@ export default async function ComicPage({
                     <form
                       action="/api/library/reading-state"
                       method="post"
-                      className="border-t border-black/10 pt-5"
+                      className="border-t border-[var(--border)] pt-5"
                     >
                       <input
                         type="hidden"
@@ -541,7 +415,7 @@ export default async function ComicPage({
 
                       <button
                         type="submit"
-                        className="rounded-xl border border-black/15 px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+                        className="rounded-xl border border-black/15 px-4 py-2 text-sm font-semibold text-[var(--text-secondary)]"
                       >
                         Удалить из библиотеки
                       </button>
@@ -550,7 +424,7 @@ export default async function ComicPage({
                 </div>
               ) : (
                 <div className="mt-4">
-                  <p className="text-sm text-[var(--muted)]">
+                  <p className="text-sm text-[var(--text-secondary)]">
                     Комикс ещё не добавлен в библиотеку.
                   </p>
 
@@ -573,7 +447,7 @@ export default async function ComicPage({
 
                     <button
                       type="submit"
-                      className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"
+                      className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)]"
                     >
                       Добавить в библиотеку
                     </button>
@@ -591,7 +465,7 @@ export default async function ComicPage({
                   Метаданные личного тайтла
                 </h2>
 
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                   Название, ссылка и количество глав относятся только к вашему личному тайтлу. Его внутренний идентификатор не меняется.
                 </p>
 
@@ -622,7 +496,7 @@ export default async function ComicPage({
                       name="title"
                       maxLength={255}
                       defaultValue={comic.title}
-                      className="w-full rounded-xl border border-black/10 bg-[var(--surface)] px-3 py-2"
+                      className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
                     />
                   </label>
 
@@ -637,7 +511,7 @@ export default async function ComicPage({
                       name="sourceUrl"
                       maxLength={2048}
                       defaultValue={comic.sourceUrl}
-                      className="w-full rounded-xl border border-black/10 bg-[var(--surface)] px-3 py-2"
+                      className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
                     />
                   </label>
 
@@ -659,11 +533,11 @@ export default async function ComicPage({
                         comic.totalChapters ??
                         ""
                       }
-                      className="w-full rounded-xl border border-black/10 bg-[var(--surface)] px-3 py-2"
+                      className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
                       placeholder="Неизвестно"
                     />
 
-                    <span className="mt-1 block text-xs leading-5 text-[var(--muted)]">
+                    <span className="mt-1 block text-xs leading-5 text-[var(--text-secondary)]">
                       Можно оставить пустым. Значение не может быть меньше уже сохранённого прогресса: {readingState?.currentChapter ?? 0}.
                     </span>
                   </label>
@@ -685,7 +559,7 @@ export default async function ComicPage({
                 href={comic.sourceUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex rounded-xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition-opacity hover:opacity-90"
+                className="inline-flex rounded-xl bg-[var(--primary)] px-5 py-3 font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
               >
                 {comic.visibility ===
                 "PRIVATE"
@@ -719,7 +593,7 @@ export default async function ComicPage({
                   Удалить личный тайтл
                 </h2>
 
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                   Тайтл и связанный читательский дневник будут удалены без влияния на общий каталог.
                 </p>
 
@@ -734,6 +608,6 @@ export default async function ComicPage({
           </div>
         </div>
       </article>
-    </main>
+    </div>
   );
 }

@@ -30,6 +30,6 @@ export async function getChapterProgressCeiling(
   return registeredChapters.filter(
     (chapter) =>
       chapter.status ===
-      "RELEASED",
+      "RELEASED" && chapter.kind === "MAIN",
   ).length;
 }

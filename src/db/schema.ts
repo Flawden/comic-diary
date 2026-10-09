@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   check,
   index,
@@ -12,6 +13,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
 
@@ -255,6 +257,10 @@ export const chapters = pgTable(
       "source_url",
     ),
 
+    kind: varchar("kind", { length: 16 }).default("MAIN").notNull(),
+    supersedesChapterId: integer("supersedes_chapter_id")
+      .references((): AnyPgColumn => chapters.id, { onDelete: "restrict" }),
+
     sortOrder: integer(
       "sort_order",
     ).notNull(),
@@ -285,12 +291,11 @@ export const chapters = pgTable(
       .notNull(),
   },
   (table) => [
-    unique(
-      "chapters_comic_display_code_unique",
-    ).on(
-      table.comicId,
-      table.displayCode,
-    ),
+    uniqueIndex("chapters_comic_display_code_active_unique")
+      .on(table.comicId, table.displayCode)
+      .where(sql`${table.status} <> 'ARCHIVED'`),
+    uniqueIndex("chapters_supersedes_unique").on(table.supersedesChapterId),
+    check("chapters_kind_valid", sql`${table.kind} IN ('MAIN', 'SPECIAL')`),
 
     index(
       "chapters_comic_id_idx",
@@ -713,3 +718,14 @@ export const userComics = pgTable(
     ),
   ],
 );
+
+
+export const userChapterReads = pgTable("user_chapter_reads", {
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  chapterId: integer("chapter_id").notNull().references(() => chapters.id, { onDelete: "restrict" }),
+  readAt: timestamp("read_at", { withTimezone: true }).defaultNow().notNull(),
+  origin: varchar("origin", { length: 16 }).default("EXPLICIT").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.chapterId] }),
+  index("user_chapter_reads_chapter_idx").on(table.chapterId),
+]);

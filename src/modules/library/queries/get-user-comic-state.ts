@@ -1,3 +1,4 @@
+import { getChapterReading } from "./get-chapter-reading";
 import {
   and,
   eq,
@@ -10,9 +11,6 @@ import {
   userComics,
 } from "@/db/schema";
 
-import {
-  getChapterProgressCeiling,
-} from "@/modules/comics/queries/get-chapter-progress-ceiling";
 
 export async function getUserComicState(
   userId: number,
@@ -98,27 +96,20 @@ export async function getUserComicState(
     return null;
   }
 
-  const progressCeiling =
-    await getChapterProgressCeiling(
-      comicId,
-      state.totalChapters,
-    );
+  const chapterReading = await getChapterReading(userId, comicId);
 
-  const currentChapter =
-    progressCeiling === null
-      ? state.currentChapter
-      : Math.min(
-          state.currentChapter,
-          progressCeiling,
-        );
+  const progressCeiling = chapterReading.registered ? chapterReading.progressCeiling : state.totalChapters;
+  const currentChapter = progressCeiling === null ? state.currentChapter : Math.min(state.currentChapter, progressCeiling);
 
   return {
     status:
       state.status,
 
-    currentChapter,
+    currentChapter: chapterReading.registered ? chapterReading.currentChapter : currentChapter,
 
     progressCeiling,
+    chapterReading,
+    unresolvedLegacyProgress: chapterReading.registered && chapterReading.readIds.length === 0 && state.currentChapter > 0 ? state.currentChapter : null,
 
     ratingPlot:
       state.ratingPlot,
