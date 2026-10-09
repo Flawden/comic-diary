@@ -1,0 +1,1 @@
+ALTER TABLE "user_comics" ADD COLUMN "tracking_enabled" boolean DEFAULT true NOT NULL;

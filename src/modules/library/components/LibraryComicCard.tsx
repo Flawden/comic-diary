@@ -1,3 +1,4 @@
+import { TrackingControl } from "./TrackingControl";
 import Link from "next/link";
 
 import type { UserLibraryItem } from "@/modules/library/queries/get-user-library";
@@ -34,7 +35,7 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
             <h2 className="mt-1 break-words text-lg font-bold leading-snug text-[var(--text-primary)]">
               <Link href={href} className="hover:underline">{item.title}</Link>
             </h2>
-            <div className="mt-2"><Badge variant={status.variant}>{status.label}</Badge></div>
+            <div className="mt-2 flex flex-wrap gap-2"><Badge variant={status.variant}>{status.label}</Badge>{!item.trackingEnabled ? <Badge variant="neutral">Обновления отключены</Badge> : null}</div>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
               {item.chapterReading.registered ? "Основные главы" : "Общий счётчик"}: <strong className="text-[var(--text-primary)]">{item.currentChapter}{item.progressCeiling === null ? "" : ` / ${item.progressCeiling}`}</strong>
               {item.chapterReading.specialCount > 0 ? ` · Спешиалы ${item.chapterReading.specialReadCount}/${item.chapterReading.specialCount}` : ""}
@@ -73,6 +74,7 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
         <Link href={href} className="mt-3 inline-flex min-h-11 items-center justify-center rounded-[var(--cd-radius-button)] border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-raised)] focus-visible:outline-2 focus-visible:outline-[var(--primary)]">
           Открыть комикс →
         </Link>
+        <TrackingControl comicId={item.comicId} enabled={item.trackingEnabled} />
         </details>
       </article>
     </Card>

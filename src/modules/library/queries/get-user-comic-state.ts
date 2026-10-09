@@ -18,6 +18,7 @@ export async function getUserComicState(
 ) {
   const result = await db
     .select({
+      trackingEnabled: userComics.trackingEnabled,
       status:
         userComics.status,
 
@@ -102,6 +103,7 @@ export async function getUserComicState(
   const currentChapter = progressCeiling === null ? state.currentChapter : Math.min(state.currentChapter, progressCeiling);
 
   return {
+    trackingEnabled: state.trackingEnabled,
     status:
       state.status,
 

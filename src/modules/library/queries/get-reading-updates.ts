@@ -13,8 +13,8 @@ export function parseUpdatesOptions(params: Record<string, string | string[] | u
   const rawStatus = first("status");
   const page = Number(first("page") ?? 1);
   return {
-    kind: (["MAIN", "SPECIAL", "UPDATED", "ALL"].includes(rawKind ?? "") ? rawKind : "MAIN") as UpdatesKind,
-    status: (["READING", "WANT_TO_READ", "ON_HOLD", "COMPLETED", "ALL"].includes(rawStatus ?? "") ? rawStatus : "READING") as UpdatesStatus,
+    kind: (["MAIN", "SPECIAL", "UPDATED", "ALL"].includes(rawKind ?? "") ? rawKind : "ALL") as UpdatesKind,
+    status: (["READING", "WANT_TO_READ", "ON_HOLD", "COMPLETED", "ALL"].includes(rawStatus ?? "") ? rawStatus : "ALL") as UpdatesStatus,
     q: (first("q") ?? "").trim().slice(0, 160),
     page: Number.isSafeInteger(page) && page > 0 ? Math.min(page, 100000) : 1,
   };
@@ -25,7 +25,7 @@ function unreadRegistry(userId: number, status: UpdatesStatus = "ALL") {
   return sql`WITH RECURSIVE eligible AS (
     SELECT c.id, c.slug, c.title, c.cover_url FROM comics c
     JOIN user_comics uc ON uc.comic_id = c.id
-    WHERE uc.user_id = ${userId}
+    WHERE uc.user_id = ${userId} AND uc.tracking_enabled = TRUE
       AND (c.visibility = 'SHARED' OR (c.visibility = 'PRIVATE' AND c.owner_user_id = ${userId}))
       AND (${status} = 'ALL' OR uc.status::text = ${status})
   ), read_lineage(id) AS (

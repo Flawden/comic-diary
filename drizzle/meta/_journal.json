@@ -120,6 +120,13 @@
       "when": 1791483596636,
       "tag": "0016_chapter_reading_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791548078993,
+      "tag": "0017_independent_tracking",
+      "breakpoints": true
     }
   ]
 }

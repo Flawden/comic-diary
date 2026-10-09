@@ -645,6 +645,8 @@ export const userComics = pgTable(
       .default("WANT_TO_READ")
       .notNull(),
 
+    trackingEnabled: boolean("tracking_enabled").default(true).notNull(),
+
     currentChapter: integer("current_chapter")
       .default(0)
       .notNull(),

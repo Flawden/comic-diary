@@ -523,3 +523,15 @@ CD-08 добавляет «Ожидается» и серверную обраб
 Отписка сохраняет дневник. Статус выпуска вводится отдельно от опубликованности
 карточки каталога. Список «Новое» и доставка уведомления — разные возможности;
 каналы доставки будут реализованы в CD-08. См. последовательность в ROADMAP.
+
+
+## CD-03 — Independent tracking and safe unsubscribe (2026-10-09)
+
+Implementation ready; Windows PostgreSQL validation and desktop/mobile visual acceptance pending.
+
+- `user_comics.tracking_enabled` is independent of personal reading status and publication state. Migration 0017 defaults existing and new library entries to true, preserving tracking.
+- Disabling tracking retains the library row, chapter marks/read dates, ratings, notes, personal status and reading dates. It excludes the title from both updates title queries and chapter expansion. Re-enabling exposes currently unread released chapters; nothing is auto-read.
+- The old `remove-from-library` intent is a compatibility alias for disabling tracking, never diary deletion. Shared and owned private titles support the same toggle. Ownership and session/origin checks remain mandatory.
+- Library cards and comic details offer explicit “Включить/Отключить обновления”; disabled titles stay visible with a badge. Default updates filters are ALL statuses and ALL chapter kinds so completed titles, extras and revisions remain discoverable; optional filters only narrow the view.
+- This delivers in-app updates. Push/email notification delivery and scheduled chapter publication remain CD-08. Publication state ONGOING/FINISHED/HIATUS/CANCELLED/UNKNOWN and publication-aware completion remain CD-04; COMPLETED must not be inferred from caught-up counts.
+- CD-03 remains IN PROGRESS until registered completion, safe unsubscribe and mobile visual acceptance are complete. Next: CD-04 publication metadata and honest ongoing/finished reading semantics.

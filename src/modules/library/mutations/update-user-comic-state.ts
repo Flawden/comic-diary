@@ -194,35 +194,16 @@ export async function removeComicFromUserLibrary(
   userId: number,
   comicId: number,
 ) {
-  const comic = await getComic(
-    userId,
-    comicId,
-  );
+  // Compatibility for old forms: removing from tracking never deletes the diary.
+  return setUserComicTracking(userId, comicId, false);
+}
 
-  if (
-    comic.visibility ===
-    "PRIVATE"
-  ) {
-    throw new Error(
-      "Private titles cannot be removed from the library",
-    );
-  }
-
-  await db
-    .delete(userComics)
-    .where(
-      and(
-        eq(
-          userComics.userId,
-          userId,
-        ),
-        eq(
-          userComics.comicId,
-          comic.id,
-        ),
-      ),
-    );
-
+export async function setUserComicTracking(userId: number, comicId: number, enabled: boolean) {
+  if (typeof enabled !== "boolean") throw new Error("Invalid tracking preference");
+  const comic = await getComic(userId, comicId);
+  const updated = await db.update(userComics).set({ trackingEnabled: enabled })
+    .where(and(eq(userComics.userId, userId), eq(userComics.comicId, comicId))).returning({ id: userComics.id });
+  if (!updated.length) throw new Error("Comic is not in the authenticated user's library");
   return comic.slug;
 }
 

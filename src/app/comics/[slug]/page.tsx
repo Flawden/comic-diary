@@ -1,3 +1,4 @@
+import { TrackingControl } from "@/modules/library/components/TrackingControl";
 import { ReadingStatusForm } from "@/modules/library/components/ReadingStatusForm";
 import { completionSnapshot } from "@/modules/library/completion-model";
 import { ChapterReadingPanel } from "@/modules/library/components/ChapterReadingPanel";
@@ -339,33 +340,7 @@ export default async function ComicPage({
                     </button>
                   </form>
 
-                  {comic.visibility !==
-                  "PRIVATE" ? (
-                    <form
-                      action="/api/library/reading-state"
-                      method="post"
-                      className="border-t border-[var(--border)] pt-5"
-                    >
-                      <input
-                        type="hidden"
-                        name="comicId"
-                        value={comic.id}
-                      />
-
-                      <input
-                        type="hidden"
-                        name="intent"
-                        value="remove-from-library"
-                      />
-
-                      <button
-                        type="submit"
-                        className="rounded-xl border border-black/15 px-4 py-2 text-sm font-semibold text-[var(--text-secondary)]"
-                      >
-                        Удалить из библиотеки
-                      </button>
-                    </form>
-                  ) : null}
+                  <TrackingControl comicId={comic.id} enabled={readingState.trackingEnabled} />
                 </div>
               ) : (
                 <div className="mt-4">

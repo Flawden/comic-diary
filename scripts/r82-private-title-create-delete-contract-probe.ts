@@ -8,7 +8,7 @@ function source(
   return readFileSync(
     path,
     "utf8",
-  );
+  ).replace(/\r\n/g, "\n");
 }
 
 function assertIncludes(
@@ -160,8 +160,8 @@ assertIncludes(
 
 assertIncludes(
   diaryMutations,
-  '"Private titles cannot be removed from the library"',
-  "generic remove-from-library must not orphan private title",
+  "return setUserComicTracking(userId, comicId, false)",
+  "generic remove-from-library must disable tracking without orphaning private titles",
 );
 
 console.log(

@@ -21,6 +21,7 @@ export async function getUserLibrary(
 ) {
   const rows = await db
     .select({
+      trackingEnabled: userComics.trackingEnabled,
       comicId: comics.id,
       slug: comics.slug,
       title: comics.title,

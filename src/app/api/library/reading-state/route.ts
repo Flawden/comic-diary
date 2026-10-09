@@ -15,6 +15,7 @@ import {
   removeComicFromUserLibrary,
   isReadingStatus,
   setUserComicStatus,
+  setUserComicTracking,
   setLegacyComicProgress,
   updateUserComicDiary,
 } from "@/modules/library/mutations/update-user-comic-state";
@@ -139,6 +140,10 @@ export async function POST(
           currentUser.id,
           comicId,
         );
+    } else if (intent === "set-tracking") {
+      const enabled = formData.get("enabled");
+      if (enabled !== "true" && enabled !== "false") return NextResponse.json({ error: "Invalid tracking preference" }, { status: 400 });
+      slug = await setUserComicTracking(currentUser.id, comicId, enabled === "true");
     } else if (intent === "set-status") {
       const status =
         formData.get("status");
@@ -287,7 +292,7 @@ export async function POST(
       );
     }
 
-    if ((intent === "chapter-reading" || intent === "set-status" || intent === "complete-reading") && request.headers.get("accept")?.includes("application/json")) {
+    if ((intent === "chapter-reading" || intent === "set-status" || intent === "complete-reading" || intent === "set-tracking") && request.headers.get("accept")?.includes("application/json")) {
       return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
     }
 

@@ -17,7 +17,7 @@ export default async function UpdatesPage({ searchParams }: {
   const control = "mt-2 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm";
   return <div className="mx-auto max-w-3xl">
     <header><h1 className="text-3xl font-bold">Новое для чтения</h1>
-      <p className="mt-3 text-[var(--text-secondary)]">Непрочитанные главы из вашей библиотеки — включая то, что давно ждёт своей очереди.</p></header>
+      <p className="mt-3 text-[var(--text-secondary)]">Непрочитанные главы отслеживаемых тайтлов, включая спешиалы и новые редакции. Статус «Прочитано» не отключает обновления.</p></header>
     <form key={`${options.q}:${options.status}:${options.kind}`} action="/updates" className="mt-6 grid gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:grid-cols-2">
       <label className="text-sm sm:col-span-2">Поиск по тайтлам<input name="q" type="search" maxLength={160} defaultValue={options.q} placeholder="Название тайтла" className={control} /></label>
       <label className="text-sm">Мой статус<select name="status" defaultValue={options.status} className={control}>
@@ -30,8 +30,8 @@ export default async function UpdatesPage({ searchParams }: {
     <p className="mt-6 text-sm text-[var(--text-secondary)]">Тайтлов с непрочитанным: {result.total}{options.page > 1 ? ` · страница ${options.page}` : ""}</p>
     <ReadingUpdatesList key={`${options.kind}:${options.status}:${options.q}:${options.page}`} titles={result.titles} kind={options.kind} />
     {result.titles.length === 0 ? <section className="mt-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-      <h2 className="text-xl font-bold">{options.page > 1 ? "На этой странице нет тайтлов" : options.q ? "По запросу ничего не найдено" : result.libraryCount === 0 ? "Нет тайтлов выбранного статуса" : "В выбранном разделе нет непрочитанных глав"}</h2>
-      <p className="mt-2 text-[var(--text-secondary)]">{result.missingCount ? "Часть реестров ещё не заполнена, поэтому отсутствие записей здесь не означает, что прочитано всё." : "Измените фильтры или добавьте тайтлы в библиотеку."}</p>
+      <h2 className="text-xl font-bold">{options.page > 1 ? "На этой странице нет тайтлов" : options.q ? "По запросу ничего не найдено" : result.libraryCount === 0 ? "Нет отслеживаемых тайтлов выбранного статуса" : "В выбранном разделе нет непрочитанных глав"}</h2>
+      <p className="mt-2 text-[var(--text-secondary)]">{result.missingCount ? "Часть реестров ещё не заполнена, поэтому отсутствие записей здесь не означает, что прочитано всё." : "Измените фильтры или включите обновления тайтла в библиотеке."}</p>
       <Link href="/library" className="mt-3 inline-flex min-h-11 items-center text-[var(--text-accent)]">Открыть библиотеку →</Link>
     </section> : null}
     <nav aria-label="Страницы обновлений" className="mt-6 flex justify-between gap-3">
