@@ -1,4 +1,5 @@
 "use client";
+import { ChapterRevisionSelector } from "@/modules/catalog/components/ChapterRevisionSelector";
 import { AdminChapterList } from "@/modules/catalog/components/AdminChapterList";
 import { ChapterBatchEditor } from "@/modules/catalog/components/ChapterBatchEditor";
 import type { WorkType, WorkFormat } from "@/modules/comics/work-metadata";
@@ -584,6 +585,7 @@ export function AdminComicManager({
   const router =
     useRouter();
 
+  const [creationVersions, setCreationVersions] = useState<Record<number, number>>({});
   const [
     busyKey,
     setBusyKey,
@@ -1149,7 +1151,24 @@ export function AdminComicManager({
       return;
     }
 
+    if (textValue(data, "chapterRevisionInvalid") === "yes") {
+      setError("Выбранная редакция больше недоступна. Выберите актуальную главу или отмените замену.");
+      setBusyKey(null);
+      return;
+    }
     const rawReplacement = textValue(data, "chapterSupersedesId");
+    if (rawReplacement && textValue(data, "chapterRevisionConfirmed") !== "yes") {
+      setError("Подтвердите замену старой редакции или отмените её выбор.");
+      setBusyKey(null);
+      return;
+    }
+    const previous = rawReplacement ? comic.chapters.find(c => c.id === Number(rawReplacement)) : null;
+    if (rawReplacement && (!previous || previous.status !== "RELEASED" || status !== "RELEASED" || textValue(data, "chapterKind") !== previous.kind)) {
+      setError("Новая редакция должна быть опубликована и иметь тот же тип, что и заменяемая глава.");
+      setBusyKey(null);
+      return;
+    }
+
     const payload = {
       kind: textValue(data, "chapterKind") || "MAIN",
       supersedesChapterId: rawReplacement ? Number(rawReplacement) : null,
@@ -1258,7 +1277,7 @@ export function AdminComicManager({
         "SCHEDULED",
       );
 
-      setFormControlValue(form, "chapterSupersedesId", "");
+      setCreationVersions(versions => ({ ...versions, [comic.id]: (versions[comic.id] ?? 0) + 1 }));
       setFormControlValue(form, "chapterKind", "MAIN");
 
       setMessage(
@@ -1676,7 +1695,7 @@ export function AdminComicManager({
                                         }}
                                         className="text-sm font-semibold text-[var(--primary)]"
                                       >
-                                        Редактировать
+                                        Исправить данные
                                       </button>
 
                                       {archiveConfirmChapterId ===
@@ -1742,7 +1761,7 @@ export function AdminComicManager({
 
                       <div className="mt-5 border-t border-black/10 pt-4">
                         <h5 className="text-sm font-semibold">
-                          Добавить главу / новую редакцию
+                          Добавить главу или выпустить новую редакцию
                         </h5>
 
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -1753,16 +1772,7 @@ export function AdminComicManager({
                               <option value="SPECIAL">Спешиал / бонус</option>
                             </select>
                           </label>
-                          <label className="block">
-                            <span className="mb-1 block text-xs font-medium">Заменяет старую редакцию</span>
-                            <select name="chapterSupersedesId" className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm">
-                              <option value="">Новая глава без замены</option>
-                              {comic.chapters.filter((c) => c.status === "RELEASED").map((c) => (
-                                <option key={c.id} value={c.id}>{c.displayCode}{c.title ? ` — ${c.title}` : ""}</option>
-                              ))}
-                            </select>
-                            <p className="mt-1 text-xs text-[var(--text-secondary)]">Для замены выберите статус «Опубликована» и тот же тип главы. Старая редакция уйдёт в архив; её история чтения сохранится.</p>
-                          </label>
+                          <ChapterRevisionSelector key={creationVersions[comic.id] ?? 0} chapters={comic.chapters} disabled={busyKey !== null} />
 
                           <label className="block">
                             <span className="mb-1 block text-xs font-medium">
@@ -1884,7 +1894,7 @@ export function AdminComicManager({
                           {busyKey ===
                           `chapter-create:${comic.id}`
                             ? "Добавляем…"
-                            : "+ Добавить главу"}
+                            : "Создать главу / редакцию"}
                         </button>
                       </div>
                     </section>

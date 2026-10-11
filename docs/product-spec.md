@@ -601,3 +601,10 @@ Status: IN PROGRESS. Logout deployed and operator-accepted after 4daadeb.
 ### CD-05 — Adjacent chapter movement
 
 Implemented: atomic up/down movement across the complete active registry, ordered by sortOrder then ID. Gaps preserve existing slots; tied slots are normalized in the same transaction. Archived chapters are untouched. Each changed order is audited; chapter IDs, metadata and reading history are retained. Stale neighbor/order requests return 409 without writes. Movement is disabled during search, status/type filtering and edit/confirmation. Pagination does not limit adjacency. Search workspace accepted by operator at c4667c8; adjacent movement desktop/mobile acceptance pending. CD-05 remains IN PROGRESS.
+
+
+## CD-05 — Explicit revision workflow (2026-10-11)
+
+Status: IN PROGRESS. Adjacent chapter movement validated on actual Windows PostgreSQL, committed/pushed as 128bbeb and accepted by operator.
+
+Revision selector distinguishes a new chapter from a replacement. Selecting a current RELEASED predecessor prefills display code, title, kind, source URL and its current position, and sets RELEASED. Cancelling restores the original draft. Explicit confirmation describes archival, retained old read history and new unread identity; an unconfirmed replacement cannot be sent by the UI. Replacement must keep the predecessor kind and be RELEASED. Switching predecessor resets confirmation; a disappeared/archived predecessor invalidates selection. Successful creation clears the revision state. Existing server transactions, catalog locks, authorization, audit and stale-predecessor validation remain authoritative. Scheduled revisions and automatic publication remain CD-08. UI wording distinguishes metadata corrections from new content. Desktop/mobile acceptance pending; CD-05 remains open for import and cover acceptance.
