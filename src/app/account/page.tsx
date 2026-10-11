@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { resolveTheme, THEME_COOKIE } from "@/shared/theme/themes";
+import { getUserReadingStats } from "@/modules/library/queries/get-user-reading-stats";
+import { ReadingStats } from "./ReadingStats";
 import { ThemeSelector } from "./ThemeSelector";
 import { LogoutButton } from "./LogoutButton";
 import { hasPermission } from "@/modules/auth/permissions";
@@ -52,6 +54,7 @@ export default async function AccountPage() {
     );
   }
 
+  const stats = await getUserReadingStats(user.id);
   const theme = resolveTheme((await cookies()).get(THEME_COOKIE)?.value);
 
   return (
@@ -121,6 +124,8 @@ export default async function AccountPage() {
           </Link>
         </section>
       ) : null}
+
+      <ReadingStats stats={stats} />
 
       <ThemeSelector initialTheme={theme} />
 

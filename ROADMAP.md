@@ -1450,3 +1450,16 @@ CD-05 implementation accepted by operator on desktop through b8a31f2: chapter ba
 CD-06: IN PROGRESS. First slice: account theme selector for Night/Paper/Tea, immediate application and browser cookie persistence for one year. Server layout validates the cookie and renders the selected theme from the first response; missing/invalid values use Night. This is a browser-wide preference, shared by accounts using that browser, not cross-device account synchronization. Cookie refusal produces visible feedback. Existing semantic palettes remain authoritative. Theme choice does not alter authentication or reading data. Desktop/mobile and reload/navigation acceptance pending.
 
 Remaining CD-06: defined personal counters and export. Event history, confirmed reading dates, heatmap, rereading and undo require a separate data model and migration; existing marks must not be presented as verified reading dates or hours.
+
+
+## CD-06 — Personal diary counters (2026-10-11)
+
+Status: IN PROGRESS. Theme selection accepted by operator at 1d85580. Production import enabled in /opt/comic-diary/.env; backup /opt/comic-diary/backups/import-enable-20261011-191421 and operator-confirmed functionality. This source package does not change production configuration.
+
+Account counters use one database snapshot scoped to the current session user's library. Total titles include retained unsubscribed entries and hidden/archived shared titles, consistent with the library. Private titles require current ownership. Four mutually exclusive status counts link to library filters. Tracking is a separate count. Empty library links to discovery.
+
+Chapter counters count unique existing user_chapter_reads records for those library entries: RELEASED MAIN, RELEASED SPECIAL and ARCHIVED separately. Replacement predecessors do not inflate current released counts; new revisions do not inherit marks. SCHEDULED marks and marks without a library entry are excluded. Removing a mark decreases the counter. These are present marks, not lifetime events or rereading totals.
+
+Legacy progress is a separate count of titles with positive currentChapter and no chapter registry of any status. Neither currentChapter nor totalChapters is summed into marked chapters. No hours, confirmed reading dates or heatmap are inferred from read_at.
+
+Verification: typecheck/lint/webpack build and a PostgreSQL-compatible local integration probe. The Windows package runs the same probe against real local PostgreSQL before commit. Coverage: empty diary, status partition, independent tracking and retention, released MAIN/SPECIAL, archived separation, scheduled exclusion, legacy separation and ownership isolation. Dedicated desktop/mobile visual acceptance pending. Export and event model remain separate CD-06 work.
