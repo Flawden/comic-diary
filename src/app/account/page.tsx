@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DiaryExport } from "./DiaryExport";
 import { cookies } from "next/headers";
 import { resolveTheme, THEME_COOKIE } from "@/shared/theme/themes";
 import { getUserReadingStats } from "@/modules/library/queries/get-user-reading-stats";
@@ -126,6 +127,8 @@ export default async function AccountPage() {
       ) : null}
 
       <ReadingStats stats={stats} />
+
+      <DiaryExport />
 
       <ThemeSelector initialTheme={theme} />
 
