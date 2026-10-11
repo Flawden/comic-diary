@@ -1423,3 +1423,10 @@ Revision selector distinguishes a new chapter from a replacement. Selecting a cu
 Status: IN PROGRESS. 4ad4215 pushed and deployed per operator. Production cover storage repaired in /opt/comic-diary/compose.yml with external volume comic-diary-cover-media, MEDIA_ROOT=/app/data/media and Nginx request limit 7m. Uploaded address persists in PostgreSQL; exact file bytes served with HTTP 200 internally and public URL operator-accepted. Persistence across the next deployment still requires verification.
 
 Comic metadata save is disabled during its cover upload; submission also checks pending form state. Cover file/URL controls are locked during metadata save, and URL changes are locked during upload. Upload completion explicitly asks the operator to save metadata. Cached images are recognized when mounted so a missed load event does not leave them transparent. Existing 6 MiB file limit and server authorization remain unchanged. Desktop/mobile upload/save/reload acceptance pending; import acceptance and revision correction acceptance remain open.
+
+
+## CD-05 — Searchable title workspace (2026-10-11)
+
+Status: IN PROGRESS. 7b20429 typecheck/lint/build passed on Windows, committed/pushed, and cover upload/save/reload accepted by operator after deployment.
+
+Shared admin catalog now supports literal title/slug search, combined catalog publication status and category filters (including uncategorized), and 20-title pages. Default includes every status; existing server order is retained. Counts reflect the current filters, empty results preserve criteria with reset, and current page clamps after refresh. Forms remain mounted when hidden, so navigation does not discard chapter/comic drafts. Filters/pages lock during upload, save, chapter editing and archive confirmation. This is presentation pagination; the existing authorized server read still loads the full shared registry. No database or API change. Typecheck/lint/webpack build required; desktop/mobile acceptance and import workflow acceptance remain open.

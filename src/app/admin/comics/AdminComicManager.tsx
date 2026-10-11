@@ -1,4 +1,6 @@
 "use client";
+
+import { AdminComicList } from "@/modules/catalog/components/AdminComicList";
 import { ChapterRevisionSelector } from "@/modules/catalog/components/ChapterRevisionSelector";
 import { AdminChapterList } from "@/modules/catalog/components/AdminChapterList";
 import { ChapterBatchEditor } from "@/modules/catalog/components/ChapterBatchEditor";
@@ -1455,10 +1457,13 @@ export function AdminComicManager({
             Комиксов пока нет.
           </p>
         ) : (
-          <div className="mt-4 space-y-5">
+          <AdminComicList comics={initialComics} categories={categories}
+            locked={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null || Object.values(coverUploads).some(Boolean)}>
+            {visibleIds => <div className="mt-4 space-y-5">
             {initialComics.map(
               (comic) => (
                 <details
+                  hidden={!visibleIds.has(comic.id)}
                   key={
                     comic.id
                   }
@@ -1956,7 +1961,8 @@ export function AdminComicManager({
                 </details>
               ),
             )}
-          </div>
+          </div>}
+          </AdminComicList>
         )}
       </section>
     </div>
