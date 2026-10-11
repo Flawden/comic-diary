@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { resolveTheme, THEME_COOKIE } from "@/shared/theme/themes";
+import { ThemeSelector } from "./ThemeSelector";
 import { LogoutButton } from "./LogoutButton";
 import { hasPermission } from "@/modules/auth/permissions";
 
@@ -48,6 +51,8 @@ export default async function AccountPage() {
       "/login?next=%2Faccount",
     );
   }
+
+  const theme = resolveTheme((await cookies()).get(THEME_COOKIE)?.value);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -116,6 +121,8 @@ export default async function AccountPage() {
           </Link>
         </section>
       ) : null}
+
+      <ThemeSelector initialTheme={theme} />
 
       <section className="mt-6 rounded-2xl bg-[var(--surface)] p-6 shadow-sm sm:p-8">
         <h2 className="text-lg font-semibold">

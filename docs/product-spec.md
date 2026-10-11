@@ -634,3 +634,12 @@ Review uses multiple checkbox filters combined by OR and literal search. Importe
 Each review card accepts JPEG/PNG/WebP uploads (6 MiB maximum) through the existing authorized cover endpoint. The resulting media URL is controlled review draft data and is included in autosave/artifact and subsequent dry-run/apply. Upload alone does not change comic metadata. Starting an upload invalidates the old plan; filtering, JSON replacement/reset/export and database check/apply wait for all uploads. Failed uploads retain the previous URL. Existing metadata forms retain their save-after-upload contract. Exported JSON stores a URL, not image bytes; media must be available in the target deployment.
 
 Typecheck/lint/webpack build and import authorization checks required. Desktop/mobile checkbox and upload/check/apply/reload acceptance remain open; CD-05 is not closed by this delivery.
+
+
+## CD-05 acceptance and CD-06 theme selection (2026-10-11)
+
+CD-05 implementation accepted by operator on desktop through b8a31f2: chapter batch, adjacent movement, revision confirmation/cancellation and inline feedback, title/chapter workspaces, cover upload/save/reload, import checkbox filters and local cover upload. Windows PostgreSQL batch/move/reading and authorization checks passed. Full import transaction automation and dedicated mobile acceptance remain release checks in CD-07; they are not claimed as passed. Previous delivery notes record their status at delivery time.
+
+CD-06: IN PROGRESS. First slice: account theme selector for Night/Paper/Tea, immediate application and browser cookie persistence for one year. Server layout validates the cookie and renders the selected theme from the first response; missing/invalid values use Night. This is a browser-wide preference, shared by accounts using that browser, not cross-device account synchronization. Cookie refusal produces visible feedback. Existing semantic palettes remain authoritative. Theme choice does not alter authentication or reading data. Desktop/mobile and reload/navigation acceptance pending.
+
+Remaining CD-06: defined personal counters and export. Event history, confirmed reading dates, heatmap, rereading and undo require a separate data model and migration; existing marks must not be presented as verified reading dates or hours.

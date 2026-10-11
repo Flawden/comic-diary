@@ -15,3 +15,9 @@ export const themes = {
 
 export type ThemeId =
   keyof typeof themes;
+
+export const THEME_COOKIE = "comic-diary-theme";
+
+export function resolveTheme(value: string | undefined): ThemeId {
+  return value === "paper" || value === "tea" ? value : "night";
+}

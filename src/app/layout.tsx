@@ -1,3 +1,6 @@
+import { cookies } from "next/headers";
+import { resolveTheme, THEME_COOKIE } from "@/shared/theme/themes";
+
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
@@ -10,13 +13,15 @@ export const metadata: Metadata = {
   description: "Личный дневник для чтения и оценки комиксов",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: ReactNode;
 }) {
+  const theme = resolveTheme((await cookies()).get(THEME_COOKIE)?.value);
+
   return (
-    <html lang="ru">
+    <html lang="ru" data-theme={theme}>
       <body>
         <AppShell>
           {children}
