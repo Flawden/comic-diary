@@ -63,7 +63,8 @@ export type SharedChapterMutationErrorKind =
   | "chapter-not-found"
   | "chapter-archived"
   | "chapter-display-code-conflict"
-  | "chapter-batch-stale";
+  | "chapter-batch-stale"
+  | "chapter-order-stale";
 
 export class SharedChapterMutationError
   extends Error {
@@ -1105,5 +1106,49 @@ export async function appendSharedChapterBatch(
       details: { channel: "manual-batch", comicId, comicSlug: comic.slug, after: chapterSnapshot(chapter) },
     })));
     return { snapshot, rows: values, createdCount: created.length };
+  });
+}
+
+
+/** Move within the complete active registry; IDs and reading history remain unchanged. */
+export async function moveSharedCatalogChapter(
+  comicId: number, chapterId: number, direction: "up" | "down",
+  expected: { sortOrder: number; neighborId: number; neighborSortOrder: number },
+  actor: SharedChapterAuditActor,
+) {
+  requirePositiveId(comicId); requirePositiveId(chapterId); requirePositiveId(expected.neighborId);
+  normalizeSortOrder(expected.sortOrder); normalizeSortOrder(expected.neighborSortOrder);
+  if (direction !== "up" && direction !== "down") throw new SharedChapterMutationError("invalid-chapter");
+  return db.transaction(async tx => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${SHARED_CATALOG_ADVISORY_LOCK})`);
+    const [comic] = await tx.select().from(comics).where(and(eq(comics.id, comicId), eq(comics.visibility, "SHARED")));
+    if (!comic) throw new SharedChapterMutationError("comic-not-found");
+    const registry = await tx.select().from(chapters).where(eq(chapters.comicId, comicId));
+    const current = registry.find(c => c.id === chapterId);
+    if (!current) throw new SharedChapterMutationError("chapter-not-found");
+    if (current.status === "ARCHIVED") throw new SharedChapterMutationError("chapter-archived");
+    const active = registry.filter(c => c.status !== "ARCHIVED").sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+    const index = active.findIndex(c => c.id === chapterId);
+    const neighborIndex = index + (direction === "up" ? -1 : 1);
+    const neighbor = active[neighborIndex];
+    if (!neighbor || neighbor.id !== expected.neighborId || current.sortOrder !== expected.sortOrder || neighbor.sortOrder !== expected.neighborSortOrder)
+      throw new SharedChapterMutationError("chapter-order-stale");
+    [active[index], active[neighborIndex]] = [active[neighborIndex], active[index]];
+    // Unique ascending values make a move deterministic even when old values tie.
+    // Preserve existing slots when strictly increasing; otherwise normalize active slots.
+    const slots = registry.filter(c => c.status !== "ARCHIVED").map(c => c.sortOrder).sort((a, b) => a - b);
+    const unique = slots.every((value, i) => i === 0 || value > slots[i - 1]);
+    const now = new Date();
+    for (const [i, before] of active.entries()) {
+      const sortOrder = unique ? slots[i] : (i + 1) * 10;
+      if (sortOrder === before.sortOrder) continue;
+      const [after] = await tx.update(chapters).set({ sortOrder, updatedAt: now }).where(eq(chapters.id, before.id)).returning();
+      await tx.insert(administrativeAuditEvents).values({
+        actorUserId: actor.userId, actorRole: actor.role, action: "CHAPTER_REORDER", targetType: "CHAPTER", targetId: before.id,
+        targetKey: chapterTargetKey(comic.slug, before.id),
+        details: { channel: "adjacent-move", comicId, direction, movedChapterId: chapterId, before: chapterSnapshot(before), after: chapterSnapshot(after) },
+      });
+    }
+    return { chapterId, neighborId: neighbor.id };
   });
 }

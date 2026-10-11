@@ -861,16 +861,10 @@ export function AdminComicManager({
       return;
     }
 
-    const nextSortOrder =
-      direction === "up"
-        ? chapter.sortOrder - 1
-        : chapter.sortOrder + 1;
-
-    if (
-      nextSortOrder < 0
-    ) {
-      return;
-    }
+    const active = comic.chapters.filter(c => c.status !== "ARCHIVED").sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+    const index = active.findIndex(c => c.id === chapter.id);
+    const neighbor = active[index + (direction === "up" ? -1 : 1)];
+    if (!neighbor) return;
 
     const key =
       `chapter-reorder:${chapter.id}`;
@@ -898,13 +892,15 @@ export function AdminComicManager({
             body:
               JSON.stringify({
                 intent:
-                  "reorder",
+                  "move",
 
                 chapterId:
                   chapter.id,
 
-                sortOrder:
-                  nextSortOrder,
+                sortOrder: chapter.sortOrder,
+                direction,
+                neighborId: neighbor.id,
+                neighborSortOrder: neighbor.sortOrder,
               }),
           },
         );
@@ -917,7 +913,7 @@ export function AdminComicManager({
 
       if (!response.ok) {
         setError(
-          "Не удалось изменить порядок главы.",
+          response.status === 409 ? "Список глав изменился. Обновите страницу и повторите перемещение." : "Не удалось изменить порядок главы.",
         );
 
         setBusyKey(null);
@@ -1486,7 +1482,7 @@ export function AdminComicManager({
 
                       {comic.chapters.length > 0 ? (
                         <AdminChapterList chapters={comic.chapters} locked={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null}>
-                          {(visibleChapters) => <ul className="space-y-2">
+                          {(visibleChapters, canMove) => <ul className="space-y-2">
                           {visibleChapters.map(
                             (chapter) => (
                               <li
@@ -1623,7 +1619,7 @@ export function AdminComicManager({
                                       <button
                                         type="button"
                                         disabled={
-                                          busyKey !== null
+                                          busyKey !== null || !canMove || editingChapterId !== null || archiveConfirmChapterId !== null || chapter.id === comic.chapters.filter(c => c.status !== "ARCHIVED").sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)[0]?.id
                                         }
                                         onClick={() =>
                                           void moveChapter(
@@ -1634,13 +1630,13 @@ export function AdminComicManager({
                                         }
                                         className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-60"
                                       >
-                                        Порядок −1
+                                        Вверх
                                       </button>
 
                                       <button
                                         type="button"
                                         disabled={
-                                          busyKey !== null
+                                          busyKey !== null || !canMove || editingChapterId !== null || archiveConfirmChapterId !== null || chapter.id === comic.chapters.filter(c => c.status !== "ARCHIVED").sort((a, b) => b.sortOrder - a.sortOrder || b.id - a.id)[0]?.id
                                         }
                                         onClick={() =>
                                           void moveChapter(
@@ -1651,7 +1647,7 @@ export function AdminComicManager({
                                         }
                                         className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-60"
                                       >
-                                        Порядок +1
+                                        Вниз
                                       </button>
 
                                       <button

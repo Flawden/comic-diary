@@ -1399,3 +1399,8 @@ Status: IN PROGRESS. Logout deployed and operator-accepted after 4daadeb.
 - Revision labels resolve both replacement and successor from the full registry, including archived records. Existing mutation authorization, revision/read identity and audit semantics remain unchanged. Numeric order controls explicitly say order -1/+1; adjacent swaps remain separate work.
 - Editor controls have accessible names; filters and navigation have labels and touch-sized buttons. Typecheck, lint and build required. Desktop/mobile interactive acceptance remains pending.
 - CD-05 remains open for remaining input/revision/import/cover workflow acceptance.
+
+
+### CD-05 — Adjacent chapter movement
+
+Implemented: atomic up/down movement across the complete active registry, ordered by sortOrder then ID. Gaps preserve existing slots; tied slots are normalized in the same transaction. Archived chapters are untouched. Each changed order is audited; chapter IDs, metadata and reading history are retained. Stale neighbor/order requests return 409 without writes. Movement is disabled during search, status/type filtering and edit/confirmation. Pagination does not limit adjacency. Search workspace accepted by operator at c4667c8; adjacent movement desktop/mobile acceptance pending. CD-05 remains IN PROGRESS.

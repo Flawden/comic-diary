@@ -17,7 +17,7 @@ const PAGE_SIZE = 40;
 export function AdminChapterList<T extends Chapter>({ chapters, locked, children }: {
   chapters: T[];
   locked: boolean;
-  children: (visible: T[]) => ReactNode;
+  children: (visible: T[], canMove: boolean) => ReactNode;
 }) {
   const id = useId();
   const [search, setSearch] = useState("");
@@ -65,8 +65,9 @@ export function AdminChapterList<T extends Chapter>({ chapters, locked, children
       <p role="status">Найдено: {filtered.length}{filtered.length ? ` · Показаны ${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)}` : ""}</p>
       <Button variant="ghost" disabled={locked} onClick={reset}>Сбросить фильтры</Button>
     </div>
+    <p className="text-xs text-[var(--text-secondary)]">Перемещение доступно без поиска и фильтров, в списке «Без архива». Соседняя глава может находиться на другой странице.</p>
     {locked ? <p className="text-xs text-[var(--text-secondary)]">Закончите редактирование или подтверждение действия, чтобы изменить фильтры и страницу.</p> : null}
-    {filtered.length ? children(filtered.slice(start, start + PAGE_SIZE)) :
+    {filtered.length ? children(filtered.slice(start, start + PAGE_SIZE), !query && status === "ACTIVE" && kind === "ALL") :
       <p className="rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--text-secondary)]">По этим условиям глав нет. Измените поиск или сбросьте фильтры.</p>}
     {pages > 1 ? <nav aria-label="Страницы списка глав" className="flex flex-wrap items-center gap-3">
       <Button variant="secondary" disabled={locked || currentPage === 1} onClick={() => setPage(currentPage - 1)}>Назад</Button>

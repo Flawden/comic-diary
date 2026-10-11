@@ -13,6 +13,7 @@ import {
   archiveSharedCatalogChapter,
   createSharedCatalogChapter,
   reorderSharedCatalogChapter,
+  moveSharedCatalogChapter,
   SharedChapterMutationError,
   updateSharedCatalogChapter,
 } from "@/modules/catalog/shared-chapter-mutations";
@@ -394,6 +395,7 @@ function mutationErrorResponse(
         );
 
       case "chapter-batch-stale":
+      case "chapter-order-stale":
       case "chapter-archived":
       case "chapter-display-code-conflict":
         return errorResponse(
@@ -636,6 +638,15 @@ export async function PATCH(
           "update",
         chapter,
       });
+    }
+
+    if (intent === "move") {
+      const { direction, sortOrder, neighborId, neighborSortOrder } = parsed.body;
+      if ((direction !== "up" && direction !== "down") || typeof sortOrder !== "number" || typeof neighborId !== "number" || typeof neighborSortOrder !== "number")
+        return errorResponse("invalid-chapter-request", 400);
+      const moved = await moveSharedCatalogChapter(comicId, chapterId, direction, { sortOrder, neighborId, neighborSortOrder },
+        { userId: access.currentUser.id, role: access.currentUser.role });
+      return jsonResponse({ ok: true, action: "move", ...moved });
     }
 
     if (
