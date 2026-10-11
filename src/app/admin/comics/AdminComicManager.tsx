@@ -585,6 +585,7 @@ export function AdminComicManager({
   const router =
     useRouter();
 
+  const [chapterFeedback, setChapterFeedback] = useState<{ comicId: number; kind: "error" | "success"; message: string } | null>(null);
   const [creationVersions, setCreationVersions] = useState<Record<number, number>>({});
   const [
     busyKey,
@@ -1070,6 +1071,11 @@ export function AdminComicManager({
     );
     setMessage(null);
     setError(null);
+    setChapterFeedback(null);
+    function fail(message: string) {
+      setError(message);
+      setChapterFeedback({ comicId: comic.id, kind: "error", message });
+    }
 
     const data =
       new FormData(
@@ -1123,7 +1129,7 @@ export function AdminComicManager({
         : null;
 
     if (!displayCode) {
-      setError(
+      fail(
         "Код главы обязателен.",
       );
       setBusyKey(null);
@@ -1136,7 +1142,7 @@ export function AdminComicManager({
       ) ||
       sortOrder < 0
     ) {
-      setError(
+      fail(
         "Порядок главы должен быть целым неотрицательным числом.",
       );
       setBusyKey(null);
@@ -1144,7 +1150,7 @@ export function AdminComicManager({
     }
 
     if (!status) {
-      setError(
+      fail(
         "Выберите корректный статус главы.",
       );
       setBusyKey(null);
@@ -1152,19 +1158,19 @@ export function AdminComicManager({
     }
 
     if (textValue(data, "chapterRevisionInvalid") === "yes") {
-      setError("Выбранная редакция больше недоступна. Выберите актуальную главу или отмените замену.");
+      fail("Выбранная редакция больше недоступна. Выберите актуальную главу или отмените замену.");
       setBusyKey(null);
       return;
     }
     const rawReplacement = textValue(data, "chapterSupersedesId");
     if (rawReplacement && textValue(data, "chapterRevisionConfirmed") !== "yes") {
-      setError("Подтвердите замену старой редакции или отмените её выбор.");
+      fail("Подтвердите замену старой редакции или отмените её выбор.");
       setBusyKey(null);
       return;
     }
     const previous = rawReplacement ? comic.chapters.find(c => c.id === Number(rawReplacement)) : null;
     if (rawReplacement && (!previous || previous.status !== "RELEASED" || status !== "RELEASED" || textValue(data, "chapterKind") !== previous.kind)) {
-      setError("Новая редакция должна быть опубликована и иметь тот же тип, что и заменяемая глава.");
+      fail("Новая редакция должна быть опубликована и иметь тот же тип, что и заменяемая глава.");
       setBusyKey(null);
       return;
     }
@@ -1229,7 +1235,7 @@ export function AdminComicManager({
       }
 
       if (!response.ok) {
-        setError(
+        fail(
           chapterErrorMessage(
             apiErrorKind(
               body,
@@ -1280,14 +1286,16 @@ export function AdminComicManager({
       setCreationVersions(versions => ({ ...versions, [comic.id]: (versions[comic.id] ?? 0) + 1 }));
       setFormControlValue(form, "chapterKind", "MAIN");
 
-      setMessage(
-        `Глава ${displayCode} добавлена в ${comic.title}.`,
-      );
+      const successMessage = previous
+        ? `Новая редакция ${displayCode} опубликована. Предыдущая редакция ${previous.displayCode} (ID ${previous.id}) перемещена в архив; её история чтения сохранена.`
+        : `Глава ${displayCode} добавлена в ${comic.title}.`;
+      setMessage(successMessage);
+      setChapterFeedback({ comicId: comic.id, kind: "success", message: successMessage });
 
       setBusyKey(null);
       router.refresh();
     } catch {
-      setError(
+      fail(
         "Не удалось связаться с сервером.",
       );
       setBusyKey(null);
@@ -1632,8 +1640,8 @@ export function AdminComicManager({
                                       {chapter.status === "RELEASED" ? "Опубликована" : chapter.status === "SCHEDULED" ? "Запланирована" : "В архиве"} · Порядок: {chapter.sortOrder}
                                     </div>
 
-                                    {chapter.supersedesChapterId ? <p className="mt-1 text-xs text-[var(--text-secondary)]">Заменяет редакцию: {comic.chapters.find(c => c.id === chapter.supersedesChapterId)?.displayCode ?? `ID ${chapter.supersedesChapterId}`}</p> : null}
-                                    {comic.chapters.filter(c => c.supersedesChapterId === chapter.id).map(c => <p key={c.id} className="mt-1 text-xs text-[var(--text-secondary)]">Новая редакция: {c.displayCode}{c.title ? ` — ${c.title}` : ""}. История чтения этой редакции сохранена.</p>)}
+                                    {chapter.supersedesChapterId ? <p className="mt-1 text-xs text-[var(--text-secondary)]">Новая редакция · заменяет: {comic.chapters.find(c => c.id === chapter.supersedesChapterId)?.displayCode ?? `ID ${chapter.supersedesChapterId}`}</p> : null}
+                                    {comic.chapters.filter(c => c.supersedesChapterId === chapter.id).map(c => <p key={c.id} className="mt-1 text-xs text-[var(--text-secondary)]">Старая редакция · заменена на: {c.displayCode}{c.title ? ` — ${c.title}` : ""}. История чтения этой редакции сохранена.</p>)}
                                     <div className="mt-2 flex flex-wrap gap-2">
                                       <button
                                         type="button"
@@ -1896,6 +1904,11 @@ export function AdminComicManager({
                             ? "Добавляем…"
                             : "Создать главу / редакцию"}
                         </button>
+                        {chapterFeedback?.comicId === comic.id ? <p
+                          data-chapter-feedback
+                          role={chapterFeedback.kind === "error" ? "alert" : "status"}
+                          className={`mt-3 rounded-xl border p-3 text-sm ${chapterFeedback.kind === "error" ? "border-[var(--danger)] text-[var(--danger)]" : "border-[var(--border)] text-[var(--text-primary)]"}`}
+                        >{chapterFeedback.message}</p> : null}
                       </div>
                     </section>
 
