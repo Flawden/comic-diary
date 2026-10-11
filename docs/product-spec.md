@@ -623,3 +623,14 @@ Revision selector distinguishes a new chapter from a replacement. Selecting a cu
 ### CD-05: поиск в административном каталоге
 
 Редактор может искать тайтлы по названию или slug, сочетать статус каталога и категорию, открыть записи без категории и переключать страницы по 20 тайтлов. Порядок определяется существующим серверным запросом. Поиск буквальный, регистр не учитывается. Скрытие формы при фильтрации или смене страницы сохраняет введённые данные в текущей вкладке; перезагрузка страницы не сохраняет черновик. Переключение списка блокируется на время загрузки обложки, записи, редактирования главы и подтверждения архива. Пагинация интерфейса не заменяет будущую серверную пагинацию при росте каталога.
+
+
+## CD-05 — Import review filters and local cover upload (2026-10-11)
+
+Status: IN PROGRESS. Operator accepted chapter batch preview/duplicate rejection, revision confirmation/inline feedback/cancellation, and catalog changes after JSON import. Actual Windows PostgreSQL batch, movement, reading and authorization probes passed at 0171848. Local first administrator was promoted through the existing audited bootstrap; the import kill-switch was enabled only for the local process.
+
+Review uses multiple checkbox filters combined by OR and literal search. Imported records appear only when Imported is selected. “Hide processed” keeps pending, accepted (not imported) and postponed records; skipped/imported records remain recoverable through filters. No decisions or drafts are deleted. Apply hides processed cards; all filters remain available.
+
+Each review card accepts JPEG/PNG/WebP uploads (6 MiB maximum) through the existing authorized cover endpoint. The resulting media URL is controlled review draft data and is included in autosave/artifact and subsequent dry-run/apply. Upload alone does not change comic metadata. Starting an upload invalidates the old plan; filtering, JSON replacement/reset/export and database check/apply wait for all uploads. Failed uploads retain the previous URL. Existing metadata forms retain their save-after-upload contract. Exported JSON stores a URL, not image bytes; media must be available in the target deployment.
+
+Typecheck/lint/webpack build and import authorization checks required. Desktop/mobile checkbox and upload/check/apply/reload acceptance remain open; CD-05 is not closed by this delivery.

@@ -1430,3 +1430,14 @@ Comic metadata save is disabled during its cover upload; submission also checks 
 Status: IN PROGRESS. 7b20429 typecheck/lint/build passed on Windows, committed/pushed, and cover upload/save/reload accepted by operator after deployment.
 
 Shared admin catalog now supports literal title/slug search, combined catalog publication status and category filters (including uncategorized), and 20-title pages. Default includes every status; existing server order is retained. Counts reflect the current filters, empty results preserve criteria with reset, and current page clamps after refresh. Forms remain mounted when hidden, so navigation does not discard chapter/comic drafts. Filters/pages lock during upload, save, chapter editing and archive confirmation. This is presentation pagination; the existing authorized server read still loads the full shared registry. No database or API change. Typecheck/lint/webpack build required; desktop/mobile acceptance and import workflow acceptance remain open.
+
+
+## CD-05 — Import review filters and local cover upload (2026-10-11)
+
+Status: IN PROGRESS. Operator accepted chapter batch preview/duplicate rejection, revision confirmation/inline feedback/cancellation, and catalog changes after JSON import. Actual Windows PostgreSQL batch, movement, reading and authorization probes passed at 0171848. Local first administrator was promoted through the existing audited bootstrap; the import kill-switch was enabled only for the local process.
+
+Review uses multiple checkbox filters combined by OR and literal search. Imported records appear only when Imported is selected. “Hide processed” keeps pending, accepted (not imported) and postponed records; skipped/imported records remain recoverable through filters. No decisions or drafts are deleted. Apply hides processed cards; all filters remain available.
+
+Each review card accepts JPEG/PNG/WebP uploads (6 MiB maximum) through the existing authorized cover endpoint. The resulting media URL is controlled review draft data and is included in autosave/artifact and subsequent dry-run/apply. Upload alone does not change comic metadata. Starting an upload invalidates the old plan; filtering, JSON replacement/reset/export and database check/apply wait for all uploads. Failed uploads retain the previous URL. Existing metadata forms retain their save-after-upload contract. Exported JSON stores a URL, not image bytes; media must be available in the target deployment.
+
+Typecheck/lint/webpack build and import authorization checks required. Desktop/mobile checkbox and upload/check/apply/reload acceptance remain open; CD-05 is not closed by this delivery.

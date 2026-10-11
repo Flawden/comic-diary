@@ -15,6 +15,9 @@ const MAX_CLIENT_BYTES =
 
 type CoverUploadFieldProps = {
   defaultValue?: string | null;
+  value?: string;
+  onValueChange?: (value: string) => void;
+  uploadSuccessMessage?: string;
   disabled?: boolean;
   onUploadingChange?: (uploading: boolean) => void;
 };
@@ -56,6 +59,9 @@ function uploadErrorLabel(
 
 export function CoverUploadField({
   defaultValue = "",
+  value,
+  onValueChange,
+  uploadSuccessMessage = "Обложка загружена. Нажмите «Сохранить изменения», чтобы закрепить её за тайтлом.",
   disabled = false,
   onUploadingChange,
 }: CoverUploadFieldProps) {
@@ -67,10 +73,16 @@ export function CoverUploadField({
       null,
     );
 
-  const [url, setUrl] =
+  const [localUrl, setLocalUrl] =
     useState(
       defaultValue ?? "",
     );
+
+  const url = value ?? localUrl;
+  function setUrl(next: string) {
+    setLocalUrl(next);
+    onValueChange?.(next);
+  }
 
   const [
     selectedName,
@@ -166,7 +178,7 @@ export function CoverUploadField({
       );
 
       setMessage(
-        "Обложка загружена. Нажмите «Сохранить изменения», чтобы закрепить её за тайтлом.",
+        uploadSuccessMessage,
       );
     } catch {
       setMessage(

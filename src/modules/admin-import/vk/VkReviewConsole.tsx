@@ -8,6 +8,8 @@ import {
   useState,
 } from "react";
 
+import { CoverUploadField } from "@/shared/components/media/CoverUploadField";
+
 import type {
   CatalogCategory,
   CatalogComic,
@@ -48,16 +50,18 @@ type Props = {
     CatalogComic[];
 };
 
-type ReviewFilter =
-  | "all"
-  | "attention"
-  | "pending"
-  | "accepted"
-  | "postponed"
-  | "skipped"
-  | "ready"
-  | "imported"
-  | "invalid";
+const reviewFilterLabels = {
+  pending: "Не разобраны",
+  accepted: "Приняты, ещё не импортированы",
+  postponed: "Отложены",
+  skipped: "Пропущены",
+  imported: "Импортированы",
+  ready: "Готовы к импорту",
+  invalid: "С ошибками",
+  attention: "Требуют особого внимания",
+} as const;
+type ReviewFilter = keyof typeof reviewFilterLabels;
+const allReviewFilters = Object.keys(reviewFilterLabels) as ReviewFilter[];
 
 const attentionWarnings =
   new Set([
@@ -283,13 +287,18 @@ export function VkReviewConsole({
       initialEntries,
     );
 
-  const [
-    filter,
-    setFilter,
-  ] =
-    useState<ReviewFilter>(
-      "all",
-    );
+  const [filters, setFilters] = useState<ReviewFilter[]>(allReviewFilters);
+  const coverUploads = useRef(new Set<string>());
+  const [coverUploadCount, setCoverUploadCount] = useState(0);
+  function coverUploadingChanged(candidateId: string, uploading: boolean) {
+    if (uploading) {
+      coverUploads.current.add(candidateId);
+      invalidateImportPreview();
+    } else {
+      coverUploads.current.delete(candidateId);
+    }
+    setCoverUploadCount(coverUploads.current.size);
+  }
 
   const [
     search,
@@ -850,6 +859,7 @@ export function VkReviewConsole({
   }
 
   function resetAll() {
+    if (coverUploads.current.size > 0 || importBusy) return;
     if (
       !window.confirm(
         "Сбросить все решения и правки Review Console?",
@@ -876,6 +886,7 @@ export function VkReviewConsole({
   }
 
   function exportArtifact() {
+    if (coverUploads.current.size > 0 || importBusy) return;
     try {
       const exportedAt =
         new Date()
@@ -919,6 +930,7 @@ export function VkReviewConsole({
     event:
       ChangeEvent<HTMLInputElement>,
   ) {
+    if (coverUploads.current.size > 0 || importBusy) return;
     const file =
       event.target
         .files?.[0];
@@ -1014,6 +1026,7 @@ export function VkReviewConsole({
   }
 
   async function checkDatabaseImport() {
+    if (coverUploads.current.size > 0 || importBusy) return;
     if (
       stats.acceptedBlocked >
       0
@@ -1151,6 +1164,7 @@ export function VkReviewConsole({
   }
 
   async function applyDatabaseImport() {
+    if (coverUploads.current.size > 0 || importBusy) return;
     if (
       !databasePlan ||
       databasePlanRevision ===
@@ -1341,9 +1355,7 @@ export function VkReviewConsole({
         `Импорт завершён: CREATE ${result.summary.create}, UPDATE ${result.summary.update}, UNCHANGED ${result.summary.unchanged}, уже IMPORTED ${result.summary.imported}, новых receipts ${result.summary.receiptsInserted}.`,
       );
 
-      setFilter(
-        "ready",
-      );
+      setFilters(["pending", "accepted", "postponed"]);
     } catch (error) {
       /*
        * R5.3.6C guarantees whole-batch rollback.
@@ -1424,44 +1436,17 @@ export function VkReviewConsole({
           }
         }
 
-        if (filter === "all") {
-          return true;
-        }
-
-        if (filter === "attention") {
-          return candidate.warnings.some(
-            (warning) =>
-              attentionWarnings.has(
-                warning,
-              ),
-          );
-        }
-
-        if (filter === "ready") {
-          return (
-            analysis.acceptedReady &&
-            !importedCandidateIds.has(
-              candidate.candidateId,
-            )
-          );
-        }
-
-        if (
-          filter === "imported"
-        ) {
-          return importedCandidateIds.has(
-            candidate.candidateId,
-          );
-        }
-
-        if (filter === "invalid") {
-          return !analysis.valid;
-        }
-
-        return (
-          entry.decision ===
-          filter
-        );
+        const imported = importedCandidateIds.has(candidate.candidateId);
+        return filters.some((filter) => {
+          if (filter === "imported") return imported;
+          // Imported records belong only to the imported filter, even if their
+          // retained review decision is accepted or evidence has warnings.
+          if (imported) return false;
+          if (filter === "attention") return candidate.warnings.some((warning) => attentionWarnings.has(warning));
+          if (filter === "ready") return analysis.acceptedReady;
+          if (filter === "invalid") return !analysis.valid;
+          return entry.decision === filter;
+        });
       },
     );
 
@@ -1497,6 +1482,7 @@ export function VkReviewConsole({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
+              disabled={importBusy || coverUploadCount > 0}
               onClick={
                 exportArtifact
               }
@@ -1511,6 +1497,7 @@ export function VkReviewConsole({
               <input
                 type="file"
                 accept="application/json,.json"
+                disabled={importBusy || coverUploadCount > 0}
                 onChange={
                   importArtifact
                 }
@@ -1520,6 +1507,7 @@ export function VkReviewConsole({
 
             <button
               type="button"
+              disabled={importBusy || coverUploadCount > 0}
               onClick={
                 resetAll
               }
@@ -1651,7 +1639,7 @@ export function VkReviewConsole({
           <button
             type="button"
             disabled={
-              importBusy ||
+              importBusy || coverUploadCount > 0 ||
               stats.acceptedReady === 0 ||
               stats.acceptedBlocked > 0
             }
@@ -1659,7 +1647,7 @@ export function VkReviewConsole({
               checkDatabaseImport
             }
             className={
-              importBusy ||
+              importBusy || coverUploadCount > 0 ||
               stats.acceptedReady === 0 ||
               stats.acceptedBlocked > 0
                 ? "cursor-not-allowed rounded-xl border border-black/10 bg-black/5 px-4 py-2.5 text-sm font-semibold text-[var(--muted)]"
@@ -1675,7 +1663,7 @@ export function VkReviewConsole({
           <button
             type="button"
             disabled={
-              importBusy ||
+              importBusy || coverUploadCount > 0 ||
               databasePlan === null ||
               pendingApplyCount === 0
             }
@@ -1683,7 +1671,7 @@ export function VkReviewConsole({
               applyDatabaseImport
             }
             className={
-              importBusy ||
+              importBusy || coverUploadCount > 0 ||
               databasePlan === null ||
               pendingApplyCount === 0
                 ? "cursor-not-allowed rounded-xl border border-black/10 bg-black/5 px-4 py-2.5 text-sm font-semibold text-[var(--muted)]"
@@ -1785,6 +1773,8 @@ export function VkReviewConsole({
         </p>
       </div>
 
+      {coverUploadCount > 0 ? <p role="status" className="rounded-xl border border-[var(--border)] p-3">Загружается обложка. Дождитесь завершения перед проверкой, применением или переключением списка.</p> : null}
+
       <div className="rounded-2xl border border-black/10 bg-[var(--surface)] p-5">
         <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
           <label>
@@ -1794,6 +1784,7 @@ export function VkReviewConsole({
 
             <input
               type="search"
+              disabled={importBusy || coverUploadCount > 0}
               value={search}
               onChange={
                 (event) =>
@@ -1806,66 +1797,30 @@ export function VkReviewConsole({
             />
           </label>
 
-          <label>
-            <span className="mb-2 block text-sm font-medium">
-              Фильтр
-            </span>
-
-            <select
-              value={filter}
-              onChange={
-                (event) =>
-                  setFilter(
-                    event.target
-                      .value as
-                      ReviewFilter,
-                  )
-              }
-              className="w-full rounded-xl border border-black/15 bg-white px-4 py-3"
-            >
-              <option value="all">
-                Все
-              </option>
-
-              <option value="attention">
-                Требуют особого внимания
-              </option>
-
-              <option value="pending">
-                Pending
-              </option>
-
-              <option value="accepted">
-                Accepted
-              </option>
-
-              <option value="ready">
-                Ready to import
-              </option>
-
-              <option value="imported">
-                Imported
-              </option>
-
-              <option value="postponed">
-                Postponed
-              </option>
-
-              <option value="skipped">
-                Skipped
-              </option>
-
-              <option value="invalid">
-                Invalid
-              </option>
-            </select>
-          </label>
+          <fieldset disabled={importBusy || coverUploadCount > 0} className="space-y-3">
+            <legend className="mb-2 text-sm font-medium">Показать карточки</legend>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" disabled={importBusy || coverUploadCount > 0} onClick={() => setFilters(allReviewFilters)} className="min-h-11 rounded-xl border border-[var(--border)] px-3">Все</button>
+              <button type="button" disabled={importBusy || coverUploadCount > 0} onClick={() => setFilters(["pending", "accepted", "postponed"])} className="min-h-11 rounded-xl border border-[var(--border)] px-3">Скрыть обработанные</button>
+            </div>
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {allReviewFilters.map((filter) => (
+                <label key={filter} className="flex min-h-11 items-center gap-2 text-sm">
+                  <input type="checkbox" checked={filters.includes(filter)} onChange={(event) => setFilters((current) => event.target.checked ? [...current, filter] : current.filter((item) => item !== filter))} />
+                  {reviewFilterLabels[filter]}
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-[var(--muted)]">Выбранные состояния объединяются. Фильтры не удаляют решения и правки. Обработанные: импортированные и пропущенные.</p>
+          </fieldset>
         </div>
 
         <p className="mt-3 text-xs text-[var(--muted)]">
           Показано: {visibleCandidates.length} из {candidateSet.candidates.length}
         </p>
       </div>
+
+      {visibleCandidates.length === 0 ? <p role="status" className="rounded-xl border border-[var(--border)] p-5">Нет карточек по выбранным условиям. Измените чекбоксы или поиск; решения сохранены.</p> : null}
 
       {visibleCandidates.map(
         (candidate) => {
@@ -1914,6 +1869,7 @@ export function VkReviewConsole({
                 entry.decision,
               )}`}
             >
+              <fieldset disabled={importBusy} className="min-w-0">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-[var(--muted)]">
@@ -2316,29 +2272,13 @@ export function VkReviewConsole({
                   />
                 </label>
 
-                <label>
-                  <span className="mb-1.5 block text-xs font-semibold">
-                    Cover URL
-                  </span>
-
-                  <input
-                    type="url"
-                    value={
-                      entry.draft
-                        .coverUrl
-                    }
-                    onChange={
-                      (event) =>
-                        updateDraft(
-                          candidate.candidateId,
-                          "coverUrl",
-                          event.target.value,
-                        )
-                    }
-                    placeholder="не задан"
-                    className="w-full rounded-xl border border-black/15 bg-white px-3 py-2.5 text-sm"
-                  />
-                </label>
+                <CoverUploadField
+                  value={entry.draft.coverUrl}
+                  disabled={importBusy}
+                  onValueChange={(url) => updateDraft(candidate.candidateId, "coverUrl", url)}
+                  onUploadingChange={(uploading) => coverUploadingChanged(candidate.candidateId, uploading)}
+                  uploadSuccessMessage="Обложка загружена и добавлена в разбор. Проверьте импорт и примените его, чтобы сохранить её в каталоге."
+                />
               </div>
 
               <details className="mt-6 rounded-xl border border-black/10 p-4">
@@ -2730,6 +2670,7 @@ export function VkReviewConsole({
                   также завершит подтверждение.
                 </div>
               ) : null}
+              </fieldset>
             </article>
           );
         },
