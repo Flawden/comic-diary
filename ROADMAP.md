@@ -1379,3 +1379,11 @@ Status: IN PROGRESS. CD-04 type/format Windows checks passed at 2ffba8d; final r
 - Existing catalog permissions, session identity, same-origin checks and request size limits apply to preview and save. Private titles cannot be modified through this endpoint.
 - Integration verification covers preview/no writes, audit rollback, duplicates, stale/repeated confirmation, specials, limits, ownership boundary and diary preservation. Windows PostgreSQL and desktop/mobile visual acceptance remain pending.
 - Remaining CD-05 scope: admin workflow refinement, revision workflow and import/cover acceptance. This slice does not close the whole stage.
+
+
+## Account logout entry (2026-10-11)
+
+- CD-05 batch package validated on Windows PostgreSQL and pushed as 0f14c3c; visual acceptance remains pending.
+- Account page exposes logout for every authenticated role through the existing same-origin POST /api/auth/logout endpoint. The current session is revoked and its cookie cleared. Other devices and diary data remain unchanged.
+- Repeated clicks are blocked while pending. Failed requests show a retryable error. Successful logout performs a full navigation to /login to discard authenticated client cache.
+- Typecheck, lint and production build required; deployed logout/login visual verification pending.

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogoutButton } from "./LogoutButton";
 import { hasPermission } from "@/modules/auth/permissions";
 
 import {
@@ -147,6 +148,14 @@ export default async function AccountPage() {
         </p>
 
         <AccountPasswordForm />
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8">
+        <h2 className="text-lg font-semibold">Выход из аккаунта</h2>
+        <p className="mt-2 mb-4 text-sm leading-6 text-[var(--text-secondary)]">
+          Завершить вход на этом устройстве. Библиотека и история чтения сохранятся.
+        </p>
+        <LogoutButton />
       </section>
 
       <div className="mt-6 flex flex-wrap gap-4 text-sm">
