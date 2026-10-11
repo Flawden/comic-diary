@@ -1,4 +1,5 @@
 "use client";
+import { ChapterBatchEditor } from "@/modules/catalog/components/ChapterBatchEditor";
 import type { WorkType, WorkFormat } from "@/modules/comics/work-metadata";
 import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
 
@@ -1730,6 +1731,9 @@ export function AdminComicManager({
                           Главы пока не добавлены.
                         </p>
                       )}
+
+                      <ChapterBatchEditor comicId={comic.id} disabled={busyKey !== null}
+                        onBusyChange={busy => setBusyKey(busy ? `chapter-batch:${comic.id}` : null)} />
 
                       <div className="mt-5 border-t border-black/10 pt-4">
                         <h5 className="text-sm font-semibold">

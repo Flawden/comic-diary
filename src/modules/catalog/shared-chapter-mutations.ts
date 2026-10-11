@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { parseChapterBatch } from "./chapter-batch-input";
 import {
   and,
   eq,
@@ -60,7 +62,8 @@ export type SharedChapterMutationErrorKind =
   | "comic-not-found"
   | "chapter-not-found"
   | "chapter-archived"
-  | "chapter-display-code-conflict";
+  | "chapter-display-code-conflict"
+  | "chapter-batch-stale";
 
 export class SharedChapterMutationError
   extends Error {
@@ -1066,4 +1069,41 @@ export async function archiveSharedCatalogChapter(
       return updated;
     },
   );
+}
+
+
+/** Preview and atomic append share the same validation and catalog lock. */
+export async function appendSharedChapterBatch(
+  comicId: number,
+  text: string,
+  status: "SCHEDULED" | "RELEASED",
+  actor: SharedChapterAuditActor,
+  expectedSnapshot?: string,
+) {
+  requirePositiveId(comicId);
+  if (status !== "SCHEDULED" && status !== "RELEASED") throw new SharedChapterMutationError("invalid-chapter");
+  const rows = parseChapterBatch(text).map(row => normalizeMetadata({ ...row, status, releasedAt: null }));
+  return db.transaction(async tx => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${SHARED_CATALOG_ADVISORY_LOCK})`);
+    const [comic] = await tx.select({ id: comics.id, slug: comics.slug }).from(comics)
+      .where(and(eq(comics.id, comicId), eq(comics.visibility, "SHARED")));
+    if (!comic) throw new SharedChapterMutationError("comic-not-found");
+    const registry = await tx.select().from(chapters).where(eq(chapters.comicId, comicId));
+    registry.sort((a, b) => a.id - b.id);
+    const snapshot = createHash("sha256").update(JSON.stringify({ comicId, rows, registry: registry.map(chapterSnapshot) })).digest("hex");
+    if (expectedSnapshot !== undefined && expectedSnapshot !== snapshot) throw new SharedChapterMutationError("chapter-batch-stale");
+    const codes = new Set(registry.filter(row => row.status !== "ARCHIVED").map(row => row.displayCode));
+    if (rows.some(row => codes.has(row.displayCode))) throw new SharedChapterMutationError("chapter-display-code-conflict");
+    const lastOrder = registry.reduce((max, row) => Math.max(max, row.sortOrder), 0);
+    if (lastOrder + rows.length * 10 > 2147483647) throw new SharedChapterMutationError("invalid-chapter");
+    const values = rows.map((row, index) => ({ ...row, comicId, sortOrder: lastOrder + (index + 1) * 10 }));
+    if (expectedSnapshot === undefined) return { snapshot, rows: values, createdCount: 0 };
+    const created = await tx.insert(chapters).values(values).returning();
+    await tx.insert(administrativeAuditEvents).values(created.map(chapter => ({
+      actorUserId: actor.userId, actorRole: actor.role, action: "CHAPTER_CREATE" as const,
+      targetType: "CHAPTER" as const, targetId: chapter.id, targetKey: chapterTargetKey(comic.slug, chapter.id),
+      details: { channel: "manual-batch", comicId, comicSlug: comic.slug, after: chapterSnapshot(chapter) },
+    })));
+    return { snapshot, rows: values, createdCount: created.length };
+  });
 }

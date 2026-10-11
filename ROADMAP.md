@@ -1365,3 +1365,17 @@ Status: IN PROGRESS. Catalog publication filter accepted by the operator after b
 - Catalog type/format filters combine with publication state, title, category and sort in the URL. Public visibility remains SHARED + PUBLISHED.
 - Missing fields in older imports/clients preserve existing metadata on update and use UNKNOWN on creation. Invalid supplied values are rejected. Changes do not rewrite personal reading status, marks, ratings, notes or tracking.
 - Publication state forms and catalog state filter were accepted by the operator; build/PG tests passed on Windows for previous deliveries. CD-04 final responsive catalog/detail and type/format acceptance remain pending; wording pass deferred.
+
+
+## CD-05 — Atomic chapter batch entry (2026-10-09)
+
+Status: IN PROGRESS. CD-04 type/format Windows checks passed at 2ffba8d; final responsive acceptance remains open.
+
+- Shared catalog editors can append 1–100 chapters using arbitrary codes, optional titles, explicit MAIN/SPECIAL kinds and HTTP(S) source URLs. Tab-separated table paste is supported; code-only rows default to MAIN.
+- Preview performs the same validation as commit and writes nothing. Confirmation binds the normalized input and current registry snapshot. Changes to either require a fresh preview.
+- The whole batch and per-chapter audit records commit in one transaction under the catalog lock. Duplicate active codes, invalid input, stale snapshots or audit failures leave no partial batch.
+- Chapters append in entered order after the existing registry. Existing IDs, revisions, marks, dates, diary status, tracking, notes and ratings are preserved. New chapters are not auto-read.
+- The operator explicitly chooses SCHEDULED (default) or RELEASED. Unknown release dates remain null. Scheduled chapters do not become available for reading. Date planning and optional automatic publication remain CD-08.
+- Existing catalog permissions, session identity, same-origin checks and request size limits apply to preview and save. Private titles cannot be modified through this endpoint.
+- Integration verification covers preview/no writes, audit rollback, duplicates, stale/repeated confirmation, specials, limits, ownership boundary and diary preservation. Windows PostgreSQL and desktop/mobile visual acceptance remain pending.
+- Remaining CD-05 scope: admin workflow refinement, revision workflow and import/cover acceptance. This slice does not close the whole stage.

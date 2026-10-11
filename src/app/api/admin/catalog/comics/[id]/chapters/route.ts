@@ -1,3 +1,4 @@
+import { ChapterBatchInputError } from "@/modules/catalog/chapter-batch-input";
 import {
   type NextRequest,
   NextResponse,
@@ -8,6 +9,7 @@ import {
 } from "@/modules/catalog/shared-catalog-authorization";
 
 import {
+  appendSharedChapterBatch,
   archiveSharedCatalogChapter,
   createSharedCatalogChapter,
   reorderSharedCatalogChapter,
@@ -376,6 +378,7 @@ function parseMetadata(
 function mutationErrorResponse(
   error: unknown,
 ) {
+  if (error instanceof ChapterBatchInputError) return jsonResponse({ ok: false, error: { kind: "invalid-chapter-request", message: error.message } }, 400);
   if (
     error instanceof
       SharedChapterMutationError
@@ -390,6 +393,7 @@ function mutationErrorResponse(
           404,
         );
 
+      case "chapter-batch-stale":
       case "chapter-archived":
       case "chapter-display-code-conflict":
         return errorResponse(
@@ -457,6 +461,22 @@ export async function POST(
 
   if (!parsed.ok) {
     return parsed.response;
+  }
+
+  if (parsed.body.intent === "batch-preview" || parsed.body.intent === "batch-create") {
+    const { text, status, snapshot } = parsed.body;
+    if (typeof text !== "string" || (status !== "SCHEDULED" && status !== "RELEASED") ||
+        (parsed.body.intent === "batch-create" && (typeof snapshot !== "string" || !/^[a-f0-9]{64}$/.test(snapshot)))) {
+      return errorResponse("invalid-chapter-request", 400);
+    }
+    try {
+      const result = await appendSharedChapterBatch(comicId, text, status, {
+        userId: access.currentUser.id, role: access.currentUser.role,
+      }, parsed.body.intent === "batch-create" ? snapshot as string : undefined);
+      return jsonResponse({ ok: true, ...result }, parsed.body.intent === "batch-create" ? 201 : 200);
+    } catch (error) {
+      return mutationErrorResponse(error);
+    }
   }
 
   const metadata =
