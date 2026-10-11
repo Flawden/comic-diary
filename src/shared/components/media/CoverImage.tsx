@@ -65,6 +65,10 @@ function CoverSource({
       ) : null}
 
       <img
+        ref={(image) => {
+          // Cached images can finish before React attaches onLoad.
+          if (image?.complete && image.naturalWidth > 0) setLoaded(true);
+        }}
         src={src}
         alt={alt}
         loading="lazy"

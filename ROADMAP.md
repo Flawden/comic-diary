@@ -1416,3 +1416,10 @@ Revision selector distinguishes a new chapter from a replacement. Selecting a cu
 ## CD-05 — Revision feedback correction (2026-10-11)
 
 128bbeb movement accepted; db09e07 committed/pushed with actual Windows PostgreSQL checks and operator-confirmed green deploy. Revision UI acceptance found that the global error was outside the visible creation area and cancellation was hard to find. Creation errors/success now also appear immediately below its button, scoped to the comic, using alert/status semantics. Cancellation is a prominent button directly below the revision selector. Confirmation guidance is visible before submission. Revision labels and success explicitly distinguish old archived predecessor from new published record, including predecessor ID. Historical archived marks remain read-only; server behavior is unchanged. Desktop/mobile correction acceptance pending. CD-05 remains IN PROGRESS.
+
+
+## CD-05 — Cover upload save guard (2026-10-11)
+
+Status: IN PROGRESS. 4ad4215 pushed and deployed per operator. Production cover storage repaired in /opt/comic-diary/compose.yml with external volume comic-diary-cover-media, MEDIA_ROOT=/app/data/media and Nginx request limit 7m. Uploaded address persists in PostgreSQL; exact file bytes served with HTTP 200 internally and public URL operator-accepted. Persistence across the next deployment still requires verification.
+
+Comic metadata save is disabled during its cover upload; submission also checks pending form state. Cover file/URL controls are locked during metadata save, and URL changes are locked during upload. Upload completion explicitly asks the operator to save metadata. Cached images are recognized when mounted so a missed load event does not leave them transparent. Existing 6 MiB file limit and server authorization remain unchanged. Desktop/mobile upload/save/reload acceptance pending; import acceptance and revision correction acceptance remain open.

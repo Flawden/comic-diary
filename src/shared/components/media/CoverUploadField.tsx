@@ -15,6 +15,8 @@ const MAX_CLIENT_BYTES =
 
 type CoverUploadFieldProps = {
   defaultValue?: string | null;
+  disabled?: boolean;
+  onUploadingChange?: (uploading: boolean) => void;
 };
 
 type UploadResponse = {
@@ -54,6 +56,8 @@ function uploadErrorLabel(
 
 export function CoverUploadField({
   defaultValue = "",
+  disabled = false,
+  onUploadingChange,
 }: CoverUploadFieldProps) {
   const inputId =
     useId();
@@ -87,6 +91,8 @@ export function CoverUploadField({
   async function uploadFile(
     file: File,
   ) {
+    if (disabled || uploading) return;
+
     if (
       file.size >
       MAX_CLIENT_BYTES
@@ -99,6 +105,7 @@ export function CoverUploadField({
     }
 
     setUploading(true);
+    onUploadingChange?.(true);
 
     setMessage(
       "Загружаю обложку…",
@@ -159,7 +166,7 @@ export function CoverUploadField({
       );
 
       setMessage(
-        "Обложка загружена.",
+        "Обложка загружена. Нажмите «Сохранить изменения», чтобы закрепить её за тайтлом.",
       );
     } catch {
       setMessage(
@@ -167,6 +174,7 @@ export function CoverUploadField({
       );
     } finally {
       setUploading(false);
+      onUploadingChange?.(false);
 
       /*
        * Allow selecting the same physical
@@ -188,6 +196,7 @@ export function CoverUploadField({
        * comic form contract, but it is now
        * filled automatically after upload.
        */}
+      <input type="hidden" name="coverUploading" value={uploading ? "yes" : "no"} />
       <input
         type="hidden"
         name="coverUrl"
@@ -215,7 +224,7 @@ export function CoverUploadField({
             }
             type="file"
             accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-            disabled={uploading}
+            disabled={uploading || disabled}
             onChange={
               (event) => {
                 const selected =
@@ -245,7 +254,7 @@ export function CoverUploadField({
                 `${inputId}-file`
               }
               aria-disabled={
-                uploading
+                uploading || disabled
               }
               className={[
                 "inline-flex min-h-11 items-center justify-center",
@@ -254,7 +263,7 @@ export function CoverUploadField({
                 "bg-[var(--surface-raised)]",
                 "px-4 py-2",
                 "text-sm font-semibold",
-                uploading
+                uploading || disabled
                   ? "cursor-wait opacity-60"
                   : "cursor-pointer",
                 "text-[var(--text-primary)]",
@@ -300,6 +309,7 @@ export function CoverUploadField({
                 }
                 type="text"
                 inputMode="url"
+                disabled={uploading || disabled}
                 value={url}
                 onChange={
                   (event) => {

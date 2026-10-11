@@ -342,10 +342,14 @@ function ComicFields({
   categories,
   comic,
   create,
+  disabled,
+  onUploadingChange,
 }: {
   categories: Category[];
   comic?: AdminComic;
   create: boolean;
+  disabled: boolean;
+  onUploadingChange: (uploading: boolean) => void;
 }) {
   return (
     <>
@@ -532,6 +536,8 @@ function ComicFields({
         </label>
 
         <CoverUploadField
+          disabled={disabled}
+          onUploadingChange={onUploadingChange}
           key={
             comic?.id ??
             "new-comic"
@@ -586,6 +592,7 @@ export function AdminComicManager({
     useRouter();
 
   const [chapterFeedback, setChapterFeedback] = useState<{ comicId: number; kind: "error" | "success"; message: string } | null>(null);
+  const [coverUploads, setCoverUploads] = useState<Record<string, boolean>>({});
   const [creationVersions, setCreationVersions] = useState<Record<number, number>>({});
   const [
     busyKey,
@@ -663,6 +670,12 @@ export function AdminComicManager({
       new FormData(
         form,
       );
+
+    if (data.get("coverUploading") === "yes") {
+      setError("Дождитесь завершения загрузки обложки перед сохранением.");
+      setBusyKey(null);
+      return;
+    }
 
     const payload =
       comicPayload(
@@ -1387,6 +1400,8 @@ export function AdminComicManager({
               className="mt-6"
             >
               <ComicFields
+                disabled={busyKey !== null}
+                onUploadingChange={uploading => setCoverUploads(previous => ({ ...previous, create: uploading }))}
                 categories={
                   categories
                 }
@@ -1397,6 +1412,7 @@ export function AdminComicManager({
                 <button
                   type="submit"
                   disabled={
+                    coverUploads.create ||
                     busyKey !==
                     null
                   }
@@ -1485,6 +1501,8 @@ export function AdminComicManager({
                     className="mt-6 border-t border-[var(--border)] pt-6"
                   >
                     <ComicFields
+                      disabled={busyKey !== null}
+                      onUploadingChange={uploading => setCoverUploads(previous => ({ ...previous, [comic.slug]: uploading }))}
                       categories={
                         categories
                       }
@@ -1916,6 +1934,7 @@ export function AdminComicManager({
                       <button
                         type="submit"
                         disabled={
+                          coverUploads[comic.slug] ||
                           busyKey !==
                           null ||
                           categories.length ===
