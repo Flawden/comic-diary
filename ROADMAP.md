@@ -1387,3 +1387,15 @@ Status: IN PROGRESS. CD-04 type/format Windows checks passed at 2ffba8d; final r
 - Account page exposes logout for every authenticated role through the existing same-origin POST /api/auth/logout endpoint. The current session is revoked and its cookie cleared. Other devices and diary data remain unchanged.
 - Repeated clicks are blocked while pending. Failed requests show a retryable error. Successful logout performs a full navigation to /login to discard authenticated client cache.
 - Typecheck, lint and production build required; deployed logout/login visual verification pending.
+
+
+## CD-05 — Searchable chapter workspace (2026-10-11)
+
+Status: IN PROGRESS. Logout deployed and operator-accepted after 4daadeb.
+
+- Each shared comic chapter list offers literal code/title search, combined status and MAIN/SPECIAL filters and 40-row pages. Default excludes ARCHIVED; archive and all-record views remain available. Filters do not mutate chapter data or infer numbering from display codes.
+- List order is sortOrder then stable ID. Status counters reflect the whole registry; result/page counts reflect active filters. Empty results preserve criteria and offer reset. Page index is clamped after data changes.
+- Filters and page changes are disabled while editing, confirming archive or saving. Search Enter never submits the surrounding comic metadata form.
+- Revision labels resolve both replacement and successor from the full registry, including archived records. Existing mutation authorization, revision/read identity and audit semantics remain unchanged. Numeric order controls explicitly say order -1/+1; adjacent swaps remain separate work.
+- Editor controls have accessible names; filters and navigation have labels and touch-sized buttons. Typecheck, lint and build required. Desktop/mobile interactive acceptance remains pending.
+- CD-05 remains open for remaining input/revision/import/cover workflow acceptance.

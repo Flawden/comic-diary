@@ -1,4 +1,5 @@
 "use client";
+import { AdminChapterList } from "@/modules/catalog/components/AdminChapterList";
 import { ChapterBatchEditor } from "@/modules/catalog/components/ChapterBatchEditor";
 import type { WorkType, WorkFormat } from "@/modules/comics/work-metadata";
 import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
@@ -1484,8 +1485,9 @@ export function AdminComicManager({
                       </h4>
 
                       {comic.chapters.length > 0 ? (
-                        <ul className="mt-3 space-y-2">
-                          {comic.chapters.map(
+                        <AdminChapterList chapters={comic.chapters} locked={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null}>
+                          {(visibleChapters) => <ul className="space-y-2">
+                          {visibleChapters.map(
                             (chapter) => (
                               <li
                                 key={chapter.id}
@@ -1501,6 +1503,7 @@ export function AdminComicManager({
                                       </select>
                                     </label>
                                     <input
+                                      aria-label="Код главы"
                                       value={
                                         chapterEditValues.displayCode
                                       }
@@ -1511,10 +1514,11 @@ export function AdminComicManager({
                                             event.target.value,
                                         })
                                       }
-                                      className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm"
+                                      className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] px-3 py-2 text-sm"
                                     />
 
                                     <input
+                                      aria-label="Название главы"
                                       value={
                                         chapterEditValues.title
                                       }
@@ -1525,10 +1529,11 @@ export function AdminComicManager({
                                             event.target.value,
                                         })
                                       }
-                                      className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm"
+                                      className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] px-3 py-2 text-sm"
                                     />
 
                                     <input
+                                      aria-label="Ссылка на главу"
                                       value={
                                         chapterEditValues.sourceUrl
                                       }
@@ -1539,10 +1544,11 @@ export function AdminComicManager({
                                             event.target.value,
                                         })
                                       }
-                                      className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm"
+                                      className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] px-3 py-2 text-sm"
                                     />
 
                                     <select
+                                      aria-label="Статус главы"
                                       value={
                                         chapterEditValues.status
                                       }
@@ -1553,18 +1559,18 @@ export function AdminComicManager({
                                             event.target.value as ChapterEditStatus,
                                         })
                                       }
-                                      className="rounded-xl border border-black/10 px-3 py-2 text-sm"
+                                      className="rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] px-3 py-2 text-sm"
                                     >
                                       <option value="SCHEDULED">
-                                        SCHEDULED
+                                        Запланирована
                                       </option>
 
                                       <option value="RELEASED">
-                                        RELEASED
+                                        Опубликована
                                       </option>
 
                                       <option value="ARCHIVED">
-                                        ARCHIVED
+                                        В архиве
                                       </option>
                                     </select>
 
@@ -1608,9 +1614,11 @@ export function AdminComicManager({
                                     </div>
 
                                     <div className="mt-1 text-sm text-[var(--muted)]">
-                                      {chapter.status}
+                                      {chapter.status === "RELEASED" ? "Опубликована" : chapter.status === "SCHEDULED" ? "Запланирована" : "В архиве"} · Порядок: {chapter.sortOrder}
                                     </div>
 
+                                    {chapter.supersedesChapterId ? <p className="mt-1 text-xs text-[var(--text-secondary)]">Заменяет редакцию: {comic.chapters.find(c => c.id === chapter.supersedesChapterId)?.displayCode ?? `ID ${chapter.supersedesChapterId}`}</p> : null}
+                                    {comic.chapters.filter(c => c.supersedesChapterId === chapter.id).map(c => <p key={c.id} className="mt-1 text-xs text-[var(--text-secondary)]">Новая редакция: {c.displayCode}{c.title ? ` — ${c.title}` : ""}. История чтения этой редакции сохранена.</p>)}
                                     <div className="mt-2 flex flex-wrap gap-2">
                                       <button
                                         type="button"
@@ -1624,9 +1632,9 @@ export function AdminComicManager({
                                             "up",
                                           )
                                         }
-                                        className="rounded-lg border px-3 py-1 text-sm"
+                                        className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-60"
                                       >
-                                        ↑
+                                        Порядок −1
                                       </button>
 
                                       <button
@@ -1641,9 +1649,9 @@ export function AdminComicManager({
                                             "down",
                                           )
                                         }
-                                        className="rounded-lg border px-3 py-1 text-sm"
+                                        className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-60"
                                       >
-                                        ↓
+                                        Порядок +1
                                       </button>
 
                                       <button
@@ -1725,7 +1733,8 @@ export function AdminComicManager({
                               </li>
                             ),
                           )}
-                        </ul>
+                        </ul>}
+                        </AdminChapterList>
                       ) : (
                         <p className="mt-2 text-sm text-[var(--muted)]">
                           Главы пока не добавлены.

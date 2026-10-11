@@ -584,3 +584,15 @@ Batch entry contract: preview followed by explicit atomic confirmation.
 - Existing catalog permissions, session identity, same-origin checks and request size limits apply to preview and save. Private titles cannot be modified through this endpoint.
 - Integration verification covers preview/no writes, audit rollback, duplicates, stale/repeated confirmation, specials, limits, ownership boundary and diary preservation. Windows PostgreSQL and desktop/mobile visual acceptance remain pending.
 - Remaining CD-05 scope: admin workflow refinement, revision workflow and import/cover acceptance. This slice does not close the whole stage.
+
+
+## CD-05 — Searchable chapter workspace (2026-10-11)
+
+Status: IN PROGRESS. Logout deployed and operator-accepted after 4daadeb.
+
+- Each shared comic chapter list offers literal code/title search, combined status and MAIN/SPECIAL filters and 40-row pages. Default excludes ARCHIVED; archive and all-record views remain available. Filters do not mutate chapter data or infer numbering from display codes.
+- List order is sortOrder then stable ID. Status counters reflect the whole registry; result/page counts reflect active filters. Empty results preserve criteria and offer reset. Page index is clamped after data changes.
+- Filters and page changes are disabled while editing, confirming archive or saving. Search Enter never submits the surrounding comic metadata form.
+- Revision labels resolve both replacement and successor from the full registry, including archived records. Existing mutation authorization, revision/read identity and audit semantics remain unchanged. Numeric order controls explicitly say order -1/+1; adjacent swaps remain separate work.
+- Editor controls have accessible names; filters and navigation have labels and touch-sized buttons. Typecheck, lint and build required. Desktop/mobile interactive acceptance remains pending.
+- CD-05 remains open for remaining input/revision/import/cover workflow acceptance.
