@@ -37,6 +37,11 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Check restore script syntax
+        run: |
+          bash -n deploy/scripts/CHECK_COMIC_DIARY_DB_RESTORE.sh
+          bash -n deploy/scripts/CHECK_COMIC_DIARY_FULL_RESTORE.sh
+
       - name: Build application
         run: npm run build
         env:
@@ -46,11 +51,97 @@ jobs:
       - name: Build Docker verification image
         run: docker build -t comic-diary:ci .
 
+  database:
+    name: PostgreSQL release checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: comic_diary_release
+          POSTGRES_USER: comic_diary_ci
+          POSTGRES_PASSWORD: ci_ephemeral_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U comic_diary_ci -d comic_diary_release"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Migrate clean database and verify repeat migration
+        run: |
+          node scripts/migrate-production.mjs
+          node scripts/migrate-production.mjs
+
+      - name: Seed disposable database twice
+        run: |
+          node --import tsx scripts/seed.ts
+          node --import tsx scripts/seed.ts
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import pg from 'pg';
+          const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+          try {
+            const { rows } = await pool.query(`
+              SELECT ch.status, count(*)::int AS count FROM chapters ch
+              JOIN comics c ON c.id = ch.comic_id
+              WHERE c.slug = 'r85-catalog-demo' GROUP BY ch.status ORDER BY ch.status
+            `);
+            assert.deepEqual(rows, [
+              { status: 'SCHEDULED', count: 1 },
+              { status: 'RELEASED', count: 3 },
+              { status: 'ARCHIVED', count: 1 },
+            ]);
+            console.log('REPEATED_SEED_FIXTURE=PASS');
+          } finally { await pool.end(); }
+          JS
+
+      - name: Reading, revisions and chapter workflows
+        run: |
+          node --import tsx scripts/chapter-reading-probe.ts
+          node --import tsx scripts/chapter-batch-probe.ts
+          node --import tsx scripts/chapter-move-probe.ts
+          node --import tsx scripts/series-publication-probe.ts
+
+      - name: Account counters and diary export
+        run: |
+          node --import tsx scripts/account-reading-stats-probe.ts
+          node --import tsx scripts/account-diary-export-probe.ts
+
+      - name: Personal mutation and shared catalog authorization contracts
+        run: |
+          node --import tsx scripts/auth-personal-mutation-authorization-probe.ts
+          node --import tsx scripts/auth-shared-catalog-authorization-probe.ts
+
   publish:
     name: Publish immutable image
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs:
       - verify
+      - database
 
     runs-on: ubuntu-latest
 

@@ -1472,3 +1472,35 @@ Counters committed/pushed at 66bea15; operator confirmed green deployment. Count
 Account offers authenticated JSON download through GET /api/account/export. Identity comes exclusively from the active session; request user IDs are ignored. One SQL statement exports a consistent snapshot of all retained library entries, including hidden/archived shared titles and owned private titles. Foreign private entries and other users' marks are excluded. Explicit allowlisted fields exclude credentials, sessions, email, role and owner IDs. Version 1 contains catalog identity/metadata, stored numeric progress, registry flag, status/tracking, all five ratings, notes and diary timestamps, and all existing chapter marks (including archived/scheduled marks), with kind/status/revision identity and markedAt/origin. Scheduled marks are preserved as data, not counted as released progress. markedAt is recording time, never a verified reading date. IDs refer to this database; cover/source URLs are references, not bundled files. JSON preserves Unicode/newlines/nulls; an empty diary exports an empty entries array.
 
 Response is a UTF-8 attachment with private/no-store and nosniff headers; unauthenticated requests return 401 and export errors return a generic 500. UI prevents duplicate downloads and shows session/network failure feedback. This slice exports data only; restore/import is not implemented or promised. No database migration. Verification: typecheck, lint, webpack build and PostgreSQL-compatible integration probe; Windows package repeats the probe on real local PostgreSQL before commit. Manual download/content and desktop/mobile acceptance pending. CD-06 remains IN PROGRESS.
+
+
+## CD-06 acceptance and CD-07 release checks (2026-10-18)
+
+CD-06 first-release scope accepted: theme, counters and versioned JSON export at
+3475343. Supplied export contained one retained COMPLETED shared entry with tracking
+off and three unique marks: RELEASED MAIN, RELEASED SPECIAL and ARCHIVED MAIN.
+Operator confirmed account/library/theme persistence and phone smoke on the live site.
+Event history, confirmed reading dates, heatmaps/rereading/undo and JSON restore remain
+separate future work; they are not implied by this acceptance.
+
+CD-07: IN PROGRESS. Production database restore, media archive roundtrip, isolated app
+startup/public-page smoke, referenced local cover SHA-256, anonymous export refusal
+and one off-host backup with outer/inner checksum verification passed. Evidence and
+manual operational procedure are in docs/operations/cd07-backup-recovery.md. The two
+reviewed drill scripts are now versioned under deploy/scripts.
+
+CI adds a disposable PostgreSQL 17 release job for clean/repeated migrations, repeated
+seed, reading/revision/batch/movement/series checks, counters/export and authorization
+contracts. Publish requires both build verification and this DB job. First GitHub run
+pending. Tests do not run against production.
+
+Still open: authenticated diary UI on the restored copy; recurring off-host backups
+and retention; monitoring/alerts; complete auth/security/browser/accessibility/load
+release matrix, including AC-19/20. An existing published site and a successful manual
+restore do not by themselves close UI-F9/R9 or all CD-07 gates.
+
+Clean-DB validation found and fixed seed compatibility with the partial active-code
+chapter index. Active fixture upserts now use the index predicate; archived fixtures
+are reused by identity instead of duplicated. CI asserts the repeated seed leaves
+exactly 3 RELEASED, 1 SCHEDULED and 1 ARCHIVED demo chapters. Seed is never run on
+production by this delivery.

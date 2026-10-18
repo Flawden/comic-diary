@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
@@ -161,6 +161,22 @@ async function seed() {
   ];
 
   for (const chapter of r85Chapters) {
+    // Archived revisions do not participate in the active-code unique index.
+    // Reuse this demo's existing archived fixture on repeated seed runs.
+    if (chapter.status === "ARCHIVED") {
+      const [existing] = await db.select({ id: chapters.id }).from(chapters).where(and(
+        eq(chapters.comicId, r85ComicId),
+        eq(chapters.displayCode, chapter.displayCode),
+        eq(chapters.status, "ARCHIVED"),
+      )).limit(1);
+      const values = { comicId: r85ComicId, ...chapter, releasedAt: null, updatedAt: new Date() };
+      if (existing) {
+        await db.update(chapters).set(values).where(eq(chapters.id, existing.id));
+      } else {
+        await db.insert(chapters).values(values);
+      }
+      continue;
+    }
     await db
       .insert(chapters)
       .values({
@@ -176,6 +192,7 @@ async function seed() {
           chapters.comicId,
           chapters.displayCode,
         ],
+        targetWhere: sql`${chapters.status} <> 'ARCHIVED'`,
         set: {
           title: chapter.title,
           sortOrder: chapter.sortOrder,
