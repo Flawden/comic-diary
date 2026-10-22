@@ -7,7 +7,7 @@ import {
   redirect,
 } from "next/navigation";
 
-import { LibraryStat } from "@/modules/library/components/LibraryStat";
+import { LibraryView } from "@/modules/library/components/LibraryView";
 import { getCurrentUser } from "@/modules/auth/request-identity";
 import { hasPrivateCatalogEntitlement } from "@/modules/auth/account-entitlements";
 import { getUserLibrary } from "@/modules/library/queries/get-user-library";
@@ -25,9 +25,9 @@ export const dynamic = "force-dynamic";
 const filterLabels = {
   ALL: "Все",
   READING: "Читаю",
-  WANT_TO_READ: "Хочу прочитать",
+  WANT_TO_READ: "В планах",
   COMPLETED: "Прочитано",
-  ON_HOLD: "Отложено",
+  ON_HOLD: "На паузе",
 } as const;
 
 type LibraryFilter =
@@ -215,21 +215,155 @@ export default async function LibraryPage({
     );
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <header>
-        <p className="text-sm font-medium text-[var(--primary)]">
-          Читательский дневник
-        </p>
-
-        <h1 className="mt-2 text-3xl font-bold">
-          Моя библиотека
-        </h1>
-
-        <p className="mt-3 max-w-2xl text-[var(--text-secondary)]">
-          Комиксы, которые я добавил в личный список чтения.
-        </p>
+    <div className="tea-library">
+      <header className="library-heading">
+        <div>
+          <h1>Моя библиотека</h1>
+          <p>Истории, к которым хочется возвращаться.</p>
+        </div>
+        <Link href="/" className="tea-outline">Найти в каталоге <span aria-hidden="true">↗</span></Link>
       </header>
 
+      {library.length > 0 ? (
+        <nav
+          aria-label="Фильтр библиотеки"
+          className="library-tabs"
+        >
+          {(
+            Object.keys(
+              filterLabels,
+            ) as LibraryFilter[]
+          ).map((filter) => {
+            const isActive =
+              filter === activeFilter;
+
+            const href =
+              libraryHref(
+                filter,
+                activeSort,
+                query,
+              );
+
+            return (
+              <Link
+                key={filter}
+                href={href}
+                aria-current={isActive ? "page" : undefined}
+                className="library-tab"
+              >
+                {filterLabels[filter]}{" "}
+                <span className="opacity-70">
+                  {filterCounts[filter]}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+      ) : null}
+
+      {library.length > 0 ? (
+        <form
+          method="get"
+          key={`${activeFilter}:${activeSort}:${query}`}
+          className="library-search"
+        >
+          {activeFilter !== "ALL" ? (
+            <input
+              type="hidden"
+              name="status"
+              value={activeFilter}
+            />
+          ) : null}
+
+          <label className="library-search-field">
+            <span className="sr-only">Поиск в библиотеке</span>
+            <input type="search" name="q" defaultValue={query} maxLength={160} placeholder="Найти в библиотеке" className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]" />
+          </label>
+          <label className="block flex-1">
+            <span className="sr-only">
+              Сортировка библиотеки
+            </span>
+
+            <select
+              name="sort"
+              defaultValue={
+                activeSort
+              }
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
+            >
+              {(
+                Object.keys(
+                  librarySortLabels,
+                ) as LibrarySort[]
+              ).map(
+                (sort) => (
+                  <option
+                    key={sort}
+                    value={sort}
+                  >
+                    {
+                      librarySortLabels[
+                        sort
+                      ]
+                    }
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <Button
+            type="submit"
+          >
+            Применить
+          </Button>
+        </form>
+      ) : null}
+
+      {library.length === 0 ? (
+        <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm">
+          <h2 className="text-lg font-semibold">
+            В библиотеке пока пусто
+          </h2>
+
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            Добавьте комикс из каталога, и он появится здесь.
+          </p>
+
+          <Link
+            href="/"
+            className="mt-5 inline-flex rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)]"
+          >
+            Перейти в каталог
+          </Link>
+        </section>
+      ) : filteredLibrary.length === 0 ? (
+        <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm">
+          <h2 className="text-lg font-semibold">
+            {query ? "Ничего не найдено" : "В этом разделе пока пусто"}
+          </h2>
+
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            {query ? `По запросу «${query}» нет тайтлов в выбранном разделе.` : `Здесь появятся комиксы со статусом «${filterLabels[activeFilter]}».`}
+          </p>
+
+          <Link
+            href={libraryHref(
+              "ALL",
+              activeSort,
+            )}
+            className="mt-5 inline-flex rounded-xl border border-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary)]"
+          >
+            Сбросить фильтры
+          </Link>
+        </section>
+      ) : (
+        <LibraryView>
+          {filteredLibrary.map((item) => (
+            <LibraryComicCard key={item.comicId} item={item} />
+          ))}
+        </LibraryView>
+      )}
       {canUsePrivateCatalog ? (
         <details className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm sm:p-6">
           <summary className="min-h-11 cursor-pointer text-lg font-bold focus-visible:outline-2 focus-visible:outline-[var(--primary)]">Добавить личный тайтл</summary>
@@ -322,182 +456,6 @@ export default async function LibraryPage({
         </details>
       ) : null}
 
-      <section className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-5">
-        <LibraryStat
-          label="Всего"
-          value={library.length}
-          href="/library"
-        />
-
-        <LibraryStat
-          label="Читаю"
-          value={readingCount}
-          href="/library?status=READING"
-        />
-
-        <LibraryStat
-          label="Хочу прочитать"
-          value={wantToReadCount}
-          href="/library?status=WANT_TO_READ"
-        />
-
-        <LibraryStat
-          label="Прочитано"
-          value={completedCount}
-          href="/library?status=COMPLETED"
-        />
-
-        <LibraryStat
-          label="Отложено"
-          value={onHoldCount}
-          href="/library?status=ON_HOLD"
-        />
-      </section>
-
-      {library.length > 0 ? (
-        <nav
-          aria-label="Фильтр библиотеки"
-          className="mt-8 flex flex-wrap gap-2"
-        >
-          {(
-            Object.keys(
-              filterLabels,
-            ) as LibraryFilter[]
-          ).map((filter) => {
-            const isActive =
-              filter === activeFilter;
-
-            const href =
-              libraryHref(
-                filter,
-                activeSort,
-                query,
-              );
-
-            return (
-              <Link
-                key={filter}
-                href={href}
-                aria-current={isActive ? "page" : undefined}
-                className={
-                  isActive
-                    ? "rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)]"
-                    : "rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]"
-                }
-              >
-                {filterLabels[filter]}{" "}
-                <span className="opacity-70">
-                  {filterCounts[filter]}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      ) : null}
-
-      {library.length > 0 ? (
-        <form
-          method="get"
-          key={`${activeFilter}:${activeSort}:${query}`}
-          className="mt-4 flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:items-end sm:justify-between"
-        >
-          {activeFilter !== "ALL" ? (
-            <input
-              type="hidden"
-              name="status"
-              value={activeFilter}
-            />
-          ) : null}
-
-          <label className="block flex-1">
-            <span className="mb-2 block text-sm font-medium">Поиск в библиотеке</span>
-            <input type="search" name="q" defaultValue={query} maxLength={160} placeholder="Название тайтла" className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]" />
-          </label>
-          <label className="block flex-1">
-            <span className="mb-2 block text-sm font-medium">
-              Сортировка библиотеки
-            </span>
-
-            <select
-              name="sort"
-              defaultValue={
-                activeSort
-              }
-              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
-            >
-              {(
-                Object.keys(
-                  librarySortLabels,
-                ) as LibrarySort[]
-              ).map(
-                (sort) => (
-                  <option
-                    key={sort}
-                    value={sort}
-                  >
-                    {
-                      librarySortLabels[
-                        sort
-                      ]
-                    }
-                  </option>
-                ),
-              )}
-            </select>
-          </label>
-
-          <Button
-            type="submit"
-          >
-            Применить
-          </Button>
-        </form>
-      ) : null}
-
-      {library.length === 0 ? (
-        <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm">
-          <h2 className="text-lg font-semibold">
-            В библиотеке пока пусто
-          </h2>
-
-          <p className="mt-2 text-sm text-[var(--text-secondary)]">
-            Добавьте комикс из каталога, и он появится здесь.
-          </p>
-
-          <Link
-            href="/"
-            className="mt-5 inline-flex rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)]"
-          >
-            Перейти в каталог
-          </Link>
-        </section>
-      ) : filteredLibrary.length === 0 ? (
-        <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm">
-          <h2 className="text-lg font-semibold">
-            {query ? "Ничего не найдено" : "В этом разделе пока пусто"}
-          </h2>
-
-          <p className="mt-2 text-sm text-[var(--text-secondary)]">
-            {query ? `По запросу «${query}» нет тайтлов в выбранном разделе.` : `Здесь появятся комиксы со статусом «${filterLabels[activeFilter]}».`}
-          </p>
-
-          <Link
-            href={libraryHref(
-              "ALL",
-              activeSort,
-            )}
-            className="mt-5 inline-flex rounded-xl border border-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary)]"
-          >
-            Сбросить фильтры
-          </Link>
-        </section>
-      ) : (
-        <section aria-label="Комиксы в библиотеке" className="mt-6 space-y-3">
-          {filteredLibrary.map((item) => (
-            <LibraryComicCard key={item.comicId} item={item} />
-          ))}
-        </section>
-      )}
     </div>
   );
 }

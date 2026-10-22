@@ -19,5 +19,5 @@ export type ThemeId =
 export const THEME_COOKIE = "comic-diary-theme";
 
 export function resolveTheme(value: string | undefined): ThemeId {
-  return value === "paper" || value === "tea" ? value : "night";
+  return value === "night" || value === "tea" ? value : "paper";
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { themes, THEME_COOKIE, type ThemeId } from "@/shared/theme/themes";
 
 const descriptions: Record<ThemeId, { label: string; detail: string }> = {
-  night: { label: "Ночная", detail: "Тёмный фон и фиолетовый акцент" },
+  night: { label: "Ночная", detail: "Тёплый графит и чайный акцент" },
   paper: { label: "Бумажная", detail: "Светлый фон и тёплые оттенки" },
   tea: { label: "Чайная", detail: "Тёмный фон и мягкий зелёный акцент" },
 };

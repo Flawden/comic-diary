@@ -151,3 +151,58 @@
     Helvetica,
     sans-serif;
 }
+
+/* White Dragon: shared paper, ink and tea palette. */
+:root {
+  --cd-background: #1c211e;
+  --cd-surface: #232a25;
+  --cd-surface-raised: #2d362f;
+  --cd-text-primary: #f2eee4;
+  --cd-text-secondary: #c2c9bd;
+  --cd-text-muted: #a4afa2;
+  --cd-text-accent: #bad2b9;
+  --cd-primary: #b2cdb2;
+  --cd-primary-foreground: #1c2c22;
+  --cd-border: #424e44;
+  --cd-success: #a6ceb0;
+  --cd-warning: #e0bd80;
+  --cd-danger: #f3a49d;
+  --cd-info: #aac9dc;
+  --cd-radius-card: .75rem;
+  --cd-radius-button: .5rem;
+  --cd-shadow-card: 0 3px 12px rgb(0 0 0 / .06);
+  --cd-font-ui: "Segoe UI", Arial, sans-serif;
+  --cd-font-display: Georgia, "Times New Roman", serif;
+}
+[data-theme="paper"] {
+  --cd-background: #f5f1e8;
+  --cd-surface: #fffcf5;
+  --cd-surface-raised: #eeeade;
+  --cd-text-primary: #252d28;
+  --cd-text-secondary: #596457;
+  --cd-text-muted: #636c60;
+  --cd-text-accent: #365849;
+  --cd-primary: #365849;
+  --cd-primary-foreground: #ffffff;
+  --cd-border: #d8d8ca;
+  --cd-success: #356344;
+  --cd-warning: #81580e;
+  --cd-danger: #a13d35;
+  --cd-info: #366279;
+}
+[data-theme="tea"] {
+  --cd-background: #18251f;
+  --cd-surface: #203128;
+  --cd-surface-raised: #2c4034;
+  --cd-text-primary: #f4efdf;
+  --cd-text-secondary: #c7d1be;
+  --cd-text-muted: #adbaa5;
+  --cd-text-accent: #c6d8a4;
+  --cd-primary: #c0d29c;
+  --cd-primary-foreground: #203020;
+  --cd-border: #465c48;
+  --cd-success: #accfb2;
+  --cd-warning: #e0bd80;
+  --cd-danger: #f3a49d;
+  --cd-info: #aac9dc;
+}

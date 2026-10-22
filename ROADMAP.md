@@ -1524,3 +1524,13 @@ are pending server evidence. Automatic off-host transfer/encryption and notifica
 alerts are not configured. Manual off-host verification from the earlier drill is
 retained as separate evidence. CD-07 remains IN PROGRESS; authenticated restored-copy
 UI, monitoring and remaining release matrix items are not implicitly closed.
+
+
+## White Dragon interface — first slice
+
+- [x] Implement warm library shelves, list/grid selection, shared navigation and coordinated themes.
+- [x] Verify responsive fixtures, persisted preferences, typecheck, lint and build.
+- [ ] Accept the authenticated library on production desktop and mobile.
+- [ ] Redesign work detail, updates, catalog and account layouts.
+
+Implementation and validation scope: `docs/design/white-dragon.md`.

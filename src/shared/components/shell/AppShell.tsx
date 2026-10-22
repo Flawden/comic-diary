@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 
 import {
   AppHeader,
-  AppNavigation,
   PageContainer,
 } from "./";
 
@@ -14,7 +13,6 @@ export function AppShell({
   return (
     <>
       <AppHeader />
-      <AppNavigation />
       <PageContainer>
         {children}
       </PageContainer>
