@@ -1,0 +1,12 @@
+# Managed by comic-diary-backup-v1
+[Unit]
+Description=Daily Comic Diary backup at 03:15 Moscow time
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 Europe/Moscow
+RandomizedDelaySec=5min
+Persistent=true
+Unit=comic-diary-backup.service
+
+[Install]
+WantedBy=timers.target

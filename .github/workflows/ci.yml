@@ -41,6 +41,12 @@ jobs:
         run: |
           bash -n deploy/scripts/CHECK_COMIC_DIARY_DB_RESTORE.sh
           bash -n deploy/scripts/CHECK_COMIC_DIARY_FULL_RESTORE.sh
+          bash -n deploy/backup/install.sh
+
+      - name: Managed backup lifecycle and retention tests
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python3 -m unittest discover -s deploy/backup -p test_backup.py -v
 
       - name: Build application
         run: npm run build

@@ -1,0 +1,22 @@
+# Managed by comic-diary-backup-v1
+[Unit]
+Description=Comic Diary database and media backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+RuntimeDirectory=comic-diary-backup
+RuntimeDirectoryMode=0700
+Environment=DOCKER_HOST=unix:///var/run/docker.sock
+Environment=DOCKER_CONFIG=/run/comic-diary-backup/docker
+ExecStart=/usr/bin/python3 /usr/local/lib/comic-diary/backup.py
+TimeoutStartSec=45min
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true

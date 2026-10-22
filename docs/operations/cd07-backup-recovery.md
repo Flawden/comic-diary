@@ -91,3 +91,12 @@ publication, account counters/export and static authorization contracts. Publish
 requires both `verify` and `database`. These probes are not browser automation and do
 not replace reviewing CSRF/session/rate-limit behavior, load or accessibility tests.
 A first real CI run is required before this new gate is considered proven on GitHub.
+
+
+## Follow-up: daily backup implementation
+
+CI run 39139359170 at 145d6a9 passed the new PostgreSQL gate, Verify, publish and
+production deployment, as confirmed by operator-supplied `gh run view` output.
+Daily managed backup code and installation/status procedure now live in
+`deploy/backup` and `docs/operations/cd07-automatic-backups.md`. Server installation
+and timer evidence remain pending; recurring off-host transfer remains open.

@@ -697,3 +697,23 @@ chapter index. Active fixture upserts now use the index predicate; archived fixt
 are reused by identity instead of duplicated. CI asserts the repeated seed leaves
 exactly 3 RELEASED, 1 SCHEDULED and 1 ARCHIVED demo chapters. Seed is never run on
 production by this delivery.
+
+
+## CD-07 — Daily managed backups (2026-10-18)
+
+The operator confirmed CI run 39139359170 at 145d6a9: PostgreSQL release checks,
+Verify, immutable image publishing and production deployment all succeeded. The
+previous CI gate is now verified on real PostgreSQL in GitHub Actions.
+
+New code: deploy/backup implements a root-only DB/local-media backup, SHA-256 and
+media archive roundtrip checks, lock, atomic completed-directory publication, 14-copy
+retention limited to verified managed snapshots, and a 36-hour freshness status.
+A systemd timer targets 03:15 Europe/Moscow plus up to five minutes, with persistent
+catch-up. Installer runs tests and a real backup before enabling the timer. CI runs
+the eight backup lifecycle tests. Details: docs/operations/cd07-automatic-backups.md.
+
+Installation/first actual backup, timer activation and a subsequent scheduled run
+are pending server evidence. Automatic off-host transfer/encryption and notification
+alerts are not configured. Manual off-host verification from the earlier drill is
+retained as separate evidence. CD-07 remains IN PROGRESS; authenticated restored-copy
+UI, monitoring and remaining release matrix items are not implicitly closed.
