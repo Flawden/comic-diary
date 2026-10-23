@@ -59,134 +59,37 @@ export default async function AccountPage() {
   const theme = resolveTheme((await cookies()).get(THEME_COOKIE)?.value);
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <p className="text-sm font-semibold text-[var(--primary)]">
-        Comic Diary
-      </p>
-
-      <h1 className="mt-2 text-3xl font-bold">
-        Аккаунт
-      </h1>
-
-      <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
-        Здесь можно проверить данные аккаунта,
-        изменить отображаемое имя и безопасно
-        изменить пароль.
-      </p>
-
-      <section className="mt-8 rounded-2xl bg-[var(--surface)] p-6 shadow-sm sm:p-8">
-        <h2 className="text-lg font-semibold">
-          Данные аккаунта
-        </h2>
-
-        <dl className="mt-5 space-y-4 text-sm">
-          <div>
-            <dt className="font-medium text-[var(--muted)]">
-              Email
-            </dt>
-            <dd className="mt-1 break-all">
-              {user.email}
-            </dd>
-          </div>
-
-          <div>
-            <dt className="font-medium text-[var(--muted)]">
-              Имя
-            </dt>
-            <dd className="mt-1">
-              {user.displayName ??
-                "Не указано"}
-            </dd>
-          </div>
-
-          <div>
-            <dt className="font-medium text-[var(--muted)]">
-              Роль
-            </dt>
-            <dd className="mt-1">
-              {roleLabel(
-                user.role,
-              )}
-            </dd>
-          </div>
-        </dl>
-      </section>
-
-      {hasPermission(user.role, "EDIT_SHARED_CATALOG") ? (
-        <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8">
-          <h2 className="text-lg font-semibold">Панель управления</h2>
-          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-            {user.role === "ADMIN"
-              ? "Управление каталогом, главами, пользователями и журналом изменений."
-              : "Редактирование каталога и глав в пределах прав редактора."}
-          </p>
-          <Link href="/admin" className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]">
-            Открыть панель управления →
-          </Link>
-        </section>
-      ) : null}
-
-      <ReadingStats stats={stats} />
-
-      <DiaryExport />
-
-      <ThemeSelector initialTheme={theme} />
-
-      <section className="mt-6 rounded-2xl bg-[var(--surface)] p-6 shadow-sm sm:p-8">
-        <h2 className="text-lg font-semibold">
-          Профиль
-        </h2>
-
-        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-          Это имя показывается как часть вашего
-          профиля. Email, роль и права аккаунта
-          здесь не изменяются.
-        </p>
-
-        <AccountProfileForm
-          initialDisplayName={
-            user.displayName
-          }
-        />
-      </section>
-
-      <section className="mt-6 rounded-2xl bg-[var(--surface)] p-6 shadow-sm sm:p-8">
-        <h2 className="text-lg font-semibold">
-          Смена пароля
-        </h2>
-
-        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-          Потребуется текущий пароль. После
-          успешной смены все старые сессии
-          будут завершены, а эта сессия
-          будет обновлена.
-        </p>
-
-        <AccountPasswordForm />
-      </section>
-
-      <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8">
-        <h2 className="text-lg font-semibold">Выход из аккаунта</h2>
-        <p className="mt-2 mb-4 text-sm leading-6 text-[var(--text-secondary)]">
-          Завершить вход на этом устройстве. Библиотека и история чтения сохранятся.
-        </p>
-        <LogoutButton />
-      </section>
-
-      <div className="mt-6 flex flex-wrap gap-4 text-sm">
-        <Link
-          href="/library"
-          className="font-medium text-[var(--primary)] hover:underline"
-        >
-          В библиотеку
-        </Link>
-
-        <Link
-          href="/"
-          className="font-medium text-[var(--primary)] hover:underline"
-        >
-          В каталог
-        </Link>
+    <div className="reader-page account-page">
+      <header className="reader-heading">
+        <div><p className="reader-eyebrow">Ваш уголок</p><h1>Профиль</h1>
+        <p>Дневник, оформление и настройки аккаунта.</p></div>
+        <Link href="/library" className="tea-outline">К моей полке →</Link>
+      </header>
+      <nav className="reader-section-nav" aria-label="Разделы профиля">
+        <a href="#account-diary">Мой дневник</a><a href="#appearance">Оформление</a><a href="#account-settings">Настройки</a>
+      </nav>
+      <div className="account-layout">
+        <aside className="account-identity reader-panel">
+          <span className="account-monogram" aria-hidden="true">{(user.displayName || user.email).slice(0,1).toLocaleUpperCase("ru")}</span>
+          <h2>{user.displayName || "Читатель"}</h2>
+          <p className="account-email">{user.email}</p>
+          <p className="reader-eyebrow">{roleLabel(user.role)}</p>
+          <details className="account-edit-name"><summary>Изменить имя</summary><AccountProfileForm initialDisplayName={user.displayName} /></details>
+          {hasPermission(user.role, "EDIT_SHARED_CATALOG") ? <Link href="/admin" className="tea-outline">Панель управления →</Link> : null}
+          <LogoutButton />
+        </aside>
+        <div className="account-content">
+          <div id="account-diary"><ReadingStats stats={stats} /></div>
+          <div id="appearance"><ThemeSelector initialTheme={theme} /></div>
+          <section id="account-settings" className="reader-panel account-settings">
+            <h2>Настройки и данные</h2>
+            <details><summary>Скачать дневник <span>Статусы, оценки и заметки</span></summary><DiaryExport /></details>
+            <details><summary>Изменить пароль</summary>
+              <p className="mt-4 text-sm text-[var(--text-secondary)]">Потребуется текущий пароль. После смены пароля вход на других устройствах завершится.</p>
+              <AccountPasswordForm />
+            </details>
+          </section>
+        </div>
       </div>
     </div>
   );

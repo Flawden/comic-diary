@@ -38,7 +38,7 @@ export function ReadingUpdatesList({ titles, kind }: { titles: UpdatesTitle[]; k
       {notice}{last ? <Button variant="ghost" disabled={undoBusy} onClick={undo} className="ml-2">{undoBusy ? "Снимаем…" : "Снять последнюю отметку"}</Button> : null}
     </div>
     <ul className="mt-4 space-y-3">{titles.map((title) => <UpdatesRow key={`${title.comicId}:${undoVersion}`} item={title} kind={kind}
-      onMarked={(chapterId, action) => { setNotice(action === "read-through" ? "Основные главы до выбранной отмечены. Спешиалы не изменены." : "Глава отмечена прочитанной."); setLast(action === "read" ? { comicId: title.comicId, chapterId } : null); router.refresh(); }} />)}</ul>
+      onMarked={(chapterId, action) => { setNotice(action === "read-through" ? "Основные главы до выбранной отмечены. Спецвыпуски не изменены." : "Глава отмечена прочитанной."); setLast(action === "read" ? { comicId: title.comicId, chapterId } : null); router.refresh(); }} />)}</ul>
   </>;
 }
 function UpdatesRow({ item, kind, onMarked }: { item: UpdatesTitle; kind: UpdatesKind; onMarked: (id: number, action: MarkAction) => void }) {
@@ -75,9 +75,9 @@ function UpdatesRow({ item, kind, onMarked }: { item: UpdatesTitle; kind: Update
   const selected = chapters.find((c) => String(c.id) === target);
   return <li className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
     <div className="flex items-center gap-3 p-3 sm:p-4">
-      <Link href={`/comics/${encodeURIComponent(item.slug)}`} aria-label={`Открыть ${item.title}`} className="w-16 shrink-0 sm:w-20"><CoverImage src={item.coverUrl} alt="" className="aspect-[2/3] rounded-lg" /></Link>
+      <Link href={`/comics/${encodeURIComponent(item.slug)}`} aria-label={`Открыть ${item.title}`} className="w-16 shrink-0 sm:w-20"><CoverImage src={item.coverUrl} alt="" className="aspect-[3/4] rounded-lg" imageClassName="object-contain" fallback={item.title} /></Link>
       <div className="min-w-0 flex-1"><Link href={`/comics/${encodeURIComponent(item.slug)}`} className="block break-words text-base font-bold sm:text-lg">{item.title}</Link>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">Основных: {item.mainCount} · Спешиалов: {item.specialCount}</p>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">Основных: {item.mainCount} · Спецвыпусков: {item.specialCount}</p>
         {item.updatedCount > 0 ? <p className="mt-1 text-xs text-[var(--text-accent)]">Обновлённых редакций: {item.updatedCount}</p> : null}</div>
       <Button variant="ghost" iconOnly aria-label={open ? `Свернуть главы ${item.title}` : `Раскрыть главы ${item.title}`} aria-expanded={open} aria-controls={panelId}
         onClick={() => { setOpen(!open); if (!open && !loaded && !busy) void load(); }}><span aria-hidden="true">{open ? "⌃" : "⌄"}</span></Button>
@@ -88,13 +88,13 @@ function UpdatesRow({ item, kind, onMarked }: { item: UpdatesTitle; kind: Update
       {chapters.some((c) => c.kind === "MAIN" && !marked.includes(c.id)) ? <form className="mb-4 rounded-xl bg-[var(--surface-raised)] p-3" onSubmit={(e) => { e.preventDefault(); if (selected) void save(selected.id, "read-through"); }}>
         <label className="block text-sm font-medium">Прочитано до…<select value={target} required disabled={busy} onChange={(e) => setTarget(e.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm">
           <option value="">Выберите главу</option>{chapters.filter((c) => c.kind === "MAIN" && !marked.includes(c.id)).map((c) => <option key={c.id} value={c.id}>{c.displayCode}{c.title ? ` — ${c.title}` : ""}</option>)}</select></label>
-        <p className="my-2 text-xs text-[var(--text-secondary)]">{selected ? `Будет добавлено отметок основных глав: ${selected.throughCount}.` : "Выберите из загруженных глав; для дальних глав нажмите «Показать ещё»."} Спешиалы и архивные версии не изменятся.</p>
+        <p className="my-2 text-xs text-[var(--text-secondary)]">{selected ? `Будет добавлено отметок основных глав: ${selected.throughCount}.` : "Выберите из загруженных глав; для дальних глав нажмите «Показать ещё»."} Спецвыпуски и архивные версии не изменятся.</p>
         <Button type="submit" disabled={busy || !selected}>Отметить до выбранной</Button>
       </form> : null}
       <ul className="divide-y divide-[var(--border)]">{chapters.map((c) => {
         const source = sourceUrl(c.sourceUrl); const done = marked.includes(c.id);
         return <li key={c.id} className="flex items-start gap-3 py-3"><div className="min-w-0 flex-1 break-words"><p className="font-semibold">{c.displayCode}{c.title ? ` — ${c.title}` : ""}</p>
-          <div className="mt-1 flex flex-wrap gap-2">{c.kind === "SPECIAL" ? <Badge>Спешиал</Badge> : null}{c.updated ? <Badge>Обновлённая редакция</Badge> : null}</div>
+          <div className="mt-1 flex flex-wrap gap-2">{c.kind === "SPECIAL" ? <Badge>Спецвыпуск</Badge> : null}{c.updated ? <Badge>Обновлённая редакция</Badge> : null}</div>
           {source ? <a href={source} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm text-[var(--text-accent)]">Читать в источнике ↗</a> : null}</div>
           <Button iconOnly variant={done ? "primary" : "secondary"} disabled={busy || done} aria-label={done ? `${c.displayCode}: прочитано` : `Отметить ${c.displayCode} прочитанной`} onClick={() => save(c.id, "read")}><span aria-hidden="true">{done ? "✓" : "○"}</span></Button></li>;
       })}</ul>

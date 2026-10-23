@@ -3,7 +3,7 @@ import type { UserReadingStats } from "@/modules/library/queries/get-user-readin
 
 export function ReadingStats({ stats }: { stats: UserReadingStats }) {
   const statuses = [
-    { label: "Хочу прочитать", value: stats.planned, status: "WANT_TO_READ" },
+    { label: "В планах", value: stats.planned, status: "WANT_TO_READ" },
     { label: "Читаю", value: stats.reading, status: "READING" },
     { label: "Прочитано", value: stats.completed, status: "COMPLETED" },
     { label: "На паузе", value: stats.onHold, status: "ON_HOLD" },
@@ -27,7 +27,7 @@ export function ReadingStats({ stats }: { stats: UserReadingStats }) {
       <dl className="mt-3 grid gap-3 sm:grid-cols-3">
         {[
           ["Основные главы", stats.main],
-          ["Спешалы", stats.specials],
+          ["Спецвыпуски", stats.specials],
           ["Архивные главы", stats.archived],
         ].map(([label, value]) => (
           <div key={label} className="rounded-xl border border-[var(--border)] p-4">
@@ -36,6 +36,7 @@ export function ReadingStats({ stats }: { stats: UserReadingStats }) {
           </div>
         ))}
       </dl>
+      <details className="stats-explanation"><summary>Как считаются главы</summary>
       <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">
         Основные главы и спешалы считаются по отметкам у вышедших глав.
         Архивные главы показаны отдельно: их отметки сохраняются при замене редакции.
@@ -47,6 +48,7 @@ export function ReadingStats({ stats }: { stats: UserReadingStats }) {
           Их прогресс сохранён в библиотеке и не добавляется к числу отмеченных глав.
         </p>
       ) : null}
+      </details>
       {stats.titles === 0 ? (
         <Link href="/" className="mt-4 inline-flex min-h-11 items-center font-semibold text-[var(--primary)] hover:underline">Найти первый тайтл →</Link>
       ) : null}

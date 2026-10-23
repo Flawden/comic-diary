@@ -1486,7 +1486,7 @@ export function VkReviewConsole({
               onClick={
                 exportArtifact
               }
-              className="rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white"
+              className="rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)]"
             >
               Скачать Review JSON
             </button>
@@ -1675,7 +1675,7 @@ export function VkReviewConsole({
               databasePlan === null ||
               pendingApplyCount === 0
                 ? "cursor-not-allowed rounded-xl border border-black/10 bg-black/5 px-4 py-2.5 text-sm font-semibold text-[var(--muted)]"
-                : "rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white"
+                : "rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)]"
             }
           >
             {importStatus ===
@@ -2550,7 +2550,7 @@ export function VkReviewConsole({
                     }
                     className={
                       canApprove
-                        ? "rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white"
+                        ? "rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)]"
                         : "cursor-not-allowed rounded-xl border border-black/10 bg-black/5 px-4 py-2.5 text-sm font-semibold text-[var(--muted)]"
                     }
                   >

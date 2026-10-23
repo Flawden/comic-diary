@@ -95,12 +95,12 @@ export default async function VkCatalogImportPage({
       "forbidden"
     ) {
       return (
-        <main className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-8">
+        <div className="reader-page admin-page">
           <p className="text-sm font-semibold text-[var(--primary)]">
             R6.3 · Authorization
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold">
+          <h1 className="mt-2 reader-title">
             Доступ запрещён
           </h1>
 
@@ -114,17 +114,17 @@ export default async function VkCatalogImportPage({
               разрешение RUN_BULK_IMPORT.
             </p>
           </section>
-        </main>
+        </div>
       );
     }
 
     return (
-      <main className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-8">
+      <div className="reader-page admin-page">
         <p className="text-sm font-semibold text-[var(--primary)]">
           R6.3 · Authorization
         </p>
 
-        <h1 className="mt-2 text-3xl font-bold">
+        <h1 className="mt-2 reader-title">
           Импорт каталога VK
         </h1>
 
@@ -138,7 +138,7 @@ export default async function VkCatalogImportPage({
             ADMIN_IMPORT_ENABLED выключен.
           </p>
         </section>
-      </main>
+      </div>
     );
   }
 
@@ -146,14 +146,14 @@ export default async function VkCatalogImportPage({
     await loadVkReviewWorkspace();
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-4 py-8 sm:px-8">
+    <div className="reader-page admin-page">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-[var(--primary)]">
             R5.3 · VK Catalog Import
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold">
+          <h1 className="mt-2 reader-title">
             Импорт каталога VK
           </h1>
 
@@ -348,7 +348,7 @@ export default async function VkCatalogImportPage({
 
           <button
             type="submit"
-            className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white"
+            className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)]"
           >
             Проверить подключение
           </button>
@@ -400,7 +400,7 @@ export default async function VkCatalogImportPage({
 
           <button
             type="submit"
-            className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white"
+            className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)]"
           >
             Скачать discovery JSON
           </button>
@@ -465,7 +465,7 @@ export default async function VkCatalogImportPage({
 
           <button
             type="submit"
-            className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white"
+            className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)]"
           >
             Скачать reconciliation JSON
           </button>
@@ -534,7 +534,7 @@ export default async function VkCatalogImportPage({
 
           <button
             type="submit"
-            className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white"
+            className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)]"
           >
             Скачать Raw Snapshot v1
           </button>
@@ -567,6 +567,6 @@ export default async function VkCatalogImportPage({
           <li>✓ каталог и база данных не изменяются</li>
         </ul>
       </section>
-    </main>
+    </div>
   );
 }

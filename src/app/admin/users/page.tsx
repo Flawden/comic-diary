@@ -31,8 +31,8 @@ export default async function AdminUsersPage() {
 
   if (!access.canAdminUsers) {
     return (
-      <main className="mx-auto min-h-screen max-w-3xl px-4 py-10 sm:px-8">
-        <h1 className="text-3xl font-bold">
+      <div className="reader-page admin-page">
+        <h1 className="reader-title">
           Доступ запрещён
         </h1>
 
@@ -46,7 +46,7 @@ export default async function AdminUsersPage() {
         >
           ← В панель управления
         </Link>
-      </main>
+      </div>
     );
   }
 
@@ -54,14 +54,14 @@ export default async function AdminUsersPage() {
     await listAdminUsers();
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-10 sm:px-8">
+    <div className="reader-page admin-page">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-[var(--primary)]">
-            R7.3 · Admin
+            Панель управления
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold">
+          <h1 className="mt-2 reader-title">
             Пользователи
           </h1>
 
@@ -76,7 +76,7 @@ export default async function AdminUsersPage() {
           href="/admin"
           className="rounded-xl border border-black/10 bg-[var(--surface)] px-4 py-2 text-sm font-semibold"
         >
-          ← Админка
+          ← Панель управления
         </Link>
       </div>
 
@@ -96,6 +96,6 @@ export default async function AdminUsersPage() {
           )
         }
       />
-    </main>
+    </div>
   );
 }

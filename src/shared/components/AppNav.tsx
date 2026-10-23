@@ -75,7 +75,7 @@ export function AppNav() {
                   }
                   className={
                     active
-                      ? "inline-flex min-w-0 items-center justify-center rounded-xl bg-[var(--primary)] px-3 py-2 text-center text-sm font-semibold text-white sm:px-4"
+                      ? "inline-flex min-w-0 items-center justify-center rounded-xl bg-[var(--primary)] px-3 py-2 text-center text-sm font-semibold text-[var(--primary-foreground)] sm:px-4"
                       : "inline-flex min-w-0 items-center justify-center rounded-xl border border-black/10 bg-[var(--surface)] px-3 py-2 text-center text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--background)] sm:px-4"
                   }
                 >

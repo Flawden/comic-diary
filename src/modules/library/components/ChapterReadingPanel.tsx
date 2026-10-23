@@ -26,13 +26,13 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, canMark }: Pro
   const control = "w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2.5 text-sm";
 
   return (
-    <section className="mt-6" aria-label="Главы и история чтения">
+    <section className="chapter-panel" aria-label="Главы и история чтения">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold">Главы</h2>
-        <span className="text-sm text-[var(--text-secondary)]">Основных: {main.length} · Спешиалов: {active.length - main.length}</span>
+        <span className="text-sm text-[var(--text-secondary)]">Основных: {main.length} · Спецвыпусков: {active.length - main.length}</span>
       </div>
       {canMark && main.length > 0 ? (
-        <Card padding="sm" className="mt-4">
+        <details className="chapter-bulk"><summary>Отметить несколько глав прочитанными</summary>
           <form action="/api/library/reading-state" method="post">
             <input type="hidden" name="comicId" value={comicId} />
             <input type="hidden" name="intent" value="chapter-reading" />
@@ -44,18 +44,18 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, canMark }: Pro
                 {main.map((c) => <option key={c.id} value={c.id}>{c.displayCode}{c.title ? ` — ${c.title}` : ""}{c.supersedesChapterId ? " (новая редакция)" : ""}</option>)}
               </select>
             </label>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">Отметит основные главы до выбранной включительно в текущем порядке. Спешиалы и архивные версии останутся без изменений.</p>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">Отметит основные главы до выбранной включительно в текущем порядке. Спецвыпуски и архивные версии останутся без изменений.</p>
             <Button type="submit" className="mt-3 w-full sm:w-auto">Отметить прочитанное до выбранной</Button>
           </form>
-        </Card>
+        </details>
       ) : null}
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="block text-sm">Поиск по коду или названию
-          <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setLimit(30); }} placeholder="15.5, спешиал, название…" className={`${control} mt-2`} />
+          <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setLimit(30); }} placeholder="15.5, спецвыпуск, название…" className={`${control} mt-2`} />
         </label>
         <label className="block text-sm">Раздел
           <select value={kind} onChange={(e) => { setKind(e.target.value); setLimit(30); }} className={`${control} mt-2`}>
-            <option value="MAIN">Основные главы</option><option value="SPECIAL">Спешиалы и бонусы</option>
+            <option value="MAIN">Основные главы</option><option value="SPECIAL">Спецвыпуски и бонусы</option>
           </select>
         </label>
       </div>
@@ -63,7 +63,7 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, canMark }: Pro
         {filtered.slice(0, limit).map((c) => {
           const source = safeSource(c.sourceUrl);
           return <li key={c.id}>
-            <Card padding="sm">
+            <Card padding="sm" className="chapter-row">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0 break-words"><h3 className="font-semibold">{c.displayCode}</h3>{c.title ? <p className="mt-1 text-sm text-[var(--text-secondary)]">{c.title}</p> : null}</div>
                 {canMark ? <Badge variant={read.has(c.id) ? "success" : "neutral"}>{read.has(c.id) ? "Прочитано" : "Не прочитано"}</Badge> : null}
@@ -76,7 +76,7 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, canMark }: Pro
                   <input type="hidden" name="intent" value="chapter-reading" />
                   <input type="hidden" name="chapterId" value={c.id} />
                   <input type="hidden" name="action" value={read.has(c.id) ? "unread" : "read"} />
-                  <Button type="submit" variant="secondary">{read.has(c.id) ? "Снять отметку" : "Прочитал эту главу"}</Button>
+                  <Button type="submit" variant="secondary">{read.has(c.id) ? "Снять отметку" : "Отметить прочитанной"}</Button>
                 </form> : null}
               </div>
             </Card>

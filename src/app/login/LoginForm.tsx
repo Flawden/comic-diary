@@ -176,7 +176,7 @@ export function LoginForm({
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-xl bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white transition disabled:cursor-wait disabled:opacity-60"
+        className="w-full rounded-xl bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-[var(--primary-foreground)] transition disabled:cursor-wait disabled:opacity-60"
       >
         {submitting
           ? "Входим…"

@@ -1531,6 +1531,7 @@ UI, monitoring and remaining release matrix items are not implicitly closed.
 - [x] Implement warm library shelves, list/grid selection, shared navigation and coordinated themes.
 - [x] Verify responsive fixtures, persisted preferences, typecheck, lint and build.
 - [ ] Accept the authenticated library on production desktop and mobile.
-- [ ] Redesign work detail, updates, catalog and account layouts.
+- [x] Implement White Dragon layouts for work detail, updates, catalog and account.
+- [ ] Accept the second design slice with live authenticated data on desktop/mobile.
 
 Implementation and validation scope: `docs/design/white-dragon.md`.

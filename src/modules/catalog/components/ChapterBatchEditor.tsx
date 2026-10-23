@@ -70,7 +70,7 @@ export function ChapterBatchEditor({ comicId, disabled, onBusyChange }: { comicI
           {preview.rows.map(row => <li key={row.displayCode} className="break-words text-sm"><strong>{row.displayCode}</strong>{row.title ? ` — ${row.title}` : ""}<span className="block text-xs text-[var(--cd-text-secondary)]">{row.kind === "SPECIAL" ? "Спешиал" : "Основная"} · Порядок {row.sortOrder} · {row.sourceUrl ?? "Без ссылки"}</span></li>)}
         </ol>
         <div className="flex flex-wrap gap-3">
-          <button type="button" disabled={busy || disabled} onClick={() => void send(true)} className="min-h-11 rounded-xl bg-[var(--cd-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">Подтвердить добавление</button>
+          <button type="button" disabled={busy || disabled} onClick={() => void send(true)} className="min-h-11 rounded-xl bg-[var(--cd-primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)] disabled:opacity-60">Подтвердить добавление</button>
           <button type="button" disabled={busy || disabled} onClick={() => setPreview(null)} className="min-h-11 rounded-xl border border-[var(--cd-border)] px-4 py-2 text-sm">Отмена</button>
         </div>
       </div> : null}

@@ -389,7 +389,7 @@ export function AdminCategoryManager({
               busyKey !==
                 null
             }
-            className="mt-5 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+            className="mt-5 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)] disabled:cursor-wait disabled:opacity-60"
           >
             Создать категорию
           </button>
@@ -468,13 +468,13 @@ export function AdminCategoryManager({
                           busyKey !==
                             null
                         }
-                        className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+                        className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)] disabled:cursor-wait disabled:opacity-60"
                       >
                         Сохранить изменения
                       </button>
 
                       <span className="text-xs text-[var(--muted)]">
-                        Удаление категорий в R7.4 не реализуется.
+                        Удаление категорий пока недоступно.
                       </span>
                     </div>
                   </form>

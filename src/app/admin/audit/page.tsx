@@ -36,12 +36,12 @@ export default async function AdminAuditPage() {
 
   if (!access.canViewAudit) {
     return (
-      <main className="mx-auto min-h-screen max-w-3xl px-4 py-10 sm:px-8">
+      <div className="reader-page admin-page">
         <p className="text-sm font-semibold text-[var(--primary)]">
           Comic Diary
         </p>
 
-        <h1 className="mt-2 text-3xl font-bold">
+        <h1 className="mt-2 reader-title">
           Доступ запрещён
         </h1>
 
@@ -56,7 +56,7 @@ export default async function AdminAuditPage() {
         >
           ← В панель управления
         </Link>
-      </main>
+      </div>
     );
   }
 
@@ -64,14 +64,14 @@ export default async function AdminAuditPage() {
     await listAdministrativeAuditEvents();
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-10 sm:px-8">
+    <div className="reader-page admin-page">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-[var(--primary)]">
             R7.6 · Admin
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold">
+          <h1 className="mt-2 reader-title">
             Журнал аудита
           </h1>
 
@@ -139,6 +139,6 @@ export default async function AdminAuditPage() {
           )}
         </div>
       )}
-    </main>
+    </div>
   );
 }

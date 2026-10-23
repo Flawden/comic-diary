@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
 import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
 import { seriesStatusLabels, caughtUpLabel } from "@/modules/comics/series-status";
@@ -99,21 +100,17 @@ export default async function ComicPage({
     : null;
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <article className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
-        <div className="grid md:grid-cols-[280px_1fr]">
-          <CoverImage
-            src={comic.coverUrl}
-            alt={`Обложка ${comic.title}`}
-            className="aspect-[3/4] mx-auto w-40 self-start md:mx-0 md:w-full"
-          />
-
-          <div className="min-w-0 p-4 sm:p-6 md:p-8">
+    <div className="reader-page work-page">
+      <Link href="/" className="reader-back">← Каталог</Link>
+      <article>
+        <header className="work-hero">
+          <CoverImage src={comic.coverUrl} alt={`Обложка ${comic.title}`} className="work-cover" imageClassName="object-contain" fallback={comic.title} />
+          <div className="work-intro">
             <p className="text-sm font-medium text-[var(--primary)]">
-              {comic.categoryName ?? "Без категории"}
+              {comic.categoryName}
             </p>
 
-            <h1 className="mt-2 text-3xl font-bold">
+            <h1 className="reader-title">
               {comic.title}
             </h1>
 
@@ -137,9 +134,9 @@ export default async function ComicPage({
             ) : null}
 
             {comic.authorName || comic.translatorName ? (
-              <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
+              <dl className="work-credits">
                 {comic.authorName ? (
-                  <div className="rounded-xl bg-[var(--background)] p-4">
+                  <div className="min-w-0">
                     <dt className="text-[var(--text-secondary)]">
                       Автор
                     </dt>
@@ -150,7 +147,7 @@ export default async function ComicPage({
                 ) : null}
 
                 {comic.translatorName ? (
-                  <div className="rounded-xl bg-[var(--background)] p-4">
+                  <div className="min-w-0">
                     <dt className="text-[var(--text-secondary)]">
                       Перевод
                     </dt>
@@ -173,35 +170,27 @@ export default async function ComicPage({
               </section>
             ) : null}
 
-            <p className="mt-4 text-sm font-semibold text-[var(--text-secondary)]">{seriesStatusLabels[comic.seriesStatus]}</p>
-<p className="mt-2 text-sm text-[var(--text-secondary)]">{workTypeLabels[comic.workType]} · {workFormatLabels[comic.workFormat]}</p>
+            {comic.seriesStatus !== "UNKNOWN" ? <p className="mt-4 text-sm font-semibold text-[var(--text-secondary)]">{seriesStatusLabels[comic.seriesStatus]}</p> : null}
+<p className="mt-2 text-sm text-[var(--text-secondary)]">{[comic.workType !== "UNKNOWN" ? workTypeLabels[comic.workType] : null, comic.workFormat !== "UNKNOWN" ? workFormatLabels[comic.workFormat] : null].filter(Boolean).join(" · ")}</p>
 
-            {comic.description ? (
-              <p className="mt-6 max-w-2xl leading-7 text-[var(--text-secondary)]">
-                {comic.description}
-              </p>
-            ) : (
-              <p className="mt-6 text-[var(--text-secondary)]">
-                Описание пока не добавлено.
-              </p>
-            )}
-
-            <ChapterReadingPanel
-              comicId={comic.id}
-              chapters={(readingState?.chapterReading.registry ?? chapters)
-                .filter((c) => c.status === "RELEASED" || (c.status === "ARCHIVED" && readingState?.chapterReading.readIds.includes(c.id)))
-                .map((c) => ({ id: c.id, displayCode: c.displayCode, title: c.title, sourceUrl: c.sourceUrl, sortOrder: c.sortOrder, status: c.status, kind: c.kind, supersedesChapterId: c.supersedesChapterId }))}
-              readIds={readingState?.chapterReading.readIds ?? []}
-              canMark={readingState !== null}
-            />
-
-            <section className="mt-8 rounded-xl bg-[var(--background)] p-5">
+            {comic.description ? <details className="work-description" open>
+              <summary>Об истории</summary>
+              <p>{comic.description}</p>
+            </details> : null}
+            <div className="work-actions">
+              <a href={comic.sourceUrl} target="_blank" rel="noopener noreferrer" className="tea-primary">Читать в источнике ↗</a>
+              <a href="#chapters" className="tea-outline">К списку глав ↓</a>
+              <a href="#my-reading" className="tea-text-action">Мой дневник</a>
+            </div>
+          </div>
+        </header>
+            <section id="my-reading" className="reader-panel work-diary">
               <h2 className="font-semibold">
-                Моя библиотека
+                Мой дневник
               </h2>
 
               {readingState ? (
-                <div className="mt-4 space-y-5">
+                <div className="reading-dashboard">
                   <ReadingStatusForm key={`${comic.id}:${comic.seriesStatus}:${readingState.status}:${readingState.currentChapter}:${readingState.chapterReading.specialReadCount}`}
                     comicId={comic.id} status={readingState.status}
                     registered={readingState.chapterReading.registered} seriesStatus={comic.seriesStatus}
@@ -219,8 +208,8 @@ export default async function ComicPage({
                         {readingState.chapterReading.lastReadLabel ? <p>Последняя отмеченная: {readingState.chapterReading.lastReadLabel}</p> : null}
                         <p>{readingState.chapterReading.caughtUp ? caughtUpLabel(comic.seriesStatus) : `Непрочитанных основных глав: ${readingState.chapterReading.unreadChapters}`}</p>
                         {readingState.chapterReading.updatedChapters ? <p>Непрочитанных новых редакций: {readingState.chapterReading.updatedChapters}</p> : null}
-                        {readingState.chapterReading.specialCount ? <p>Спешиалы: {readingState.chapterReading.specialReadCount} / {readingState.chapterReading.specialCount}</p> : null}
-                        <p>Отмечайте чтение в списке глав выше. Статус «Прочитано» выбирается отдельно.</p>
+                        {readingState.chapterReading.specialCount ? <p>Спецвыпуски: {readingState.chapterReading.specialReadCount} / {readingState.chapterReading.specialCount}</p> : null}
+                        <p>Отмечайте чтение в списке глав ниже. Статус «Прочитано» выбирается отдельно.</p>
                       </div>
                     ) : (
                       <form action="/api/library/reading-state" method="post" className="mt-3">
@@ -234,10 +223,12 @@ export default async function ComicPage({
                       </form>
                     )}
                   </div>
+                  <details className="journal-editor">
+                    <summary>Оценки и личная заметка <span>{averageRating !== null ? `★ ${averageRating.toFixed(1)} / 5` : ""}{readingState.personalNote ? " · Есть заметка" : ""}</span></summary>
                   <form
                     action="/api/library/reading-state"
                     method="post"
-                    className="border-t border-[var(--border)] pt-5"
+                    className="journal-form"
                   >
                     <input
                       type="hidden"
@@ -346,9 +337,12 @@ export default async function ComicPage({
                       Сохранить оценку и заметку
                     </button>
                   </form>
+                  </details>
 
-                  <TrackingControl comicId={comic.id} enabled={readingState.trackingEnabled} />
+                  <details className="journal-editor"><summary>Обновления <span>{readingState.trackingEnabled ? "Включены" : "Выключены"}</span></summary><TrackingControl comicId={comic.id} enabled={readingState.trackingEnabled} /></details>
                 </div>
+              ) : !currentUser ? (
+                <p className="mt-4"><Link className="tea-primary" href={`/login?next=${encodeURIComponent(`/comics/${comic.slug}`)}`}>Войти и вести дневник</Link></p>
               ) : (
                 <div className="mt-4">
                   <p className="text-sm text-[var(--text-secondary)]">
@@ -383,11 +377,22 @@ export default async function ComicPage({
               )}
             </section>
 
+        <div id="chapters" className="reader-panel work-chapters">
+            <ChapterReadingPanel
+              comicId={comic.id}
+              chapters={(readingState?.chapterReading.registry ?? chapters)
+                .filter((c) => c.status === "RELEASED" || (c.status === "ARCHIVED" && readingState?.chapterReading.readIds.includes(c.id)))
+                .map((c) => ({ id: c.id, displayCode: c.displayCode, title: c.title, sourceUrl: c.sourceUrl, sortOrder: c.sortOrder, status: c.status, kind: c.kind, supersedesChapterId: c.supersedesChapterId }))}
+              readIds={readingState?.chapterReading.readIds ?? []}
+              canMark={readingState !== null}
+            />
+
+        </div>
             {comic.visibility ===
               "PRIVATE" &&
             currentUser?.id ===
               comic.ownerUserId ? (
-              <section className="mt-8 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] p-5">
+              <details className="reader-panel private-settings"><summary>Настройки личного произведения</summary>
                 <h2 className="font-semibold">
                   Метаданные личного тайтла
                 </h2>
@@ -486,22 +491,8 @@ export default async function ComicPage({
                     </button>
                   </div>
                 </form>
-              </section>
+              </details>
             ) : null}
-
-            <div className="mt-8">
-              <a
-                href={comic.sourceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex rounded-xl bg-[var(--primary)] px-5 py-3 font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
-              >
-                {comic.visibility ===
-                "PRIVATE"
-                  ? "Открыть источник"
-                  : "Читать в VK"}
-              </a>
-            </div>
 
             {comic.visibility ===
               "PRIVATE" &&
@@ -540,8 +531,6 @@ export default async function ComicPage({
                 </button>
               </form>
             ) : null}
-          </div>
-        </div>
       </article>
     </div>
   );

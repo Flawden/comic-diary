@@ -1633,7 +1633,7 @@ export function AdminComicManager({
                                           busyKey !==
                                           null
                                         }
-                                        className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm text-white disabled:opacity-60"
+                                        className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm text-[var(--primary-foreground)] disabled:opacity-60"
                                       >
                                         Сохранить
                                       </button>
@@ -1945,7 +1945,7 @@ export function AdminComicManager({
                           categories.length ===
                             0
                         }
-                        className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+                        className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)] disabled:cursor-wait disabled:opacity-60"
                       >
                         Сохранить изменения
                       </button>

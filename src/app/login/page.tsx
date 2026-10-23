@@ -60,7 +60,7 @@ export default async function LoginPage({
           Comic Diary
         </p>
 
-        <h1 className="mt-2 text-3xl font-bold">
+        <h1 className="mt-2 reader-title">
           Вход
         </h1>
 

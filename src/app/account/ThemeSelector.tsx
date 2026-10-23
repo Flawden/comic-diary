@@ -37,7 +37,7 @@ export function ThemeSelector({ initialTheme }: { initialTheme: ThemeId }) {
     <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8">
       <h2 className="text-lg font-semibold">Оформление</h2>
       <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-        Выберите удобную тему. Она сохраняется в этом браузере на год и применяется ко всему сайту.
+        Выберите настроение для чтения. Тема сохранится в этом браузере.
       </p>
       <fieldset className="mt-4 grid gap-3 sm:grid-cols-3">
         <legend className="sr-only">Тема оформления</legend>
@@ -47,7 +47,8 @@ export function ThemeSelector({ initialTheme }: { initialTheme: ThemeId }) {
           return (
             <label key={theme} className={`flex cursor-pointer gap-3 rounded-xl border p-4 ${selected === theme ? "border-[var(--primary)] bg-[var(--surface-raised)]" : "border-[var(--border)]"}`}>
               <input type="radio" name="theme" value={theme} checked={selected === theme} onChange={() => choose(theme)} className="mt-1 accent-[var(--primary)]" />
-              <span>
+              <span className="theme-choice-content">
+                <span className={`theme-preview theme-preview-${theme}`} aria-hidden="true"><i /><i /><i /></span>
                 <span className="block font-semibold">{description.label}</span>
                 <span className="mt-1 block text-sm text-[var(--text-secondary)]">{description.detail}</span>
               </span>

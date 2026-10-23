@@ -31,13 +31,13 @@ export default async function AdminCategoriesPage() {
 
   if (!access.canEditCatalog) {
     return (
-      <main className="mx-auto min-h-screen max-w-3xl px-4 py-10 sm:px-8">
-        <h1 className="text-3xl font-bold">
+      <div className="reader-page admin-page">
+        <h1 className="reader-title">
           Доступ запрещён
         </h1>
 
         <p className="mt-4 text-sm text-[var(--muted)]">
-          Требуется разрешение EDIT_SHARED_CATALOG.
+          Этот раздел доступен редакторам и администраторам.
         </p>
 
         <Link
@@ -46,7 +46,7 @@ export default async function AdminCategoriesPage() {
         >
           ← В панель управления
         </Link>
-      </main>
+      </div>
     );
   }
 
@@ -54,21 +54,19 @@ export default async function AdminCategoriesPage() {
     await listAdminCategories();
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-4 py-10 sm:px-8">
+    <div className="reader-page admin-page">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-[var(--primary)]">
-            R7.4 · Admin
+            Панель управления
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold">
+          <h1 className="mt-2 reader-title">
             Управление категориями
           </h1>
 
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-            Slug категории — канонический идентификатор и после создания
-            не переименовывается. R7.4 изменяет только название и описание
-            и не предоставляет destructive delete.
+            Создавайте категории и редактируйте их названия и описания. Адрес категории после создания сохраняется.
           </p>
         </div>
 
@@ -76,7 +74,7 @@ export default async function AdminCategoriesPage() {
           href="/admin"
           className="rounded-xl border border-black/10 bg-[var(--surface)] px-4 py-2 text-sm font-semibold"
         >
-          ← Админка
+          ← Панель управления
         </Link>
       </div>
 
@@ -91,6 +89,6 @@ export default async function AdminCategoriesPage() {
           )
         }
       />
-    </main>
+    </div>
   );
 }

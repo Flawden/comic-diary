@@ -437,7 +437,7 @@ export function AdminUserManager({
                     busyId !==
                     null
                   }
-                  className="min-h-10 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+                  className="min-h-10 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)] disabled:cursor-wait disabled:opacity-60"
                 >
                   Сохранить
                 </button>

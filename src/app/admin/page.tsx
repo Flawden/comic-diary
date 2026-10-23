@@ -27,7 +27,7 @@ export default async function AdminPage() {
 
   if (!access.canAccessWorkspace) {
     return (
-      <main className="mx-auto min-h-screen max-w-3xl px-4 py-10 sm:px-8">
+      <div className="reader-page admin-page">
         <p className="text-sm font-semibold text-[var(--primary)]">
           Comic Diary
         </p>
@@ -47,7 +47,7 @@ export default async function AdminPage() {
         >
           Вернуться в каталог
         </Link>
-      </main>
+      </div>
     );
   }
 
@@ -55,7 +55,7 @@ export default async function AdminPage() {
     await getAdminDashboardCounts();
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-4 py-10 sm:px-8">
+    <div className="reader-page admin-page">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-[var(--primary)]">
@@ -83,7 +83,7 @@ export default async function AdminPage() {
       <section className="mt-8 grid gap-4 sm:grid-cols-3">
         <article className="rounded-2xl bg-[var(--surface)] p-6 shadow-sm">
           <p className="text-sm text-[var(--muted)]">
-            Комиксов в PostgreSQL
+            Комиксов в каталоге
           </p>
 
           <p className="mt-2 text-3xl font-bold">
@@ -112,7 +112,7 @@ export default async function AdminPage() {
         </article>
       </section>
 
-      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {access.canEditCatalog ? (
           <Link
             href="/admin/comics"
@@ -140,7 +140,7 @@ export default async function AdminPage() {
 
             <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
               Создание категорий и безопасное редактирование
-              названия и описания без destructive delete.
+              названия и описания.
             </p>
           </Link>
         ) : null}
@@ -171,8 +171,7 @@ export default async function AdminPage() {
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-              Существующий review/discovery/import workspace
-              с production kill-switch.
+              Проверка и добавление произведений из VK.
             </p>
           </Link>
         ) : null}
@@ -187,8 +186,7 @@ export default async function AdminPage() {
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-              Неизменяемая история редакторских и административных
-              действий с actor, target и временем.
+              История изменений каталога и аккаунтов.
             </p>
           </Link>
         ) : null}
@@ -201,6 +199,6 @@ export default async function AdminPage() {
       >
         ← В каталог
       </Link>
-    </main>
+    </div>
   );
 }
