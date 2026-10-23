@@ -100,3 +100,14 @@ systemd unit syntax and calendar were checked locally (a Docker service stub was
 needed because Docker/systemd is unavailable in the authoring environment).
 Real first backup and timer activation require server output; scheduled execution
 requires observing the next run. No operational PASS is claimed from unit tests.
+
+
+## Confirmed installation and next acceptance (2026-10-23)
+
+Operator output on 2026-10-22 established INSTALL=PASS, the initial verified
+`backup-20261022T164845Z-81d03560`, active/enabled timer, and next run at 03:18:34
+Moscow on 2026-10-23. CI 39816827137 passed all release jobs at 813efef.
+The later scheduled invocation has not yet been supplied as evidence.
+Use `deploy/scripts/CHECK_COMIC_DIARY_RELEASE_STATUS.sh` for a read-only check;
+it distinguishes a timer trigger with a matching service invocation from a later
+manual execution. Current acceptance is in `release-readiness.md`.

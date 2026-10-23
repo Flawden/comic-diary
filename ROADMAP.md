@@ -2,6 +2,28 @@
 
 This document is the canonical development roadmap for Comic Diary.
 
+## Current acceptance index — 2026-10-23
+
+Current status/evidence and the ordered release checklist:
+[Web release readiness](docs/operations/release-readiness.md).
+
+- R6 authentication is CLOSED by its dedicated closure document. Older planning
+  text is historical; the current regression checklist remains applicable.
+- Catalog/library/chapters/admin/account/export implementations are present.
+  CD-05 desktop and CD-06 first-release scope have operator acceptance.
+- White Dragon library/shell (`409f824`) and reader pages (`d629907`) deployed with
+  green Verify/PostgreSQL/image/deploy jobs. Operator visual feedback is positive;
+  live post-redesign functional desktop/mobile acceptance remains open.
+- CD-07 remains IN PROGRESS: daily backup installation, initial verified snapshot
+  and active timer were confirmed on 2026-10-22. The subsequent scheduled run,
+  recurring off-host copy, alerts and authenticated restored-copy checks still
+  need evidence. New operational/isolated authenticated check tools are prepared.
+- Next: collect release evidence, complete live acceptance, configure off-host
+  backup/alerts after choosing destinations; then CD-08 source sync/calendar.
+
+Historical delivery notes below record their status at the time of delivery.
+
+
 It records both completed historical milestones and the planned direction of the project.
 
 ## Product Goal
@@ -531,7 +553,9 @@ Comic pages remain external; the application should link to the approved source 
 
 # R6 — Authentication & Roles
 
-Status: IN PROGRESS
+Status: COMPLETE
+
+Closure: [R6 authentication program](docs/operations/r6-authentication-program-closure.md).
 
 Goal:
 
@@ -570,7 +594,7 @@ Completed acceptance:
 
 ## R6.2 — Login / Logout
 
-Status: PLANNED
+Status: COMPLETE
 
 - dedicated password hashing with Argon2id or equivalent;
 - normalized login identifier handling;
@@ -584,7 +608,7 @@ Status: PLANNED
 
 ## R6.3 — Request Identity & Authorization
 
-Status: PLANNED
+Status: COMPLETE
 
 - resolve authenticated user for server-rendered pages;
 - resolve authenticated user for route handlers;
@@ -601,7 +625,7 @@ Status: PLANNED
 
 ## R6.4 — Admin Bootstrap
 
-Status: PLANNED
+Status: COMPLETE
 
 - secure first-admin creation procedure;
 - no hard-coded production admin password;
@@ -613,7 +637,7 @@ Status: PLANNED
 
 ## R6.5 — Authentication Production Proof
 
-Status: PLANNED
+Status: COMPLETE
 
 - deploy additive auth and authorization migrations;
 - validate anonymous behavior;
@@ -629,11 +653,11 @@ Status: PLANNED
 
 ---
 
-# R7 — Admin Panel---
-
 # R7 — Admin Panel
 
-Status: PLANNED
+Status: IN PROGRESS
+
+Implementation exists; consolidated post-redesign release acceptance remains open.
 
 Goal:
 
@@ -697,8 +721,6 @@ and shared-catalog editing area.
 - distinguish EDITOR content actions from ADMIN security/account actions.
 
 ---
-
-# R8 — User Account & Catalog UX---
 
 # R8 — User Account, Reading Diary & Catalog UX
 
@@ -1031,7 +1053,7 @@ visual acceptance remain pending.
 
 ## UI-F6 — Admin Visual Migration
 
-Status: PLANNED
+Status: IN PROGRESS
 
 - keep administration visually consistent with the reader application;
 - use compact cards, sheets/panels and contextual actions;
@@ -1041,7 +1063,7 @@ Status: PLANNED
 
 ## UI-F7 — Account & Theme Selector
 
-Status: PLANNED
+Status: IN PROGRESS
 
 - migrate account/profile surfaces;
 - expose a user-facing diary style selector;
@@ -1051,7 +1073,7 @@ Status: PLANNED
 
 ## UI-F8 — UX Completion
 
-Status: PLANNED
+Status: IN PROGRESS
 
 - loading and skeleton states;
 - empty states;
@@ -1064,7 +1086,7 @@ Status: PLANNED
 
 ## UI-F9 — Web Release Hardening
 
-Status: PLANNED
+Status: IN PROGRESS
 
 Before declaring the web application complete:
 
@@ -1093,7 +1115,7 @@ workflows and visual/UX decisions.
 
 # R9 — Production Reliability & Security
 
-Status: PLANNED
+Status: IN PROGRESS
 
 Goal:
 
@@ -1535,3 +1557,19 @@ UI, monitoring and remaining release matrix items are not implicitly closed.
 - [ ] Accept the second design slice with live authenticated data on desktop/mobile.
 
 Implementation and validation scope: `docs/design/white-dragon.md`.
+
+
+## CD-07 release evidence reconciliation — 2026-10-23
+
+Backup installation and active timer at 813efef were operator-confirmed on
+2026-10-22; the earlier “installation pending” entry is superseded by this evidence.
+CI 39816827137 passed Verify, PostgreSQL checks, image publication and deployment.
+White Dragon d629907 passed the same jobs in CI 39937740617 and received positive
+operator visual feedback. This does not close live functional mobile/desktop gates.
+
+Prepared: read-only scheduled-backup status check and authenticated render/export
+comparison in the isolated restored application. Local syntax/comparator/status
+unit tests pass; server execution is pending. Off-host destination and alert channel
+are unresolved; recurring transfer, encryption, destination retention and delivered
+alerts are not installed. Current remaining gates and evidence are maintained in
+`docs/operations/release-readiness.md`. CD-07/UI-F9/R9 remain IN PROGRESS.

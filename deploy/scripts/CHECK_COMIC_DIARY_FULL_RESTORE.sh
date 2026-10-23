@@ -11,6 +11,9 @@ for tool in docker sha256sum mktemp python3 tar; do
   command -v "$tool" >/dev/null || { echo "Missing command: $tool" >&2; exit 1; }
 done
 
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+diary_probe="$script_dir/CHECK_COMIC_DIARY_RESTORED_DIARY.cjs"
+[[ -f $diary_probe && ! -L $diary_probe ]] || { echo 'Copy CHECK_COMIC_DIARY_RESTORED_DIARY.cjs next to this script.'; exit 1; }
 compose_file=/opt/comic-diary/compose.yml
 [[ -f $compose_file ]] || { echo "Compose file not found: $compose_file" >&2; exit 1; }
 cd /opt/comic-diary
@@ -160,7 +163,7 @@ app_id=$(docker create --network "$network_id" --label comic-diary.cd07.restore-
   --mount "type=bind,src=$backup_dir/restored-media,dst=/app/data/media,readonly" \
   -e DATABASE_URL=postgresql://restore_probe@restore-db:5432/restore_probe \
   -e MEDIA_ROOT=/app/data/media -e ADMIN_IMPORT_ENABLED=false \
-  -e NEXT_TELEMETRY_DISABLED=1 "$app_image")
+  -e NEXT_TELEMETRY_DISABLED=1 -e CD07_ISOLATED_RESTORE=true "$app_image")
 [[ $app_id =~ ^[a-f0-9]{64}$ ]] || exit 1
 docker start "$app_id" >/dev/null
 ready=false
@@ -223,6 +226,8 @@ JS
 
 echo 'MEDIA_RESTORE=PASS'
 echo 'APP_ON_RESTORED_DATABASE=PASS; public HTTP checks and anonymous export boundary'
-echo 'AUTHENTICATED_DIARY_UI=NOT_TESTED'
+echo '===== AUTHENTICATED RESTORED DIARY ====='
+docker exec -i "$app_id" node < "$diary_probe"
+echo 'AUTHENTICATED_DIARY_HTTP=PASS; authenticated rendering and exported diary values verified on restored DB'
 echo 'EXTERNAL_COVER_URLS=NOT_TESTED'
 echo 'OFF_HOST_BACKUP=NOT_TESTED; copy backups to separate storage'
