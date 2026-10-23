@@ -15,9 +15,9 @@ Current status/evidence and the ordered release checklist:
   green Verify/PostgreSQL/image/deploy jobs. Operator visual feedback is positive;
   live post-redesign functional desktop/mobile acceptance remains open.
 - CD-07 remains IN PROGRESS: daily backup installation, initial verified snapshot
-  and active timer were confirmed on 2026-10-22. The subsequent scheduled run,
-  recurring off-host copy, alerts and authenticated restored-copy checks still
-  need evidence. New operational/isolated authenticated check tools are prepared.
+  and active timer were confirmed on 2026-10-22. The first scheduled run was
+  confirmed on 2026-10-23 at 03:18:38–03:18:39 Moscow. Recurring off-host copy,
+  alerts and authenticated restored-copy checks still need evidence. New operational/isolated authenticated check tools are prepared.
 - Next: collect release evidence, complete live acceptance, configure off-host
   backup/alerts after choosing destinations; then CD-08 source sync/calendar.
 
@@ -1573,3 +1573,16 @@ unit tests pass; server execution is pending. Off-host destination and alert cha
 are unresolved; recurring transfer, encryption, destination retention and delivered
 alerts are not installed. Current remaining gates and evidence are maintained in
 `docs/operations/release-readiness.md`. CD-07/UI-F9/R9 remain IN PROGRESS.
+
+
+## CD-07 first scheduled backup confirmed — 2026-10-23
+
+Operator status/systemctl/journal evidence confirms timer trigger and service start
+at 03:18:38 Moscow, successful completion at 03:18:39, Result=success and exit 0.
+`backup-20261023T001839Z-665c23d1` passes hash/freshness and last-attempt checks.
+CI 39943925506 at ccbb77d passed all four release jobs. The release-status checker
+needed a format correction: systemctl timer monotonic times are displayed as spans,
+while service timestamps are integer microseconds. Exact parsing and regression
+tests now cover both. Server rerun of the corrected checker is pending; the first
+scheduled run is established by the independent supplied operational logs.
+Off-host automation, alerts and authenticated isolated restore remain open.

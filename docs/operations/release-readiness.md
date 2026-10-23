@@ -15,6 +15,8 @@ states. No open item below is closed by a screenshot, unit test or green build a
 | DB/media recovery drill | `/opt/comic-diary/backups/cd07-full-restore-nzi1UOlk`, operator log 2026-10-18 | DB restore, media roundtrip, public app/cover HTTP checks passed |
 | Manual off-host copy | Windows `comic-diary-backup-20261018-180041`, operator log | Outer/inner hashes passed; one copy, not recurring automation |
 | Daily backup installation | Operator log 2026-10-22; `backup-20261022T164845Z-81d03560` | Eight tests, first verified backup, enabled/active timer passed |
+| First scheduled backup | Operator systemctl/journal/status logs 2026-10-23 | Timer/service started 03:18:38 Moscow, completed 03:18:39, service exit 0 and checksummed fresh backup passed |
+| Release evidence tooling | `ccbb77d`, CI 39943925506 | Verify, PostgreSQL, image and deploy passed |
 | Backup code CI/deploy | `813efef`, CI 39816827137 | All four jobs passed |
 | Responsive reader fixtures | `docs/design/white-dragon.md` | Four pages × four widths; themes, disclosures and selected error/form contracts passed locally |
 
@@ -25,7 +27,8 @@ CI links:
 
 ## Remaining gates, in order
 
-1. Collect scheduled-backup evidence after installation using
+1. First scheduled-backup execution is CONFIRMED by the operator logs of
+   2026-10-23. For subsequent read-only verification use
    `deploy/scripts/CHECK_COMIC_DIARY_RELEASE_STATUS.sh`. This is read-only. It
    requires a fresh timer trigger and successful service invocation starting
    within 90 seconds of that trigger, plus fresh checksummed backup and successful
@@ -91,3 +94,19 @@ manual execution overwrites the service's most recent invocation timestamps.
 Local verification for this checkpoint: Bash/Node syntax, 13 Python backup/status
 unit tests and three Node comparator/isolation tests. Real Docker/systemd recovery
 and notification/off-host delivery cannot be established in the authoring runtime.
+
+
+## Ubuntu systemctl timestamp correction — 2026-10-23
+
+The first release-status script returned INVALID_TIMESTAMPS because this host's
+systemctl renders LastTriggerUSecMonotonic as `1d 20h 58min 26.960273s`, while
+ExecMain*TimestampMonotonic values are integer microseconds. Both forms are now
+parsed exactly, including decimal seconds, with unknown/invalid values rejected.
+The matching-window, stale/future, successful-exit and last-backup checks remain.
+
+Operator evidence: timer trigger and service start at 03:18:38 Moscow; successful
+exit at 03:18:39; journal BACKUP=PASS for
+`backup-20261023T001839Z-665c23d1`; status verifies hashes/freshness and last attempt.
+This closes the first scheduled-run gate, not off-host/alerts/restore acceptance.
+Regression tests use the exact supplied monotonic values. Updated script execution
+on the host remains to be collected; the prior FAIL was a checker parsing error.

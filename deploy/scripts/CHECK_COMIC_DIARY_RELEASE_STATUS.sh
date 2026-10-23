@@ -4,6 +4,7 @@ set -Eeuo pipefail
 [[ $EUID -eq 0 ]] || { echo 'Run with sudo bash CHECK_COMIC_DIARY_RELEASE_STATUS.sh'; exit 1; }
 python3 - <<'PY'
 import datetime as dt
+from decimal import Decimal
 import json
 import math
 from pathlib import Path
@@ -12,14 +13,41 @@ import subprocess
 import sys
 
 
+def monotonic_microseconds(value):
+    """systemctl prints service timestamps as integers, timer times as spans."""
+    text = str(value).strip()
+    if re.fullmatch(r'[0-9]+', text):
+        return int(text)
+    units = {'w': 604800000000, 'd': 86400000000, 'h': 3600000000,
+             'min': 60000000, 's': 1000000, 'ms': 1000, 'us': 1, 'µs': 1}
+    total = Decimal(0)
+    position = 0
+    previous_scale = None
+    matches = list(re.finditer(r'([0-9]+(?:\.[0-9]+)?)(min|ms|us|µs|w|d|h|s)', text))
+    if not matches:
+        raise ValueError('Unavailable monotonic timestamp')
+    for match in matches:
+        if text[position:match.start()].strip():
+            raise ValueError('Invalid monotonic span')
+        scale = units[match[2]]
+        if previous_scale is not None and scale >= previous_scale:
+            raise ValueError('Unexpected monotonic unit order')
+        previous_scale = scale
+        total += Decimal(match[1]) * scale
+        position = match.end()
+    if text[position:].strip() or total != total.to_integral_value():
+        raise ValueError('Invalid monotonic span precision')
+    return int(total)
+
+
 def schedule_evidence(timer, service, uptime_us):
     """Match a timer activation to the most recent completed service invocation."""
     if timer.get('LoadState') != 'loaded' or timer.get('ActiveState') != 'active':
         return False, 'TIMER_NOT_ACTIVE'
     try:
-        trigger = int(timer.get('LastTriggerUSecMonotonic', 0))
-        start = int(service.get('ExecMainStartTimestampMonotonic', 0))
-        end = int(service.get('ExecMainExitTimestampMonotonic', 0))
+        trigger = monotonic_microseconds(timer.get('LastTriggerUSecMonotonic', 0))
+        start = monotonic_microseconds(service.get('ExecMainStartTimestampMonotonic', 0))
+        end = monotonic_microseconds(service.get('ExecMainExitTimestampMonotonic', 0))
         exit_status = int(service.get('ExecMainStatus', -1))
     except (ValueError, TypeError):
         return False, 'INVALID_TIMESTAMPS'
