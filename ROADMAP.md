@@ -1586,3 +1586,14 @@ while service timestamps are integer microseconds. Exact parsing and regression
 tests now cover both. Server rerun of the corrected checker is pending; the first
 scheduled run is established by the independent supplied operational logs.
 Off-host automation, alerts and authenticated isolated restore remain open.
+
+
+## CD-07 restored diary execution correction — 2026-10-23
+
+Corrected release-status script passed on the host after 55eb954. The full drill
+at cd07-full-restore-kAKjiJj8 passed database/media/public HTTP checks, but its
+authenticated wrapper PASS was invalid because the streamed Node probe never
+entered its main function. This does not close authenticated restored-copy
+acceptance. Explicit stdin execution, required detailed PASS output and log drain
+are now implemented with a stdin entry/isolation regression. Fresh server evidence
+including account/entry/mark counts and final RESULT remains required.

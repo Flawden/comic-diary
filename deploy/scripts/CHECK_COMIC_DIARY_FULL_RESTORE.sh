@@ -33,7 +33,9 @@ image=$(docker inspect --format '{{.Image}}' "$source_db")
 mkdir -p /opt/comic-diary/backups
 backup_dir=$(mktemp -d /opt/comic-diary/backups/cd07-full-restore-XXXXXXXX)
 chmod 700 "$backup_dir"
+exec 3>&1 4>&2
 exec > >(tee -a "$backup_dir/check.log") 2>&1
+log_pid=$!
 printf 'BACKUP=%s\n' "$backup_dir"
 printf 'DATABASE_IMAGE=%s\n' "$image"
 restore_id=''
@@ -60,6 +62,10 @@ cleanup() {
     echo 'RESULT=FAIL; backup and log retained; production database was not restored or changed'
   fi
   echo "BACKUP=$backup_dir"
+  # Drain tee before the remote SSH command closes its output channel.
+  exec 1>&3 2>&4
+  exec 3>&- 4>&-
+  wait "$log_pid" || code=1
   exit "$code"
 }
 trap cleanup EXIT
@@ -227,7 +233,12 @@ JS
 echo 'MEDIA_RESTORE=PASS'
 echo 'APP_ON_RESTORED_DATABASE=PASS; public HTTP checks and anonymous export boundary'
 echo '===== AUTHENTICATED RESTORED DIARY ====='
-docker exec -i "$app_id" node < "$diary_probe"
+diary_output=$(docker exec -i "$app_id" node - < "$diary_probe")
+printf '%s\n' "$diary_output"
+[[ $diary_output == *'AUTHENTICATED_RESTORED_DIARY=PASS; accounts='* && $diary_output == *'RESTORED_DIARY_VALUES=PASS;'* ]] || {
+  echo 'AUTHENTICATED_DIARY_HTTP=FAIL; detailed verification output missing'
+  exit 1
+}
 echo 'AUTHENTICATED_DIARY_HTTP=PASS; authenticated rendering and exported diary values verified on restored DB'
 echo 'EXTERNAL_COVER_URLS=NOT_TESTED'
 echo 'OFF_HOST_BACKUP=NOT_TESTED; copy backups to separate storage'

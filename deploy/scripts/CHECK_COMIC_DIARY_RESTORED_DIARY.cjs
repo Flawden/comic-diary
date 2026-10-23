@@ -95,7 +95,7 @@ async function run() {
 }
 
 module.exports = { verifyIsolation, verifyExport };
-if (require.main === module) run().catch(() => {
+if (require.main === module || process.argv[1] === '-') run().catch(() => {
   // Assertion values can include private notes or session information: never print the error.
   console.error('AUTHENTICATED_RESTORED_DIARY=FAIL; inspect isolated setup/schema or missing fixture coverage');
   process.exitCode=1;

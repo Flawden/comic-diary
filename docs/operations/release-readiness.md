@@ -110,3 +110,19 @@ exit at 03:18:39; journal BACKUP=PASS for
 This closes the first scheduled-run gate, not off-host/alerts/restore acceptance.
 Regression tests use the exact supplied monotonic values. Updated script execution
 on the host remains to be collected; the prior FAIL was a checker parsing error.
+
+
+## Restored diary stdin entry point correction — 2026-10-23
+
+Operator rerun of the timestamp-fixed status check returned RESULT=PASS with
+SCHEDULED_RUN_EVIDENCE=PASS, BACKUP_STATUS=PASS and LAST_ATTEMPT=PASS.
+Full restore at `/opt/comic-diary/backups/cd07-full-restore-kAKjiJj8` passed DB,
+media and public HTTP checks. Its authenticated wrapper line was insufficient:
+the child probe was streamed to Node stdin, where require.main did not select its
+entry point, so the function never ran. Authenticated acceptance is NOT closed.
+The helper now explicitly supports `node -`, with a regression proving execution
+and isolation refusal via stdin. The shell requires both detailed PASS markers;
+a successful exit with no verification output cannot pass. The log writer is
+also drained before SSH exit, so final cleanup/result lines can be collected.
+Rerun the updated full drill and require the account/entry/mark counts,
+RESTORED_DIARY_VALUES=PASS and final RESULT=PASS before closure.

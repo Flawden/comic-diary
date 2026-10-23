@@ -28,3 +28,16 @@ test('missing/foreign entry, changed note/rating/mark or wrong format fail',()=>
     x=>x.entries[0].diary.trackingEnabled=true,
   ]) { const value=snapshot(); mutate(value);assert.throws(()=>verifyExport(value,[row],marks)); }
 });
+
+test('stdin entry point really runs and rejects a non-isolated environment',()=>{
+  const {spawnSync}=require('node:child_process');
+  const {readFileSync}=require('node:fs');
+  const path=require('node:path');
+  const result=spawnSync(process.execPath,['-'],{
+    input:readFileSync(path.join(__dirname,'CHECK_COMIC_DIARY_RESTORED_DIARY.cjs'),'utf8'),
+    encoding:'utf8',env:{...process.env,CD07_ISOLATED_RESTORE:'false',DATABASE_URL:'postgresql://blocked@production/blocked'},timeout:5000,
+  });
+  assert.equal(result.status,1);
+  assert.match(result.stderr,/AUTHENTICATED_RESTORED_DIARY=FAIL/);
+  assert(!result.stdout.includes('=PASS'));
+});
