@@ -57,6 +57,11 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
         run: python3 -m unittest discover -s deploy/keeper -p test_keeper.py -v
 
+      - name: Restricted backup export tests
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python3 -m unittest discover -s deploy/offhost -p 'test*.py' -v
+
       - name: Build application
         run: npm run build
         env:
@@ -65,6 +70,19 @@ jobs:
 
       - name: Build Docker verification image
         run: docker build -t comic-diary:ci .
+
+  windows-backup-client:
+    name: Windows backup client
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Windows PowerShell 5.1 archive, hash and binary transport checks
+        shell: powershell
+        run: ./deploy/offhost/Test-WindowsPull.ps1
 
   database:
     name: PostgreSQL release checks
@@ -157,6 +175,7 @@ jobs:
     needs:
       - verify
       - database
+      - windows-backup-client
 
     runs-on: ubuntu-latest
 

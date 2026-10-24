@@ -1629,3 +1629,19 @@ getpass input now has real PTY/no-echo and noninteractive-refusal regressions
 (12 keeper tests total). Windows recovery also separates Git warning stderr from
 filename stdout; the initial package is applied locally but not committed yet.
 Keeper server activation/delivery still require successful reinstallation evidence.
+
+## CD-07 delivered Telegram and Windows pull — 2026-10-24
+
+Operator evidence confirms 5040594 / CI 40061261021 successful, keeper timer active
+with a subsequent scheduled trigger, pairing to @ComicDiaryKeeperBot and receipt
+of both welcome and new-backup messages. Basic real Telegram delivery is confirmed;
+real failure/recovery delivery and an external full-host outage monitor remain open.
+
+Prepared restricted SSH exporter and Windows pull in `deploy/offhost`, with a
+Windows PowerShell 5.1 CI gate before image publication. Windows downloads and
+checks all files before registering its current-user daily/logon task, retaining
+30 verified managed local copies. Destination defaults to
+`C:\Users\Atell\Backups\ComicDiary`. Eight Python export tests pass locally.
+Windows CI, host installation, first actual off-host download and task execution
+remain pending. Restore from a downloaded automatic copy remains a separate gate.
+See `docs/operations/cd07-windows-pull.md`. CD-07 remains IN PROGRESS.

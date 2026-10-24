@@ -139,3 +139,19 @@ entries are historical. Browser interaction coverage remains open.
 Telegram monitoring is implemented with local unit tests; installation and actual
 delivery remain pending. Off-host destination chosen: Windows PC using SSH pull.
 The pull/exporter/scheduler and off-host restore have not yet been installed.
+
+## Current checkpoint — 2026-10-24
+
+5040594 / CI 40061261021 passed. Operator confirmed @ComicDiaryKeeperBot pairing,
+welcome and new-backup delivery, enabled keeper timer and its next trigger. These
+supersede earlier basic Telegram installation/delivery pending notes. Failure and
+recovery delivery have unit coverage but no real incident drill evidence.
+
+Windows off-host pull is now implemented, not installed or operator-verified:
+restricted read-only SSH identity, pinned host key, all-file hashes, binary archive
+transport, atomic local completion and 30-copy managed retention. Its task runs at
+04:00 PC-local time and user logon; requires an interactive user session. Windows
+CI is a publishing prerequisite. See `cd07-windows-pull.md` for installation and
+limits. Pending: Windows CI, first verified PC download, actual scheduled pull,
+and isolated restore of a downloaded automatic snapshot. Telegram has no off-host
+receipt and still reports copies as stored on the VPS.
