@@ -29,7 +29,10 @@ if (-not (Test-Path -LiteralPath $key)) {
 }
 Set-PrivateAcl $key
 $derived=(Invoke-TextProcess $keygenExe @('-y','-P','','-f',$key)).Trim()
-if ($derived -notmatch '^ssh-ed25519 [A-Za-z0-9+/=]+$') { throw 'Unexpected key format.' }
+if ($derived -notmatch '^(ssh-ed25519 [A-Za-z0-9+/=]+)(?:[ \t]+[^\r\n]*)?$') {
+    throw 'Unexpected key format.'
+}
+$derived = $Matches[1]
 [IO.File]::WriteAllText(($key+'.pub'),$derived+' '+$script:PullManagedBy+"`n",(New-Object Text.UTF8Encoding($false)))
 # Pin the public host key through the already-trusted administrative SSH connection.
 $hostKey=(Invoke-TextProcess $sshExe @('-o','ConnectTimeout=20','lab','cat /etc/ssh/ssh_host_ed25519_key.pub')).Trim()

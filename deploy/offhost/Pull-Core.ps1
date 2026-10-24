@@ -22,7 +22,12 @@ function Assert-LocalPath {
 function Set-PrivateAcl {
     param([string]$Path)
     $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User
-    $acl = Get-Acl -LiteralPath $Path
+    $isDirectory = Test-Path -LiteralPath $Path -PathType Container
+    if ($isDirectory) {
+        $acl = New-Object Security.AccessControl.DirectorySecurity
+    } else {
+        $acl = New-Object Security.AccessControl.FileSecurity
+    }
     $acl.SetAccessRuleProtection($true,$false)
     foreach ($rule in @($acl.Access)) { [void]$acl.RemoveAccessRuleSpecific($rule) }
     if (Test-Path -LiteralPath $Path -PathType Container) {
@@ -30,7 +35,11 @@ function Set-PrivateAcl {
     } else { $rule = New-Object Security.AccessControl.FileSystemAccessRule($sid,'FullControl','Allow') }
     $acl.SetOwner($sid)
     $acl.AddAccessRule($rule)
-    Set-Acl -LiteralPath $Path -AclObject $acl
+    if ($isDirectory) {
+        [IO.Directory]::SetAccessControl($Path, $acl)
+    } else {
+        [IO.File]::SetAccessControl($Path, $acl)
+    }
 }
 
 function Get-WindowsArguments {
