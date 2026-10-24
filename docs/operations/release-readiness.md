@@ -126,3 +126,16 @@ a successful exit with no verification output cannot pass. The log writer is
 also drained before SSH exit, so final cleanup/result lines can be collected.
 Rerun the updated full drill and require the account/entry/mark counts,
 RESTORED_DIARY_VALUES=PASS and final RESULT=PASS before closure.
+
+
+## Confirmed authenticated recovery and Telegram plan — 2026-10-24
+
+The operator supplied the corrected full log for
+`/opt/comic-diary/backups/cd07-full-restore-y2kzwUIY`: detailed authenticated PASS for
+1 account, 1 entry and 3 marks, SQL/export values PASS and final RESULT=PASS.
+CI 39946947257 at eeb40d0 passed Verify, PostgreSQL, image and deploy. Authenticated
+HTTP restore gate is now confirmed for that snapshot; earlier pending/correction
+entries are historical. Browser interaction coverage remains open.
+Telegram monitoring is implemented with local unit tests; installation and actual
+delivery remain pending. Off-host destination chosen: Windows PC using SSH pull.
+The pull/exporter/scheduler and off-host restore have not yet been installed.

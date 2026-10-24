@@ -1,0 +1,18 @@
+# Managed by comic-diary-keeper-v1
+[Unit]
+Description=Comic Diary Telegram backup keeper
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/bin/python3 /usr/local/lib/comic-diary/keeper/keeper.py
+TimeoutStartSec=2min
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/comic-diary-keeper
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX

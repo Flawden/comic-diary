@@ -45,11 +45,17 @@ jobs:
           node --check deploy/scripts/CHECK_COMIC_DIARY_RESTORED_DIARY.cjs
           node --test deploy/scripts/restored-diary-check.test.cjs
           bash -n deploy/backup/install.sh
+          bash -n deploy/keeper/install.sh
 
       - name: Managed backup lifecycle and retention tests
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: python3 -m unittest discover -s deploy/backup -p 'test*.py' -v
+
+      - name: Telegram keeper notification and pairing tests
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python3 -m unittest discover -s deploy/keeper -p test_keeper.py -v
 
       - name: Build application
         run: npm run build

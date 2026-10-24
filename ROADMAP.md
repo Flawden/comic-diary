@@ -1597,3 +1597,35 @@ entered its main function. This does not close authenticated restored-copy
 acceptance. Explicit stdin execution, required detailed PASS output and log drain
 are now implemented with a stdin entry/isolation regression. Fresh server evidence
 including account/entry/mark counts and final RESULT remains required.
+
+
+## CD-07 Telegram keeper implementation — 2026-10-24
+
+Operator evidence at eeb40d0 / CI 39946947257 confirms all four release jobs.
+The isolated drill `/opt/comic-diary/backups/cd07-full-restore-y2kzwUIY` returned
+AUTHENTICATED_RESTORED_DIARY=PASS (1 account, 1 entry, 3 marks),
+RESTORED_DIARY_VALUES=PASS and final RESULT=PASS. This closes restored authenticated
+HTTP render/export acceptance for that snapshot, not browser interactions.
+
+Prepared `deploy/keeper`: lightweight 15-minute backup metadata/timer monitoring,
+new-copy notifications, failure reminders at six-hour intervals, recovery messages,
+secret-free logs and one-time-code private-chat pairing. Token is entered hidden on
+the VPS and stored root-only outside Git. Ten unit tests cover notification state,
+retry, stale/malformed/missing metadata, pairing and filesystem boundaries. CI runs
+them. Server installation and real Telegram delivery remain pending.
+
+Chosen off-host direction: Windows pulls completed copies over SSH when available;
+no VPN or incoming PC connection required. Restricted download identity, transfer,
+Windows schedule, destination retention and restore from a downloaded automatic
+snapshot are still unimplemented/unverified. The monitor does not claim off-host
+protection or detect complete VPS/network loss from outside the host.
+
+
+## CD-07 keeper installation correction — 2026-10-24
+
+Operator installation ran the ten monitor tests successfully, but pairing stopped
+before asking for a token due to nonseekable /dev/tty opened in r+ mode. Corrected
+getpass input now has real PTY/no-echo and noninteractive-refusal regressions
+(12 keeper tests total). Windows recovery also separates Git warning stderr from
+filename stdout; the initial package is applied locally but not committed yet.
+Keeper server activation/delivery still require successful reinstallation evidence.

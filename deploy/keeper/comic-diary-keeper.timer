@@ -1,0 +1,12 @@
+# Managed by comic-diary-keeper-v1
+[Unit]
+Description=Check Comic Diary backups every 15 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=15min
+AccuracySec=1min
+Unit=comic-diary-keeper.service
+
+[Install]
+WantedBy=timers.target
