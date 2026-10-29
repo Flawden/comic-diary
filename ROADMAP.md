@@ -1,5 +1,19 @@
 # Comic Diary Roadmap
 
+## Active roadmap — 2026-10-29
+
+Current work queue: [White Dragon product roadmap](docs/design/white-dragon-roadmap.md).
+Source audit and first delivery scope: [b46d6d1 audit](docs/design/white-dragon-source-audit.md).
+
+Approved three-screen design is the next product direction. WD-00 static source audit is complete; runtime/visual baseline remains open. Next delivery: shared foundation and diary on existing /library; catalog stays at /.
+
+Operations confirmed by supplied logs: Telegram welcome/new-copy delivery, three verified Windows copies, manual scheduled-task execution, isolated database restore from a Windows copy. Full media/app restore from that copy, automatic Windows trigger and real error/recovery delivery remain open. CD-07/R9 are not fully closed.
+
+This index supersedes older next-step priorities below; historical milestones and outstanding obligations remain preserved.
+
+---
+
+
 This document is the canonical development roadmap for Comic Diary.
 
 ## Current acceptance index — 2026-10-23
