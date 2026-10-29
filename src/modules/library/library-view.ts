@@ -1,5 +1,5 @@
 export const librarySortLabels = {
-  UPDATED: "Недавно обновлённые",
+  UPDATED: "Недавно изменённые",
   TITLE: "По названию",
   PROGRESS: "По прогрессу",
   RATING: "По оценке",

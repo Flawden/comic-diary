@@ -26,6 +26,7 @@ export async function getUserLibrary(
       slug: comics.slug,
       title: comics.title,
       coverUrl: comics.coverUrl,
+      sourceUrl: comics.sourceUrl,
       seriesStatus: comics.seriesStatus,
       workType: comics.workType,
       workFormat: comics.workFormat,

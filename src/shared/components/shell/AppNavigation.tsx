@@ -3,9 +3,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const items = [
-  { href: "/updates", label: "Новое", path: "M4 5h16v14H4z M8 2v6 M16 2v6 M4 10h16 M8 14h3" },
-  { href: "/library", label: "Библиотека", path: "M4 4h5v16H4z M10 4h5v16h-5z M17 5l3-1 3 15-3 1z" },
+  { href: "/library", label: "Дневник", path: "M4 4h5v16H4z M10 4h5v16h-5z M17 5l3-1 3 15-3 1z" },
   { href: "/", label: "Каталог", path: "M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14 M15 15l6 6" },
+  { href: "/updates", label: "Обновления", path: "M4 5h16v14H4z M8 2v6 M16 2v6 M4 10h16 M8 14h3" },
   { href: "/account", label: "Профиль", path: "M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M4 21v-2a8 8 0 0 1 16 0v2" },
 ];
 export function AppNavigation() {

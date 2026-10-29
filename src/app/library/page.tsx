@@ -1,3 +1,4 @@
+import { ContinueReading } from "@/modules/library/components/ContinueReading";
 import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
 import { seriesStatusLabels } from "@/modules/comics/series-status";
 import Link from "next/link";
@@ -218,11 +219,14 @@ export default async function LibraryPage({
     <div className="tea-library">
       <header className="library-heading">
         <div>
-          <h1>Моя библиотека</h1>
+          <p className="diary-eyebrow">Ваша читательская полка</p>
+          <h1>Мой дневник</h1>
           <p>Истории, к которым хочется возвращаться.</p>
         </div>
         <Link href="/" className="tea-outline">Найти в каталоге <span aria-hidden="true">↗</span></Link>
       </header>
+
+      {activeFilter === "ALL" && !query ? <ContinueReading items={library} /> : null}
 
       {library.length > 0 ? (
         <nav

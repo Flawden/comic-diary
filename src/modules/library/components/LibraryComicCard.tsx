@@ -38,7 +38,7 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
       </div>
     </div>
     <div className="shelf-action">
-      <Link href={href} className={item.status === "READING" ? "tea-primary" : "tea-text-action"}>Открыть произведение <span aria-hidden="true">↗</span></Link>
+      <Link href={href} className={item.status === "READING" ? "tea-primary" : "tea-text-action"}>Открыть дневник <span aria-hidden="true">→</span></Link>
     </div>
     <details className="shelf-details">
       <summary>Мой дневник <span>{note ? "Есть заметка · " : ""}{item.trackingEnabled ? "Обновления включены" : "Обновления выключены"} <span aria-hidden="true">⌄</span></span></summary>
