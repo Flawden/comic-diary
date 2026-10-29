@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DiaryRatingFields } from "@/modules/library/components/DiaryRatingFields";
 import { workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
 import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
 import { seriesStatusLabels, caughtUpLabel } from "@/modules/comics/series-status";
@@ -25,29 +26,6 @@ type ComicPageProps = {
     slug: string;
   }>;
 };
-
-const ratingFields = [
-  {
-    name: "ratingPlot",
-    label: "Сюжет",
-  },
-  {
-    name: "ratingCharacters",
-    label: "Персонажи",
-  },
-  {
-    name: "ratingArt",
-    label: "Рисовка",
-  },
-  {
-    name: "ratingDepth",
-    label: "Глубина",
-  },
-  {
-    name: "ratingWorld",
-    label: "Мир",
-  },
-] as const;
 
 export default async function ComicPage({
   params,
@@ -106,6 +84,7 @@ export default async function ComicPage({
         <header className="work-hero">
           <CoverImage src={comic.coverUrl} alt={`Обложка ${comic.title}`} className="work-cover" imageClassName="object-contain" fallback={comic.title} />
           <div className="work-intro">
+            <div className="work-identity">
             <p className="text-sm font-medium text-[var(--primary)]">
               {comic.categoryName}
             </p>
@@ -113,6 +92,7 @@ export default async function ComicPage({
             <h1 className="reader-title">
               {comic.title}
             </h1>
+            </div>
 
             <p className="mt-3 text-sm text-[var(--text-secondary)]">
               Основных глав доступно: {chapters.filter((c) => c.status === "RELEASED" && c.kind === "MAIN").length}
@@ -134,7 +114,7 @@ export default async function ComicPage({
             ) : null}
 
             {comic.authorName || comic.translatorName ? (
-              <dl className="work-credits">
+              <details className="work-credit-details"><summary>Автор и перевод</summary><dl className="work-credits">
                 {comic.authorName ? (
                   <div className="min-w-0">
                     <dt className="text-[var(--text-secondary)]">
@@ -156,7 +136,7 @@ export default async function ComicPage({
                     </dd>
                   </div>
                 ) : null}
-              </dl>
+              </dl></details>
             ) : null}
 
             {comic.translatorNote ? (
@@ -173,7 +153,7 @@ export default async function ComicPage({
             {comic.seriesStatus !== "UNKNOWN" ? <p className="mt-4 text-sm font-semibold text-[var(--text-secondary)]">{seriesStatusLabels[comic.seriesStatus]}</p> : null}
 <p className="mt-2 text-sm text-[var(--text-secondary)]">{[comic.workType !== "UNKNOWN" ? workTypeLabels[comic.workType] : null, comic.workFormat !== "UNKNOWN" ? workFormatLabels[comic.workFormat] : null].filter(Boolean).join(" · ")}</p>
 
-            {comic.description ? <details className="work-description" open>
+            {comic.description ? <details className="work-description">
               <summary>Об истории</summary>
               <p>{comic.description}</p>
             </details> : null}
@@ -223,7 +203,7 @@ export default async function ComicPage({
                       </form>
                     )}
                   </div>
-                  <details className="journal-editor">
+                  <details className="journal-editor" open>
                     <summary>Оценки и личная заметка <span>{averageRating !== null ? `★ ${averageRating.toFixed(1)} / 5` : ""}{readingState.personalNote ? " · Есть заметка" : ""}</span></summary>
                   <form
                     action="/api/library/reading-state"
@@ -255,7 +235,7 @@ export default async function ComicPage({
 
                       {averageRating !== null ? (
                         <p className="rounded-xl bg-[var(--surface)] px-3 py-2 text-sm">
-                          Средняя оценка:{" "}
+                          Сохранённая оценка:{" "}
                           <strong>
                             {averageRating.toFixed(1)} / 5
                           </strong>
@@ -267,47 +247,7 @@ export default async function ComicPage({
                       )}
                     </div>
 
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      {ratingFields.map(
-                        (field) => (
-                          <label
-                            key={field.name}
-                            htmlFor={field.name}
-                            className="block text-sm"
-                          >
-                            <span className="mb-1 block font-medium">
-                              {field.label}
-                            </span>
-
-                            <select
-                              id={field.name}
-                              name={field.name}
-                              defaultValue={
-                                readingState[
-                                  field.name
-                                ] ?? ""
-                              }
-                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
-                            >
-                              <option value="">
-                                Не оценено
-                              </option>
-
-                              {[1, 2, 3, 4, 5].map(
-                                (value) => (
-                                  <option
-                                    key={value}
-                                    value={value}
-                                  >
-                                    {value}
-                                  </option>
-                                ),
-                              )}
-                            </select>
-                          </label>
-                        ),
-                      )}
-                    </div>
+                    <DiaryRatingFields ratings={readingState} />
 
                     <label
                       htmlFor="personal-note"
@@ -320,7 +260,7 @@ export default async function ComicPage({
                       <textarea
                         id="personal-note"
                         name="personalNote"
-                        rows={5}
+                        rows={3}
                         defaultValue={
                           readingState.personalNote ??
                           ""

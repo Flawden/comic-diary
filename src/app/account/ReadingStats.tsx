@@ -9,7 +9,7 @@ export function ReadingStats({ stats }: { stats: UserReadingStats }) {
     { label: "На паузе", value: stats.onHold, status: "ON_HOLD" },
   ];
   return (
-    <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8">
+    <section className="reader-stats mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8">
       <h2 className="text-lg font-semibold">Мой дневник</h2>
       <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
         Тайтлов в библиотеке: <strong className="text-[var(--text-primary)]">{stats.titles}</strong>.
@@ -24,7 +24,7 @@ export function ReadingStats({ stats }: { stats: UserReadingStats }) {
         ))}
       </div>
       <h3 className="mt-6 font-semibold">Отмечено прочитанными</h3>
-      <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+      <dl className="chapter-stat-totals">
         {[
           ["Основные главы", stats.main],
           ["Спецвыпуски", stats.specials],

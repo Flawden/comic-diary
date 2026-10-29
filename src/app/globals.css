@@ -390,3 +390,103 @@ body { line-height: 1.5; }
   .tea-library .library-collection.is-list { padding: 0 14px; }
   .tea-brand { font-size: 18px; }
 }
+
+/* WD-02: compact reader surfaces, without changing reading semantics. */
+.tea-library .is-list .shelf-book { grid-template-columns: 72px minmax(0,1fr); gap: 8px 16px; padding: 16px 0 8px; }
+.tea-library .is-list .shelf-cover { grid-row: 1; }
+.tea-library .is-list .shelf-details { grid-column: 2; margin-top: 0; }
+.tea-library .is-list .shelf-metadata { margin-top: 4px; font-size: 12px; }
+.tea-library .is-list .shelf-reading { gap: 5px 10px; margin-top: 8px; }
+.tea-library .is-list .shelf-status { padding: 2px 8px; }
+.tea-library .is-list .shelf-progress { margin-top: 8px; }
+.tea-library .is-list .shelf-extras:empty { display: none; }
+.shelf-details-body > span { display: block; margin-bottom: 6px; }
+.library-tabs { gap: 8px; border-bottom: 0; padding: 4px 0; }
+.library-tab { min-height: 44px; border: 1px solid transparent; border-radius: 9px; padding: 6px 10px; gap: 6px; }
+.library-tab[aria-current] { border-color: var(--border); background: var(--surface-raised); }
+.library-search { margin-top: 14px; }
+.work-hero { gap: 24px; margin-bottom: 20px; }
+.work-credit-details { margin-top: 12px; font-size: 13px; color: var(--text-secondary); }
+.work-credit-details > summary { min-height: 44px; display: list-item; align-content: center; cursor: pointer; }
+.work-credit-details .work-credits { margin-top: 4px; }
+.work-description { margin-top: 10px; }
+.work-description summary { min-height: 44px; align-content: center; }
+.work-actions { margin-top: 14px; gap: 8px 12px; }
+.work-diary, .work-chapters { margin-top: 18px; }
+.reading-dashboard { gap: 18px 24px; margin-top: 16px; }
+.reading-dashboard > .journal-editor { padding-top: 8px; }
+.journal-form { padding-top: 12px; }
+.journal-form textarea { min-height: 96px; }
+.journal-form button[type="submit"] { min-height: 44px; }
+.diary-rating-fields { margin-top: 12px; }
+.rating-dimension { border: 0; padding: 8px 0; min-width: 0; border-bottom: 1px solid var(--border); }
+.rating-dimension legend { float: left; width: 105px; padding-top: 11px; font-size: 14px; font-weight: 500; }
+.rating-options { display: flex; flex-wrap: wrap; }
+.rating-star, .rating-clear { position: relative; display: grid; place-items: center; width: 44px; height: 44px; cursor: pointer; border-radius: 7px; }
+.rating-star input, .rating-clear input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.rating-star span { font-size: 27px; color: var(--text-muted); }
+.rating-star.is-filled span { color: var(--text-accent); }
+.rating-star:has(input:checked), .rating-clear:has(input:checked) { background: var(--surface-raised); }
+.rating-star:has(input:focus-visible), .rating-clear:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: 2px; }
+.rating-clear { color: var(--text-secondary); font-size: 22px; }
+.rating-total { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 12px 0; }
+.rating-total strong { font-size: 20px; color: var(--primary); }
+.rating-total span { font-size: 12px; color: var(--text-secondary); }
+.chapter-list { border: 1px solid var(--border); border-radius: 12px; margin-top: 16px; overflow: hidden; }
+.chapter-list:empty { display: none; }
+.chapter-line { display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border); }
+.chapter-line:last-child { border-bottom: 0; }
+.chapter-line-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.chapter-line-title h3 { font-size: 14px; font-weight: 650; }
+.chapter-line-title > p { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
+.chapter-line-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: end; flex-shrink: 0; max-width: 50%; }
+.chapter-line-actions .tea-text-action { font-size: 12px; }
+.chapter-mark { display: flex; align-items: center; flex-direction: column; justify-content: center; gap: 2px; min-width: 64px; min-height: 48px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 9px; color: var(--text-secondary); cursor: pointer; }
+.chapter-mark > span:first-child { font-size: 20px; line-height: 1; }
+.chapter-mark-caption { font-size: 10px; }
+.is-read .chapter-mark { color: var(--primary); background: var(--surface-raised); }
+.chapter-revision { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+.chapter-revision summary { cursor: pointer; min-height: 32px; align-content: center; }
+.chapter-revision p { margin: 4px 0; }
+.chapter-stat-totals { display: grid; gap: 0; margin-top: 10px; }
+.chapter-stat-totals > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; padding: 10px 0; }
+.chapter-stat-totals dd { margin: 0; font-size: 20px; }
+.reader-stats > .grid > a { padding: 12px; }
+.cover-fallback { min-height: 100%; overflow-wrap: anywhere; background: linear-gradient(140deg,var(--surface-raised),var(--surface)); }
+.cover-fallback-symbol { display: block; font-size: 32px; margin-bottom: 10px; color: var(--primary); }
+@media (max-width: 767px) {
+ .reader-heading { margin-bottom: 20px; }
+ .reader-heading h1, .library-heading h1 { font-size: 32px; }
+ .reader-section-nav { margin-bottom: 18px; gap: 18px; padding-bottom: 8px; }
+ .work-hero { grid-template-columns: 100px minmax(0,1fr); gap: 12px 16px; }
+ .work-intro > h1 { font-size: 25px; margin-top: 28px; align-self: start; padding-top: 10px; }
+ .work-intro > p:first-child { font-size: 12px; padding-top: 0; }
+ .work-cover { grid-row: 1; }
+ .work-actions > .tea-primary { flex: 1 1 100%; }
+ .reading-dashboard { gap: 16px; }
+ .journal-editor summary { flex-wrap: wrap; gap: 6px; font-size: 14px; }
+ .journal-editor summary span { font-size: 12px; }
+ .rating-dimension legend { float: none; padding-top: 0; width: auto; }
+ .rating-options { justify-content: space-between; max-width: 300px; }
+ .chapter-bulk { padding: 8px 12px; margin-top: 12px; }
+ .chapter-bulk summary { min-height: 44px; align-content: center; }
+ .account-identity { display: grid; grid-template-columns: 48px minmax(0,1fr); gap: 10px 14px; }
+ .account-monogram { width: 48px; height: 48px; font-size: 24px; }
+ .account-identity > :not(.account-monogram) { grid-column: 2; min-width: 0; }
+ .account-identity .account-edit-name { grid-column: 1 / -1; padding-top: 10px; }
+ .account-identity h2 { font-size: 23px; }
+ .catalog-grid { gap: 24px 14px; margin-top: 20px; }
+ .catalog-book h3 { font-size: 17px; line-height: 1.3; overflow-wrap: anywhere; }
+ .catalog-book-body { padding-top: 10px; }
+}
+@media (max-width: 359px) {
+ .rating-star, .rating-clear { width: 40px; min-height: 44px; }
+ .chapter-line { gap: 8px; padding: 10px; }
+}
+
+.work-identity h1 { margin-top: 8px; }
+@media (max-width: 767px) {
+ .work-intro > .work-identity { grid-column: 2; grid-row: 1; align-self: start; }
+ .work-identity > p { font-size: 12px; overflow-wrap: anywhere; }
+ .work-identity h1 { font-size: 25px; margin: 8px 0 0; }
+}

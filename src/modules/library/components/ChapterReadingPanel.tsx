@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Button, Card } from "@/shared/components/ui";
+import { Button } from "@/shared/components/ui";
 import type { ComicChapter } from "@/modules/comics/queries/get-comic-chapters";
 
 type Chapter = Omit<ComicChapter, "releasedAt">;
@@ -59,27 +59,29 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, canMark }: Pro
           </select>
         </label>
       </div>
-      <ul className="mt-4 space-y-3">
+      <ul className="chapter-list">
         {filtered.slice(0, limit).map((c) => {
           const source = safeSource(c.sourceUrl);
-          return <li key={c.id}>
-            <Card padding="sm" className="chapter-row">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0 break-words"><h3 className="font-semibold">{c.displayCode}</h3>{c.title ? <p className="mt-1 text-sm text-[var(--text-secondary)]">{c.title}</p> : null}</div>
-                {canMark ? <Badge variant={read.has(c.id) ? "success" : "neutral"}>{read.has(c.id) ? "Прочитано" : "Не прочитано"}</Badge> : null}
-              </div>
-              {c.supersedesChapterId ? <p className="mt-2 text-xs text-[var(--text-secondary)]">Новая редакция · отметка старой версии хранится отдельно</p> : null}
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {source ? <a href={source} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center px-3 text-sm font-semibold text-[var(--text-accent)]">Читать в источнике ↗</a> : null}
-                {canMark ? <form action="/api/library/reading-state" method="post">
-                  <input type="hidden" name="comicId" value={comicId} />
-                  <input type="hidden" name="intent" value="chapter-reading" />
-                  <input type="hidden" name="chapterId" value={c.id} />
-                  <input type="hidden" name="action" value={read.has(c.id) ? "unread" : "read"} />
-                  <Button type="submit" variant="secondary">{read.has(c.id) ? "Снять отметку" : "Отметить прочитанной"}</Button>
-                </form> : null}
-              </div>
-            </Card>
+          const isRead = read.has(c.id);
+          return <li key={c.id} className={`chapter-line ${isRead ? "is-read" : ""}`}>
+            <div className="chapter-line-title">
+              <h3>{c.displayCode}</h3>
+              {c.title ? <p>{c.title}</p> : null}
+              {c.supersedesChapterId ? <details className="chapter-revision"><summary>Новая редакция</summary><p>Отметка старой версии хранится в архиве. Эту версию можно отметить отдельно.</p></details> : null}
+            </div>
+            <div className="chapter-line-actions">
+              {source ? <a href={source} target="_blank" rel="noopener noreferrer" className="tea-text-action" aria-label={`Читать главу ${c.displayCode} в источнике, новая вкладка`}>Читать ↗</a> : null}
+              {canMark ? <form action="/api/library/reading-state" method="post">
+                <input type="hidden" name="comicId" value={comicId} />
+                <input type="hidden" name="intent" value="chapter-reading" />
+                <input type="hidden" name="chapterId" value={c.id} />
+                <input type="hidden" name="action" value={isRead ? "unread" : "read"} />
+                <button type="submit" className="chapter-mark" aria-label={`${isRead ? "Снять отметку прочитанного" : "Отметить прочитанной"}: глава ${c.displayCode}`} title={isRead ? "Прочитано — снять отметку" : "Отметить прочитанной"}>
+                  <span aria-hidden="true">{isRead ? "✓" : "○"}</span>
+                  <span className="chapter-mark-caption">{isRead ? "Прочитано" : "Отметить"}</span>
+                </button>
+              </form> : null}
+            </div>
           </li>;
         })}
       </ul>

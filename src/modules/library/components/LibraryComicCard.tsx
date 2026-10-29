@@ -32,17 +32,15 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
       </div>
       {percent !== null ? <div role="progressbar" aria-label={`Прочитано основных глав: ${item.title}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} className="shelf-progress"><span style={{ width: `${percent}%` }} /></div> : null}
       <div className="shelf-extras">
-        {item.chapterReading.specialCount > 0 ? <span>Спецвыпуски: {item.chapterReading.specialReadCount} из {item.chapterReading.specialCount}</span> : null}
-        {item.chapterReading.updatedChapters > 0 ? <span>Новых редакций: {item.chapterReading.updatedChapters}</span> : null}
         {rating !== null ? <span aria-label={`Моя средняя оценка ${rating.toFixed(1)} из 5`}>★ {rating.toFixed(1)} / 5</span> : null}
       </div>
     </div>
-    <div className="shelf-action">
-      <Link href={href} className={item.status === "READING" ? "tea-primary" : "tea-text-action"}>Открыть дневник <span aria-hidden="true">→</span></Link>
-    </div>
     <details className="shelf-details">
-      <summary>Мой дневник <span>{note ? "Есть заметка · " : ""}{item.trackingEnabled ? "Обновления включены" : "Обновления выключены"} <span aria-hidden="true">⌄</span></span></summary>
+      <summary>Подробнее <span>{note ? "Есть заметка · " : ""}{item.chapterReading.updatedChapters ? "Есть новая редакция · " : ""}<span aria-hidden="true">⌄</span></span></summary>
       <div className="shelf-details-body">
+        {item.chapterReading.specialCount > 0 ? <span>Спецвыпуски: {item.chapterReading.specialReadCount} из {item.chapterReading.specialCount}</span> : null}
+        {item.chapterReading.updatedChapters > 0 ? <span>Новых редакций: {item.chapterReading.updatedChapters}</span> : null}
+
         {item.seriesStatus !== "UNKNOWN" ? <p>{seriesStatusLabels[item.seriesStatus]}</p> : null}
         {item.chapterReading.registered ? <>
           {item.chapterReading.lastReadLabel ? <p>Последняя отмеченная: {item.chapterReading.lastReadLabel}</p> : null}

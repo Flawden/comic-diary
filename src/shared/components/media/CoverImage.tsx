@@ -28,9 +28,9 @@ function CoverFallback({
 }) {
   return (
     <div
-      className="flex h-full w-full items-center justify-center p-3 text-center text-xs font-medium"
+      className="cover-fallback flex h-full w-full items-center justify-center p-3 text-center text-xs font-medium"
     >
-      {label}
+      <span><span className="cover-fallback-symbol" aria-hidden="true">▤</span>{label}</span>
     </div>
   );
 }
@@ -60,8 +60,8 @@ function CoverSource({
       {!loaded ? (
         <div
           aria-hidden="true"
-          className="absolute inset-0 animate-pulse bg-[var(--surface-raised)]"
-        />
+          className="absolute inset-0 flex items-center justify-center bg-[var(--surface-raised)] p-3 text-center text-xs"
+        >Загружаем обложку…</div>
       ) : null}
 
       <img
