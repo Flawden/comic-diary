@@ -49,6 +49,8 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, canMark }: Pro
           </form>
         </details>
       ) : null}
+      <details className="chapter-filters">
+        <summary>Поиск и раздел <span>{kind === "MAIN" ? "Основные" : "Спецвыпуски"}{query.trim() ? " · есть поиск" : ""} · {filtered.length}</span></summary>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="block text-sm">Поиск по коду или названию
           <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setLimit(30); }} placeholder="15.5, спецвыпуск, название…" className={`${control} mt-2`} />
@@ -59,6 +61,8 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, canMark }: Pro
           </select>
         </label>
       </div>
+        {query || kind !== "MAIN" ? <button type="button" className="tea-text-action chapter-filter-reset" onClick={() => { setQuery(""); setKind("MAIN"); setLimit(30); }}>Сбросить фильтры</button> : null}
+      </details>
       <ul className="chapter-list">
         {filtered.slice(0, limit).map((c) => {
           const source = safeSource(c.sourceUrl);

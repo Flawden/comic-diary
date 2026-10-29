@@ -53,27 +53,13 @@ export function ComicCard({ comic, progressCeiling, personalState = null }: Comi
               {progressCeiling !== null && progressCeiling > 0 ? `Основных глав: ${progressCeiling}` : ""}
             </span>
           </div>
-          {comic.description ? <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--text-secondary)]">{comic.description}</p> : null}
           {personalState ? (
-            <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                <Badge variant="primary">{statusLabels[personalState.status]}</Badge>
-                <span className="text-[var(--text-secondary)]">{personalState.chapterReading.registered ? "Прочитано" : "Общий счётчик"} {currentChapter}{!personalState.chapterReading.registered || progressCeiling === null ? "" : ` / ${progressCeiling}`}</span>
-              </div>
-              {percent !== null ? (
-                <div className="mt-3">
-                  <div className="mb-1 flex justify-between text-xs text-[var(--text-muted)]"><span>Мой прогресс</span><span>{percent}%</span></div>
-                  <div role="progressbar" aria-label={`Прогресс чтения: ${comic.title}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} className="h-1.5 overflow-hidden rounded-full bg-[var(--surface)]">
-                    <div className="h-full rounded-full bg-[var(--primary)]" style={{ width: `${percent}%` }} />
-                  </div>
-                </div>
-              ) : null}
+            <div className="catalog-personal">
+              <p><span>{statusLabels[personalState.status]}</span><span>{currentChapter}{personalState.chapterReading.registered && progressCeiling !== null ? ` / ${progressCeiling}` : " гл."}</span></p>
+              {percent !== null ? <div role="progressbar" aria-label={`Прогресс чтения: ${comic.title}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} className="catalog-progress"><span style={{ width: `${percent}%` }} /></div> : null}
             </div>
           ) : null}
-          <div className="mt-auto flex flex-wrap gap-2 pt-4 text-sm font-semibold">
-            <Link href={`/comics/${comic.slug}`} className="inline-flex min-h-11 items-center rounded-[var(--cd-radius-button)] border border-[var(--border)] px-3 text-[var(--text-primary)] hover:bg-[var(--surface-raised)]">Открыть историю →</Link>
 
-          </div>
         </div>
       </article>
 

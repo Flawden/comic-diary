@@ -15,7 +15,7 @@ export function DiaryRatingFields({ ratings }: { ratings: PersonalRatings }) {
       <div className="rating-options">
         {[1,2,3,4,5].map(value => <label key={value} className={`rating-star ${value <= (values[name] ?? 0) ? "is-filled" : ""}`}>
           <input type="radio" name={name} value={value} checked={values[name] === value} onChange={() => setValues(old => ({...old, [name]: value}))} aria-label={`${label}: ${value} из 5`} />
-          <span aria-hidden="true">★</span>
+          <span aria-hidden="true">{value <= (values[name] ?? 0) ? "★" : "☆"}</span>
         </label>)}
         <label className="rating-clear"><input type="radio" name={name} value="" checked={values[name] === null} onChange={() => setValues(old => ({...old, [name]: null}))} aria-label={`${label}: без оценки`} /><span aria-hidden="true">×</span></label>
       </div>

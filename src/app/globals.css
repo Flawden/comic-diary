@@ -490,3 +490,42 @@ body { line-height: 1.5; }
  .work-identity > p { font-size: 12px; overflow-wrap: anywhere; }
  .work-identity h1 { font-size: 25px; margin: 8px 0 0; }
 }
+
+/* WD-03: quieter catalog and focused mobile controls. */
+.catalog-personal { margin-top: 10px; color: var(--text-secondary); font-size: 12px; }
+.catalog-personal > p { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; }
+.catalog-progress { height: 4px; margin-top: 7px; border-radius: 8px; background: var(--surface-raised); overflow: hidden; }
+.catalog-progress > span { display: block; height: 100%; background: var(--primary); border-radius: inherit; }
+.catalog-book-body { justify-content: flex-start; }
+.catalog-book-cover:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+.diary-rating-fields { container-type: inline-size; }
+.rating-dimension { padding: 3px 0; }
+.rating-dimension legend { float: left; width: 100px; padding-top: 12px; font-size: 13px; }
+.rating-options { flex-wrap: nowrap; justify-content: flex-start; max-width: none; }
+.rating-star, .rating-clear { flex: 0 0 32px; width: 32px; height: 44px; min-height: 44px; }
+.rating-star span { font-size: 26px; line-height: 1; }
+.rating-star.is-filled span { color: #a76b16; }
+[data-theme="night"] .rating-star.is-filled span { color: #eab55b; }
+.rating-star:has(input:checked), .rating-clear:has(input:checked) { background: transparent; }
+.rating-clear { margin-left: 2px; font-size: 18px; }
+.rating-clear:hover { background: var(--surface-raised); }
+.rating-total { padding: 10px 0; gap: 4px 12px; }
+.rating-total span { font-size: 11px; }
+@container (max-width: 299px) {
+ .rating-dimension legend { float: none; width: auto; padding-top: 3px; font-size: 12px; }
+ .rating-options { justify-content: space-between; }
+}
+.chapter-filters { margin-top: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.chapter-filters > summary { min-height: 44px; cursor: pointer; align-content: center; font-size: 13px; color: var(--text-primary); }
+.chapter-filters > summary > span { margin-left: 8px; color: var(--text-secondary); font-size: 11px; }
+.chapter-filter-reset { min-height: 44px; margin-top: 8px; }
+.chapter-bulk summary { font-size: 13px; }
+@media (max-width: 767px) {
+ .catalog-grid { align-items: start; gap: 24px 14px; }
+ .catalog-book-body > div.mt-3 { margin-top: 6px; gap: 4px; }
+ .catalog-book h3 { font-size: 16px; }
+ .rating-dimension legend { float: left; width: 100px; padding-top: 12px; }
+}
+@container (max-width: 299px) {
+ .rating-dimension legend { float: none; width: auto; padding-top: 3px; }
+}
