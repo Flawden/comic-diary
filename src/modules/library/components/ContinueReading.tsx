@@ -1,23 +1,15 @@
+import { getReadingTarget } from "../reading-target";
+import { ReadingDestination } from "./ReadingDestination";
 import Link from "next/link";
 import { CoverImage } from "@/shared/components/media";
 import type { UserLibraryItem } from "../queries/get-user-library";
 import { getLibraryProgressPercent } from "../library-view";
 
-function sourceLink(value: string | null) {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
-    const vk = ["vk.com", "vk.ru"].some(host => url.hostname === host || url.hostname.endsWith(`.${host}`));
-    return { href: url.href, label: vk ? "Открыть в VK" : "Открыть источник" };
-  } catch { return null; }
-}
-
 export function ContinueReading({ items }: { items: UserLibraryItem[] }) {
   const reading = items.filter(item => item.status === "READING");
   const item = reading[0];
   if (!item) return null;
-  const source = sourceLink(item.sourceUrl);
+  const target = getReadingTarget(item.chapterReading.registry, item.chapterReading.readIds, item.sourceUrl);
   const percent = item.chapterReading.registered ? getLibraryProgressPercent(item.currentChapter, item.progressCeiling) : null;
   return <section className="diary-continue" aria-labelledby="continue-heading">
     <div className="diary-continue-heading"><h2 id="continue-heading">Читаю сейчас</h2>
@@ -35,7 +27,6 @@ export function ContinueReading({ items }: { items: UserLibraryItem[] }) {
         <Link href={`/comics/${item.slug}#my-reading`} className="tea-text-action">Отметки и заметка →</Link>
       </div>
     </div>
-    {source ? <a className="tea-primary diary-continue-button" href={source.href} target="_blank" rel="noopener noreferrer">{source.label} <span aria-hidden="true">↗</span><span className="sr-only"> — в новой вкладке</span></a>
-      : <Link href={`/comics/${item.slug}`} className="tea-primary diary-continue-button">Открыть карточку →</Link>}
+    <ReadingDestination target={target} slug={item.slug} className="diary-reading-destination" />
   </section>;
 }

@@ -1,3 +1,5 @@
+import { getReadingTarget } from "@/modules/library/reading-target";
+import { ReadingDestination } from "@/modules/library/components/ReadingDestination";
 import Link from "next/link";
 import { DiaryRatingFields } from "@/modules/library/components/DiaryRatingFields";
 import { workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
@@ -156,7 +158,8 @@ export default async function ComicPage({
               <p>{comic.description}</p>
             </details> : null}
             <div className="work-actions">
-              <a href={comic.sourceUrl} target="_blank" rel="noopener noreferrer" className="tea-primary">Читать в источнике ↗</a>
+              {readingState ? <ReadingDestination target={getReadingTarget(readingState.chapterReading.registry, readingState.chapterReading.readIds, comic.sourceUrl)} slug={comic.slug} />
+                : <a href={comic.sourceUrl} target="_blank" rel="noopener noreferrer" className="tea-primary">Читать в источнике ↗</a>}
               <a href="#chapters" className="tea-outline">К списку глав ↓</a>
               <a href="#my-reading" className="tea-text-action">Мой дневник</a>
             </div>

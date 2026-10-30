@@ -617,3 +617,11 @@ body { line-height: 1.5; }
  .work-hero-v6 .work-actions > :not(.tea-primary) { flex: 1 1 120px; }
  .tea-library .is-grid .shelf-content h2 { font-size: 18px; }
 }
+
+/* Reading destination: explicit chapter link, honest source fallback. */
+.reading-destination { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.work-actions > .reading-destination { flex: 1 1 100%; }
+.reading-destination .tea-primary { padding: 10px 16px; min-height: 44px; white-space: normal; overflow-wrap: anywhere; text-align: center; }
+.reading-destination-hint { font-size: 13px; color: var(--text-secondary); line-height: 1.5; overflow-wrap: anywhere; }
+.reading-destination-note { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+.diary-reading-destination { margin-top: 14px; }
