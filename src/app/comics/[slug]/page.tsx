@@ -76,7 +76,7 @@ export default async function ComicPage({
     <div className="reader-page work-page">
       <Link href="/" className="reader-back">← Каталог</Link>
       <article>
-        <header className="work-hero">
+        <header className="work-hero work-hero-v6">
           <CoverImage src={comic.coverUrl} alt={`Обложка ${comic.title}`} className="work-cover" imageClassName="object-contain" fallback={comic.title} />
           <div className="work-intro">
             <div className="work-identity">
@@ -87,12 +87,15 @@ export default async function ComicPage({
             <h1 className="reader-title">
               {comic.title}
             </h1>
-            </div>
-
-            <p className="mt-3 text-sm text-[var(--text-secondary)]">
-              Основных глав доступно: {chapters.filter((c) => c.status === "RELEASED" && c.kind === "MAIN").length}
+            <p className="work-count-v6">
+              Основных глав: {chapters.filter((c) => c.status === "RELEASED" && c.kind === "MAIN").length}
               {comic.totalChapters !== null ? ` · Заявлено (справочно): ${comic.totalChapters}` : ""}
             </p>
+            {comic.seriesStatus !== "UNKNOWN" ? <p className="work-state-v6">{seriesStatusLabels[comic.seriesStatus]}</p> : null}
+            {comic.workType !== "UNKNOWN" || comic.workFormat !== "UNKNOWN" ? <p className="work-metadata-v6">{[comic.workType !== "UNKNOWN" ? workTypeLabels[comic.workType] : null, comic.workFormat !== "UNKNOWN" ? workFormatLabels[comic.workFormat] : null].filter(Boolean).join(" · ")}</p> : null}
+            </div>
+
+
 
             {comic.visibility === "PRIVATE" ? (
               <p className="mt-4 inline-flex rounded-full border border-[var(--primary)]/30 bg-[var(--background)] px-3 py-1 text-xs font-semibold text-[var(--primary)]">
@@ -145,8 +148,8 @@ export default async function ComicPage({
               </section>
             ) : null}
 
-            {comic.seriesStatus !== "UNKNOWN" ? <p className="mt-4 text-sm font-semibold text-[var(--text-secondary)]">{seriesStatusLabels[comic.seriesStatus]}</p> : null}
-<p className="mt-2 text-sm text-[var(--text-secondary)]">{[comic.workType !== "UNKNOWN" ? workTypeLabels[comic.workType] : null, comic.workFormat !== "UNKNOWN" ? workFormatLabels[comic.workFormat] : null].filter(Boolean).join(" · ")}</p>
+
+
 
             {comic.description ? <details className="work-description">
               <summary>Об истории</summary>

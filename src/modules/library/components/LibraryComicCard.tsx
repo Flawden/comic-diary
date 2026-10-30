@@ -36,10 +36,15 @@ export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
       </div>
     </div>
     <details className="shelf-details">
-      <summary>Подробнее <span>{note ? "Есть заметка · " : ""}{item.chapterReading.updatedChapters ? "Есть новая редакция · " : ""}<span aria-hidden="true">⌄</span></span></summary>
+      <summary><span className="shelf-details-label-v6">Подробнее <span aria-hidden="true">⌄</span></span>
+        {note || item.chapterReading.updatedChapters ? <span className="shelf-signals-v6">
+          {note ? <span>Заметка</span> : null}
+          {item.chapterReading.updatedChapters ? <span>Новых редакций: {item.chapterReading.updatedChapters}</span> : null}
+        </span> : null}
+      </summary>
       <div className="shelf-details-body">
-        {item.chapterReading.specialCount > 0 ? <span>Спецвыпуски: {item.chapterReading.specialReadCount} из {item.chapterReading.specialCount}</span> : null}
-        {item.chapterReading.updatedChapters > 0 ? <span>Новых редакций: {item.chapterReading.updatedChapters}</span> : null}
+        {item.chapterReading.specialCount > 0 ? <p>Спецвыпуски: {item.chapterReading.specialReadCount} из {item.chapterReading.specialCount}</p> : null}
+        {item.chapterReading.updatedChapters > 0 ? <p>Новых редакций: {item.chapterReading.updatedChapters}</p> : null}
 
         {item.seriesStatus !== "UNKNOWN" ? <p>{seriesStatusLabels[item.seriesStatus]}</p> : null}
         {item.chapterReading.registered ? <>

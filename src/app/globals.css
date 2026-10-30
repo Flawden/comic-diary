@@ -582,3 +582,38 @@ body { line-height: 1.5; }
  .tea-library .library-view-toolbar { min-height: 50px; }
  .work-diary .reading-dashboard { gap: 12px; }
 }
+
+/* WD06: work overview and library grid. */
+.work-hero-v6 .work-identity { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.work-hero-v6 .work-identity h1 { margin: 0; }
+.work-hero-v6 .work-count-v6, .work-hero-v6 .work-metadata-v6 { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text-secondary); overflow-wrap: anywhere; }
+.work-hero-v6 .work-state-v6 { margin: 0; font-size: 12px; line-height: 1.4; padding: 3px 8px; border-radius: 6px; color: var(--primary); background: var(--surface-raised); }
+.work-hero-v6 .work-credit-details { margin-top: 8px; font-size: 13px; }
+.work-hero-v6 .work-actions { margin-top: 12px; }
+.shelf-details summary > .shelf-details-label-v6 { font-size: 12px; text-align: left; flex-shrink: 0; }
+.shelf-signals-v6 { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 8px; min-width: 0; overflow-wrap: anywhere; }
+.shelf-signals-v6 > span { display: inline-block; }
+.tea-library .is-grid { align-items: start; gap: 24px 16px; padding-top: 16px; }
+.tea-library .is-grid .shelf-book { gap: 8px; padding-bottom: 12px; }
+.tea-library .is-grid .shelf-content h2 { font-size: 20px; line-height: 1.25; overflow-wrap: anywhere; }
+.tea-library .is-grid .shelf-metadata { margin-top: 4px; font-size: 12px; overflow-wrap: anywhere; }
+.tea-library .is-grid .shelf-reading { margin-top: 8px; gap: 6px; }
+.tea-library .is-grid .shelf-count { font-size: 12px; }
+.tea-library .is-grid .shelf-progress { margin-top: 8px; }
+.tea-library .is-grid .shelf-extras { margin-top: 6px; font-size: 12px; }
+.tea-library .is-grid .shelf-extras:empty { display: none; }
+.tea-library .is-grid .shelf-details summary { flex-wrap: wrap; justify-content: flex-start; gap: 2px 8px; padding-block: 6px; }
+.tea-library .is-grid .shelf-signals-v6 { justify-content: flex-start; text-align: left; }
+.tea-library .is-grid .shelf-details-body { padding: 10px; font-size: 12px; }
+.tea-library .is-grid .shelf-details-body blockquote { font-size: 16px; padding-left: 10px; margin-block: 10px; }
+@media (max-width: 767px) {
+ .work-page > .reader-back { min-height: 44px; padding-block: 8px; }
+ .work-hero.work-hero-v6 { margin-top: 8px; margin-bottom: 16px; gap: 8px 14px; }
+ .work-hero-v6 .work-identity { gap: 6px; }
+ .work-hero-v6 .work-identity h1 { font-size: 25px; }
+ .work-hero-v6 .work-count-v6, .work-hero-v6 .work-metadata-v6 { font-size: 12px; }
+ .work-hero-v6 .work-credit-details, .work-hero-v6 .work-description { margin-top: 0; }
+ .work-hero-v6 .work-actions { margin-top: 0; gap: 8px; }
+ .work-hero-v6 .work-actions > :not(.tea-primary) { flex: 1 1 120px; }
+ .tea-library .is-grid .shelf-content h2 { font-size: 18px; }
+}
