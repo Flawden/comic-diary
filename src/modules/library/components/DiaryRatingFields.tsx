@@ -1,17 +1,20 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { calculateAverageRating, type PersonalRatings } from "../ratings/calculate-average-rating";
 const fields = [
   ["ratingPlot", "Сюжет"], ["ratingCharacters", "Персонажи"], ["ratingArt", "Рисовка"],
   ["ratingDepth", "Глубина"], ["ratingWorld", "Мир"],
 ] as const;
-export function DiaryRatingFields({ ratings }: { ratings: PersonalRatings }) {
+export function DiaryRatingFields({ ratings, personalNote = "" }: { ratings: PersonalRatings; personalNote?: string }) {
   const [values, setValues] = useState<PersonalRatings>({ ratingPlot: ratings.ratingPlot, ratingCharacters: ratings.ratingCharacters, ratingArt: ratings.ratingArt, ratingDepth: ratings.ratingDepth, ratingWorld: ratings.ratingWorld });
+  const groupId = useId();
+  const [note, setNote] = useState(personalNote);
+  const dirty = fields.some(([name]) => values[name] !== ratings[name]) || note !== personalNote;
   const average = calculateAverageRating(values);
   const count = fields.filter(([name]) => values[name] !== null).length;
-  return <div className="diary-rating-fields">
-    {fields.map(([name, label]) => <fieldset className="rating-dimension" key={name}>
-      <legend>{label}</legend>
+  return <div className="diary-rating-fields diary-editor-v4">
+    {fields.map(([name, label]) => <div className="rating-row-v4" role="group" aria-labelledby={`${groupId}-${name}`} key={name}>
+      <span className="rating-label-v4" id={`${groupId}-${name}`}>{label}</span>
       <div className="rating-options">
         {[1,2,3,4,5].map(value => <label key={value} className={`rating-star ${value <= (values[name] ?? 0) ? "is-filled" : ""}`}>
           <input type="radio" name={name} value={value} checked={values[name] === value} onChange={() => setValues(old => ({...old, [name]: value}))} aria-label={`${label}: ${value} из 5`} />
@@ -19,7 +22,15 @@ export function DiaryRatingFields({ ratings }: { ratings: PersonalRatings }) {
         </label>)}
         <label className="rating-clear"><input type="radio" name={name} value="" checked={values[name] === null} onChange={() => setValues(old => ({...old, [name]: null}))} aria-label={`${label}: без оценки`} /><span aria-hidden="true">×</span></label>
       </div>
-    </fieldset>)}
-    <p className="rating-total" aria-live="polite"><strong>{average === null ? "Без оценки" : `${average.toFixed(1)} / 5`}</strong><span>Оценено {count} из 5 · сохраните изменения ниже</span></p>
+    </div>)}
+    <p className="rating-total" aria-live="polite"><strong>{average === null ? "Без оценки" : `${average.toFixed(1)} / 5`}</strong><span>Оценено {count} из 5</span></p>
+    <label className="journal-note-v4" htmlFor={`${groupId}-note`}>
+      <span>Личная заметка</span>
+      <textarea id={`${groupId}-note`} name="personalNote" rows={3} value={note} onChange={event => setNote(event.target.value)} placeholder="Что хочется запомнить об этой истории?" />
+    </label>
+    <div className="journal-save-v4">
+      <p role="status">{dirty ? "Есть несохранённые изменения" : count === 0 && !note ? "Оцените историю или оставьте заметку" : "Оценки и заметка сохранены"}</p>
+      <button type="submit" className="tea-primary">Сохранить</button>
+    </div>
   </div>;
 }

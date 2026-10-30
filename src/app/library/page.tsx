@@ -269,7 +269,7 @@ export default async function LibraryPage({
         <form
           method="get"
           key={`${activeFilter}:${activeSort}:${query}`}
-          className="library-search"
+          className="library-search library-search-v4"
         >
           {activeFilter !== "ALL" ? (
             <input
@@ -283,6 +283,10 @@ export default async function LibraryPage({
             <span className="sr-only">Поиск в библиотеке</span>
             <input type="search" name="q" defaultValue={query} maxLength={160} placeholder="Найти в библиотеке" className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]" />
           </label>
+          <Button type="submit">Найти</Button>
+          <details className="library-sort-v4">
+            <summary>Сортировка <span>{librarySortLabels[activeSort]}</span></summary>
+            <div className="library-sort-controls-v4">
           <label className="block flex-1">
             <span className="sr-only">
               Сортировка библиотеки
@@ -316,11 +320,10 @@ export default async function LibraryPage({
             </select>
           </label>
 
-          <Button
-            type="submit"
-          >
-            Применить
-          </Button>
+              <Button type="submit">Применить</Button>
+            </div>
+          </details>
+          {query ? <Link className="library-reset-v4" href={libraryHref(activeFilter, activeSort, "")}>Сбросить поиск</Link> : null}
         </form>
       ) : null}
 

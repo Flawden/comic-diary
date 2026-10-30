@@ -17,7 +17,6 @@ import { getComicBySlug } from "@/modules/comics/queries/get-comic-by-slug";
 import { getComicChapters } from "@/modules/comics/queries/get-comic-chapters";
 import { getCurrentUser } from "@/modules/auth/request-identity";
 import { getUserComicState } from "@/modules/library/queries/get-user-comic-state";
-import { calculateAverageRating } from "@/modules/library/ratings/calculate-average-rating";
 
 export const dynamic = "force-dynamic";
 
@@ -71,11 +70,7 @@ export default async function ComicPage({
       ? readingState.progressCeiling
       : await getChapterProgressCeiling(comic.id);
 
-  const averageRating = readingState
-    ? calculateAverageRating(
-        readingState,
-      )
-    : null;
+
 
   return (
     <div className="reader-page work-page">
@@ -204,7 +199,7 @@ export default async function ComicPage({
                     )}
                   </div>
                   <details className="journal-editor" open>
-                    <summary>Оценки и личная заметка <span>{averageRating !== null ? `★ ${averageRating.toFixed(1)} / 5` : ""}{readingState.personalNote ? " · Есть заметка" : ""}</span></summary>
+                    <summary>Оценки и личная заметка </summary>
                   <form
                     action="/api/library/reading-state"
                     method="post"
@@ -222,60 +217,8 @@ export default async function ComicPage({
                       value="update-diary"
                     />
 
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-semibold">
-                          Моя оценка
-                        </h3>
-
-                        <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                          Можно оценить только те критерии, по которым уже есть мнение.
-                        </p>
-                      </div>
-
-                      {averageRating !== null ? (
-                        <p className="rounded-xl bg-[var(--surface)] px-3 py-2 text-sm">
-                          Сохранённая оценка:{" "}
-                          <strong>
-                            {averageRating.toFixed(1)} / 5
-                          </strong>
-                        </p>
-                      ) : (
-                        <p className="text-sm text-[var(--text-secondary)]">
-                          Пока без средней оценки
-                        </p>
-                      )}
-                    </div>
-
-                    <DiaryRatingFields ratings={readingState} />
-
-                    <label
-                      htmlFor="personal-note"
-                      className="mt-4 block text-sm"
-                    >
-                      <span className="mb-1 block font-medium">
-                        Личная заметка
-                      </span>
-
-                      <textarea
-                        id="personal-note"
-                        name="personalNote"
-                        rows={3}
-                        defaultValue={
-                          readingState.personalNote ??
-                          ""
-                        }
-                        placeholder="Мысли, впечатления, что хочется запомнить..."
-                        className="w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 leading-6"
-                      />
-                    </label>
-
-                    <button
-                      type="submit"
-                      className="mt-4 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)]"
-                    >
-                      Сохранить оценку и заметку
-                    </button>
+                    <p className="journal-hint-v4">Оцените любые критерии — средний балл посчитаем по заполненным.</p>
+                    <DiaryRatingFields key={JSON.stringify([comic.id, readingState.ratingPlot, readingState.ratingCharacters, readingState.ratingArt, readingState.ratingDepth, readingState.ratingWorld, readingState.personalNote])} ratings={readingState} personalNote={readingState.personalNote ?? ""} />
                   </form>
                   </details>
 

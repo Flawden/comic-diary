@@ -529,3 +529,32 @@ body { line-height: 1.5; }
 @container (max-width: 299px) {
  .rating-dimension legend { float: none; width: auto; padding-top: 3px; }
 }
+
+/* WD-04: explicit diary draft state and compact search. */
+.diary-editor-v4 .rating-row-v4 { display: grid; grid-template-columns: minmax(0,1fr) 174px; align-items: center; gap: 6px; padding: 3px 0; border-bottom: 1px solid var(--border); }
+.diary-editor-v4 .rating-label-v4 { font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
+.diary-editor-v4 .rating-options { display: flex; gap: 1px; justify-content: end; }
+.diary-editor-v4 .rating-star, .diary-editor-v4 .rating-clear { flex: 0 0 28px; width: 28px; height: 44px; margin: 0; }
+.diary-editor-v4 .rating-star span { font-size: 24px; }
+@container (max-width: 249px) {
+ .diary-editor-v4 .rating-row-v4 { grid-template-columns: 1fr; gap: 0; }
+ .diary-editor-v4 .rating-options { justify-content: space-between; }
+}
+.journal-hint-v4 { font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
+.journal-note-v4 { display: grid; gap: 8px; margin-top: 12px; font-size: 13px; }
+.journal-note-v4 textarea { width: 100%; min-height: 88px; resize: vertical; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text-primary); font: inherit; font-size: 16px; }
+.journal-save-v4 { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; margin-top: 12px; }
+.journal-save-v4 p { flex: 1; min-width: 140px; font-size: 12px; color: var(--text-secondary); }
+.journal-save-v4 button { min-height: 44px; }
+.library-search.library-search-v4 { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px 8px; align-items: start; margin-top: 12px; }
+.library-sort-v4 { grid-column: 1 / -1; min-width: 0; }
+.library-sort-v4 > summary { min-height: 44px; align-content: center; cursor: pointer; font-size: 12px; color: var(--text-secondary); }
+.library-sort-v4 > summary span { margin-left: 8px; }
+.library-sort-controls-v4 { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
+.library-sort-controls-v4 label { flex: 1 1 170px; }
+.library-reset-v4 { grid-column: 1/-1; min-height: 44px; align-content: center; font-size: 13px; color: var(--primary); }
+@media (max-width: 767px) {
+ .library-heading { margin-bottom: 18px; gap: 12px; }
+ .library-search-v4 > button { padding-left: 14px; padding-right: 14px; }
+ .library-tabs { scrollbar-width: thin; }
+}
