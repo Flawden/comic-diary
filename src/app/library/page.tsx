@@ -217,13 +217,12 @@ export default async function LibraryPage({
 
   return (
     <div className="tea-library">
-      <header className="library-heading">
+      <header className="library-heading library-heading-v5">
         <div>
-          <p className="diary-eyebrow">Ваша читательская полка</p>
           <h1>Мой дневник</h1>
-          <p>Истории, к которым хочется возвращаться.</p>
+          <p>{library.length ? `На полке: ${library.length} · Читаю: ${readingCount}` : "Ваша следующая история начинается здесь."}</p>
         </div>
-        <Link href="/" className="tea-outline">Найти в каталоге <span aria-hidden="true">↗</span></Link>
+        <Link href="/" className="tea-text-action">В каталог <span aria-hidden="true">↗</span></Link>
       </header>
 
       {activeFilter === "ALL" && !query ? <ContinueReading items={library} /> : null}

@@ -174,17 +174,22 @@ export default async function ComicPage({
                     unreadSpecial={readingState.chapterReading.specialCount - readingState.chapterReading.specialReadCount}
                     snapshot={completionSnapshot(readingState.chapterReading.registry, comic.totalChapters, comic.seriesStatus)} />
 
-                  <div>
+                  <div className="reading-progress-v5">
                     <h3 className="font-semibold">Мой прогресс</h3>
                     <p className="mt-2 text-lg font-semibold">{!readingState.chapterReading.registered ? "Общий счётчик: " : ""}{readingState.currentChapter}{progressCeiling === null ? "" : ` / ${progressCeiling}`}</p>
                     {readingState.unresolvedLegacyProgress ? <p className="mt-2 text-sm text-[var(--text-secondary)]">Ранее сохранён общий счётчик: {readingState.unresolvedLegacyProgress}. Появился список глав — выберите «Прочитано до», чтобы связать чтение с конкретными главами.</p> : null}
                     {readingState.chapterReading.registered ? (
-                      <div className="mt-2 space-y-2 text-sm text-[var(--text-secondary)]">
-                        {readingState.chapterReading.lastReadLabel ? <p>Последняя отмеченная: {readingState.chapterReading.lastReadLabel}</p> : null}
+                      <div className="mt-2 text-sm text-[var(--text-secondary)]">
                         <p>{readingState.chapterReading.caughtUp ? caughtUpLabel(comic.seriesStatus) : `Непрочитанных основных глав: ${readingState.chapterReading.unreadChapters}`}</p>
-                        {readingState.chapterReading.updatedChapters ? <p>Непрочитанных новых редакций: {readingState.chapterReading.updatedChapters}</p> : null}
-                        {readingState.chapterReading.specialCount ? <p>Спецвыпуски: {readingState.chapterReading.specialReadCount} / {readingState.chapterReading.specialCount}</p> : null}
-                        <p>Отмечайте чтение в списке глав ниже. Статус «Прочитано» выбирается отдельно.</p>
+                        <details className="reading-help-v5">
+                          <summary>Подробнее о прогрессе{readingState.chapterReading.updatedChapters ? ` · Новых редакций: ${readingState.chapterReading.updatedChapters}` : ""}</summary>
+                          <div className="space-y-2">
+                            {readingState.chapterReading.lastReadLabel ? <p>Последняя отмеченная: {readingState.chapterReading.lastReadLabel}</p> : null}
+                            {readingState.chapterReading.updatedChapters ? <p>Непрочитанных новых редакций: {readingState.chapterReading.updatedChapters}</p> : null}
+                            {readingState.chapterReading.specialCount ? <p>Спецвыпуски: {readingState.chapterReading.specialReadCount} / {readingState.chapterReading.specialCount}</p> : null}
+                            <p>Отмечайте чтение в списке глав ниже. Статус «Прочитано» выбирается отдельно.</p>
+                          </div>
+                        </details>
                       </div>
                     ) : (
                       <form action="/api/library/reading-state" method="post" className="mt-3">

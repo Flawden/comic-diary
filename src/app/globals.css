@@ -558,3 +558,27 @@ body { line-height: 1.5; }
  .library-search-v4 > button { padding-left: 14px; padding-right: 14px; }
  .library-tabs { scrollbar-width: thin; }
 }
+
+/* WD05: compact diary entry and progressive disclosure. */
+.library-heading.library-heading-v5 { gap: 8px 16px; margin-bottom: 12px; flex-wrap: wrap; }
+.library-heading-v5 > div { min-width: 0; flex: 1 1 180px; }
+.library-heading.library-heading-v5 h1 { font-size: clamp(28px, 4vw, 40px); }
+.library-heading.library-heading-v5 p { margin-top: 6px; font-size: 13px; }
+.library-heading-v5 > a { flex-shrink: 0; padding: 6px 0; }
+.reading-status-controls-v5 { display: flex; flex-wrap: wrap; gap: 8px; }
+.reading-status-controls-v5 select { flex: 1 1 130px; min-width: 0; max-width: 100%; }
+.reading-status-controls-v5 button { flex: 1 1 130px; }
+.reading-help-v5 { margin-top: 6px; font-size: 12px; color: var(--text-secondary); }
+.reading-help-v5 > summary { min-height: 44px; align-content: center; cursor: pointer; overflow-wrap: anywhere; }
+.reading-help-v5[open] > summary { margin-bottom: 6px; }
+.reading-progress-v5 > h3 { font-size: 14px; }
+.reading-progress-v5 > p { margin-top: 4px; }
+.work-diary .journal-editor > summary { justify-content: flex-start; gap: 10px; }
+.work-diary .journal-editor > summary::before { flex: 0 0 auto; }
+.work-diary .journal-editor > summary span { margin-left: auto; }
+@media (max-width: 640px) {
+ .library-heading.library-heading-v5 { margin-bottom: 8px; }
+ .tea-library .library-search-v4 { margin-top: 8px; margin-bottom: 0; }
+ .tea-library .library-view-toolbar { min-height: 50px; }
+ .work-diary .reading-dashboard { gap: 12px; }
+}

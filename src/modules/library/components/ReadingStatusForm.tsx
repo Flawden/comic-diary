@@ -47,15 +47,17 @@ export function ReadingStatusForm(props: Props) {
   function cancel() { if (pending) return; dialog.current?.close(); setConfirming(false); setStatus(props.status); setError(""); }
 
   return <>
-    <form onSubmit={submit} className="space-y-2">
+    <form onSubmit={submit} className="reading-status-v5 space-y-2">
       <label htmlFor="reading-status" className="block text-sm font-medium">Статус</label>
-      <div className="flex flex-wrap gap-2">
+      <div className="reading-status-controls-v5">
         <select id="reading-status" value={status} disabled={pending} onChange={(e) => setStatus(e.target.value as ReadingStatus)} className="min-h-11 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm">
           {Object.entries(labels).map(([value, label]) => <option key={value} value={value} disabled={value === "COMPLETED" && !finished && props.status !== "COMPLETED"}>{label}</option>)}
         </select>
         <button type="submit" disabled={pending} className={`${button} text-[var(--primary)]`}>{pending ? "Сохраняю…" : "Сохранить статус"}</button>
       </div>
+      <details className="reading-help-v5"><summary>О статусе · {seriesStatusLabels[props.seriesStatus]}</summary>
       <p className="text-xs leading-5 text-[var(--text-secondary)]">{seriesStatusLabels[props.seriesStatus]}. {props.completionBlocked ? "В списке основных глав есть невышедшие главы или пока нет опубликованных основных глав." : null} {finished ? "Завершение чтения подтверждается отдельно." : "Прочитав всё вышедшее, оставайтесь в статусе «Читаю»."}</p>
+      </details>
       {props.registered ? <button type="button" disabled={pending} onClick={() => { setError(""); setMode("AVAILABLE"); setConfirming(true); dialog.current?.showModal(); }} className={button}>Отметить всё вышедшее</button> : null}
       {error && !confirming ? <p role="alert" className="text-sm text-[var(--text-secondary)]">{error}</p> : null}
     </form>
