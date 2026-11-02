@@ -1,3 +1,4 @@
+import { comicListHref } from "@/modules/library/list-navigation";
 import { isWorkType, isWorkFormat, workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
 import { isSeriesStatus, seriesStatusLabels } from "@/modules/comics/series-status";
 import Link from "next/link";
@@ -152,7 +153,7 @@ export default async function Home({
           <p>Комиксы, к которым захочется возвращаться.</p></div>
         <Link href="/library" className="tea-outline">Моя библиотека →</Link>
       </header>
-      {readingNow ? <Link href={`/comics/${readingNow.slug}`} className="reading-return">
+      {readingNow ? <Link href={comicListHref(readingNow.slug, "catalog", resolvedSearchParams)} className="reading-return">
         <span>Вернуться к чтению</span><strong>{readingNow.title}</strong><span aria-hidden="true">→</span>
       </Link> : null}
       <section id="catalog" aria-label="Каталог комиксов">
@@ -304,6 +305,7 @@ export default async function Home({
                 >
                   <ComicCard
                     comic={comic}
+                    href={comicListHref(comic.slug, "catalog", resolvedSearchParams)}
                     progressCeiling={progressCeiling}
                     personalState={
                       libraryByComicId.get(

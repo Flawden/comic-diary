@@ -14,6 +14,7 @@ type PersonalState = {
 };
 
 type ComicCardProps = {
+  href: string;
   comic: ComicListItem;
   progressCeiling: number | null;
   personalState?: PersonalState | null;
@@ -26,7 +27,7 @@ const statusLabels = {
   ON_HOLD: "Отложено",
 } as const;
 
-export function ComicCard({ comic, progressCeiling, personalState = null }: ComicCardProps) {
+export function ComicCard({ href, comic, progressCeiling, personalState = null }: ComicCardProps) {
   const currentChapter = personalState
     ? !personalState.chapterReading.registered || progressCeiling === null
       ? personalState.currentChapter
@@ -38,14 +39,14 @@ export function ComicCard({ comic, progressCeiling, personalState = null }: Comi
 
   return (
 
-      <article className="catalog-book">
-        <Link href={`/comics/${comic.slug}`} className="catalog-book-cover">
+      <article id={`book-${comic.id}`} className="catalog-book">
+        <Link href={href} className="catalog-book-cover">
           <CoverImage src={comic.coverUrl} alt={`Обложка ${comic.title}`} className="aspect-[3/4] rounded-[var(--cd-radius-card)]" imageClassName="object-contain" fallback={comic.title} />
         </Link>
         <div className="catalog-book-body">
           <p className="text-xs font-medium text-[var(--text-accent)]">{comic.categoryName}</p>
           <h3 className="mt-1 text-lg font-bold leading-snug text-[var(--text-primary)]">
-            <Link href={`/comics/${comic.slug}`} title={comic.title} className="break-words hover:underline">{comic.title}</Link>
+            <Link href={href} title={comic.title} className="break-words hover:underline">{comic.title}</Link>
           </h3>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {comic.seriesStatus !== "UNKNOWN" ? <Badge variant={comic.seriesStatus === "FINISHED" ? "success" : "neutral"}>{seriesStatusLabels[comic.seriesStatus]}</Badge> : null}<span className="text-xs text-[var(--text-secondary)]">{[comic.workType !== "UNKNOWN" ? workTypeLabels[comic.workType] : null, comic.workFormat !== "UNKNOWN" ? workFormatLabels[comic.workFormat] : null].filter(Boolean).join(" · ")}</span>

@@ -1,3 +1,4 @@
+import { comicListHref } from "@/modules/library/list-navigation";
 import { ContinueReading } from "@/modules/library/components/ContinueReading";
 import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
 import { seriesStatusLabels } from "@/modules/comics/series-status";
@@ -225,7 +226,7 @@ export default async function LibraryPage({
         <Link href="/" className="tea-text-action">В каталог <span aria-hidden="true">↗</span></Link>
       </header>
 
-      {activeFilter === "ALL" && !query ? <ContinueReading items={library} /> : null}
+      {activeFilter === "ALL" && !query ? <ContinueReading items={library} listQuery={resolvedSearchParams} /> : null}
 
       {library.length > 0 ? (
         <nav
@@ -366,7 +367,7 @@ export default async function LibraryPage({
       ) : (
         <LibraryView>
           {filteredLibrary.map((item) => (
-            <LibraryComicCard key={item.comicId} item={item} />
+            <LibraryComicCard key={item.comicId} item={item} href={comicListHref(item.slug, "library", resolvedSearchParams)} />
           ))}
         </LibraryView>
       )}

@@ -11,15 +11,14 @@ const statuses = {
   WANT_TO_READ: "В планах", READING: "Читаю", COMPLETED: "Прочитано", ON_HOLD: "На паузе",
 } as const;
 
-export function LibraryComicCard({ item }: { item: UserLibraryItem }) {
-  const href = `/comics/${item.slug}`;
+export function LibraryComicCard({ item, href }: { item: UserLibraryItem; href: string }) {
   const percent = item.chapterReading.registered ? getLibraryProgressPercent(item.currentChapter, item.progressCeiling) : null;
   const rating = calculateAverageRating(item);
   const note = item.personalNote?.trim();
   const metadata = [item.visibility === "PRIVATE" ? "Личное произведение" : item.categoryName,
     item.workType !== "UNKNOWN" ? workTypeLabels[item.workType] : null,
     item.workFormat !== "UNKNOWN" ? workFormatLabels[item.workFormat] : null].filter(Boolean);
-  return <article className="shelf-book" aria-label={item.title}>
+  return <article id={`book-${item.comicId}`} className="shelf-book" aria-label={item.title}>
     <Link href={href} className="shelf-cover">
       <CoverImage src={item.coverUrl} alt={`Обложка ${item.title}`} className="shelf-cover-image" imageClassName="object-contain" fallback={item.title} />
     </Link>

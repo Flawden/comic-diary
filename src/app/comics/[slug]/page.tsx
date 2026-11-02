@@ -1,3 +1,4 @@
+import { listReturn } from "@/modules/library/list-navigation";
 import { getReadingTarget } from "@/modules/library/reading-target";
 import { ReadingDestination } from "@/modules/library/components/ReadingDestination";
 import Link from "next/link";
@@ -23,13 +24,14 @@ import { getUserComicState } from "@/modules/library/queries/get-user-comic-stat
 export const dynamic = "force-dynamic";
 
 type ComicPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
   params: Promise<{
     slug: string;
   }>;
 };
 
 export default async function ComicPage({
-  params,
+  params, searchParams,
 }: ComicPageProps) {
   const { slug } = await params;
 
@@ -45,6 +47,8 @@ export default async function ComicPage({
   if (!comic) {
     notFound();
   }
+
+  const back = listReturn(await searchParams, comic.id);
 
   const canSeeUnreleasedChapters =
     comic.visibility === "PRIVATE" &&
@@ -76,7 +80,7 @@ export default async function ComicPage({
 
   return (
     <div className="reader-page work-page">
-      <Link href="/" className="reader-back">← Каталог</Link>
+      <Link href={back.href} className="reader-back">← {back.label}</Link>
       <article>
         <header className="work-hero work-hero-v6">
           <CoverImage src={comic.coverUrl} alt={`Обложка ${comic.title}`} className="work-cover" imageClassName="object-contain" fallback={comic.title} />
@@ -158,7 +162,7 @@ export default async function ComicPage({
               <p>{comic.description}</p>
             </details> : null}
             <div className="work-actions">
-              {readingState ? <ReadingDestination target={getReadingTarget(readingState.chapterReading.registry, readingState.chapterReading.readIds, comic.sourceUrl)} slug={comic.slug} />
+              {readingState ? <ReadingDestination target={getReadingTarget(readingState.chapterReading.registry, readingState.chapterReading.readIds, comic.sourceUrl)} comicHref="" />
                 : <a href={comic.sourceUrl} target="_blank" rel="noopener noreferrer" className="tea-primary">Читать в источнике ↗</a>}
               <a href="#chapters" className="tea-outline">К списку глав ↓</a>
               <a href="#my-reading" className="tea-text-action">Мой дневник</a>

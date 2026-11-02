@@ -38,7 +38,7 @@ jobs:
         run: npm run typecheck
 
       - name: Reading destination rules
-        run: node --import tsx --test src/modules/library/reading-target.test.ts
+        run: node --import tsx --test src/modules/library/reading-target.test.ts src/modules/library/list-navigation.test.ts
 
       - name: Check restore script syntax
         run: |
