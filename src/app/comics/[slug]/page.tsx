@@ -9,6 +9,7 @@ import { seriesStatusLabels, caughtUpLabel } from "@/modules/comics/series-statu
 import { TrackingControl } from "@/modules/library/components/TrackingControl";
 import { ReadingStatusForm } from "@/modules/library/components/ReadingStatusForm";
 import { completionSnapshot } from "@/modules/library/completion-model";
+import { chapterRatingSummary } from "@/modules/library/chapter-rating-summary";
 import { ChapterReadingPanel } from "@/modules/library/components/ChapterReadingPanel";
 import { Button } from "@/shared/components/ui";
 import { notFound } from "next/navigation";
@@ -233,8 +234,15 @@ export default async function ComicPage({
                     />
 
                     <p className="journal-hint-v4">Оцените любые критерии — средний балл посчитаем по заполненным.</p>
+                    <h3 className="font-semibold">Моя оценка тайтла</h3>
                     <DiaryRatingFields key={JSON.stringify([comic.id, readingState.ratingPlot, readingState.ratingCharacters, readingState.ratingArt, readingState.ratingDepth, readingState.ratingWorld, readingState.personalNote])} ratings={readingState} personalNote={readingState.personalNote ?? ""} />
                   </form>
+                  <h3 className="mt-4 font-semibold">Мои оценки глав</h3>
+                  {(["MAIN", "SPECIAL"] as const).map(kind => {
+                    const { average, rated, read } = chapterRatingSummary(readingState.chapterReading, kind);
+                    if (kind === "SPECIAL" && !read) return null;
+                    return <p key={kind} className="mt-1 text-sm">{kind === "MAIN" ? "По главам" : "По спецвыпускам"}: <strong>{average === null ? "Без оценки" : average.toLocaleString("ru", {minimumFractionDigits:1, maximumFractionDigits:1}) + " / 5"}</strong> · оценено {rated} из {read} прочитанных</p>;
+                  })}
                   </details>
 
                   <details className="journal-editor"><summary>Обновления <span>{readingState.trackingEnabled ? "Включены" : "Выключены"}</span></summary><TrackingControl comicId={comic.id} enabled={readingState.trackingEnabled} /></details>
@@ -281,6 +289,7 @@ export default async function ComicPage({
               chapters={(readingState?.chapterReading.registry ?? chapters)
                 .filter((c) => c.status === "RELEASED" || (c.status === "ARCHIVED" && readingState?.chapterReading.readIds.includes(c.id)))
                 .map((c) => ({ id: c.id, displayCode: c.displayCode, title: c.title, sourceUrl: c.sourceUrl, sortOrder: c.sortOrder, status: c.status, kind: c.kind, supersedesChapterId: c.supersedesChapterId }))}
+              ratings={readingState?.chapterReading.ratings ?? {}}
               readIds={readingState?.chapterReading.readIds ?? []}
               canMark={readingState !== null}
             />

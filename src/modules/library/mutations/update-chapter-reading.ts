@@ -4,7 +4,7 @@ import { chapters, comics, userChapterReads, userComics } from "@/db/schema";
 import { selectReadThrough } from "../chapter-reading-model";
 import { SHARED_CATALOG_ADVISORY_LOCK } from "@/modules/catalog/canonical-catalog-write";
 
-export async function updateChapterReading(userId: number, comicId: number, chapterId: number, action: "read" | "unread" | "read-through") {
+export async function updateChapterReading(userId: number, comicId: number, chapterId: number, action: "read" | "unread" | "read-through" | "rate", rating?: number | null) {
   if (!Number.isSafeInteger(chapterId) || chapterId <= 0) throw new Error("Invalid chapter");
   return db.transaction(async (tx) => {
     // Serialize registry changes and reading actions against the same chapter set.
@@ -18,6 +18,12 @@ export async function updateChapterReading(userId: number, comicId: number, chap
     const registry = await tx.select().from(chapters).where(eq(chapters.comicId, comicId));
     const target = registry.find((c) => c.id === chapterId);
     if (!target || (action !== "unread" && target.status !== "RELEASED")) throw new Error("Chapter is unavailable");
+    if (action === "rate") {
+      if (rating !== null && (typeof rating !== "number" || !Number.isInteger(rating) || rating < 1 || rating > 5)) throw new Error("Invalid chapter rating");
+      const changed = await tx.update(userChapterReads).set({ rating }).where(and(eq(userChapterReads.userId, userId), eq(userChapterReads.chapterId, chapterId))).returning({ id: userChapterReads.chapterId });
+      if (!changed.length) throw new Error("Mark chapter read before rating it");
+      return context.slug;
+    }
     const selected = action === "read-through" ? selectReadThrough(registry, chapterId) : [target];
     const now = new Date();
     if (action === "unread") {

@@ -141,6 +141,13 @@
       "when": 1791562282468,
       "tag": "0019_work_type_and_format",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793621337820,
+      "tag": "0020_chapter_rating",
+      "breakpoints": true
     }
   ]
 }

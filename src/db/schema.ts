@@ -735,8 +735,10 @@ export const userChapterReads = pgTable("user_chapter_reads", {
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   chapterId: integer("chapter_id").notNull().references(() => chapters.id, { onDelete: "restrict" }),
   readAt: timestamp("read_at", { withTimezone: true }).defaultNow().notNull(),
+  rating: integer("rating"),
   origin: varchar("origin", { length: 16 }).default("EXPLICIT").notNull(),
 }, (table) => [
   primaryKey({ columns: [table.userId, table.chapterId] }),
+  check("user_chapter_reads_rating_range", sql`${table.rating} BETWEEN 1 AND 5`),
   index("user_chapter_reads_chapter_idx").on(table.chapterId),
 ]);

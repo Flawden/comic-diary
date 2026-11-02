@@ -115,6 +115,12 @@ export async function POST(
       const mode = formData.get("mode") ?? "COMPLETE";
       if (mode !== "COMPLETE" && mode !== "AVAILABLE") return NextResponse.json({ error: "Invalid completion mode" }, { status: 400 });
       slug = await completeComicReading(currentUser.id, comicId, scope, snapshot, mode);
+    } else if (intent === "chapter-rating") {
+      const value = formData.get("rating");
+      if (typeof value !== "string" || (value !== "" && !/^[1-5]$/.test(value))) {
+        return NextResponse.json({error: "Invalid chapter rating"}, {status:400});
+      }
+      slug = await updateChapterReading(currentUser.id, comicId, Number(formData.get("chapterId")), "rate", value === "" ? null : Number(value));
     } else if (intent === "chapter-reading") {
       const action = formData.get("action");
       const chapterId = Number(formData.get("chapterId"));
@@ -294,7 +300,7 @@ export async function POST(
       );
     }
 
-    if ((intent === "chapter-reading" || intent === "set-status" || intent === "complete-reading" || intent === "set-tracking") && request.headers.get("accept")?.includes("application/json")) {
+    if ((intent === "chapter-rating" || intent === "chapter-reading" || intent === "set-status" || intent === "complete-reading" || intent === "set-tracking") && request.headers.get("accept")?.includes("application/json")) {
       return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
     }
 

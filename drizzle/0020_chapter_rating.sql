@@ -1,0 +1,2 @@
+ALTER TABLE "user_chapter_reads" ADD COLUMN "rating" integer;--> statement-breakpoint
+ALTER TABLE "user_chapter_reads" ADD CONSTRAINT "user_chapter_reads_rating_range" CHECK ("user_chapter_reads"."rating" BETWEEN 1 AND 5);

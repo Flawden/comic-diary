@@ -31,7 +31,7 @@ export async function exportUserDiary(userId: number) {
             'chapterId', ch.id, 'displayCode', ch.display_code, 'title', ch.title,
             'kind', ch.kind, 'status', ch.status, 'sortOrder', ch.sort_order,
             'sourceUrl', ch.source_url, 'supersedesChapterId', ch.supersedes_chapter_id,
-            'markedAt', mark.read_at, 'origin', mark.origin
+            'markedAt', mark.read_at, 'origin', mark.origin, 'rating', mark.rating
           ) ORDER BY ch.sort_order, ch.id)
           FROM user_chapter_reads mark JOIN chapters ch ON ch.id = mark.chapter_id
           WHERE mark.user_id = ${userId} AND ch.comic_id = c.id
@@ -49,7 +49,7 @@ export async function exportUserDiary(userId: number) {
     entries: result.rows[0].entries as Array<{
       comic: { id: number; title: string; visibility: string };
       diary: { status: string; trackingEnabled: boolean; storedCurrentChapter: number; personalNote: string | null; ratings: { plot: number | null } };
-      chapterMarks: Array<{ chapterId: number; status: string; kind: string; markedAt: string; origin: string }>;
+      chapterMarks: Array<{ chapterId: number; status: string; kind: string; markedAt: string; origin: string; rating: number | null }>;
     }>,
   };
 }

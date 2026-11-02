@@ -1,11 +1,12 @@
 "use client";
 
+import { ChapterRating } from "./ChapterRating";
 import { useState } from "react";
 import { Button } from "@/shared/components/ui";
 import type { ComicChapter } from "@/modules/comics/queries/get-comic-chapters";
 
 type Chapter = Omit<ComicChapter, "releasedAt">;
-type Props = { comicId: number; chapters: Chapter[]; readIds: number[]; canMark: boolean };
+type Props = { comicId: number; chapters: Chapter[]; ratings: Record<number, number>; readIds: number[]; canMark: boolean };
 
 function safeSource(value: string | null) {
   if (!value) return null;
@@ -13,7 +14,7 @@ function safeSource(value: string | null) {
   catch { return null; }
 }
 
-export function ChapterReadingPanel({ comicId, chapters, readIds, canMark }: Props) {
+export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMark }: Props) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("MAIN");
   const [limit, setLimit] = useState(30);
@@ -71,11 +72,14 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, canMark }: Pro
             <div className="chapter-line-title">
               <h3>{c.displayCode}</h3>
               {c.title ? <p>{c.title}</p> : null}
+              {canMark && isRead ? <ChapterRating key={`${c.id}:${ratings[c.id] ?? ""}`} comicId={comicId} chapterId={c.id} code={c.displayCode} rating={ratings[c.id] ?? null} /> : null}
               {c.supersedesChapterId ? <details className="chapter-revision"><summary>Новая редакция</summary><p>Отметка старой версии хранится в архиве. Эту версию можно отметить отдельно.</p></details> : null}
             </div>
             <div className="chapter-line-actions">
               {source ? <a href={source} target="_blank" rel="noopener noreferrer" className="tea-text-action" aria-label={`Читать главу ${c.displayCode} в источнике, новая вкладка`}>Читать ↗</a> : null}
-              {canMark ? <form action="/api/library/reading-state" method="post">
+              {canMark ? <form action="/api/library/reading-state" method="post" onSubmit={event => {
+                if (isRead && ratings[c.id] && !window.confirm("Снять отметку чтения и удалить оценку этой главы?")) event.preventDefault();
+              }}>
                 <input type="hidden" name="comicId" value={comicId} />
                 <input type="hidden" name="intent" value="chapter-reading" />
                 <input type="hidden" name="chapterId" value={c.id} />
@@ -91,7 +95,7 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, canMark }: Pro
       </ul>
       {filtered.length === 0 ? <p className="mt-4 text-sm text-[var(--text-secondary)]">{query ? "По запросу ничего не найдено." : "В этом разделе пока нет опубликованных глав."}</p> : null}
       {filtered.length > limit ? <Button variant="secondary" className="mt-3" onClick={() => setLimit(limit + 30)}>Показать ещё 30</Button> : null}
-      {history.length ? <details className="mt-5 rounded-xl border border-[var(--border)] p-3"><summary className="cursor-pointer font-semibold">Прочитанные архивные версии ({history.length})</summary><ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">{history.map((c) => <li key={c.id}>{c.displayCode}{c.title ? ` — ${c.title}` : ""} · прочитано</li>)}</ul></details> : null}
+      {history.length ? <details className="mt-5 rounded-xl border border-[var(--border)] p-3"><summary className="cursor-pointer font-semibold">Прочитанные архивные версии ({history.length})</summary><ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">{history.map((c) => <li key={c.id}>{c.displayCode}{c.title ? ` — ${c.title}` : ""} · прочитано{ratings[c.id] ? ` · ★ ${ratings[c.id]} / 5` : ""}</li>)}</ul></details> : null}
       {!canMark ? <p className="mt-4 text-sm text-[var(--text-secondary)]">Добавьте комикс в свою библиотеку, чтобы отмечать чтение.</p> : null}
     </section>
   );
