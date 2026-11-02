@@ -614,7 +614,7 @@ body { line-height: 1.5; }
  .work-hero-v6 .work-count-v6, .work-hero-v6 .work-metadata-v6 { font-size: 12px; }
  .work-hero-v6 .work-credit-details, .work-hero-v6 .work-description { margin-top: 0; }
  .work-hero-v6 .work-actions { margin-top: 0; gap: 8px; }
- .work-hero-v6 .work-actions > :not(.tea-primary) { flex: 1 1 120px; }
+ .work-hero-v6 .work-actions > a:not(.tea-primary) { flex: 1 1 120px; }
  .tea-library .is-grid .shelf-content h2 { font-size: 18px; }
 }
 
