@@ -1,3 +1,5 @@
+import { getCollectionProgress } from "@/modules/library/queries/get-collection-progress";
+import { CollectionProgress } from "@/modules/library/components/CollectionProgress";
 import { comicListHref } from "@/modules/library/list-navigation";
 import { ContinueReading } from "@/modules/library/components/ContinueReading";
 import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
@@ -99,6 +101,7 @@ export default async function LibraryPage({
     library,
     resolvedSearchParams,
     canUsePrivateCatalog,
+    collectionProgress,
   ] = await Promise.all([
     getUserLibrary(
       currentUser.id,
@@ -107,6 +110,7 @@ export default async function LibraryPage({
     hasPrivateCatalogEntitlement(
       currentUser.id,
     ),
+    getCollectionProgress(currentUser.id),
   ]);
 
   const rawStatus =
@@ -371,6 +375,7 @@ export default async function LibraryPage({
           ))}
         </LibraryView>
       )}
+      <CollectionProgress progress={collectionProgress} />
       {canUsePrivateCatalog ? (
         <details className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm sm:p-6">
           <summary className="min-h-11 cursor-pointer text-lg font-bold focus-visible:outline-2 focus-visible:outline-[var(--primary)]">Добавить личный тайтл</summary>

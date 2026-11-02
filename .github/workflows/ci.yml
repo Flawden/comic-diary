@@ -164,6 +164,7 @@ jobs:
 
       - name: Account counters and diary export
         run: |
+          node --import tsx scripts/collection-progress-probe.ts
           node --import tsx scripts/account-reading-stats-probe.ts
           node --import tsx scripts/account-diary-export-probe.ts
 
