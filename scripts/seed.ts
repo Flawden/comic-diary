@@ -192,7 +192,7 @@ async function seed() {
           chapters.comicId,
           chapters.displayCode,
         ],
-        targetWhere: sql`${chapters.status} <> 'ARCHIVED'`,
+        targetWhere: sql`${chapters.status} <> 'ARCHIVED' AND ${chapters.displayCode} <> ''`,
         set: {
           title: chapter.title,
           sortOrder: chapter.sortOrder,
