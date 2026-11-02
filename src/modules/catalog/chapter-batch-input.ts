@@ -10,7 +10,7 @@ export function parseChapterBatch(text: string): ChapterBatchRow[] {
     if (!line.trim()) continue;
     const cells = line.split("\t").map(value => value.trim());
     const [displayCode, title = "", kind = "MAIN", sourceUrl = ""] = cells;
-    if (cells.length > 4 || !displayCode || displayCode.length > 160 || title.length > 255 || sourceUrl.length > 2048 || (kind !== "MAIN" && kind !== "SPECIAL")) {
+    if (cells.length > 4 || (!displayCode && !title) || displayCode.length > 160 || title.length > 255 || sourceUrl.length > 2048 || (kind !== "MAIN" && kind !== "SPECIAL")) {
       throw new ChapterBatchInputError(`Строка ${index + 1}: проверьте код, название, тип и ссылку.`);
     }
     if (sourceUrl) {
@@ -18,7 +18,7 @@ export function parseChapterBatch(text: string): ChapterBatchRow[] {
       try { parsed = new URL(sourceUrl); } catch { throw new ChapterBatchInputError(`Строка ${index + 1}: некорректная ссылка.`); }
       if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new ChapterBatchInputError(`Строка ${index + 1}: нужна HTTP/HTTPS-ссылка.`);
     }
-    if (codes.has(displayCode)) throw new ChapterBatchInputError(`Строка ${index + 1}: код главы повторяется.`);
+    if (displayCode && codes.has(displayCode)) throw new ChapterBatchInputError(`Строка ${index + 1}: код главы повторяется.`);
     codes.add(displayCode);
     rows.push({ displayCode, title: title || null, kind, sourceUrl: sourceUrl || null });
     if (rows.length > CHAPTER_BATCH_LIMIT) throw new ChapterBatchInputError(`Не больше ${CHAPTER_BATCH_LIMIT} глав за один раз.`);

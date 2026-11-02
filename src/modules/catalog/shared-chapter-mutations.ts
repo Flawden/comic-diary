@@ -193,7 +193,7 @@ function normalizeMetadata(
     input.displayCode.trim();
 
   if (
-    displayCode === "" ||
+    (!displayCode && !input.title?.trim()) ||
     displayCode.length > 160
   ) {
     throw new SharedChapterMutationError(
@@ -1094,7 +1094,7 @@ export async function appendSharedChapterBatch(
     const snapshot = createHash("sha256").update(JSON.stringify({ comicId, rows, registry: registry.map(chapterSnapshot) })).digest("hex");
     if (expectedSnapshot !== undefined && expectedSnapshot !== snapshot) throw new SharedChapterMutationError("chapter-batch-stale");
     const codes = new Set(registry.filter(row => row.status !== "ARCHIVED").map(row => row.displayCode));
-    if (rows.some(row => codes.has(row.displayCode))) throw new SharedChapterMutationError("chapter-display-code-conflict");
+    if (rows.some(row => row.displayCode && codes.has(row.displayCode))) throw new SharedChapterMutationError("chapter-display-code-conflict");
     const lastOrder = registry.reduce((max, row) => Math.max(max, row.sortOrder), 0);
     if (lastOrder + rows.length * 10 > 2147483647) throw new SharedChapterMutationError("invalid-chapter");
     const values = rows.map((row, index) => ({ ...row, comicId, sortOrder: lastOrder + (index + 1) * 10 }));

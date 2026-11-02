@@ -49,6 +49,12 @@ async function main() {
     assert.equal(diary.personalNote, "keep"); assert.equal(diary.ratingArt, 5); assert.equal(diary.status, "READING");
     assert.equal(parseChapterBatch(Array.from({ length: 100 }, (_, i) => String(i)).join("\n")).length, 100);
     for (const invalid of ["", "a\na", "a\tb\tBAD", "a\tb\tMAIN\tjavascript:alert(1)", "a\u0000", Array.from({ length: 101 }, (_, i) => String(i)).join("\n")]) assert.throws(() => parseChapterBatch(invalid));
+    const named = "\tОхота на быка\n\tРубежи";
+    const unnamedCodes = await appendSharedChapterBatch(comic.id, named, "RELEASED", actor);
+    await appendSharedChapterBatch(comic.id, named, "RELEASED", actor, unnamedCodes.snapshot);
+    const ordered = (await db.select().from(chapters).where(eq(chapters.comicId, comic.id))
+      .orderBy(chapters.sortOrder, chapters.id)).filter(row => !row.displayCode);
+    assert.deepEqual(ordered.map(row => row.title), ["Охота на быка", "Рубежи"]);
     await db.update(chapters).set({ sortOrder: 2147483640 }).where(eq(chapters.id, original.id));
     await assert.rejects(appendSharedChapterBatch(comic.id, "overflow", "RELEASED", actor));
     console.log("PASS: batch preview, atomic create/audit rollback, duplicate/stale rejection, specials, limits, private boundary and diary preservation");

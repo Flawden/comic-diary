@@ -22,6 +22,20 @@ import { getComicChapters } from "@/modules/comics/queries/get-comic-chapters";
 import { getCurrentUser } from "@/modules/auth/request-identity";
 import { getUserComicState } from "@/modules/library/queries/get-user-comic-state";
 
+function StoryExcerpt({ heading, text }: { heading: string; text: string | null }) {
+  if (!text?.trim()) return null;
+  const full = text.trim();
+  const chars = Array.from(full);
+  const intro = chars.slice(0, 125).join("").replace(/\s+/g, " ").trimEnd();
+  return <section className="mt-4"><h2 className="font-semibold">{heading}</h2>
+    {chars.length <= 125 ? <p className="whitespace-pre-wrap">{full}</p> :
+      <details className="story-excerpt">
+        <summary><span className="excerpt-short">{intro}… <b>Ещё</b></span><b className="excerpt-close">Свернуть</b></summary>
+        <p className="whitespace-pre-wrap">{full}</p>
+      </details>}
+  </section>;
+}
+
 export const dynamic = "force-dynamic";
 
 type ComicPageProps = {
@@ -144,30 +158,14 @@ export default async function ComicPage({
               </dl></details>
             ) : null}
 
-            {comic.translatorNote ? (
-              <section className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--background)] p-5">
-                <h2 className="font-semibold">
-                  Примечание переводчика
-                </h2>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--text-secondary)]">
-                  {comic.translatorNote}
-                </p>
-              </section>
-            ) : null}
-
-
-
-
-            {comic.description ? <details className="work-description">
-              <summary>Об истории</summary>
-              <p>{comic.description}</p>
-            </details> : null}
             <div className="work-actions">
               {readingState ? <ReadingDestination target={getReadingTarget(readingState.chapterReading.registry, readingState.chapterReading.readIds, comic.sourceUrl)} comicHref="" />
-                : <a href={comic.sourceUrl} target="_blank" rel="noopener noreferrer" className="tea-primary">Читать в источнике ↗</a>}
+                : chapters.some(c => c.kind === "MAIN" && c.status === "RELEASED") ? <ReadingDestination target={getReadingTarget(chapters, [], comic.sourceUrl)} comicHref="" /> : <a href={comic.sourceUrl} target="_blank" rel="noopener noreferrer" className="tea-primary">Читать в источнике ↗</a>}
               <a href="#chapters" className="tea-outline">К списку глав ↓</a>
               <a href="#my-reading" className="tea-text-action">Мой дневник</a>
             </div>
+            <StoryExcerpt heading="Описание" text={comic.description} />
+            <StoryExcerpt heading="Примечание переводчика" text={comic.translatorNote} />
           </div>
         </header>
             <section id="my-reading" className="reader-panel work-diary">

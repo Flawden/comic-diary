@@ -1,0 +1,2 @@
+DROP INDEX "chapters_comic_display_code_active_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "chapters_comic_display_code_active_unique" ON "chapters" USING btree ("comic_id","display_code") WHERE "chapters"."status" <> 'ARCHIVED' AND "chapters"."display_code" <> '';

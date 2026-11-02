@@ -44,19 +44,19 @@ export function ChapterRevisionSelector({ chapters, disabled }: { chapters: Chap
       onChange={event => choose(event.target.value, event.currentTarget.form)}
       className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm">
       <option value="">Новую главу без замены</option>
-      {candidates.map(c => <option key={c.id} value={c.id}>Новую редакцию: {c.displayCode}{c.title ? ` — ${c.title}` : ""}</option>)}
+      {candidates.map(c => <option key={c.id} value={c.id}>Новую редакцию: {c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""}</option>)}
     </select>
     {selectedId ? <button type="button" onClick={event => choose("", event.currentTarget.form)}
       className="mt-3 min-h-11 rounded-lg border-2 border-[var(--primary)] bg-[var(--surface-raised)] px-4 py-2 text-sm font-semibold text-[var(--primary)]">Отменить замену — вернуться к новой главе</button> : null}
     <input type="hidden" name="chapterRevisionInvalid" value={selectedId && !selected ? "yes" : ""} />
     <input type="hidden" name="chapterSupersedesId" value={selected?.id ?? ""} />
     {selected ? <div className="mt-3 space-y-3">
-      <p className="text-sm">Старая редакция для замены: <strong>{selected.displayCode}{selected.title ? ` — ${selected.title}` : ""}</strong> (ID {selected.id}). Код, тип и позиция подставлены; проверьте название и ссылку новой редакции.</p>
+      <p className="text-sm">Старая редакция для замены: <strong>{selected.displayCode}{selected.title ? `${selected.displayCode ? " — " : ""}${selected.title}` : ""}</strong> (ID {selected.id}). Код, тип и позиция подставлены; проверьте название и ссылку новой редакции.</p>
       <p className="text-sm text-[var(--text-secondary)]">При сохранении новая редакция публикуется, старая уходит в архив. Её отметки и даты чтения сохраняются. Новая редакция будет непрочитанной, в том числе у читателей старой версии.</p>
       <label htmlFor={`${id}-confirm`} className="flex min-h-11 items-start gap-3 text-sm">
         <input id={`${id}-confirm`} name="chapterRevisionConfirmed" type="checkbox" value="yes" checked={confirmed}
           onChange={event => setConfirmed(event.target.checked)} className="mt-1 size-5 shrink-0" />
-        <span>Подтверждаю публикацию новой редакции и архивирование «{selected.displayCode}» с сохранением истории чтения.</span>
+        <span>Подтверждаю публикацию новой редакции и архивирование «{selected.displayCode || selected.title}» с сохранением истории чтения.</span>
       </label>
       {!confirmed ? <p className="text-sm text-[var(--text-secondary)]">Чтобы сохранить новую редакцию, поставьте галочку подтверждения выше. Для обычной новой главы нажмите «Отменить замену».</p> : null}
     </div> : candidates.length === 0 ? <p className="mt-2 text-sm text-[var(--text-secondary)]">Опубликованных глав для замены пока нет.</p> : null}

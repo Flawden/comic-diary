@@ -148,6 +148,13 @@
       "when": 1793621337820,
       "tag": "0020_chapter_rating",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793638285155,
+      "tag": "0021_optional_chapter_code",
+      "breakpoints": true
     }
   ]
 }

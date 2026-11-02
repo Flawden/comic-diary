@@ -1143,9 +1143,9 @@ export function AdminComicManager({
         ? statusRaw
         : null;
 
-    if (!displayCode) {
+    if (!displayCode && !title) {
       fail(
-        "Код главы обязателен.",
+        "Укажите название или код главы.",
       );
       setBusyKey(null);
       return;
@@ -1303,7 +1303,7 @@ export function AdminComicManager({
 
       const successMessage = previous
         ? `Новая редакция ${displayCode} опубликована. Предыдущая редакция ${previous.displayCode} (ID ${previous.id}) перемещена в архив; её история чтения сохранена.`
-        : `Глава ${displayCode} добавлена в ${comic.title}.`;
+        : `Глава ${displayCode || title} добавлена в ${comic.title}.`;
       setMessage(successMessage);
       setChapterFeedback({ comicId: comic.id, kind: "success", message: successMessage });
 
@@ -1655,7 +1655,7 @@ export function AdminComicManager({
                                     <div className="font-medium">
                                       {chapter.displayCode}{chapter.kind === "SPECIAL" ? " · Спешиал" : ""}{chapter.supersedesChapterId ? " · Новая редакция" : ""}
                                       {chapter.title
-                                        ? ` — ${chapter.title}`
+                                        ? `${chapter.displayCode ? " — " : ""}${chapter.title}`
                                         : ""}
                                     </div>
 
@@ -1664,7 +1664,7 @@ export function AdminComicManager({
                                     </div>
 
                                     {chapter.supersedesChapterId ? <p className="mt-1 text-xs text-[var(--text-secondary)]">Новая редакция · заменяет: {comic.chapters.find(c => c.id === chapter.supersedesChapterId)?.displayCode ?? `ID ${chapter.supersedesChapterId}`}</p> : null}
-                                    {comic.chapters.filter(c => c.supersedesChapterId === chapter.id).map(c => <p key={c.id} className="mt-1 text-xs text-[var(--text-secondary)]">Старая редакция · заменена на: {c.displayCode}{c.title ? ` — ${c.title}` : ""}. История чтения этой редакции сохранена.</p>)}
+                                    {comic.chapters.filter(c => c.supersedesChapterId === chapter.id).map(c => <p key={c.id} className="mt-1 text-xs text-[var(--text-secondary)]">Старая редакция · заменена на: {c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""}. История чтения этой редакции сохранена.</p>)}
                                     <div className="mt-2 flex flex-wrap gap-2">
                                       <button
                                         type="button"
@@ -1807,7 +1807,7 @@ export function AdminComicManager({
 
                           <label className="block">
                             <span className="mb-1 block text-xs font-medium">
-                              Код главы
+                              Код главы (необязательно)
                             </span>
 
                             <input

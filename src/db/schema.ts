@@ -302,7 +302,7 @@ export const chapters = pgTable(
   (table) => [
     uniqueIndex("chapters_comic_display_code_active_unique")
       .on(table.comicId, table.displayCode)
-      .where(sql`${table.status} <> 'ARCHIVED'`),
+      .where(sql`${table.status} <> 'ARCHIVED' AND ${table.displayCode} <> ''`),
     uniqueIndex("chapters_supersedes_unique").on(table.supersedesChapterId),
     check("chapters_kind_valid", sql`${table.kind} IN ('MAIN', 'SPECIAL')`),
 

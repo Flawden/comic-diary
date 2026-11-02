@@ -87,16 +87,16 @@ function UpdatesRow({ item, kind, onMarked }: { item: UpdatesTitle; kind: Update
       {error ? <div role="alert" className="mb-3"><p className="text-sm text-[var(--text-primary)]">{error}</p><Button variant="secondary" disabled={busy} onClick={() => load()}>Загрузить заново</Button></div> : null}
       {chapters.some((c) => c.kind === "MAIN" && !marked.includes(c.id)) ? <form className="mb-4 rounded-xl bg-[var(--surface-raised)] p-3" onSubmit={(e) => { e.preventDefault(); if (selected) void save(selected.id, "read-through"); }}>
         <label className="block text-sm font-medium">Прочитано до…<select value={target} required disabled={busy} onChange={(e) => setTarget(e.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm">
-          <option value="">Выберите главу</option>{chapters.filter((c) => c.kind === "MAIN" && !marked.includes(c.id)).map((c) => <option key={c.id} value={c.id}>{c.displayCode}{c.title ? ` — ${c.title}` : ""}</option>)}</select></label>
+          <option value="">Выберите главу</option>{chapters.filter((c) => c.kind === "MAIN" && !marked.includes(c.id)).map((c) => <option key={c.id} value={c.id}>{c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""}</option>)}</select></label>
         <p className="my-2 text-xs text-[var(--text-secondary)]">{selected ? `Будет добавлено отметок основных глав: ${selected.throughCount}.` : "Выберите из загруженных глав; для дальних глав нажмите «Показать ещё»."} Спецвыпуски и архивные версии не изменятся.</p>
         <Button type="submit" disabled={busy || !selected}>Отметить до выбранной</Button>
       </form> : null}
       <ul className="divide-y divide-[var(--border)]">{chapters.map((c) => {
         const source = sourceUrl(c.sourceUrl); const done = marked.includes(c.id);
-        return <li key={c.id} className="flex items-start gap-3 py-3"><div className="min-w-0 flex-1 break-words"><p className="font-semibold">{c.displayCode}{c.title ? ` — ${c.title}` : ""}</p>
+        return <li key={c.id} className="flex items-start gap-3 py-3"><div className="min-w-0 flex-1 break-words"><p className="font-semibold">{c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""}</p>
           <div className="mt-1 flex flex-wrap gap-2">{c.kind === "SPECIAL" ? <Badge>Спецвыпуск</Badge> : null}{c.updated ? <Badge>Обновлённая редакция</Badge> : null}</div>
           {source ? <a href={source} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm text-[var(--text-accent)]">Читать в источнике ↗</a> : null}</div>
-          <Button iconOnly variant={done ? "primary" : "secondary"} disabled={busy || done} aria-label={done ? `${c.displayCode}: прочитано` : `Отметить ${c.displayCode} прочитанной`} onClick={() => save(c.id, "read")}><span aria-hidden="true">{done ? "✓" : "○"}</span></Button></li>;
+          <Button iconOnly variant={done ? "primary" : "secondary"} disabled={busy || done} aria-label={done ? `${c.displayCode || c.title || "Глава"}: прочитано` : `Отметить ${c.displayCode || c.title || "Глава"} прочитанной`} onClick={() => save(c.id, "read")}><span aria-hidden="true">{done ? "✓" : "○"}</span></Button></li>;
       })}</ul>
       {loaded && chapters.length === 0 ? <p className="text-sm text-[var(--text-secondary)]">Непрочитанных глав в этом разделе уже нет.</p> : null}
       {chapters.length < total ? <Button variant="secondary" className="mt-3" disabled={busy} onClick={() => load(true)}>Показать ещё 30</Button> : null}

@@ -44,6 +44,6 @@ export function summarizeChapterReads(chapters: ReadingChapter[], reads: { chapt
     specialReadCount: active.filter((c) => c.kind === "SPECIAL" && readIds.has(c.id)).length,
     specialCount: active.filter((c) => c.kind === "SPECIAL").length,
     caughtUp: main.length > 0 && main.every((c) => readIds.has(c.id)),
-    lastReadLabel: lastRead ? `${lastRead.displayCode}${lastRead.title ? ` — ${lastRead.title}` : ""}${lastRead.status === "ARCHIVED" ? " (старая редакция / архив)" : ""}` : null,
+    lastReadLabel: lastRead ? `${lastRead.displayCode}${lastRead.title ? `${lastRead.displayCode ? " — " : ""}${lastRead.title}` : ""}${lastRead.status === "ARCHIVED" ? " (старая редакция / архив)" : ""}` : null,
   };
 }

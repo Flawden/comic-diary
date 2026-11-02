@@ -625,3 +625,9 @@ body { line-height: 1.5; }
 .reading-destination-hint { font-size: 13px; color: var(--text-secondary); line-height: 1.5; overflow-wrap: anywhere; }
 .reading-destination-note { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
 .diary-reading-destination { margin-top: 14px; }
+
+.story-excerpt summary { list-style: none; cursor: pointer; }
+.story-excerpt summary::-webkit-details-marker { display: none; }
+.story-excerpt b { color: var(--primary); }
+.story-excerpt .excerpt-close, .story-excerpt[open] .excerpt-short { display: none; }
+.story-excerpt[open] .excerpt-close { display: inline; }

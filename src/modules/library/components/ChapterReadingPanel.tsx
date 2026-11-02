@@ -22,7 +22,7 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMa
   const active = chapters.filter((c) => c.status === "RELEASED");
   const main = active.filter((c) => c.kind === "MAIN");
   const filtered = active.filter((c) => c.kind === kind &&
-    `${c.displayCode} ${c.title ?? ""}`.toLocaleLowerCase("ru").includes(query.trim().toLocaleLowerCase("ru")));
+    `${c.displayCode || c.title || "Глава"} ${c.title ?? ""}`.toLocaleLowerCase("ru").includes(query.trim().toLocaleLowerCase("ru")));
   const history = chapters.filter((c) => c.status === "ARCHIVED" && read.has(c.id));
   const control = "w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2.5 text-sm";
 
@@ -42,7 +42,7 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMa
               Прочитано до главы
               <select name="chapterId" required defaultValue="" className={`${control} mt-2`}>
                 <option value="" disabled>Выберите последнюю прочитанную главу</option>
-                {main.map((c) => <option key={c.id} value={c.id}>{c.displayCode}{c.title ? ` — ${c.title}` : ""}{c.supersedesChapterId ? " (новая редакция)" : ""}</option>)}
+                {main.map((c) => <option key={c.id} value={c.id}>{c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""}{c.supersedesChapterId ? " (новая редакция)" : ""}</option>)}
               </select>
             </label>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">Отметит основные главы до выбранной включительно в текущем порядке. Спецвыпуски и архивные версии останутся без изменений.</p>
@@ -70,13 +70,13 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMa
           const isRead = read.has(c.id);
           return <li key={c.id} className={`chapter-line ${isRead ? "is-read" : ""}`}>
             <div className="chapter-line-title">
-              <h3>{c.displayCode}</h3>
-              {c.title ? <p>{c.title}</p> : null}
-              {canMark && isRead ? <ChapterRating key={`${c.id}:${ratings[c.id] ?? ""}`} comicId={comicId} chapterId={c.id} code={c.displayCode} rating={ratings[c.id] ?? null} /> : null}
+              {canMark && isRead ? <ChapterRating key={`${c.id}:${ratings[c.id] ?? ""}`} comicId={comicId} chapterId={c.id} code={c.displayCode || c.title || "Глава"} rating={ratings[c.id] ?? null} /> : null}
+              <h3>{c.displayCode || c.title || "Глава"}</h3>
+              {c.displayCode && c.title ? <p>{c.title}</p> : null}
               {c.supersedesChapterId ? <details className="chapter-revision"><summary>Новая редакция</summary><p>Отметка старой версии хранится в архиве. Эту версию можно отметить отдельно.</p></details> : null}
             </div>
             <div className="chapter-line-actions">
-              {source ? <a href={source} target="_blank" rel="noopener noreferrer" className="tea-text-action" aria-label={`Читать главу ${c.displayCode} в источнике, новая вкладка`}>Читать ↗</a> : null}
+              {source ? <a href={source} target="_blank" rel="noopener noreferrer" className="tea-text-action" aria-label={`Читать главу ${c.displayCode || c.title || "Глава"} в источнике, новая вкладка`}>Читать ↗</a> : null}
               {canMark ? <form action="/api/library/reading-state" method="post" onSubmit={event => {
                 if (isRead && ratings[c.id] && !window.confirm("Снять отметку чтения и удалить оценку этой главы?")) event.preventDefault();
               }}>
@@ -84,7 +84,7 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMa
                 <input type="hidden" name="intent" value="chapter-reading" />
                 <input type="hidden" name="chapterId" value={c.id} />
                 <input type="hidden" name="action" value={isRead ? "unread" : "read"} />
-                <button type="submit" className="chapter-mark" aria-label={`${isRead ? "Снять отметку прочитанного" : "Отметить прочитанной"}: глава ${c.displayCode}`} title={isRead ? "Прочитано — снять отметку" : "Отметить прочитанной"}>
+                <button type="submit" className="chapter-mark" aria-label={`${isRead ? "Снять отметку прочитанного" : "Отметить прочитанной"}: глава ${c.displayCode || c.title || "Глава"}`} title={isRead ? "Прочитано — снять отметку" : "Отметить прочитанной"}>
                   <span aria-hidden="true">{isRead ? "✓" : "○"}</span>
                   <span className="chapter-mark-caption">{isRead ? "Прочитано" : "Отметить"}</span>
                 </button>
@@ -95,7 +95,7 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMa
       </ul>
       {filtered.length === 0 ? <p className="mt-4 text-sm text-[var(--text-secondary)]">{query ? "По запросу ничего не найдено." : "В этом разделе пока нет опубликованных глав."}</p> : null}
       {filtered.length > limit ? <Button variant="secondary" className="mt-3" onClick={() => setLimit(limit + 30)}>Показать ещё 30</Button> : null}
-      {history.length ? <details className="mt-5 rounded-xl border border-[var(--border)] p-3"><summary className="cursor-pointer font-semibold">Прочитанные архивные версии ({history.length})</summary><ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">{history.map((c) => <li key={c.id}>{c.displayCode}{c.title ? ` — ${c.title}` : ""} · прочитано{ratings[c.id] ? ` · ★ ${ratings[c.id]} / 5` : ""}</li>)}</ul></details> : null}
+      {history.length ? <details className="mt-5 rounded-xl border border-[var(--border)] p-3"><summary className="cursor-pointer font-semibold">Прочитанные архивные версии ({history.length})</summary><ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">{history.map((c) => <li key={c.id}>{c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""} · прочитано{ratings[c.id] ? ` · ★ ${ratings[c.id]} / 5` : ""}</li>)}</ul></details> : null}
       {!canMark ? <p className="mt-4 text-sm text-[var(--text-secondary)]">Добавьте комикс в свою библиотеку, чтобы отмечать чтение.</p> : null}
     </section>
   );
