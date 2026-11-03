@@ -198,6 +198,15 @@ export async function removeComicFromUserLibrary(
   return setUserComicTracking(userId, comicId, false);
 }
 
+export async function setChapterRatingPrompt(userId: number, comicId: number, enabled: boolean) {
+  if (typeof enabled !== "boolean") throw new Error("Invalid chapter rating preference");
+  const comic = await getComic(userId, comicId);
+  const updated = await db.update(userComics).set({ promptChapterRating: enabled })
+    .where(and(eq(userComics.userId, userId), eq(userComics.comicId, comicId))).returning({ id: userComics.id });
+  if (!updated.length) throw new Error("Comic is not in the authenticated user's library");
+  return comic.slug;
+}
+
 export async function setUserComicTracking(userId: number, comicId: number, enabled: boolean) {
   if (typeof enabled !== "boolean") throw new Error("Invalid tracking preference");
   const comic = await getComic(userId, comicId);

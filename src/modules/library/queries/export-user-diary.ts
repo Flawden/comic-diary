@@ -18,7 +18,7 @@ export async function exportUserDiary(userId: number) {
           'workType', c.work_type, 'workFormat', c.work_format, 'seriesStatus', c.series_status
         ),
         'diary', jsonb_build_object(
-          'status', uc.status, 'trackingEnabled', uc.tracking_enabled,
+          'status', uc.status, 'trackingEnabled', uc.tracking_enabled, 'promptChapterRating', uc.prompt_chapter_rating,
           'storedCurrentChapter', uc.current_chapter,
           'hasChapterRegistry', EXISTS (SELECT 1 FROM chapters ch WHERE ch.comic_id = c.id),
           'ratings', jsonb_build_object('plot', uc.rating_plot, 'characters', uc.rating_characters,

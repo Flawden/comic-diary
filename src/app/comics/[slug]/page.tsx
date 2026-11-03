@@ -1,6 +1,6 @@
 import { listReturn } from "@/modules/library/list-navigation";
 import { getReadingTarget } from "@/modules/library/reading-target";
-import { ReadingDestination } from "@/modules/library/components/ReadingDestination";
+import { WorkTabs, WorkPreferences, PromptSwitch, ShelfAction, DiaryForm } from "@/modules/library/components/WorkControls";
 import Link from "next/link";
 import { DiaryRatingFields } from "@/modules/library/components/DiaryRatingFields";
 import { workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
@@ -93,31 +93,21 @@ export default async function ComicPage({
 
 
 
-  return (
-    <div className="reader-page work-page">
+  const registry=readingState?.chapterReading.registry ?? chapters;
+  const readIds=readingState?.chapterReading.readIds ?? [];
+  const target=getReadingTarget(registry,readIds,comic.sourceUrl);
+  const total=chapters.filter(c=>c.status==="RELEASED" && c.kind==="MAIN").length;
+  const continuing=(readingState?.chapterReading.currentChapter ?? 0)>0;
+  const c=target.chapter;
+  const caption=target.direct && c ? (continuing?"Продолжить":"Читать")+(c.displayCode?" · глава "+c.displayCode:"") : target.source?.label;
+  return <WorkPreferences key={comic.id} comicId={comic.id} initial={readingState?.promptChapterRating ?? true}>
+    <article className="wd-work">
       <Link href={back.href} className="reader-back">← {back.label}</Link>
-      <article>
-        <header className="work-hero work-hero-v6">
-          <CoverImage src={comic.coverUrl} alt={`Обложка ${comic.title}`} className="work-cover" imageClassName="object-contain" fallback={comic.title} />
-          <div className="work-intro">
-            <div className="work-identity">
-            <p className="text-sm font-medium text-[var(--primary)]">
-              {comic.categoryName}
-            </p>
-
-            <h1 className="reader-title">
-              {comic.title}
-            </h1>
-            <p className="work-count-v6">
-              Основных глав: {chapters.filter((c) => c.status === "RELEASED" && c.kind === "MAIN").length}
-              {comic.totalChapters !== null ? ` · Заявлено (справочно): ${comic.totalChapters}` : ""}
-            </p>
-            {comic.seriesStatus !== "UNKNOWN" ? <p className="work-state-v6">{seriesStatusLabels[comic.seriesStatus]}</p> : null}
-            {comic.workType !== "UNKNOWN" || comic.workFormat !== "UNKNOWN" ? <p className="work-metadata-v6">{[comic.workType !== "UNKNOWN" ? workTypeLabels[comic.workType] : null, comic.workFormat !== "UNKNOWN" ? workFormatLabels[comic.workFormat] : null].filter(Boolean).join(" · ")}</p> : null}
-            </div>
-
-
-
+      <header className="wd-hero">
+        <CoverImage src={comic.coverUrl} alt={`Обложка: ${comic.title}`} className="wd-cover" imageClassName="object-contain" fallback={comic.title}/>
+        <div className="wd-identity"><p>{comic.categoryName}</p><h1>{comic.title}</h1>
+          <span>{[comic.workType!=="UNKNOWN" && workTypeLabels[comic.workType],new Intl.NumberFormat("ru").format(total)+" "+({one:"глава",few:"главы",many:"глав"}[new Intl.PluralRules("ru").select(total) as "one"|"few"|"many"]??"глав")].filter(Boolean).join(" · ")}</span>
+          {comic.seriesStatus!=="UNKNOWN" && <small>● {seriesStatusLabels[comic.seriesStatus]}</small>}
             {comic.visibility === "PRIVATE" ? (
               <p className="mt-4 inline-flex rounded-full border border-[var(--primary)]/30 bg-[var(--background)] px-3 py-1 text-xs font-semibold text-[var(--primary)]">
                 Личный тайтл
@@ -132,6 +122,26 @@ export default async function ComicPage({
               </p>
             ) : null}
 
+
+        </div>
+      </header>
+      {target.source ? <a className="wd-read" href={target.source.href} target="_blank" rel="noopener noreferrer"><strong>{caption} ↗</strong>{c && target.direct && c.title && <span>{c.title}</span>}</a>:<a href="#chapters" className="wd-read">К главам ↓</a>}
+      {c && !target.direct && <p className="wd-hint">Прямой ссылки на главу пока нет.{target.source?" Откроется общий источник истории.":""}</p>}
+      {target.state==="CAUGHT_UP" && <p className="wd-hint">Все вышедшие основные главы прочитаны.</p>}
+      <div className="wd-shelf"><ShelfAction comicId={comic.id} member={!!readingState} login={currentUser?null:`/login?next=${encodeURIComponent("/comics/"+comic.slug)}`}/></div>
+      <WorkTabs count={total} chapters={
+            <ChapterReadingPanel
+              comicId={comic.id}
+              chapters={(readingState?.chapterReading.registry ?? chapters)
+                .filter((c) => c.status === "RELEASED" || (c.status === "ARCHIVED" && readingState?.chapterReading.readIds.includes(c.id)))
+                .map((c) => ({ id: c.id, displayCode: c.displayCode, title: c.title, sourceUrl: c.sourceUrl, sortOrder: c.sortOrder, status: c.status, kind: c.kind, supersedesChapterId: c.supersedesChapterId }))}
+              ratings={readingState?.chapterReading.ratings ?? {}}
+              readIds={readingState?.chapterReading.readIds ?? []}
+              canMark={readingState !== null}
+            />
+      } about={<div className="wd-about">
+        <StoryExcerpt heading="Описание" text={comic.description}/>
+        <StoryExcerpt heading="Примечание переводчика" text={comic.translatorNote}/>
             {comic.authorName || comic.translatorName ? (
               <details className="work-credit-details"><summary>Автор и перевод</summary><dl className="work-credits">
                 {comic.authorName ? (
@@ -158,141 +168,10 @@ export default async function ComicPage({
               </dl></details>
             ) : null}
 
-            <div className="work-actions">
-              {readingState ? <ReadingDestination target={getReadingTarget(readingState.chapterReading.registry, readingState.chapterReading.readIds, comic.sourceUrl)} comicHref="" />
-                : chapters.some(c => c.kind === "MAIN" && c.status === "RELEASED") ? <ReadingDestination target={getReadingTarget(chapters, [], comic.sourceUrl)} comicHref="" /> : <a href={comic.sourceUrl} target="_blank" rel="noopener noreferrer" className="tea-primary">Читать в источнике ↗</a>}
-              <a href="#chapters" className="tea-outline">К списку глав ↓</a>
-              <a href="#my-reading" className="tea-text-action">Мой дневник</a>
-            </div>
-            <StoryExcerpt heading="Описание" text={comic.description} />
-            <StoryExcerpt heading="Примечание переводчика" text={comic.translatorNote} />
-          </div>
-        </header>
-            <section id="my-reading" className="reader-panel work-diary">
-              <h2 className="font-semibold">
-                Мой дневник
-              </h2>
 
-              {readingState ? (
-                <div className="reading-dashboard">
-                  <ReadingStatusForm key={`${comic.id}:${comic.seriesStatus}:${readingState.status}:${readingState.currentChapter}:${readingState.chapterReading.specialReadCount}`}
-                    comicId={comic.id} status={readingState.status}
-                    registered={readingState.chapterReading.registered} seriesStatus={comic.seriesStatus}
-                    completionBlocked={readingState.chapterReading.registered && (readingState.chapterReading.registry.some(c => c.kind === "MAIN" && c.status === "SCHEDULED") || !readingState.chapterReading.registry.some(c => c.kind === "MAIN" && c.status === "RELEASED"))}
-                    unreadMain={readingState.chapterReading.unreadChapters}
-                    unreadSpecial={readingState.chapterReading.specialCount - readingState.chapterReading.specialReadCount}
-                    snapshot={completionSnapshot(readingState.chapterReading.registry, comic.totalChapters, comic.seriesStatus)} />
-
-                  <div className="reading-progress-v5">
-                    <h3 className="font-semibold">Мой прогресс</h3>
-                    <p className="mt-2 text-lg font-semibold">{!readingState.chapterReading.registered ? "Общий счётчик: " : ""}{readingState.currentChapter}{progressCeiling === null ? "" : ` / ${progressCeiling}`}</p>
-                    {readingState.unresolvedLegacyProgress ? <p className="mt-2 text-sm text-[var(--text-secondary)]">Ранее сохранён общий счётчик: {readingState.unresolvedLegacyProgress}. Появился список глав — выберите «Прочитано до», чтобы связать чтение с конкретными главами.</p> : null}
-                    {readingState.chapterReading.registered ? (
-                      <div className="mt-2 text-sm text-[var(--text-secondary)]">
-                        <p>{readingState.chapterReading.caughtUp ? caughtUpLabel(comic.seriesStatus) : `Непрочитанных основных глав: ${readingState.chapterReading.unreadChapters}`}</p>
-                        <details className="reading-help-v5">
-                          <summary>Подробнее о прогрессе{readingState.chapterReading.updatedChapters ? ` · Новых редакций: ${readingState.chapterReading.updatedChapters}` : ""}</summary>
-                          <div className="space-y-2">
-                            {readingState.chapterReading.lastReadLabel ? <p>Последняя отмеченная: {readingState.chapterReading.lastReadLabel}</p> : null}
-                            {readingState.chapterReading.updatedChapters ? <p>Непрочитанных новых редакций: {readingState.chapterReading.updatedChapters}</p> : null}
-                            {readingState.chapterReading.specialCount ? <p>Спецвыпуски: {readingState.chapterReading.specialReadCount} / {readingState.chapterReading.specialCount}</p> : null}
-                            <p>Отмечайте чтение в списке глав ниже. Статус «Прочитано» выбирается отдельно.</p>
-                          </div>
-                        </details>
-                      </div>
-                    ) : (
-                      <form action="/api/library/reading-state" method="post" className="mt-3">
-                        <input type="hidden" name="comicId" value={comic.id} />
-                        <input type="hidden" name="intent" value="set-legacy-progress" />
-                        <label className="block text-sm">Общий счётчик без привязки к главам
-                          <input type="number" name="count" min={0} max={progressCeiling ?? 2147483647} required defaultValue={readingState.currentChapter} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2" />
-                        </label>
-                        <p className="mt-2 text-sm text-[var(--text-secondary)]">Список глав пока не заполнен. Можно сохранить общий счётчик; он не определяет конкретные главы или редакции.</p>
-                        <Button type="submit" className="mt-3">Сохранить прогресс</Button>
-                      </form>
-                    )}
-                  </div>
-                  <details className="journal-editor" open>
-                    <summary>Оценки и личная заметка </summary>
-                  <form
-                    action="/api/library/reading-state"
-                    method="post"
-                    className="journal-form"
-                  >
-                    <input
-                      type="hidden"
-                      name="comicId"
-                      value={comic.id}
-                    />
-
-                    <input
-                      type="hidden"
-                      name="intent"
-                      value="update-diary"
-                    />
-
-                    <p className="journal-hint-v4">Оцените любые критерии — средний балл посчитаем по заполненным.</p>
-                    <h3 className="font-semibold">Моя оценка тайтла</h3>
-                    <DiaryRatingFields key={JSON.stringify([comic.id, readingState.ratingPlot, readingState.ratingCharacters, readingState.ratingArt, readingState.ratingDepth, readingState.ratingWorld, readingState.personalNote])} ratings={readingState} personalNote={readingState.personalNote ?? ""} />
-                  </form>
-                  <h3 className="mt-4 font-semibold">Мои оценки глав</h3>
-                  {(["MAIN", "SPECIAL"] as const).map(kind => {
-                    const { average, rated, read } = chapterRatingSummary(readingState.chapterReading, kind);
-                    if (kind === "SPECIAL" && !read) return null;
-                    return <p key={kind} className="mt-1 text-sm">{kind === "MAIN" ? "По главам" : "По спецвыпускам"}: <strong>{average === null ? "Без оценки" : average.toLocaleString("ru", {minimumFractionDigits:1, maximumFractionDigits:1}) + " / 5"}</strong> · оценено {rated} из {read} прочитанных</p>;
-                  })}
-                  </details>
-
-                  <details className="journal-editor"><summary>Обновления <span>{readingState.trackingEnabled ? "Включены" : "Выключены"}</span></summary><TrackingControl comicId={comic.id} enabled={readingState.trackingEnabled} /></details>
-                </div>
-              ) : !currentUser ? (
-                <p className="mt-4"><Link className="tea-primary" href={`/login?next=${encodeURIComponent(`/comics/${comic.slug}`)}`}>Войти и вести дневник</Link></p>
-              ) : (
-                <div className="mt-4">
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    Комикс ещё не добавлен в библиотеку.
-                  </p>
-
-                  <form
-                    action="/api/library/reading-state"
-                    method="post"
-                    className="mt-4"
-                  >
-                    <input
-                      type="hidden"
-                      name="comicId"
-                      value={comic.id}
-                    />
-
-                    <input
-                      type="hidden"
-                      name="intent"
-                      value="add-to-library"
-                    />
-
-                    <button
-                      type="submit"
-                      className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)]"
-                    >
-                      Добавить в библиотеку
-                    </button>
-                  </form>
-                </div>
-              )}
-            </section>
-
-        <div id="chapters" className="reader-panel work-chapters">
-            <ChapterReadingPanel
-              comicId={comic.id}
-              chapters={(readingState?.chapterReading.registry ?? chapters)
-                .filter((c) => c.status === "RELEASED" || (c.status === "ARCHIVED" && readingState?.chapterReading.readIds.includes(c.id)))
-                .map((c) => ({ id: c.id, displayCode: c.displayCode, title: c.title, sourceUrl: c.sourceUrl, sortOrder: c.sortOrder, status: c.status, kind: c.kind, supersedesChapterId: c.supersedesChapterId }))}
-              ratings={readingState?.chapterReading.ratings ?? {}}
-              readIds={readingState?.chapterReading.readIds ?? []}
-              canMark={readingState !== null}
-            />
-
-        </div>
+        {comic.workFormat!=="UNKNOWN" && <p>Формат: {workFormatLabels[comic.workFormat]}</p>}
+        {comic.totalChapters!==null && <p>Заявлено глав: {comic.totalChapters}</p>}
+        {!comic.description && !comic.translatorNote && !comic.authorName && !comic.translatorName && <p>Подробности об истории пока не добавлены.</p>}
             {comic.visibility ===
               "PRIVATE" &&
             currentUser?.id ===
@@ -436,7 +315,103 @@ export default async function ComicPage({
                 </button>
               </form>
             ) : null}
-      </article>
-    </div>
-  );
+
+      </div>} diary={
+            <section className="wd-diary work-diary">
+              <h2 className="font-semibold">
+                Мой дневник
+              </h2>
+
+              {readingState ? (
+                <div className="wd-dashboard">
+                  <details className="wd-edit"><summary>Статус <b>{{WANT_TO_READ:"Хочу прочитать",READING:"Читаю",COMPLETED:"Прочитано",ON_HOLD:"На паузе"}[readingState.status]} ⌄</b></summary>
+                  <ReadingStatusForm key={`${comic.id}:${comic.seriesStatus}:${readingState.status}:${readingState.currentChapter}:${readingState.chapterReading.specialReadCount}`}
+                    comicId={comic.id} status={readingState.status}
+                    registered={readingState.chapterReading.registered} seriesStatus={comic.seriesStatus}
+                    completionBlocked={readingState.chapterReading.registered && (readingState.chapterReading.registry.some(c => c.kind === "MAIN" && c.status === "SCHEDULED") || !readingState.chapterReading.registry.some(c => c.kind === "MAIN" && c.status === "RELEASED"))}
+                    unreadMain={readingState.chapterReading.unreadChapters}
+                    unreadSpecial={readingState.chapterReading.specialCount - readingState.chapterReading.specialReadCount}
+                    snapshot={completionSnapshot(readingState.chapterReading.registry, comic.totalChapters, comic.seriesStatus)} /></details>
+
+                  <div className="reading-progress-v5">
+                    <div className="wd-progress"><span>Прочитано: {readingState.currentChapter}{progressCeiling===null?"":" из "+progressCeiling}</span>
+                      {progressCeiling!==null && progressCeiling>0 && <progress aria-label="Мой прогресс" max={progressCeiling} value={readingState.currentChapter}/>}</div>
+                    {readingState.unresolvedLegacyProgress ? <p className="mt-2 text-sm text-[var(--text-secondary)]">Ранее сохранён общий счётчик: {readingState.unresolvedLegacyProgress}. Появился список глав — выберите «Прочитано до», чтобы связать чтение с конкретными главами.</p> : null}
+                    {readingState.chapterReading.registered ? (
+                      <div className="mt-2 text-sm text-[var(--text-secondary)]">
+                        <p>{readingState.chapterReading.caughtUp ? caughtUpLabel(comic.seriesStatus) : `Непрочитанных основных глав: ${readingState.chapterReading.unreadChapters}`}</p>
+                        <details className="reading-help-v5">
+                          <summary>Подробнее о прогрессе{readingState.chapterReading.updatedChapters ? ` · Новых редакций: ${readingState.chapterReading.updatedChapters}` : ""}</summary>
+                          <div className="space-y-2">
+                            {readingState.chapterReading.lastReadLabel ? <p>Последняя отмеченная: {readingState.chapterReading.lastReadLabel}</p> : null}
+                            {readingState.chapterReading.updatedChapters ? <p>Непрочитанных новых редакций: {readingState.chapterReading.updatedChapters}</p> : null}
+                            {readingState.chapterReading.specialCount ? <p>Спецвыпуски: {readingState.chapterReading.specialReadCount} / {readingState.chapterReading.specialCount}</p> : null}
+                            <p>Отмечайте чтение на вкладке «Главы». Статус «Прочитано» выбирается отдельно.</p>
+                          </div>
+                        </details>
+                      </div>
+                    ) : (
+                      <form action="/api/library/reading-state" method="post" className="mt-3">
+                        <input type="hidden" name="comicId" value={comic.id} />
+                        <input type="hidden" name="intent" value="set-legacy-progress" />
+                        <label className="block text-sm">Общий счётчик без привязки к главам
+                          <input type="number" name="count" min={0} max={progressCeiling ?? 2147483647} required defaultValue={readingState.currentChapter} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2" />
+                        </label>
+                        <p className="mt-2 text-sm text-[var(--text-secondary)]">Список глав пока не заполнен. Можно сохранить общий счётчик; он не определяет конкретные главы или редакции.</p>
+                        <Button type="submit" className="mt-3">Сохранить прогресс</Button>
+                      </form>
+                    )}
+                  </div>
+                  <DiaryForm comicId={comic.id}>
+                    <DiaryRatingFields key={JSON.stringify([comic.id, readingState.ratingPlot, readingState.ratingCharacters, readingState.ratingArt, readingState.ratingDepth, readingState.ratingWorld, readingState.personalNote])} ratings={readingState} personalNote={readingState.personalNote ?? ""} />
+                  </DiaryForm>
+
+                  {(["MAIN", "SPECIAL"] as const).map(kind => {
+                    const { average, rated, read } = chapterRatingSummary(readingState.chapterReading, kind);
+                    if (!rated) return null;
+                    return <p key={kind} className="mt-1 text-sm">{kind === "MAIN" ? "Средняя по главам" : "По спецвыпускам"}: <strong>{average === null ? "Без оценки" : average.toLocaleString("ru", {minimumFractionDigits:1, maximumFractionDigits:1}) + " / 5"}</strong> · оценено {rated} из {read} прочитанных</p>;
+                  })}
+                  <PromptSwitch/>
+                  <details className="journal-editor"><summary>Обновления <span>{readingState.trackingEnabled ? "Включены" : "Выключены"}</span></summary><TrackingControl comicId={comic.id} enabled={readingState.trackingEnabled} /></details>
+                </div>
+              ) : !currentUser ? (
+                <p className="mt-4"><Link className="tea-primary" href={`/login?next=${encodeURIComponent(`/comics/${comic.slug}`)}`}>Войти и вести дневник</Link></p>
+              ) : (
+                <div className="mt-4">
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Комикс ещё не добавлен в библиотеку.
+                  </p>
+
+                  <form
+                    action="/api/library/reading-state"
+                    method="post"
+                    className="mt-4"
+                  >
+                    <input
+                      type="hidden"
+                      name="comicId"
+                      value={comic.id}
+                    />
+
+                    <input
+                      type="hidden"
+                      name="intent"
+                      value="add-to-library"
+                    />
+
+                    <button
+                      type="submit"
+                      className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)]"
+                    >
+                      Добавить в библиотеку
+                    </button>
+                  </form>
+                </div>
+              )}
+            </section>
+
+
+      }/>
+    </article>
+  </WorkPreferences>;
 }

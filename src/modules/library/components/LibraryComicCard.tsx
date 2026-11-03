@@ -51,7 +51,7 @@ export function LibraryComicCard({ item, href }: { item: UserLibraryItem; href: 
           <p>{item.chapterReading.caughtUp ? caughtUpLabel(item.seriesStatus) : `Непрочитанных основных глав: ${item.chapterReading.unreadChapters}`}</p>
         </> : <p>Список глав пока не заполнен. Прогресс хранится общим счётчиком.</p>}
         {note ? <blockquote>{note}</blockquote> : null}
-        <Link href={href} className="tea-text-action">Оценки и заметка <span aria-hidden="true">→</span></Link>
+        <Link href={href + "#my-reading"} className="tea-text-action">Оценки и заметка <span aria-hidden="true">→</span></Link>
         <TrackingControl comicId={item.comicId} enabled={item.trackingEnabled} />
       </div>
     </details>

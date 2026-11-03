@@ -16,6 +16,7 @@ import {
   isReadingStatus,
   setUserComicStatus,
   setUserComicTracking,
+  setChapterRatingPrompt,
   setLegacyComicProgress,
   updateUserComicDiary,
 } from "@/modules/library/mutations/update-user-comic-state";
@@ -148,6 +149,10 @@ export async function POST(
           currentUser.id,
           comicId,
         );
+    } else if (intent === "rating-prompt") {
+      const enabled = formData.get("enabled");
+      if (enabled !== "true" && enabled !== "false") return NextResponse.json({error:"Invalid preference"}, {status:400});
+      slug = await setChapterRatingPrompt(currentUser.id, comicId, enabled === "true");
     } else if (intent === "set-tracking") {
       const enabled = formData.get("enabled");
       if (enabled !== "true" && enabled !== "false") return NextResponse.json({ error: "Invalid tracking preference" }, { status: 400 });
@@ -300,7 +305,7 @@ export async function POST(
       );
     }
 
-    if ((intent === "chapter-rating" || intent === "chapter-reading" || intent === "set-status" || intent === "complete-reading" || intent === "set-tracking") && request.headers.get("accept")?.includes("application/json")) {
+    if ((intent === "chapter-rating" || intent === "chapter-reading" || intent === "set-status" || intent === "complete-reading" || intent === "rating-prompt" || intent === "add-to-library" || intent === "update-diary" || intent === "set-tracking") && request.headers.get("accept")?.includes("application/json")) {
       return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
     }
 
@@ -310,7 +315,7 @@ export async function POST(
         status: 303,
         headers: {
           Location:
-            `/comics/${encodeURIComponent(slug)}`,
+            `/comics/${encodeURIComponent(slug)}${["update-diary","set-legacy-progress"].includes(String(intent)) ? "#my-reading" : ""}`,
         },
       },
     );

@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "../src/db";
 import { chapters, comics, userChapterReads, userComics, users } from "../src/db/schema";
+import { setChapterRatingPrompt } from "../src/modules/library/mutations/update-user-comic-state";
+import { getUserComicState } from "../src/modules/library/queries/get-user-comic-state";
 import { updateChapterReading } from "../src/modules/library/mutations/update-chapter-reading";
 import { getChapterReading } from "../src/modules/library/queries/get-chapter-reading";
 import { chapterRatingSummary } from "../src/modules/library/chapter-rating-summary";
@@ -21,6 +23,13 @@ async function main() {
     ]).returning();
     titles.push(book.id,secret.id);
     await db.insert(userComics).values([{userId:a.id,comicId:book.id},{userId:b.id,comicId:book.id},{userId:b.id,comicId:secret.id}]);
+    assert.equal((await getUserComicState(a.id,book.id))?.promptChapterRating,true);
+    await setChapterRatingPrompt(a.id,book.id,false);
+    assert.equal((await getUserComicState(a.id,book.id))?.promptChapterRating,false);
+    assert.equal((await getUserComicState(b.id,book.id))?.promptChapterRating,true);
+    await setChapterRatingPrompt(b.id,secret.id,false);
+    assert.equal((await getUserComicState(b.id,book.id))?.promptChapterRating,true);
+    await assert.rejects(setChapterRatingPrompt(a.id,secret.id,true));
     const [old,special,privateCh] = await db.insert(chapters).values([
       {comicId:book.id,displayCode:"1",sortOrder:1,status:"RELEASED"},
       {comicId:book.id,displayCode:"Extra",sortOrder:2,kind:"SPECIAL",status:"RELEASED"},

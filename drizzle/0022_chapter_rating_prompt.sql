@@ -1,0 +1,1 @@
+ALTER TABLE "user_comics" ADD COLUMN "prompt_chapter_rating" boolean DEFAULT true NOT NULL;
