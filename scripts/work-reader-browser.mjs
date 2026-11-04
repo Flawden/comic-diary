@@ -41,9 +41,18 @@ try {
   await sheet.waitFor();
   const stars=await sheet.locator(".wd-stars button").evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().top));
   assert.equal(stars.length,5);assert.equal(new Set(stars).size,1);
+  await sheet.getByRole("button",{name:"4 из 5"}).hover();
+  assert.deepEqual(await sheet.locator(".wd-stars button").allTextContents(),["★","★","★","★","☆"]);
+  await sheet.getByRole("button",{name:"2 из 5"}).hover();
+  assert.deepEqual(await sheet.locator(".wd-stars button").allTextContents(),["★","★","☆","☆","☆"]);
+  await sheet.locator("h2").hover();
+  assert.deepEqual(await sheet.locator(".wd-stars button").allTextContents(),["☆","☆","☆","☆","☆"]);
   await sheet.getByRole("checkbox").check();
   await sheet.getByRole("button",{name:"4 из 5"}).click();
+  await sheet.getByText("Оценка сохранена").waitFor();
+  assert.deepEqual(await sheet.locator(".wd-stars button").allTextContents(),["★","★","★","★","☆"]);
   await chapters.getByRole("button",{name:/Оценить: 1/}).filter({hasText:"4"}).waitFor();
+  await sheet.getByRole("button",{name:"Закрыть окно оценки главы"}).click();
   assert.equal(await page.locator(".wd-read").getAttribute("href"),"https://example.com/two");
   await page.getByRole("tab",{name:"Мой дневник"}).click();
   assert.equal(await diary.locator("textarea").inputValue(),"Моя заметка");

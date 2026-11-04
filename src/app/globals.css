@@ -670,7 +670,10 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 .wd-sheet::backdrop {background:#17221d77}.wd-sheet-body {position:relative;text-align:center;padding:24px 18px max(20px,env(safe-area-inset-bottom))}
 .wd-sheet-body:before {content:"";display:block;width:34px;height:4px;border-radius:4px;background:var(--border);margin:-13px auto 18px}
 .wd-close {position:absolute;right:6px;top:5px;width:44px;height:44px;font-size:24px}
-.wd-sheet h2 {font-size:1.8rem;margin:8px 0}.wd-stars {display:grid;grid-template-columns:repeat(5,1fr);margin:14px 0}.wd-stars button {font-size:clamp(28px,8vw,44px);min-height:52px}
+.wd-sheet h2 {font-size:1.8rem;margin:8px 0}.wd-stars {display:grid;grid-template-columns:repeat(5,1fr);margin:14px 0}.wd-stars button {font-size:clamp(28px,8vw,44px);min-height:52px;transition:transform .12s ease}
+.wd-stars button:hover:not(:disabled),.wd-stars button:focus-visible {transform:scale(1.08)}
+.wd-stars button:focus-visible {outline:2px solid var(--primary);outline-offset:2px}
+@media (prefers-reduced-motion: reduce) {.wd-stars button {transition:none}}
 .wd-switch {border-top:1px solid var(--border);text-align:start}.wd-switch small {display:block;color:var(--text-secondary)}
 .wd-switch input {appearance:none;width:42px;height:24px;border-radius:20px;background:var(--text-muted);padding:3px;cursor:pointer;flex:none}.wd-switch input:before{content:"";display:block;width:18px;height:18px;border-radius:50%;background:white}.wd-switch input:checked{background:var(--primary)}.wd-switch input:checked:before{transform:translateX(18px)}
 .wd-about>*,.wd-dashboard>* {padding:12px 0;border-bottom:1px solid var(--border);margin:0}
