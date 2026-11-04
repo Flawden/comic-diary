@@ -1,11 +1,13 @@
 # Comic Diary Roadmap
 
-## Active roadmap — 2026-10-29
+## Active roadmap — 2026-11-04
 
-Current work queue: [White Dragon product roadmap](docs/design/white-dragon-roadmap.md).
+**Next product queue: WD16 → WD17 → WD18 → WD19.** Scope, acceptance criteria and dependencies are in the [White Dragon product roadmap](docs/design/white-dragon-roadmap.md#актуализация-4-ноября-2026--wd12wd19). This is the authoritative active product plan; older "next delivery" lines below are historical.
 Source audit and first delivery scope: [b46d6d1 audit](docs/design/white-dragon-source-audit.md).
 
-Approved three-screen design is the next product direction. WD-00 static source audit is complete; runtime/visual baseline remains open. Next delivery: shared foundation and diary on existing /library; catalog stays at /.
+- WD12–WD14: chapter toggles without reload, optional rating sheet and three detail tabs; production deployment and visual behavior reported working by the operator on 2026-11-04 after CI cleanup fix `fe9e5c1`.
+- WD15: hover/selected star filling and saved confirmation; commit `981f8e7` pushed and working visual behavior reported by the operator on 2026-11-04. Do not infer a separate CI result unless the run is checked.
+- WD16: bring five already-persisted work-level rating criteria into a polished editable review; WD17: optional volumes/chapters; WD18: clearer expandable reading updates; WD19: first-class "graphic novel" work type.
 
 Operations confirmed by supplied logs: Telegram welcome/new-copy delivery, three verified Windows copies, manual scheduled-task execution, isolated database restore from a Windows copy. Full media/app restore from that copy, automatic Windows trigger and real error/recovery delivery remain open. CD-07/R9 are not fully closed.
 
