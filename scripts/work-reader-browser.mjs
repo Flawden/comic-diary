@@ -56,7 +56,8 @@ try {
   await chapters.getByRole("button",{name:"Повторить"}).click();
   const sheet=page.getByRole("dialog",{name:"Охота на быка"});
   await sheet.waitFor();
-  const stars=await sheet.locator(".wd-stars button").evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().top));
+  // Layout coordinates ignore the hover scale transform applied to rating stars.
+  const stars=await sheet.locator(".wd-stars button").evaluateAll(nodes=>nodes.map(n=>n.offsetTop));
   assert.equal(stars.length,5);assert.equal(new Set(stars).size,1);
   await sheet.getByRole("button",{name:"4 из 5"}).hover();
   assert.deepEqual(await sheet.locator(".wd-stars button").allTextContents(),["★","★","★","★","☆"]);
