@@ -112,8 +112,9 @@ export async function listAdminComics() {
       ),
     );
 
+  // Keep chapter rows typed through the per-comic lookup and into the admin UI.
   const chaptersByComic =
-    new Map();
+    new Map<number, typeof chapterRows>();
 
   for (const chapter of chapterRows) {
     const current =
