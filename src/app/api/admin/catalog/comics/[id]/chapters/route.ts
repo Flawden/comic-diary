@@ -342,11 +342,13 @@ function parseMetadata(
     parseReleasedAt(
       body.releasedAt,
     );
+  const expectedRelease = body.expectedRelease;
 
   if (
     title === undefined ||
     sourceUrl === undefined ||
-    releasedAt === undefined
+    releasedAt === undefined ||
+    (expectedRelease !== undefined && expectedRelease !== null && typeof expectedRelease !== "string")
   ) {
     return null;
   }
@@ -373,6 +375,7 @@ function parseMetadata(
       body.status,
 
     releasedAt,
+    expectedRelease: expectedRelease as string | null | undefined,
   } as const;
 }
 

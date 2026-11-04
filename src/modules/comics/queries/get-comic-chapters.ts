@@ -48,6 +48,7 @@ export async function getComicChapters(
         chapters.status,
       releasedAt:
         chapters.releasedAt,
+      expectedRelease: chapters.expectedRelease,
     })
     .from(chapters)
     .where(

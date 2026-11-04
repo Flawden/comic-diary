@@ -13,7 +13,7 @@ function control(form: HTMLFormElement, name: string) {
   return element instanceof HTMLInputElement || element instanceof HTMLSelectElement ? element : null;
 }
 
-export function ChapterRevisionSelector({ chapters, disabled }: { chapters: Chapter[]; disabled: boolean }) {
+export function ChapterRevisionSelector({ chapters, disabled, onChapterStatusChange }: { chapters: Chapter[]; disabled: boolean; onChapterStatusChange?: (status: "SCHEDULED" | "RELEASED") => void }) {
   const id = useId();
   const [selectedId, setSelectedId] = useState("");
   const [confirmed, setConfirmed] = useState(false);
@@ -30,8 +30,10 @@ export function ChapterRevisionSelector({ chapters, disabled }: { chapters: Chap
       if (!draft.current) draft.current = Object.fromEntries(fields.map(name => [name, control(form, name)?.value ?? ""]));
       const values = [chapter.displayCode, chapter.title ?? "", chapter.kind, chapter.sourceUrl ?? "", String(chapter.sortOrder), "RELEASED"];
       fields.forEach((name, index) => { const element = control(form, name); if (element) element.value = values[index]; });
+      onChapterStatusChange?.("RELEASED");
     } else if (draft.current) {
       fields.forEach(name => { const element = control(form, name); if (element) element.value = draft.current![name]; });
+      onChapterStatusChange?.(draft.current.chapterStatus === "RELEASED" ? "RELEASED" : "SCHEDULED");
       draft.current = null;
     }
   }

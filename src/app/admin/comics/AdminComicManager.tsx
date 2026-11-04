@@ -1,5 +1,6 @@
 "use client";
 
+import { expectedReleasePrecision, formatExpectedRelease, formatReleasedAt, isValidExpectedRelease, type ExpectedReleasePrecision } from "@/modules/catalog/chapter-release-dates";
 import { AdminComicList } from "@/modules/catalog/components/AdminComicList";
 import { ChapterRevisionSelector } from "@/modules/catalog/components/ChapterRevisionSelector";
 import { AdminChapterList } from "@/modules/catalog/components/AdminChapterList";
@@ -55,6 +56,8 @@ type AdminChapter = {
     | "RELEASED"
     | "ARCHIVED";
   releasedAt: string | null;
+  expectedRelease: string | null;
+  createdAt: string;
   updatedAt: string;
 };
 
@@ -106,7 +109,7 @@ const chapterCreateStatusLabels: Record<
   string
 > = {
   SCHEDULED: "Запланирована",
-  RELEASED: "Опубликована сейчас",
+  RELEASED: "Опубликована",
 };
 
 function nullableText(
@@ -597,6 +600,8 @@ export function AdminComicManager({
   const [chapterEditFeedback, setChapterEditFeedback] = useState<{ chapterId: number; kind: "error" | "success"; message: string } | null>(null);
   const [coverUploads, setCoverUploads] = useState<Record<string, boolean>>({});
   const [creationVersions, setCreationVersions] = useState<Record<number, number>>({});
+  const [creationStatus, setCreationStatus] = useState<Record<number, ChapterCreateStatus>>({});
+  const [creationPrecision, setCreationPrecision] = useState<Record<number, ExpectedReleasePrecision>>({});
   const [
     busyKey,
     setBusyKey,
@@ -620,6 +625,9 @@ export function AdminComicManager({
     title: string;
     sourceUrl: string;
     status: ChapterEditStatus;
+    releasedDate: string;
+    expectedRelease: string;
+    expectedPrecision: ExpectedReleasePrecision;
   } | null>(null);
 
   const [
@@ -983,6 +991,12 @@ export function AdminComicManager({
       }
     }
 
+    if (chapterEditValues.status === "SCHEDULED" && chapterEditValues.expectedRelease &&
+        !isValidExpectedRelease(chapterEditValues.expectedRelease)) {
+      setChapterEditFeedback({ chapterId, kind: "error", message: "Проверьте ожидаемую дату: год, месяц или полный день." });
+      return;
+    }
+
     const key =
       `chapter-update:${chapterId}`;
 
@@ -1033,13 +1047,14 @@ export function AdminComicManager({
                 status:
                   chapterEditValues.status,
 
-                releasedAt:
-                  chapterEditValues.status === "RELEASED"
-                    // Do not change an existing release date during a metadata edit.
-                    ? chapter.status === "RELEASED"
-                      ? chapter.releasedAt
-                      : new Date().toISOString()
-                    : null,
+                // Exact published date is optional; no guessing on status transition.
+                releasedAt: chapterEditValues.status === "RELEASED" && chapterEditValues.releasedDate
+                  ? (chapter.status === "RELEASED" && chapter.releasedAt?.slice(0, 10) === chapterEditValues.releasedDate
+                    ? chapter.releasedAt // Metadata-only edit preserves the original release timestamp.
+                    : `${chapterEditValues.releasedDate}T12:00:00.000Z`)
+                  : null,
+                expectedRelease: chapterEditValues.status === "SCHEDULED"
+                  ? chapterEditValues.expectedRelease.trim() || null : null,
               }),
           },
         );
@@ -1204,6 +1219,14 @@ export function AdminComicManager({
       return;
     }
 
+    const expectedRelease = status === "SCHEDULED" ? textValue(data, "chapterExpectedValue") || null : null;
+    const releasedDate = status === "RELEASED" ? textValue(data, "chapterReleasedDate") : "";
+    if (expectedRelease && !isValidExpectedRelease(expectedRelease)) {
+      fail("Проверьте ожидаемую дату выхода главы.");
+      setBusyKey(null);
+      return;
+    }
+
     const payload = {
       kind: textValue(data, "chapterKind") || "MAIN",
       supersedesChapterId: rawReplacement ? Number(rawReplacement) : null,
@@ -1213,12 +1236,8 @@ export function AdminComicManager({
       sortOrder,
       status,
 
-      releasedAt:
-        status ===
-        "RELEASED"
-          ? new Date()
-              .toISOString()
-          : null,
+      releasedAt: releasedDate ? `${releasedDate}T12:00:00.000Z` : null,
+      expectedRelease,
     };
 
     try {
@@ -1313,6 +1332,8 @@ export function AdminComicManager({
       );
 
       setCreationVersions(versions => ({ ...versions, [comic.id]: (versions[comic.id] ?? 0) + 1 }));
+      setCreationStatus(statuses => ({ ...statuses, [comic.id]: "SCHEDULED" }));
+      setCreationPrecision(precisions => ({ ...precisions, [comic.id]: "NONE" }));
       setFormControlValue(form, "chapterKind", "MAIN");
 
       const successMessage = previous
@@ -1643,8 +1664,43 @@ export function AdminComicManager({
                                           <option value="SCHEDULED">Запланирована</option>
                                           <option value="RELEASED">Опубликована</option>
                                         </select>
-                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Для переноса в архив используйте отдельное действие с подтверждением. Даты выхода добавим в WD21.</span>
+                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Для переноса в архив используйте отдельное действие с подтверждением. Запланированная дата не публикует главу автоматически.</span>
                                       </label>
+                                      {chapterEditValues.status === "RELEASED" ? (
+                                        <label className="block text-sm font-medium md:col-span-2">
+                                          <span className="block">Фактическая дата выхода у первоисточника (необязательно)</span>
+                                          <input type="date" value={chapterEditValues.releasedDate}
+                                            onChange={event => setChapterEditValues({ ...chapterEditValues, releasedDate: event.target.value })}
+                                            className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2" />
+                                          <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Если неизвестна — оставьте пустой. Дата добавления в Чайную хранится отдельно.</span>
+                                        </label>
+                                      ) : (
+                                        <div className="space-y-2 md:col-span-2">
+                                          <label className="block text-sm font-medium">Точность ожидаемой даты
+                                            <select value={chapterEditValues.expectedPrecision}
+                                              onChange={event => setChapterEditValues({ ...chapterEditValues, expectedPrecision: event.target.value as ExpectedReleasePrecision, expectedRelease: "" })}
+                                              className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
+                                              <option value="NONE">Дата пока неизвестна</option>
+                                              <option value="YEAR">Известен только год</option>
+                                              <option value="MONTH">Месяц и год</option>
+                                              <option value="DAY">Точный день</option>
+                                            </select>
+                                          </label>
+                                          {chapterEditValues.expectedPrecision !== "NONE" ? (
+                                            <label className="block text-sm font-medium">Ожидаемый выход
+                                              <input type={chapterEditValues.expectedPrecision === "YEAR" ? "text" : chapterEditValues.expectedPrecision === "MONTH" ? "month" : "date"}
+                                                inputMode={chapterEditValues.expectedPrecision === "YEAR" ? "numeric" : undefined}
+                                                maxLength={chapterEditValues.expectedPrecision === "YEAR" ? 4 : undefined}
+                                                placeholder={chapterEditValues.expectedPrecision === "YEAR" ? "2027" : undefined}
+                                                value={chapterEditValues.expectedRelease}
+                                                onChange={event => setChapterEditValues({ ...chapterEditValues, expectedRelease: event.target.value })}
+                                                className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2" />
+                                            </label>
+                                          ) : null}
+                                          <p className="text-xs text-[var(--text-secondary)]">Не подставляем первое число месяца и не выпускаем главу автоматически.</p>
+                                        </div>
+                                      )}
+                                      <p className="text-xs text-[var(--text-secondary)] md:col-span-2">Добавлена в Чайную: {formatReleasedAt(chapter.createdAt)} · дата записи неизменяема</p>
                                     </div>
 
                                     {chapterEditFeedback?.chapterId === chapter.id && chapterEditFeedback.kind === "error" ? (
@@ -1684,7 +1740,9 @@ export function AdminComicManager({
                                     </div>
 
                                     <div className="mt-1 text-sm text-[var(--muted)]">
-                                      {chapter.status === "RELEASED" ? "Опубликована" : chapter.status === "SCHEDULED" ? "Запланирована" : "В архиве"} · Порядок: {chapter.sortOrder}
+                                      {chapter.status === "RELEASED" ? `Опубликована${chapter.releasedAt ? ` · Вышла ${formatReleasedAt(chapter.releasedAt)}` : " · Дата выхода не указана"}`
+                                        : chapter.status === "SCHEDULED" ? `Запланирована${chapter.expectedRelease ? ` · Ожидается ${formatExpectedRelease(chapter.expectedRelease)}` : ""}`
+                                        : "В архиве"} · Порядок: {chapter.sortOrder}
                                     </div>
                                     {chapterEditFeedback?.chapterId === chapter.id && chapterEditFeedback.kind === "success" ? (
                                       <p role="status" className="mt-2 text-sm text-[var(--primary)]">{chapterEditFeedback.message}</p>
@@ -1749,8 +1807,10 @@ export function AdminComicManager({
                                               chapter.sourceUrl ??
                                               "",
 
-                                            status:
-                                              chapter.status,
+                                            status: chapter.status,
+                                            releasedDate: chapter.releasedAt?.slice(0, 10) ?? "",
+                                            expectedRelease: chapter.expectedRelease ?? "",
+                                            expectedPrecision: expectedReleasePrecision(chapter.expectedRelease),
                                           });
                                         }}
                                         className="min-h-11 rounded-lg border border-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--primary)] disabled:opacity-50"
@@ -1822,7 +1882,8 @@ export function AdminComicManager({
                               <option value="SPECIAL">Спешиал / бонус</option>
                             </select>
                           </label>
-                          <ChapterRevisionSelector key={creationVersions[comic.id] ?? 0} chapters={comic.chapters} disabled={busyKey !== null} />
+                          <ChapterRevisionSelector key={creationVersions[comic.id] ?? 0} chapters={comic.chapters} disabled={busyKey !== null}
+                            onChapterStatusChange={status => setCreationStatus(previous => ({ ...previous, [comic.id]: status }))} />
 
                           <label className="block">
                             <span className="mb-1 block text-xs font-medium">
@@ -1886,7 +1947,8 @@ export function AdminComicManager({
 
                             <select
                               name="chapterStatus"
-                              defaultValue="SCHEDULED"
+                              value={creationStatus[comic.id] ?? "SCHEDULED"}
+                              onChange={event => setCreationStatus(previous => ({ ...previous, [comic.id]: event.target.value as ChapterCreateStatus }))}
                               className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
                             >
                               {(
@@ -1911,6 +1973,37 @@ export function AdminComicManager({
                               )}
                             </select>
                           </label>
+                          {(creationStatus[comic.id] ?? "SCHEDULED") === "RELEASED" ? (
+                            <label className="block text-sm font-medium md:col-span-2">Фактическая дата выхода у первоисточника
+                              <input type="date" name="chapterReleasedDate"
+                                className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2" />
+                              <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Необязательно. Пустая дата не заменяется сегодняшней.</span>
+                            </label>
+                          ) : (
+                            <div className="space-y-2 md:col-span-2">
+                              <label className="block text-sm font-medium">Точность ожидаемой даты
+                                <select name="chapterExpectedPrecision" value={creationPrecision[comic.id] ?? "NONE"}
+                                  onChange={event => setCreationPrecision(previous => ({ ...previous, [comic.id]: event.target.value as ExpectedReleasePrecision }))}
+                                  className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
+                                  <option value="NONE">Дата пока неизвестна</option>
+                                  <option value="YEAR">Только год</option>
+                                  <option value="MONTH">Месяц и год</option>
+                                  <option value="DAY">Точный день</option>
+                                </select>
+                              </label>
+                              {(creationPrecision[comic.id] ?? "NONE") !== "NONE" ? (
+                                <label className="block text-sm font-medium">Ожидаемый выход
+                                  <input key={`${comic.id}-${creationPrecision[comic.id]}`} name="chapterExpectedValue"
+                                    type={creationPrecision[comic.id] === "YEAR" ? "text" : creationPrecision[comic.id] === "MONTH" ? "month" : "date"}
+                                    inputMode={creationPrecision[comic.id] === "YEAR" ? "numeric" : undefined}
+                                    maxLength={creationPrecision[comic.id] === "YEAR" ? 4 : undefined}
+                                    placeholder={creationPrecision[comic.id] === "YEAR" ? "2027" : undefined}
+                                    className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2" />
+                                </label>
+                              ) : null}
+                              <p className="text-xs text-[var(--text-secondary)]">Это ориентир, а не автоматическая публикация.</p>
+                            </div>
+                          )}
                         </div>
 
                         <button

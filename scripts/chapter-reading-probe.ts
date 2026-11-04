@@ -39,7 +39,7 @@ async function main() {
       { comicId: comic.id, displayCode: "1", sortOrder: 1, status: "RELEASED" },
       { comicId: comic.id, displayCode: "Extra: чай", title: "Необычное название", kind: "SPECIAL", sortOrder: 2, status: "RELEASED" },
       { comicId: comic.id, displayCode: "1.5б", sortOrder: 3, status: "RELEASED" },
-      { comicId: comic.id, displayCode: "Future", sortOrder: 4, status: "SCHEDULED" },
+      { comicId: comic.id, displayCode: "Future", sortOrder: 4, status: "SCHEDULED", expectedRelease: "2026-11" },
       { comicId: privateComic.id, displayCode: "Private", sortOrder: 1, status: "RELEASED" },
     ]).returning();
     const state = async () => (await getUserComicState(reader.id, comic.id))!;
@@ -192,6 +192,21 @@ async function main() {
     assert(!chunk1.chapters.some((c) => chunk2.chapters.some((d) => c.id === d.id)));
     assert.equal((await getReadingUpdates(reader.id, parseUpdatesOptions({ status: "ALL", q: "%_'" }))).total, 0);
     assert.equal((await getReadingUpdates(reader.id, parseUpdatesOptions({ status: "ALL" }))).missingCount, 1);
+    const beforeDates = (await db.select().from(chapters).where(eq(chapters.id, scheduled.id)))[0];
+    assert.equal(beforeDates.expectedRelease, "2026-11", "scheduled month must be stored without an invented day");
+    const revisedPlan = await updateSharedCatalogChapter(comic.id, scheduled.id,
+      { displayCode: "Future", title: "Scheduled", sourceUrl: null, status: "SCHEDULED", releasedAt: null, expectedRelease: "2027-12" }, actor);
+    assert.equal(revisedPlan.expectedRelease, "2027-12");
+    assert.equal(revisedPlan.createdAt.getTime(), beforeDates.createdAt.getTime(), "editing must not change date added");
+    await assert.rejects(updateSharedCatalogChapter(comic.id, scheduled.id,
+      { displayCode: "Future", title: "Bad date", sourceUrl: null, status: "SCHEDULED", releasedAt: null, expectedRelease: "2027-02-30" }, actor));
+    const publishedDate = new Date("2026-02-10T12:00:00.000Z");
+    const publishedChapter = await updateSharedCatalogChapter(comic.id, scheduled.id,
+      { displayCode: "Future", title: "Published", sourceUrl: null, status: "RELEASED", releasedAt: publishedDate, expectedRelease: null }, actor);
+    assert.equal(publishedChapter.releasedAt?.toISOString(), publishedDate.toISOString());
+    assert.equal(publishedChapter.expectedRelease, null, "publication clears the old plan");
+    assert.equal(publishedChapter.id, scheduled.id, "same chapter identity must be preserved");
+    console.log("PASS: WD21 planned precision, past release, original creation date and publishing transitions");
     console.log("PASS: updates filters, counts, pagination, revision ancestry and access isolation");
     console.log("PASS: read-through, specials, rename/reorder, two revisions, history, idempotency, access isolation, legacy, explicit completion, ratings/notes");
   } finally {

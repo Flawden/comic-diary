@@ -96,6 +96,12 @@ export default async function AdminComicsPage() {
               ...comic,
               updatedAt:
                 comic.updatedAt.toISOString(),
+              chapters: comic.chapters.map(chapter => ({
+                ...chapter,
+                releasedAt: chapter.releasedAt?.toISOString() ?? null,
+                createdAt: chapter.createdAt.toISOString(),
+                updatedAt: chapter.updatedAt.toISOString(),
+              })),
             }),
           )
         }

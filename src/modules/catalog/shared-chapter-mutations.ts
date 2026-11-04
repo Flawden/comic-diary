@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { parseChapterBatch } from "./chapter-batch-input";
+import { isValidExpectedRelease } from "./chapter-release-dates";
 import {
   and,
   eq,
@@ -49,6 +50,7 @@ export type SharedChapterMetadataInput = {
     | "SCHEDULED"
     | "RELEASED";
   releasedAt: Date | null;
+  expectedRelease?: string | null;
 };
 
 export type SharedChapterCreateInput =
@@ -215,11 +217,14 @@ function normalizeMetadata(
       input.releasedAt,
     );
 
-  /*
-   * releasedAt records an actual release fact.
-   * Expected future release dates belong to a
-   * separate later scheduling/reminder model.
-   */
+  const expectedRelease = input.expectedRelease === undefined ? undefined
+    : input.expectedRelease === null || input.expectedRelease.trim() === "" ? null
+    : input.expectedRelease.trim();
+  if (expectedRelease !== undefined && expectedRelease !== null && !isValidExpectedRelease(expectedRelease)) {
+    throw new SharedChapterMutationError("invalid-chapter");
+  }
+
+  // An expected date is not proof of release. Never auto-publish by date.
   if (
     input.status === "SCHEDULED" &&
     releasedAt !== null
@@ -229,8 +234,14 @@ function normalizeMetadata(
     );
   }
 
+  if (input.status === "RELEASED" && expectedRelease !== undefined && expectedRelease !== null) {
+    throw new SharedChapterMutationError("invalid-chapter");
+  }
+
   return {
     ...(input.kind === undefined ? {} : { kind: input.kind }),
+    // Publish transitions clear old plans. Other callers may omit the new field.
+    expectedRelease: input.status === "RELEASED" ? null : expectedRelease,
     displayCode,
 
     title:
@@ -298,6 +309,7 @@ function chapterSnapshot(
       chapter.releasedAt
         ?.toISOString() ??
       null,
+    expectedRelease: chapter.expectedRelease,
   };
 }
 

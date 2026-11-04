@@ -285,6 +285,9 @@ export const chapters = pgTable(
       { withTimezone: true },
     ),
 
+    // Optional plan with explicit YEAR / MONTH / DAY precision.
+    expectedRelease: varchar("expected_release", { length: 10 }),
+
     createdAt: timestamp(
       "created_at",
       { withTimezone: true },

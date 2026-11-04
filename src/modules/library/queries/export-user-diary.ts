@@ -31,6 +31,7 @@ export async function exportUserDiary(userId: number) {
             'chapterId', ch.id, 'displayCode', ch.display_code, 'title', ch.title,
             'kind', ch.kind, 'status', ch.status, 'sortOrder', ch.sort_order,
             'sourceUrl', ch.source_url, 'supersedesChapterId', ch.supersedes_chapter_id,
+            'releasedAt', ch.released_at, 'expectedRelease', ch.expected_release, 'addedAt', ch.created_at,
             'markedAt', mark.read_at, 'origin', mark.origin, 'rating', mark.rating
           ) ORDER BY ch.sort_order, ch.id)
           FROM user_chapter_reads mark JOIN chapters ch ON ch.id = mark.chapter_id

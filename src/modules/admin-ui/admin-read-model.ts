@@ -189,6 +189,8 @@ export async function getAdminComicChaptersByComicIds(
 
       releasedAt:
         chapters.releasedAt,
+      expectedRelease: chapters.expectedRelease,
+      createdAt: chapters.createdAt,
 
       updatedAt:
         chapters.updatedAt,
