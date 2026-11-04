@@ -59,8 +59,12 @@ try {
   await page.getByRole("dialog",{name:"УРГА"}).waitFor();
   console.log("PASS: tabs, mobile rating sheet, AJAX rollback/retry, drafts, preference and direct links");
 } finally {
-  await browser?.close();
-  if(comic)await pool.query("DELETE FROM comics WHERE id=$1",[comic]);
-  if(user)await pool.query("DELETE FROM users WHERE id=$1",[user]);
-  await pool.end();
+  try {
+    await browser?.close();
+    // User deletion cascades to reading marks; chapters can then be removed safely.
+    if(user)await pool.query("DELETE FROM users WHERE id=$1",[user]);
+    if(comic)await pool.query("DELETE FROM comics WHERE id=$1",[comic]);
+  } finally {
+    await pool.end();
+  }
 }
