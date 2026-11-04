@@ -684,3 +684,48 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 .wd-hero {background-image:url("/art/reader-hills.svg"),radial-gradient(ellipse at 75% 0%,#a7b9ad24,transparent 70%);background-position:top right;background-size:cover;background-repeat:no-repeat}
 .wd-edit>summary::-webkit-details-marker{display:none}.wd-dashboard .reading-progress-v5{border:0;padding-inline:0;background:transparent}
 .wd-work .journal-form fieldset{border:none;margin:0;padding:0;min-width:0}
+
+/* WD16: five-dimension personal review, independent of chapter ratings. */
+.wd-review {padding:clamp(14px,2.4vw,22px);border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+.wd-review-head {display:flex;justify-content:space-between;align-items:start;gap:18px;padding-bottom:12px}
+.wd-review-eyebrow {font-size:10px;letter-spacing:.12em;font-weight:700;color:var(--text-secondary)}
+.wd-review h3 {font-family:var(--cd-font-display);font-size:clamp(20px,2.5vw,26px);line-height:1.2;margin:6px 0}
+.wd-review-hint {font-size:13px;color:var(--text-secondary);line-height:1.55;max-width:35ch}
+.wd-review-average {display:flex;flex-direction:column;align-items:center;justify-content:center;flex:0 0 auto;min-width:100px;padding:10px 12px;border-radius:12px;background:var(--surface-raised);color:var(--text-primary)}
+.wd-review-average strong {font-size:26px;line-height:1.1;color:var(--primary);font-variant-numeric:tabular-nums}
+.wd-review-average span {font-size:12px;color:var(--text-secondary)}
+.wd-review-average small {font-size:10px;color:var(--text-secondary);margin-top:5px;white-space:nowrap}
+.wd-review-row {display:flex;justify-content:space-between;align-items:center;gap:10px;padding:5px 0;border-top:1px solid var(--border)}
+.wd-review-dimension {display:grid;gap:2px;min-width:0}
+.wd-review-dimension span {font-size:14px;font-weight:600}
+.wd-review-dimension small {font-size:11px;color:var(--text-secondary)}
+.wd-review-controls {display:flex;align-items:center;gap:5px;flex:none}
+.wd-review-stars {display:flex;align-items:center;gap:0}
+.wd-review-star,.wd-review-clear {border:0;border-radius:6px;background:transparent;min-width:34px;width:34px;min-height:44px;display:grid;place-items:center;cursor:pointer}
+.wd-review-star span {font-size:25px;line-height:1;color:var(--text-muted)}
+.wd-review-star.is-filled span {color:#bc801e}
+[data-theme="night"] .wd-review-star.is-filled span,[data-theme="tea"] .wd-review-star.is-filled span {color:#f1b94e}
+.wd-review-star:focus-visible,.wd-review-clear:focus-visible {outline:2px solid var(--primary);outline-offset:1px}
+.wd-review-star:hover span {transform:scale(1.12)}
+.wd-review-clear {color:var(--text-secondary);font-size:24px;margin-left:1px}
+.wd-review-clear:disabled {opacity:.25;cursor:default}
+.wd-review-clear:not(:disabled):hover {background:var(--surface-raised);color:var(--text-primary)}
+.wd-review-note {display:grid;gap:8px;margin-top:14px;font-size:14px;font-weight:600}
+.wd-review-note small {font-size:12px;color:var(--text-secondary);font-weight:400}
+.wd-review-note textarea {width:100%;resize:vertical;min-height:98px;padding:12px;border:1px solid var(--border);border-radius:9px;background:var(--surface-raised);color:var(--text-primary);font:inherit;font-size:16px;font-weight:400}
+.wd-review-footer {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding-top:12px}
+.wd-review-footer p {color:var(--text-secondary);font-size:12px;flex:1;min-width:160px}
+.wd-review-feedback {margin:8px 0 0;font-size:13px;color:var(--primary)}
+.wd-review-feedback-error {color:var(--danger)}
+@media (max-width:550px) {
+  .wd-review-head {gap:10px}
+  .wd-review-average {min-width:78px;padding:9px 6px}
+  .wd-review-average strong {font-size:23px}
+  .wd-review-row {flex-wrap:wrap;gap:0}
+  .wd-review-dimension {flex:1 1 100%;padding-top:6px}
+  .wd-review-controls {width:100%;justify-content:space-between}
+  .wd-review-stars {flex:1;justify-content:space-between}
+  .wd-review-star {flex:1;max-width:50px;min-width:36px}
+  .wd-review-star span {font-size:27px}
+}
+@media (prefers-reduced-motion:reduce) {.wd-review-star:hover span {transform:none}}

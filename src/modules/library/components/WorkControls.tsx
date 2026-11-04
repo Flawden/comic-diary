@@ -51,13 +51,19 @@ export function WorkTabs({chapters,about,diary,count}:{chapters:ReactNode;about:
 }
 
 export function DiaryForm({comicId,children}:{comicId:number;children:ReactNode}) {
-  const router=useRouter(), [pending,setPending]=useState(false), [error,setError]=useState("");
-  return <form className="journal-form" onSubmit={async e=>{
+  const router=useRouter(), [pending,setPending]=useState(false), [error,setError]=useState(""), [saved,setSaved]=useState(false);
+  return <form className="journal-form" onChangeCapture={()=>setSaved(false)} onClickCapture={event=>{
+    if ((event.target as HTMLElement).closest("[data-review-choice]")) setSaved(false);
+  }} onSubmit={async e=>{
     e.preventDefault();if(pending)return;
     const fields=Object.fromEntries(new FormData(e.currentTarget)) as Record<string,string>;
-    setPending(true);setError("");
-    try{await writeReading(comicId,{...fields,intent:"update-diary"});router.refresh();}
-    catch{setError("Не удалось сохранить. Черновик остался на странице.");}
+    setPending(true);setError("");setSaved(false);
+    try{await writeReading(comicId,{...fields,intent:"update-diary"});setSaved(true);router.refresh();}
+    catch{setError("Не удалось сохранить. Оценки и заметка остались на странице — попробуйте ещё раз.");}
     finally{setPending(false);}
-  }}><fieldset disabled={pending}>{children}</fieldset>{error && <p role="alert">{error}</p>}</form>;
+  }}><fieldset disabled={pending}>{children}</fieldset>
+    {pending && <p role="status" className="wd-review-feedback">Сохраняем оценку и заметку…</p>}
+    {saved && !pending && <p role="status" className="wd-review-feedback">Оценка и заметка сохранены</p>}
+    {error && <p role="alert" className="wd-review-feedback wd-review-feedback-error">{error}</p>}
+  </form>;
 }

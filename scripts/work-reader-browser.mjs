@@ -25,7 +25,6 @@ try {
   await page.goto(url+"#my-reading");
   const diary=page.getByRole("tabpanel",{name:"Мой дневник"});
   await diary.waitFor();
-  await diary.locator(".wd-edit").filter({hasText:"Личная заметка"}).locator("summary").click();
   await diary.locator("textarea").fill("Моя заметка");
   await page.getByRole("tab",{name:"Об истории"}).click();
   await page.getByText("Описание истории",{exact:true}).waitFor();
@@ -57,7 +56,42 @@ try {
   await page.getByRole("tab",{name:"Мой дневник"}).click();
   assert.equal(await diary.locator("textarea").inputValue(),"Моя заметка");
   assert.equal(await page.evaluate(()=>window.readerDocument),"kept");
+  // WD16: ratings are independent of chapter stars and survive failed saves, tabs and reloads.
+  const review=diary.locator(".wd-review");
+  const plot=review.getByRole("group",{name:"Сюжет"});
+  await plot.getByRole("button",{name:"Сюжет: 4 из 5"}).hover();
+  assert.deepEqual(await plot.locator(".wd-review-star").allTextContents(),["★","★","★","★","☆"]);
+  await review.getByText("Моя оценка произведения").hover();
+  assert.deepEqual(await plot.locator(".wd-review-star").allTextContents(),["☆","☆","☆","☆","☆"]);
+  await plot.getByRole("button",{name:"Сюжет: 4 из 5"}).click();
+  assert.equal(await plot.getByRole("button",{name:"Сюжет: 4 из 5"}).getAttribute("aria-pressed"),"true");
+  await review.getByText("Оценено 1 из 5").waitFor();
+  await review.getByRole("group",{name:"Рисовка"}).getByRole("button",{name:"Рисовка: 5 из 5"}).click();
+  await review.getByRole("group",{name:"Мир"}).getByRole("button",{name:"Мир: 3 из 5"}).click();
+  await review.getByText("Оценено 3 из 5").waitFor();
+  assert.equal(await review.locator(".wd-review-average strong").textContent(),"4,0");
+  await page.getByRole("tab",{name:/Главы/}).click();
+  await page.getByRole("tab",{name:"Мой дневник"}).click();
+  assert.equal(await plot.getByRole("button",{name:"Сюжет: 4 из 5"}).getAttribute("aria-pressed"),"true");
+  assert.equal(await diary.locator("textarea").inputValue(),"Моя заметка");
+  await page.route("**/api/library/reading-state",r=>r.fulfill({status:503,body:"retry"}),{times:1});
+  await review.getByRole("button",{name:"Сохранить оценку и заметку"}).click();
+  await diary.getByRole("alert").waitFor();
+  assert.match(await diary.getByRole("alert").textContent(),/Не удалось сохранить/);
+  assert.equal(await diary.locator("textarea").inputValue(),"Моя заметка");
+  assert.equal(await plot.getByRole("button",{name:"Сюжет: 4 из 5"}).getAttribute("aria-pressed"),"true");
+  await review.getByRole("button",{name:"Сохранить оценку и заметку"}).click();
+  await diary.getByText("Оценка и заметка сохранены").waitFor();
+  const stored=(await pool.query("SELECT rating_plot,rating_characters,rating_art,rating_depth,rating_world,personal_note FROM user_comics WHERE comic_id=$1 AND user_id=$2",[comic,user])).rows[0];
+  assert.deepEqual(stored,{rating_plot:4,rating_characters:null,rating_art:5,rating_depth:null,rating_world:3,personal_note:"Моя заметка"});
   await page.reload();await diary.waitFor();
+  assert.equal(await diary.getByRole("group",{name:"Сюжет"}).getByRole("button",{name:"Сюжет: 4 из 5"}).getAttribute("aria-pressed"),"true");
+  assert.equal(await diary.locator("textarea").inputValue(),"Моя заметка");
+  await diary.getByRole("group",{name:"Сюжет"}).getByRole("button",{name:"Убрать оценку: Сюжет"}).click();
+  await diary.getByText("Оценено 2 из 5").waitFor();
+  await diary.getByRole("button",{name:"Сохранить оценку и заметку"}).click();
+  await diary.getByText("Оценка и заметка сохранены").waitFor();
+  assert.equal((await pool.query("SELECT rating_plot FROM user_comics WHERE comic_id=$1 AND user_id=$2",[comic,user])).rows[0].rating_plot,null);
   assert.equal(await diary.getByRole("checkbox",{name:/Предлагать оценку главы/}).isChecked(),false);
   await page.getByRole("tab",{name:/Главы/}).click();
   await chapters.getByRole("button",{name:"Отметить прочитанной: УРГА"}).click();
@@ -66,7 +100,7 @@ try {
   assert.equal(await page.locator("dialog[open]").count(),0);
   await chapters.getByRole("button",{name:"Оценить: УРГА"}).click();
   await page.getByRole("dialog",{name:"УРГА"}).waitFor();
-  console.log("PASS: tabs, mobile rating sheet, AJAX rollback/retry, drafts, preference and direct links");
+  console.log("PASS: WD12-WD16 tabs, mobile rating sheet, five-dimensional review, persistence, clear, AJAX retry and drafts");
 } finally {
   try {
     await browser?.close();
