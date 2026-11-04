@@ -7,6 +7,7 @@ import { useOptimistic, useRef, useState, useTransition } from "react";
 import { Button } from "@/shared/components/ui";
 import type { ComicChapter } from "@/modules/comics/queries/get-comic-chapters";
 import { formatExpectedRelease } from "@/modules/catalog/chapter-release-dates";
+import { groupChaptersByVolume, volumeProgress } from "@/modules/catalog/chapter-volumes";
 
 type Chapter = Omit<ComicChapter, "releasedAt">;
 type Props = { comicId: number; chapters: Chapter[]; ratings: Record<number, number>; readIds: number[]; canMark: boolean };
@@ -54,6 +55,28 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMa
     `${c.displayCode || c.title || "Глава"} ${c.title ?? ""}`.toLocaleLowerCase("ru").includes(query.trim().toLocaleLowerCase("ru")));
   const history = chapters.filter((c) => c.status === "ARCHIVED" && read.has(c.id));
   const control = "w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2.5 text-sm";
+  const visible = filtered.slice(0, limit);
+  const groups = groupChaptersByVolume(visible);
+  // A pagination limit or search query must never change a volume's true progress.
+  const allVolumeGroups = groupChaptersByVolume(chapters.filter(c =>
+    (c.status === "RELEASED" || (!hideScheduled && c.status === "SCHEDULED")) && c.kind === kind));
+  const hasVolumes = groups.some(group => group.number !== null);
+
+  function renderChapter(c: Chapter) {
+    const isScheduled = c.status === "SCHEDULED";
+    const source = isScheduled ? null : safeSource(c.sourceUrl);
+    const isRead = read.has(c.id);
+    const label=[c.displayCode,c.title].filter(Boolean).join(" · ")||"Глава";
+    return <li key={c.id} className={isScheduled ? "wd-row wd-row--scheduled" : "wd-row"}><div className="wd-row-title">
+        {source?<a href={source} target="_blank" rel="noopener noreferrer" aria-label={label+" — открыть источник в новой вкладке"}>{label} <small>↗</small></a>:<span>{label}</span>}
+        {isScheduled ? <small className="wd-planned-date">{c.expectedRelease ? `Ожидается: ${formatExpectedRelease(c.expectedRelease)}` : "Запланирована · дата неизвестна"}</small> : null}
+        {!isScheduled && c.supersedesChapterId ? <details className="chapter-revision"><summary>Новая редакция</summary><p>Отметка прежней версии хранится в архиве.</p></details>:null}
+      </div>
+      {isScheduled ? <span className="wd-planned-indicator" aria-label="Глава ещё не вышла" title="Глава ещё не вышла">◷</span> : null}
+      {canMark && !isScheduled && isRead && <button className="wd-score" disabled={pending} aria-label={"Оценить: "+label} onClick={()=>setSheet(c)}>{ratings[c.id] ? "★ "+ratings[c.id] : "☆"}</button>}
+      {canMark && !isScheduled && <button className="wd-mark" aria-pressed={isRead} aria-label={(isRead?"Снять отметку: ":"Отметить прочитанной: ")+label} disabled={pending} onClick={()=>mark(c,isRead?"unread":"read")}><span>{isRead?"✓":""}</span></button>}
+    </li>;
+  }
 
   return (
     <section className="chapter-panel" aria-label="Главы и история чтения">
@@ -97,23 +120,25 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMa
       </details>
       </details>
       {failure && <div role="alert">Не удалось подтвердить отметку. <button className="tea-text-action" disabled={pending} onClick={()=>mark(failure.chapter,failure.action)}>Повторить</button></div>}
-      <ul className="wd-chapters">
-        {filtered.slice(0, limit).map((c) => {
-          const isScheduled = c.status === "SCHEDULED";
-          const source = isScheduled ? null : safeSource(c.sourceUrl);
-          const isRead = read.has(c.id);
-          const label=[c.displayCode,c.title].filter(Boolean).join(" · ")||"Глава";
-          return <li key={c.id} className={isScheduled ? "wd-row wd-row--scheduled" : "wd-row"}><div className="wd-row-title">
-              {source?<a href={source} target="_blank" rel="noopener noreferrer" aria-label={label+" — открыть источник в новой вкладке"}>{label} <small>↗</small></a>:<span>{label}</span>}
-              {isScheduled ? <small className="wd-planned-date">{c.expectedRelease ? `Ожидается: ${formatExpectedRelease(c.expectedRelease)}` : "Запланирована · дата неизвестна"}</small> : null}
-              {!isScheduled && c.supersedesChapterId ? <details className="chapter-revision"><summary>Новая редакция</summary><p>Отметка прежней версии хранится в архиве.</p></details>:null}
-            </div>
-            {isScheduled ? <span className="wd-planned-indicator" aria-label="Глава ещё не вышла" title="Глава ещё не вышла">◷</span> : null}
-            {canMark && !isScheduled && isRead && <button className="wd-score" disabled={pending} aria-label={"Оценить: "+label} onClick={()=>setSheet(c)}>{ratings[c.id] ? "★ "+ratings[c.id] : "☆"}</button>}
-            {canMark && !isScheduled && <button className="wd-mark" aria-pressed={isRead} aria-label={(isRead?"Снять отметку: ":"Отметить прочитанной: ")+label} disabled={pending} onClick={()=>mark(c,isRead?"unread":"read")}><span>{isRead?"✓":""}</span></button>}
-          </li>;
+      {hasVolumes ? <div className="wd-volumes" aria-label="Тома и главы">
+        {groups.map((group) => {
+          const allInVolume = allVolumeGroups.find(candidate => candidate.number === group.number)?.chapters ?? group.chapters;
+          const progress = volumeProgress(allInVolume, read);
+          const scheduled = allInVolume.filter(c => c.status === "SCHEDULED").length;
+          const title = group.number === null ? "Главы без тома" : `Том ${group.number}`;
+          return <details key={group.number ?? "ungrouped"} className="wd-volume">
+            <summary className="wd-volume-summary">
+              <span className="wd-volume-heading">{title} <small>{allInVolume.length} глав</small></span>
+              <span className="wd-volume-stats">
+                {canMark && progress.total > 0 ? `Прочитано ${progress.read} из ${progress.total}` : `${progress.total} вышло`}
+                {scheduled > 0 ? ` · Ожидается ${scheduled}` : ""}
+              </span>
+              {canMark && progress.total > 0 && <progress aria-label={`Прогресс: ${title}`} max={progress.total} value={progress.read} />}
+            </summary>
+            <ul className="wd-chapters">{group.chapters.map(renderChapter)}</ul>
+          </details>;
         })}
-      </ul>
+      </div> : <ul className="wd-chapters">{visible.map(renderChapter)}</ul>}
       {filtered.length === 0 ? <p className="mt-4 text-sm text-[var(--text-secondary)]">{query ? "По запросу ничего не найдено." : hideScheduled ? "В этом разделе пока нет вышедших глав." : "В этом разделе пока нет глав."}</p> : null}
       {filtered.length > limit ? <Button variant="secondary" className="mt-3" onClick={() => setLimit(limit + 30)}>Показать ещё 30</Button> : null}
       {history.length ? <details className="mt-5 rounded-xl border border-[var(--border)] p-3"><summary className="cursor-pointer font-semibold">Прочитанные архивные версии ({history.length})</summary><ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">{history.map((c) => <li key={c.id}>{c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""} · прочитано{ratings[c.id] ? ` · ★ ${ratings[c.id]} / 5` : ""}</li>)}</ul></details> : null}

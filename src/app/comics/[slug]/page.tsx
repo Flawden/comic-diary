@@ -135,7 +135,7 @@ export default async function ComicPage({
               comicId={comic.id}
               chapters={(readingState?.chapterReading.registry ?? chapters)
                 .filter((c) => c.status === "RELEASED" || c.status === "SCHEDULED" || (c.status === "ARCHIVED" && readingState?.chapterReading.readIds.includes(c.id)))
-                .map((c) => ({ id: c.id, displayCode: c.displayCode, title: c.title, sourceUrl: c.status === "RELEASED" ? c.sourceUrl : null, sortOrder: c.sortOrder, status: c.status, kind: c.kind, supersedesChapterId: c.supersedesChapterId, expectedRelease: c.expectedRelease }))}
+                .map((c) => ({ id: c.id, displayCode: c.displayCode, title: c.title, sourceUrl: c.status === "RELEASED" ? c.sourceUrl : null, sortOrder: c.sortOrder, volumeNumber: c.volumeNumber, status: c.status, kind: c.kind, supersedesChapterId: c.supersedesChapterId, expectedRelease: c.expectedRelease }))}
               ratings={readingState?.chapterReading.ratings ?? {}}
               readIds={readingState?.chapterReading.readIds ?? []}
               canMark={readingState !== null}

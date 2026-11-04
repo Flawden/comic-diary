@@ -51,6 +51,7 @@ type AdminChapter = {
   title: string | null;
   sourceUrl: string | null;
   sortOrder: number;
+  volumeNumber: number | null;
   status:
     | "SCHEDULED"
     | "RELEASED"
@@ -675,6 +676,7 @@ export function AdminComicManager({
     setChapterEditValues,
   ] = useState<{
     kind: "MAIN" | "SPECIAL";
+    volumeNumber: string;
     displayCode: string;
     title: string;
     sourceUrl: string;
@@ -1088,6 +1090,7 @@ export function AdminComicManager({
                 chapterId,
 
                 kind: chapterEditValues.kind,
+                volumeNumber: chapterEditValues.volumeNumber.trim() ? Number(chapterEditValues.volumeNumber) : null,
                 displayCode:
                   chapterEditValues.displayCode,
 
@@ -1287,6 +1290,7 @@ export function AdminComicManager({
 
     const payload = {
       kind: textValue(data, "chapterKind") || "MAIN",
+      volumeNumber: textValue(data, "chapterVolumeNumber") ? Number(textValue(data, "chapterVolumeNumber")) : previous?.volumeNumber ?? null,
       supersedesChapterId: rawReplacement ? Number(rawReplacement) : null,
       displayCode,
       title,
@@ -1394,6 +1398,7 @@ export function AdminComicManager({
       setCreationPrecision(precisions => ({ ...precisions, [comic.id]: "NONE" }));
       setCreationExpectedRelease(values => ({ ...values, [comic.id]: "" }));
       setFormControlValue(form, "chapterKind", "MAIN");
+      setFormControlValue(form, "chapterVolumeNumber", "");
 
       const successMessage = previous
         ? `Новая редакция ${displayCode} опубликована. Предыдущая редакция ${previous.displayCode} (ID ${previous.id}) перемещена в архив; её история чтения сохранена.`
@@ -1714,6 +1719,13 @@ export function AdminComicManager({
                                       </label>
 
                                       <label className="block text-sm font-medium md:col-span-2">
+                                        <span className="block">Том (необязательно)</span>
+                                        <input type="number" min={1} max={99} step={1} value={chapterEditValues.volumeNumber}
+                                          onChange={event => setChapterEditValues({ ...chapterEditValues, volumeNumber: event.target.value })}
+                                          placeholder="Без тома" className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm" />
+                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Главы с одинаковым номером попадут в один раскрывающийся том. Пустое поле — без группировки.</span>
+                                      </label>
+                                      <label className="block text-sm font-medium md:col-span-2">
                                         <span className="block">Статус главы</span>
                                         <select
                                           value={chapterEditValues.status}
@@ -1804,7 +1816,7 @@ export function AdminComicManager({
                                     </div>
 
                                     <div className="mt-1 text-sm text-[var(--muted)]">
-                                      {chapter.status === "RELEASED" ? `Опубликована${chapter.releasedAt ? ` · Вышла ${formatReleasedAt(chapter.releasedAt)}` : " · Дата выхода не указана"}`
+                                      {chapter.volumeNumber !== null ? `Том ${chapter.volumeNumber} · ` : ""}{chapter.status === "RELEASED" ? `Опубликована${chapter.releasedAt ? ` · Вышла ${formatReleasedAt(chapter.releasedAt)}` : " · Дата выхода не указана"}`
                                         : chapter.status === "SCHEDULED" ? `Запланирована${chapter.expectedRelease ? ` · Ожидается ${formatExpectedRelease(chapter.expectedRelease)}` : ""}`
                                         : "В архиве"} · Порядок: {chapter.sortOrder}
                                     </div>
@@ -1860,6 +1872,7 @@ export function AdminComicManager({
 
                                           setChapterEditValues({
                                             kind: chapter.kind === "SPECIAL" ? "SPECIAL" : "MAIN",
+                                            volumeNumber: chapter.volumeNumber === null ? "" : String(chapter.volumeNumber),
                                             displayCode:
                                               chapter.displayCode,
 
@@ -2004,6 +2017,12 @@ export function AdminComicManager({
                             />
                           </label>
 
+                          <label className="block">
+                            <span className="mb-1 block text-xs font-medium">Том (необязательно)</span>
+                            <input type="number" name="chapterVolumeNumber" min={1} max={99} step={1}
+                              placeholder="Без тома" className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm" />
+                            <span className="mt-1 block text-xs text-[var(--text-secondary)]">Например, 1 или 2. Пустое поле оставляет главу без тома.</span>
+                          </label>
                           <label className="block">
                             <span className="mb-1 block text-xs font-medium">
                               Статус

@@ -274,6 +274,9 @@ export const chapters = pgTable(
       "sort_order",
     ).notNull(),
 
+    // Optional editorial grouping. Never changes chapter identity or reading history.
+    volumeNumber: integer("volume_number"),
+
     status: chapterStatus(
       "status",
     )
@@ -308,6 +311,7 @@ export const chapters = pgTable(
       .where(sql`${table.status} <> 'ARCHIVED' AND ${table.displayCode} <> ''`),
     uniqueIndex("chapters_supersedes_unique").on(table.supersedesChapterId),
     check("chapters_kind_valid", sql`${table.kind} IN ('MAIN', 'SPECIAL')`),
+    check("chapters_volume_number_valid", sql`${table.volumeNumber} IS NULL OR ${table.volumeNumber} BETWEEN 1 AND 99`),
 
     index(
       "chapters_comic_id_idx",

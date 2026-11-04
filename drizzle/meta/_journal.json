@@ -169,6 +169,13 @@
       "when": 1793798400000,
       "tag": "0023_expected_chapter_release",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793802000000,
+      "tag": "0024_chapter_volumes",
+      "breakpoints": true
     }
   ]
 }

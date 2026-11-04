@@ -184,6 +184,7 @@ export async function getAdminComicChaptersByComicIds(
 
       sortOrder:
         chapters.sortOrder,
+      volumeNumber: chapters.volumeNumber,
 
       status:
         chapters.status,

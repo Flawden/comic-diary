@@ -51,6 +51,7 @@ export type SharedChapterMetadataInput = {
     | "RELEASED";
   releasedAt: Date | null;
   expectedRelease?: string | null;
+  volumeNumber?: number | null;
 };
 
 export type SharedChapterCreateInput =
@@ -216,6 +217,10 @@ function normalizeMetadata(
     normalizeReleasedAt(
       input.releasedAt,
     );
+  if (input.volumeNumber !== undefined && input.volumeNumber !== null &&
+      (!Number.isSafeInteger(input.volumeNumber) || input.volumeNumber < 1 || input.volumeNumber > 99)) {
+    throw new SharedChapterMutationError("invalid-chapter");
+  }
 
   const expectedRelease = input.expectedRelease === undefined ? undefined
     : input.expectedRelease === null || input.expectedRelease.trim() === "" ? null
@@ -240,6 +245,7 @@ function normalizeMetadata(
 
   return {
     ...(input.kind === undefined ? {} : { kind: input.kind }),
+    ...(input.volumeNumber === undefined ? {} : { volumeNumber: input.volumeNumber }),
     // Publish transitions clear old plans. Other callers may omit the new field.
     expectedRelease: input.status === "RELEASED" ? null : expectedRelease,
     displayCode,
@@ -283,6 +289,7 @@ function chapterSnapshot(
 ) {
   return {
     kind: chapter.kind,
+    volumeNumber: chapter.volumeNumber,
     supersedesChapterId: chapter.supersedesChapterId,
     id:
       chapter.id,
@@ -434,6 +441,7 @@ export async function createSharedCatalogChapter(
                 comic.id,
 
               ...metadata,
+              volumeNumber: metadata.volumeNumber === undefined ? replaced?.volumeNumber ?? null : metadata.volumeNumber,
               supersedesChapterId,
               sortOrder,
             })

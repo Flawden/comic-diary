@@ -343,12 +343,15 @@ function parseMetadata(
       body.releasedAt,
     );
   const expectedRelease = body.expectedRelease;
+  const volumeNumber = body.volumeNumber;
 
   if (
     title === undefined ||
     sourceUrl === undefined ||
     releasedAt === undefined ||
-    (expectedRelease !== undefined && expectedRelease !== null && typeof expectedRelease !== "string")
+    (expectedRelease !== undefined && expectedRelease !== null && typeof expectedRelease !== "string") ||
+    (volumeNumber !== undefined && volumeNumber !== null &&
+      (typeof volumeNumber !== "number" || !Number.isSafeInteger(volumeNumber) || volumeNumber < 1 || volumeNumber > 99))
   ) {
     return null;
   }
@@ -376,6 +379,7 @@ function parseMetadata(
 
     releasedAt,
     expectedRelease: expectedRelease as string | null | undefined,
+    volumeNumber: volumeNumber as number | null | undefined,
   } as const;
 }
 
