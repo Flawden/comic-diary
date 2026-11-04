@@ -191,7 +191,7 @@ function chapterErrorMessage(
       return "Сессия закончилась. Войдите снова.";
 
     default:
-      return "Не удалось добавить главу.";
+      return "Не удалось сохранить главу.";
   }
 }
 
@@ -594,6 +594,7 @@ export function AdminComicManager({
     useRouter();
 
   const [chapterFeedback, setChapterFeedback] = useState<{ comicId: number; kind: "error" | "success"; message: string } | null>(null);
+  const [chapterEditFeedback, setChapterEditFeedback] = useState<{ chapterId: number; kind: "error" | "success"; message: string } | null>(null);
   const [coverUploads, setCoverUploads] = useState<Record<string, boolean>>({});
   const [creationVersions, setCreationVersions] = useState<Record<number, number>>({});
   const [
@@ -955,10 +956,31 @@ export function AdminComicManager({
 
   async function updateChapter(
     comic: AdminComic,
-    chapterId: number,
+    chapter: AdminChapter,
   ) {
-    if (!chapterEditValues) {
+    if (!chapterEditValues || chapter.status === "ARCHIVED") {
       return;
+    }
+
+    const chapterId = chapter.id;
+    if (!chapterEditValues.displayCode.trim() && !chapterEditValues.title.trim()) {
+      setChapterEditFeedback({ chapterId, kind: "error", message: "Укажите код или название главы." });
+      return;
+    }
+
+    const sourceUrl = chapterEditValues.sourceUrl.trim();
+    if (sourceUrl) {
+      let validUrl = false;
+      try {
+        const parsedUrl = new URL(sourceUrl);
+        validUrl = parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:";
+      } catch {
+        // Keep the editor open with its current values.
+      }
+      if (!validUrl) {
+        setChapterEditFeedback({ chapterId, kind: "error", message: "Укажите ссылку с https:// или http:// либо оставьте поле пустым." });
+        return;
+      }
     }
 
     const key =
@@ -971,6 +993,7 @@ export function AdminComicManager({
     setBusyKey(key);
     setMessage(null);
     setError(null);
+    setChapterEditFeedback(null);
 
     try {
       const response =
@@ -1011,10 +1034,11 @@ export function AdminComicManager({
                   chapterEditValues.status,
 
                 releasedAt:
-                  chapterEditValues.status ===
-                  "RELEASED"
-                    ? new Date()
-                        .toISOString()
+                  chapterEditValues.status === "RELEASED"
+                    // Do not change an existing release date during a metadata edit.
+                    ? chapter.status === "RELEASED"
+                      ? chapter.releasedAt
+                      : new Date().toISOString()
                     : null,
               }),
           },
@@ -1040,32 +1064,22 @@ export function AdminComicManager({
       }
 
       if (!response.ok) {
-        setError(
-          chapterErrorMessage(
-            apiErrorKind(
-              body,
-            ),
-          ),
-        );
-
+        setChapterEditFeedback({
+          chapterId,
+          kind: "error",
+          message: chapterErrorMessage(apiErrorKind(body)),
+        });
         setBusyKey(null);
         return;
       }
 
       setEditingChapterId(null);
       setChapterEditValues(null);
-
-      setMessage(
-        "Глава обновлена.",
-      );
-
+      setChapterEditFeedback({ chapterId, kind: "success", message: "Изменения главы сохранены." });
       setBusyKey(null);
       router.refresh();
     } catch {
-      setError(
-        "Не удалось связаться с сервером.",
-      );
-
+      setChapterEditFeedback({ chapterId, kind: "error", message: "Не удалось связаться с сервером. Изменения остались в форме — попробуйте ещё раз." });
       setBusyKey(null);
     }
   }
@@ -1542,114 +1556,124 @@ export function AdminComicManager({
                                 {editingChapterId ===
                                 chapter.id &&
                                 chapterEditValues ? (
-                                  <div className="space-y-3">
-                                    <label className="block text-sm">Тип главы
-                                      <select value={chapterEditValues.kind} onChange={(event) => setChapterEditValues({ ...chapterEditValues, kind: event.target.value as "MAIN" | "SPECIAL" })} className="ml-2 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
-                                        <option value="MAIN">Основная</option><option value="SPECIAL">Спешиал / бонус</option>
-                                      </select>
-                                    </label>
-                                    <input
-                                      aria-label="Код главы"
-                                      value={
-                                        chapterEditValues.displayCode
+                                  <section
+                                    aria-labelledby={`chapter-editor-title-${chapter.id}`}
+                                    className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--background)] p-4"
+                                    onKeyDown={(event) => {
+                                      if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+                                        // Prevent Enter in the chapter editor from submitting the outer comic form.
+                                        event.preventDefault();
+                                        if (busyKey === null) void updateChapter(comic, chapter);
                                       }
-                                      onChange={(event) =>
-                                        setChapterEditValues({
-                                          ...chapterEditValues,
-                                          displayCode:
-                                            event.target.value,
-                                        })
+                                      if (event.key === "Escape" && busyKey === null) {
+                                        event.preventDefault();
+                                        setEditingChapterId(null);
+                                        setChapterEditValues(null);
+                                        setChapterEditFeedback(null);
                                       }
-                                      className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] px-3 py-2 text-sm"
-                                    />
+                                    }}
+                                  >
+                                    <div className="space-y-1 border-b border-[var(--border)] pb-3">
+                                      <h5 id={`chapter-editor-title-${chapter.id}`} className="text-base font-semibold">
+                                        Редактирование главы: {chapter.displayCode || chapter.title || `#${chapter.id}`}{chapter.displayCode && chapter.title ? ` — ${chapter.title}` : ""}
+                                      </h5>
+                                      <p className="text-sm text-[var(--text-secondary)]">
+                                        {comic.title} · {chapter.kind === "SPECIAL" ? "Спешиал / бонус" : "Основная глава"} · ID {chapter.id}
+                                      </p>
+                                      <p className="text-xs text-[var(--text-secondary)]">
+                                        Здесь исправляются данные текущей главы. Если изменилось содержание, создайте новую редакцию ниже — история чтения старой сохранится.
+                                      </p>
+                                    </div>
 
-                                    <input
-                                      aria-label="Название главы"
-                                      value={
-                                        chapterEditValues.title
-                                      }
-                                      onChange={(event) =>
-                                        setChapterEditValues({
-                                          ...chapterEditValues,
-                                          title:
-                                            event.target.value,
-                                        })
-                                      }
-                                      className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] px-3 py-2 text-sm"
-                                    />
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                      <label className="block text-sm font-medium">
+                                        <span className="block">Тип главы</span>
+                                        <select
+                                          value={chapterEditValues.kind}
+                                          onChange={(event) => setChapterEditValues({ ...chapterEditValues, kind: event.target.value as "MAIN" | "SPECIAL" })}
+                                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                                        >
+                                          <option value="MAIN">Основная</option>
+                                          <option value="SPECIAL">Спешиал / бонус</option>
+                                        </select>
+                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Основная глава или дополнительный выпуск.</span>
+                                      </label>
 
-                                    <input
-                                      aria-label="Ссылка на главу"
-                                      value={
-                                        chapterEditValues.sourceUrl
-                                      }
-                                      onChange={(event) =>
-                                        setChapterEditValues({
-                                          ...chapterEditValues,
-                                          sourceUrl:
-                                            event.target.value,
-                                        })
-                                      }
-                                      className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] px-3 py-2 text-sm"
-                                    />
+                                      <label className="block text-sm font-medium">
+                                        <span className="block">Код главы (необязательно при наличии названия)</span>
+                                        <input
+                                          value={chapterEditValues.displayCode}
+                                          onChange={(event) => setChapterEditValues({ ...chapterEditValues, displayCode: event.target.value })}
+                                          placeholder="Например, 2 или Extra"
+                                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                                        />
+                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Номер или обозначение из первоисточника.</span>
+                                      </label>
 
-                                    <select
-                                      aria-label="Статус главы"
-                                      value={
-                                        chapterEditValues.status
-                                      }
-                                      onChange={(event) =>
-                                        setChapterEditValues({
-                                          ...chapterEditValues,
-                                          status:
-                                            event.target.value as ChapterEditStatus,
-                                        })
-                                      }
-                                      className="rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] px-3 py-2 text-sm"
-                                    >
-                                      <option value="SCHEDULED">
-                                        Запланирована
-                                      </option>
+                                      <label className="block text-sm font-medium">
+                                        <span className="block">Название главы</span>
+                                        <input
+                                          value={chapterEditValues.title}
+                                          onChange={(event) => setChapterEditValues({ ...chapterEditValues, title: event.target.value })}
+                                          placeholder="Например, УРГА"
+                                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                                        />
+                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Можно оставить пустым, если указан код главы.</span>
+                                      </label>
 
-                                      <option value="RELEASED">
-                                        Опубликована
-                                      </option>
+                                      <label className="block text-sm font-medium">
+                                        <span className="block">Ссылка на источник (необязательно)</span>
+                                        <input
+                                          type="url"
+                                          value={chapterEditValues.sourceUrl}
+                                          onChange={(event) => setChapterEditValues({ ...chapterEditValues, sourceUrl: event.target.value })}
+                                          placeholder="https://..."
+                                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                                        />
+                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Адрес, куда читатель перейдёт для чтения.</span>
+                                      </label>
 
-                                      <option value="ARCHIVED">
-                                        В архиве
-                                      </option>
-                                    </select>
+                                      <label className="block text-sm font-medium md:col-span-2">
+                                        <span className="block">Статус главы</span>
+                                        <select
+                                          value={chapterEditValues.status}
+                                          onChange={(event) => setChapterEditValues({ ...chapterEditValues, status: event.target.value as ChapterEditStatus })}
+                                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                                        >
+                                          <option value="SCHEDULED">Запланирована</option>
+                                          <option value="RELEASED">Опубликована</option>
+                                        </select>
+                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Для переноса в архив используйте отдельное действие с подтверждением. Даты выхода добавим в WD21.</span>
+                                      </label>
+                                    </div>
 
-                                    <div className="flex gap-2">
+                                    {chapterEditFeedback?.chapterId === chapter.id && chapterEditFeedback.kind === "error" ? (
+                                      <p role="alert" className="rounded-lg border border-[var(--danger)] p-3 text-sm text-[var(--danger)]">{chapterEditFeedback.message}</p>
+                                    ) : null}
+
+                                    <div className="flex flex-wrap gap-3 border-t border-[var(--border)] pt-3">
                                       <button
                                         type="button"
-                                        onClick={() =>
-                                          void updateChapter(
-                                            comic,
-                                            chapter.id,
-                                          )
-                                        }
-                                        disabled={
-                                          busyKey !==
-                                          null
-                                        }
-                                        className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm text-[var(--primary-foreground)] disabled:opacity-60"
+                                        onClick={() => void updateChapter(comic, chapter)}
+                                        disabled={busyKey !== null}
+                                        className="min-h-11 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)] disabled:opacity-60"
                                       >
-                                        Сохранить
+                                        {busyKey === `chapter-update:${chapter.id}` ? "Сохраняем…" : "Сохранить главу"}
                                       </button>
-
                                       <button
                                         type="button"
                                         onClick={() => {
                                           setEditingChapterId(null);
                                           setChapterEditValues(null);
+                                          setChapterEditFeedback(null);
                                         }}
-                                        className="rounded-xl border px-4 py-2 text-sm"
+                                        disabled={busyKey !== null}
+                                        className="min-h-11 rounded-xl border border-[var(--border)] px-4 py-2 text-sm"
                                       >
                                         Отмена
                                       </button>
                                     </div>
-                                  </div>
+                                  </section>
                                 ) : (
                                   <>
                                     <div className="font-medium">
@@ -1662,6 +1686,9 @@ export function AdminComicManager({
                                     <div className="mt-1 text-sm text-[var(--muted)]">
                                       {chapter.status === "RELEASED" ? "Опубликована" : chapter.status === "SCHEDULED" ? "Запланирована" : "В архиве"} · Порядок: {chapter.sortOrder}
                                     </div>
+                                    {chapterEditFeedback?.chapterId === chapter.id && chapterEditFeedback.kind === "success" ? (
+                                      <p role="status" className="mt-2 text-sm text-[var(--primary)]">{chapterEditFeedback.message}</p>
+                                    ) : null}
 
                                     {chapter.supersedesChapterId ? <p className="mt-1 text-xs text-[var(--text-secondary)]">Новая редакция · заменяет: {comic.chapters.find(c => c.id === chapter.supersedesChapterId)?.displayCode ?? `ID ${chapter.supersedesChapterId}`}</p> : null}
                                     {comic.chapters.filter(c => c.supersedesChapterId === chapter.id).map(c => <p key={c.id} className="mt-1 text-xs text-[var(--text-secondary)]">Старая редакция · заменена на: {c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""}. История чтения этой редакции сохранена.</p>)}
@@ -1702,7 +1729,9 @@ export function AdminComicManager({
 
                                       <button
                                         type="button"
+                                        disabled={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null || chapter.status === "ARCHIVED"}
                                         onClick={() => {
+                                          setChapterEditFeedback(null);
                                           setEditingChapterId(
                                             chapter.id,
                                           );
@@ -1724,51 +1753,41 @@ export function AdminComicManager({
                                               chapter.status,
                                           });
                                         }}
-                                        className="text-sm font-semibold text-[var(--primary)]"
+                                        className="min-h-11 rounded-lg border border-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--primary)] disabled:opacity-50"
                                       >
-                                        Исправить данные
+                                        Редактировать
                                       </button>
 
-                                      {archiveConfirmChapterId ===
-                                      chapter.id ? (
-                                        <>
+                                      {chapter.status === "ARCHIVED" ? (
+                                        <span className="self-center text-xs text-[var(--text-secondary)]">Архивная глава хранится для истории чтения.</span>
+                                      ) : archiveConfirmChapterId === chapter.id ? (
+                                        <div className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-[var(--danger)] p-3">
+                                          <p className="w-full text-sm text-[var(--danger)]">
+                                            Архивировать «{chapter.displayCode || chapter.title}»? История чтения сохранится.
+                                          </p>
                                           <button
                                             type="button"
-                                            disabled={
-                                              busyKey !== null
-                                            }
-                                            onClick={() =>
-                                              void archiveChapter(
-                                                comic,
-                                                chapter.id,
-                                              )
-                                            }
-                                            className="text-sm font-semibold text-red-700"
+                                            disabled={busyKey !== null}
+                                            onClick={() => void archiveChapter(comic, chapter.id)}
+                                            className="min-h-11 rounded-lg border border-[var(--danger)] px-3 py-2 text-sm font-semibold text-[var(--danger)] disabled:opacity-60"
                                           >
                                             Да, архивировать
                                           </button>
-
                                           <button
                                             type="button"
-                                            onClick={() =>
-                                              setArchiveConfirmChapterId(
-                                                null,
-                                              )
-                                            }
-                                            className="text-sm"
+                                            disabled={busyKey !== null}
+                                            onClick={() => setArchiveConfirmChapterId(null)}
+                                            className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
                                           >
                                             Отмена
                                           </button>
-                                        </>
+                                        </div>
                                       ) : (
                                         <button
                                           type="button"
-                                          onClick={() =>
-                                            setArchiveConfirmChapterId(
-                                              chapter.id,
-                                            )
-                                          }
-                                          className="text-sm font-semibold text-red-700"
+                                          disabled={busyKey !== null || editingChapterId !== null}
+                                          onClick={() => setArchiveConfirmChapterId(chapter.id)}
+                                          className="min-h-11 rounded-lg border border-[var(--danger)] px-3 py-2 text-sm font-semibold text-[var(--danger)] disabled:opacity-60"
                                         >
                                           Архивировать
                                         </button>

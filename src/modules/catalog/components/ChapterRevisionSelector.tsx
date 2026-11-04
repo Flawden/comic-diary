@@ -38,7 +38,7 @@ export function ChapterRevisionSelector({ chapters, disabled }: { chapters: Chap
 
   return <fieldset disabled={disabled} className="rounded-xl border border-[var(--border)] p-3 md:col-span-2">
     <legend className="px-1 text-sm font-semibold">Новая глава или новая редакция?</legend>
-    <p className="mb-3 text-sm text-[var(--text-secondary)]">Опечатку, название или ссылку исправляйте кнопкой «Исправить данные». Если изменилось содержание, создайте новую редакцию.</p>
+    <p className="mb-3 text-sm text-[var(--text-secondary)]">Название, код или ссылку существующей главы изменяйте через «Редактировать». Если изменилось содержание, создайте новую редакцию: история чтения старой сохранится.</p>
     <label htmlFor={`${id}-previous`} className="block text-sm font-medium">Что добавляем</label>
     <select id={`${id}-previous`} value={selected ? selectedId : ""}
       onChange={event => choose(event.target.value, event.currentTarget.form)}
