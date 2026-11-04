@@ -589,6 +589,59 @@ function ComicFields({
   );
 }
 
+/** Keep month/year input independent of locale-specific native <input type="month">. */
+function ExpectedMonthYearPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [year = "", month = ""] = value.split("-");
+  const months = [
+    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+  ];
+  function update(nextYear: string, nextMonth: string) {
+    onChange(nextYear || nextMonth ? `${nextYear}-${nextMonth}` : "");
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <label className="block text-sm font-medium">
+        <span className="block">Месяц ожидаемого выхода</span>
+        <select
+          value={month}
+          onChange={event => update(year, event.target.value)}
+          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
+        >
+          <option value="">Выберите месяц</option>
+          {months.map((name, index) => (
+            <option key={name} value={String(index + 1).padStart(2, "0")}>{name}</option>
+          ))}
+        </select>
+      </label>
+      <label className="block text-sm font-medium">
+        <span className="block">Год ожидаемого выхода</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          maxLength={4}
+          placeholder="Например, 2026"
+          value={year}
+          onChange={event => update(event.target.value.replace(/\D/g, "").slice(0, 4), month)}
+          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+        />
+      </label>
+      <p aria-live="polite" className="text-xs text-[var(--text-secondary)] sm:col-span-2">
+        {isValidExpectedRelease(value)
+          ? `Будет показано читателям: ${formatExpectedRelease(value)}.`
+          : "Выберите месяц и укажите год четырьмя цифрами, например Ноябрь + 2026."}
+      </p>
+    </div>
+  );
+}
+
 export function AdminComicManager({
   categories,
   initialComics,
@@ -602,6 +655,7 @@ export function AdminComicManager({
   const [creationVersions, setCreationVersions] = useState<Record<number, number>>({});
   const [creationStatus, setCreationStatus] = useState<Record<number, ChapterCreateStatus>>({});
   const [creationPrecision, setCreationPrecision] = useState<Record<number, ExpectedReleasePrecision>>({});
+  const [creationExpectedRelease, setCreationExpectedRelease] = useState<Record<number, string>>({});
   const [
     busyKey,
     setBusyKey,
@@ -991,9 +1045,10 @@ export function AdminComicManager({
       }
     }
 
-    if (chapterEditValues.status === "SCHEDULED" && chapterEditValues.expectedRelease &&
-        !isValidExpectedRelease(chapterEditValues.expectedRelease)) {
-      setChapterEditFeedback({ chapterId, kind: "error", message: "Проверьте ожидаемую дату: год, месяц или полный день." });
+    if (chapterEditValues.status === "SCHEDULED" && chapterEditValues.expectedPrecision !== "NONE" &&
+        (!isValidExpectedRelease(chapterEditValues.expectedRelease) ||
+         expectedReleasePrecision(chapterEditValues.expectedRelease) !== chapterEditValues.expectedPrecision)) {
+      setChapterEditFeedback({ chapterId, kind: "error", message: "Укажите ожидаемую дату полностью. Для месяца и года выберите месяц и введите четыре цифры года." });
       return;
     }
 
@@ -1221,8 +1276,11 @@ export function AdminComicManager({
 
     const expectedRelease = status === "SCHEDULED" ? textValue(data, "chapterExpectedValue") || null : null;
     const releasedDate = status === "RELEASED" ? textValue(data, "chapterReleasedDate") : "";
-    if (expectedRelease && !isValidExpectedRelease(expectedRelease)) {
-      fail("Проверьте ожидаемую дату выхода главы.");
+    const precision = creationPrecision[comic.id] ?? "NONE";
+    if (status === "SCHEDULED" && precision !== "NONE" &&
+        (!expectedRelease || !isValidExpectedRelease(expectedRelease) ||
+         expectedReleasePrecision(expectedRelease) !== precision)) {
+      fail("Укажите ожидаемую дату полностью. Для месяца и года выберите месяц и введите четыре цифры года.");
       setBusyKey(null);
       return;
     }
@@ -1334,6 +1392,7 @@ export function AdminComicManager({
       setCreationVersions(versions => ({ ...versions, [comic.id]: (versions[comic.id] ?? 0) + 1 }));
       setCreationStatus(statuses => ({ ...statuses, [comic.id]: "SCHEDULED" }));
       setCreationPrecision(precisions => ({ ...precisions, [comic.id]: "NONE" }));
+      setCreationExpectedRelease(values => ({ ...values, [comic.id]: "" }));
       setFormControlValue(form, "chapterKind", "MAIN");
 
       const successMessage = previous
@@ -1686,12 +1745,17 @@ export function AdminComicManager({
                                               <option value="DAY">Точный день</option>
                                             </select>
                                           </label>
-                                          {chapterEditValues.expectedPrecision !== "NONE" ? (
+                                          {chapterEditValues.expectedPrecision === "MONTH" ? (
+                                            <ExpectedMonthYearPicker
+                                              value={chapterEditValues.expectedRelease}
+                                              onChange={value => setChapterEditValues({ ...chapterEditValues, expectedRelease: value })}
+                                            />
+                                          ) : chapterEditValues.expectedPrecision !== "NONE" ? (
                                             <label className="block text-sm font-medium">Ожидаемый выход
-                                              <input type={chapterEditValues.expectedPrecision === "YEAR" ? "text" : chapterEditValues.expectedPrecision === "MONTH" ? "month" : "date"}
+                                              <input type={chapterEditValues.expectedPrecision === "YEAR" ? "text" : "date"}
                                                 inputMode={chapterEditValues.expectedPrecision === "YEAR" ? "numeric" : undefined}
                                                 maxLength={chapterEditValues.expectedPrecision === "YEAR" ? 4 : undefined}
-                                                placeholder={chapterEditValues.expectedPrecision === "YEAR" ? "2027" : undefined}
+                                                placeholder={chapterEditValues.expectedPrecision === "YEAR" ? "Например, 2027" : undefined}
                                                 value={chapterEditValues.expectedRelease}
                                                 onChange={event => setChapterEditValues({ ...chapterEditValues, expectedRelease: event.target.value })}
                                                 className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2" />
@@ -1983,7 +2047,10 @@ export function AdminComicManager({
                             <div className="space-y-2 md:col-span-2">
                               <label className="block text-sm font-medium">Точность ожидаемой даты
                                 <select name="chapterExpectedPrecision" value={creationPrecision[comic.id] ?? "NONE"}
-                                  onChange={event => setCreationPrecision(previous => ({ ...previous, [comic.id]: event.target.value as ExpectedReleasePrecision }))}
+                                  onChange={event => {
+                                    setCreationPrecision(previous => ({ ...previous, [comic.id]: event.target.value as ExpectedReleasePrecision }));
+                                    setCreationExpectedRelease(previous => ({ ...previous, [comic.id]: "" }));
+                                  }}
                                   className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
                                   <option value="NONE">Дата пока неизвестна</option>
                                   <option value="YEAR">Только год</option>
@@ -1991,13 +2058,21 @@ export function AdminComicManager({
                                   <option value="DAY">Точный день</option>
                                 </select>
                               </label>
-                              {(creationPrecision[comic.id] ?? "NONE") !== "NONE" ? (
+                              {(creationPrecision[comic.id] ?? "NONE") === "MONTH" ? (
+                                <>
+                                  <ExpectedMonthYearPicker
+                                    value={creationExpectedRelease[comic.id] ?? ""}
+                                    onChange={value => setCreationExpectedRelease(previous => ({ ...previous, [comic.id]: value }))}
+                                  />
+                                  <input type="hidden" name="chapterExpectedValue" value={creationExpectedRelease[comic.id] ?? ""} />
+                                </>
+                              ) : (creationPrecision[comic.id] ?? "NONE") !== "NONE" ? (
                                 <label className="block text-sm font-medium">Ожидаемый выход
                                   <input key={`${comic.id}-${creationPrecision[comic.id]}`} name="chapterExpectedValue"
-                                    type={creationPrecision[comic.id] === "YEAR" ? "text" : creationPrecision[comic.id] === "MONTH" ? "month" : "date"}
+                                    type={creationPrecision[comic.id] === "YEAR" ? "text" : "date"}
                                     inputMode={creationPrecision[comic.id] === "YEAR" ? "numeric" : undefined}
                                     maxLength={creationPrecision[comic.id] === "YEAR" ? 4 : undefined}
-                                    placeholder={creationPrecision[comic.id] === "YEAR" ? "2027" : undefined}
+                                    placeholder={creationPrecision[comic.id] === "YEAR" ? "Например, 2027" : undefined}
                                     className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2" />
                                 </label>
                               ) : null}
