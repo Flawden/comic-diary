@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useOptimistic, useRef, useState, useTransition } from "react";
 import { Button } from "@/shared/components/ui";
 import type { ComicChapter } from "@/modules/comics/queries/get-comic-chapters";
+import { formatExpectedRelease } from "@/modules/catalog/chapter-release-dates";
 
 type Chapter = Omit<ComicChapter, "releasedAt">;
 type Props = { comicId: number; chapters: Chapter[]; ratings: Record<number, number>; readIds: number[]; canMark: boolean };
@@ -20,6 +21,7 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMa
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("MAIN");
   const [limit, setLimit] = useState(30);
+  const [hideScheduled, setHideScheduled] = useState(false);
   const router=useRouter();
   const [pending,start]=useTransition();
   const lock=useRef(false);
@@ -46,8 +48,9 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMa
     });
   }
   const active = chapters.filter((c) => c.status === "RELEASED");
+  const scheduledCount = chapters.filter((c) => c.status === "SCHEDULED").length;
   const main = active.filter((c) => c.kind === "MAIN");
-  const filtered = active.filter((c) => c.kind === kind &&
+  const filtered = chapters.filter((c) => (c.status === "RELEASED" || (!hideScheduled && c.status === "SCHEDULED")) && c.kind === kind &&
     `${c.displayCode || c.title || "Глава"} ${c.title ?? ""}`.toLocaleLowerCase("ru").includes(query.trim().toLocaleLowerCase("ru")));
   const history = chapters.filter((c) => c.status === "ARCHIVED" && read.has(c.id));
   const control = "w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2.5 text-sm";
@@ -55,6 +58,10 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMa
   return (
     <section className="chapter-panel" aria-label="Главы и история чтения">
       {canMark && main.length>0 && <div className="wd-progress"><span>Прочитано: {main.filter(c=>read.has(c.id)).length} из {main.length}</span><progress max={main.length} value={main.filter(c=>read.has(c.id)).length}/></div>}
+      {scheduledCount > 0 && <label className="wd-planned-toggle">
+        <span>Скрыть запланированные <small>Ещё не вышли: {scheduledCount}</small></span>
+        <input type="checkbox" checked={hideScheduled} onChange={(e) => { setHideScheduled(e.target.checked); setLimit(30); }}/>
+      </label>}
       <details className="wd-tools"><summary>Поиск и действия</summary>
       {canMark && main.length > 0 ? (
         <details className="chapter-bulk"><summary>Отметить несколько глав прочитанными</summary>
@@ -92,19 +99,22 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMa
       {failure && <div role="alert">Не удалось подтвердить отметку. <button className="tea-text-action" disabled={pending} onClick={()=>mark(failure.chapter,failure.action)}>Повторить</button></div>}
       <ul className="wd-chapters">
         {filtered.slice(0, limit).map((c) => {
-          const source = safeSource(c.sourceUrl);
+          const isScheduled = c.status === "SCHEDULED";
+          const source = isScheduled ? null : safeSource(c.sourceUrl);
           const isRead = read.has(c.id);
           const label=[c.displayCode,c.title].filter(Boolean).join(" · ")||"Глава";
-          return <li key={c.id} className="wd-row"><div className="wd-row-title">
+          return <li key={c.id} className={isScheduled ? "wd-row wd-row--scheduled" : "wd-row"}><div className="wd-row-title">
               {source?<a href={source} target="_blank" rel="noopener noreferrer" aria-label={label+" — открыть источник в новой вкладке"}>{label} <small>↗</small></a>:<span>{label}</span>}
-              {c.supersedesChapterId ? <details className="chapter-revision"><summary>Новая редакция</summary><p>Отметка прежней версии хранится в архиве.</p></details>:null}
+              {isScheduled ? <small className="wd-planned-date">{c.expectedRelease ? `Ожидается: ${formatExpectedRelease(c.expectedRelease)}` : "Запланирована · дата неизвестна"}</small> : null}
+              {!isScheduled && c.supersedesChapterId ? <details className="chapter-revision"><summary>Новая редакция</summary><p>Отметка прежней версии хранится в архиве.</p></details>:null}
             </div>
-            {canMark && isRead && <button className="wd-score" disabled={pending} aria-label={"Оценить: "+label} onClick={()=>setSheet(c)}>{ratings[c.id] ? "★ "+ratings[c.id] : "☆"}</button>}
-            {canMark && <button className="wd-mark" aria-pressed={isRead} aria-label={(isRead?"Снять отметку: ":"Отметить прочитанной: ")+label} disabled={pending} onClick={()=>mark(c,isRead?"unread":"read")}><span>{isRead?"✓":""}</span></button>}
+            {isScheduled ? <span className="wd-planned-indicator" aria-label="Глава ещё не вышла" title="Глава ещё не вышла">◷</span> : null}
+            {canMark && !isScheduled && isRead && <button className="wd-score" disabled={pending} aria-label={"Оценить: "+label} onClick={()=>setSheet(c)}>{ratings[c.id] ? "★ "+ratings[c.id] : "☆"}</button>}
+            {canMark && !isScheduled && <button className="wd-mark" aria-pressed={isRead} aria-label={(isRead?"Снять отметку: ":"Отметить прочитанной: ")+label} disabled={pending} onClick={()=>mark(c,isRead?"unread":"read")}><span>{isRead?"✓":""}</span></button>}
           </li>;
         })}
       </ul>
-      {filtered.length === 0 ? <p className="mt-4 text-sm text-[var(--text-secondary)]">{query ? "По запросу ничего не найдено." : "В этом разделе пока нет опубликованных глав."}</p> : null}
+      {filtered.length === 0 ? <p className="mt-4 text-sm text-[var(--text-secondary)]">{query ? "По запросу ничего не найдено." : hideScheduled ? "В этом разделе пока нет вышедших глав." : "В этом разделе пока нет глав."}</p> : null}
       {filtered.length > limit ? <Button variant="secondary" className="mt-3" onClick={() => setLimit(limit + 30)}>Показать ещё 30</Button> : null}
       {history.length ? <details className="mt-5 rounded-xl border border-[var(--border)] p-3"><summary className="cursor-pointer font-semibold">Прочитанные архивные версии ({history.length})</summary><ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">{history.map((c) => <li key={c.id}>{c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""} · прочитано{ratings[c.id] ? ` · ★ ${ratings[c.id]} / 5` : ""}</li>)}</ul></details> : null}
       {sheet && <ChapterRating comicId={comicId} chapter={sheet} rating={ratings[sheet.id]??null} onClose={()=>setSheet(null)}/>}

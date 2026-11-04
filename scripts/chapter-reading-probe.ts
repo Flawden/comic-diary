@@ -5,6 +5,7 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "../src/db";
 import { chapters, comics, userChapterReads, userComics, users, administrativeAuditEvents } from "../src/db/schema";
 import { getChapterProgressCeiling } from "../src/modules/comics/queries/get-chapter-progress-ceiling";
+import { getComicChapters } from "../src/modules/comics/queries/get-comic-chapters";
 import { completeComicReading } from "../src/modules/library/mutations/complete-comic-reading";
 import { completionSnapshot } from "../src/modules/library/completion-model";
 import { updateChapterReading } from "../src/modules/library/mutations/update-chapter-reading";
@@ -39,9 +40,15 @@ async function main() {
       { comicId: comic.id, displayCode: "1", sortOrder: 1, status: "RELEASED" },
       { comicId: comic.id, displayCode: "Extra: чай", title: "Необычное название", kind: "SPECIAL", sortOrder: 2, status: "RELEASED" },
       { comicId: comic.id, displayCode: "1.5б", sortOrder: 3, status: "RELEASED" },
-      { comicId: comic.id, displayCode: "Future", sortOrder: 4, status: "SCHEDULED", expectedRelease: "2026-11" },
+      { comicId: comic.id, displayCode: "Future", sortOrder: 4, status: "SCHEDULED", expectedRelease: "2026-11", sourceUrl: "https://example.com/unreleased-secret" },
       { comicId: privateComic.id, displayCode: "Private", sortOrder: 1, status: "RELEASED" },
     ]).returning();
+    // Announcements are visible publicly, but unpublished source URLs are not.
+    const publicChapters = await getComicChapters(comic.id, { includeScheduled: true });
+    assert.equal(publicChapters.find(c => c.id === scheduled.id)?.expectedRelease, "2026-11");
+    assert.equal(publicChapters.find(c => c.id === scheduled.id)?.sourceUrl, null);
+    assert.equal((await getComicChapters(comic.id)).some(c => c.id === scheduled.id), false);
+    await assert.rejects(updateChapterReading(reader.id, comic.id, scheduled.id, "rate", 5));
     const state = async () => (await getUserComicState(reader.id, comic.id))!;
     const options = parseUpdatesOptions({ status: "ALL", q: "Reading probe" });
     assert.equal((await getReadingUpdates(reader.id, options)).titles[0].mainCount, 2);

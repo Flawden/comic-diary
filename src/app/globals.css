@@ -662,6 +662,14 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 .wd-row-title {flex:1;min-width:0;overflow-wrap:anywhere}
 .wd-row-title a {color:var(--primary);font-weight:600;display:block;padding:12px 0}
 .wd-row-title small {opacity:.75}.wd-row-title a:hover {text-decoration:underline}
+/* WD21.3: scheduled chapters are visible, but cannot be read or rated. */
+.wd-planned-toggle {display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:52px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:.875rem}
+.wd-planned-toggle span {font-weight:600}.wd-planned-toggle small {display:block;font-size:.75rem;color:var(--text-secondary);font-weight:400;margin-top:3px}
+.wd-planned-toggle input {width:18px;height:18px;flex:none;accent-color:var(--primary);cursor:pointer}
+.wd-row--scheduled {color:var(--text-secondary)}
+.wd-row--scheduled .wd-row-title>span {display:block;padding-top:10px;font-weight:600}
+.wd-row-title .wd-planned-date {display:block;margin:4px 0 10px;color:var(--text-secondary);font-size:.75rem;opacity:1}
+.wd-planned-indicator {display:grid;place-items:center;min-width:44px;min-height:44px;color:var(--text-secondary);font-size:1.35rem}
 .wd-score,.wd-mark {min-width:44px;min-height:44px;display:inline-grid;place-content:center}
 .wd-score,.wd-stars button {color:var(--cd-rating,var(--primary));color:light-dark(#92600f,#f0bd62)}
 .wd-mark span {border-radius:50%;width:20px;height:20px;border:1.5px solid var(--text-muted);display:grid;place-items:center;font-size:.8rem}

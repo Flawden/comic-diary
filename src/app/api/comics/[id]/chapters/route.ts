@@ -144,6 +144,7 @@ export async function GET(
         {
           includeUnreleased:
             canSeeUnreleasedChapters,
+          includeScheduled: true,
         },
       );
 

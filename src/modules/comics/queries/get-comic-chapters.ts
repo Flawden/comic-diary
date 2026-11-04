@@ -2,6 +2,7 @@ import {
   and,
   asc,
   eq,
+  inArray,
 } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -9,6 +10,7 @@ import { chapters } from "@/db/schema";
 
 export type GetComicChaptersOptions = {
   includeUnreleased?: boolean;
+  includeScheduled?: boolean;
 };
 
 export async function getComicChapters(
@@ -24,14 +26,13 @@ export async function getComicChapters(
 
   if (!options.includeUnreleased) {
     predicates.push(
-      eq(
-        chapters.status,
-        "RELEASED",
-      ),
+      options.includeScheduled
+        ? inArray(chapters.status, ["RELEASED", "SCHEDULED"])
+        : eq(chapters.status, "RELEASED"),
     );
   }
 
-  return db
+  const result = await db
     .select({
       id: chapters.id,
       kind: chapters.kind,
@@ -60,6 +61,14 @@ export async function getComicChapters(
       asc(chapters.sortOrder),
       asc(chapters.id),
     );
+
+  // Public chapter lists expose announcements, not unpublished reading links.
+  if (options.includeScheduled && !options.includeUnreleased) {
+    return result.map((chapter) => chapter.status === "SCHEDULED"
+      ? { ...chapter, sourceUrl: null }
+      : chapter);
+  }
+  return result;
 }
 
 export type ComicChapter =

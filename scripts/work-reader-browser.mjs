@@ -15,7 +15,7 @@ try {
   await pool.query("INSERT INTO sessions(user_id,token_hash,expires_at) VALUES ($1,$2,now()+interval '1 hour')",[user,createHash("sha256").update(token).digest("hex")]);
   comic=(await pool.query("INSERT INTO comics(slug,title,source_url,description) VALUES ($1,'Мезолит',$2,'Описание истории') RETURNING id",[prefix,"https://example.com/book"])).rows[0].id;
   await pool.query("INSERT INTO user_comics(user_id,comic_id) VALUES ($1,$2)",[user,comic]);
-  await pool.query("INSERT INTO chapters(comic_id,display_code,title,source_url,sort_order,status) VALUES ($1,'1','Охота на быка','https://example.com/one',1,'RELEASED'),($1,'','УРГА','https://example.com/two',2,'RELEASED')",[comic]);
+  await pool.query("INSERT INTO chapters(comic_id,display_code,title,source_url,sort_order,status,expected_release) VALUES ($1,'1','Охота на быка','https://example.com/one',1,'RELEASED',NULL),($1,'','УРГА','https://example.com/two',2,'RELEASED',NULL),($1,'3','Просыпание','https://example.com/unreleased-secret',3,'SCHEDULED','2026-11')",[comic]);
   browser=await chromium.launch({channel:"chrome",headless:true});
   const ctx=await browser.newContext({viewport:{width:360,height:800}});
   await ctx.addCookies([{name:"comic_diary_session",value:token,url:origin}]);
@@ -30,6 +30,24 @@ try {
   await page.getByText("Описание истории",{exact:true}).waitFor();
   await page.getByRole("tab",{name:/Главы/}).click();
   const chapters=page.getByRole("tabpanel",{name:/Главы/});
+  const planned=chapters.locator(".wd-row--scheduled");
+  await planned.getByText("3 · Просыпание").waitFor();
+  await planned.getByText("Ожидается: ноябрь 2026 г.").waitFor();
+  assert.equal(await planned.locator("a, button").count(), 0);
+  assert.equal(await chapters.getByText("Прочитано: 0 из 2").count(), 1);
+  await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).check();
+  assert.equal(await chapters.locator(".wd-row--scheduled").count(), 0);
+  await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).uncheck();
+  await planned.getByText("3 · Просыпание").waitFor();
+  // Public visitor also sees the announcement, but no reading link or controls.
+  const guest=await browser.newContext({viewport:{width:360,height:800}});
+  const guestPage=await guest.newPage();
+  await guestPage.goto(url+"#chapters");
+  const guestPlanned=guestPage.locator(".wd-row--scheduled");
+  await guestPlanned.getByText("3 · Просыпание").waitFor();
+  assert.equal(await guestPlanned.locator("a, button").count(), 0);
+  assert.equal((await guestPage.request.get(origin+"/api/comics/"+comic+"/chapters").then(r=>r.json())).chapters.find(c=>c.status==="SCHEDULED").sourceUrl,null);
+  await guest.close();
   await page.evaluate(()=>{window.readerDocument="kept";});
   const mark=chapters.getByRole("button",{name:/Отметить прочитанной: 1/});
   // Rejection must roll the check back and leave an explicit retry.
@@ -100,7 +118,7 @@ try {
   assert.equal(await page.locator("dialog[open]").count(),0);
   await chapters.getByRole("button",{name:"Оценить: УРГА"}).click();
   await page.getByRole("dialog",{name:"УРГА"}).waitFor();
-  console.log("PASS: WD12-WD16 tabs, mobile rating sheet, five-dimensional review, persistence, clear, AJAX retry and drafts");
+  console.log("PASS: WD12-WD16 and WD21.3 planned chapters, guest visibility, read/rating guards, toggle, persistence and mobile sheet");
 } finally {
   try {
     await browser?.close();
