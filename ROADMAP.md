@@ -11,6 +11,8 @@ Source audit and first delivery scope: [b46d6d1 audit](docs/design/white-dragon-
 
 Operations confirmed by supplied logs: Telegram welcome/new-copy delivery, three verified Windows copies, manual scheduled-task execution, isolated database restore from a Windows copy. Full media/app restore from that copy, automatic Windows trigger and real error/recovery delivery remain open. CD-07/R9 are not fully closed.
 
+**Pilot feedback addendum — 2026-11-04:** [Admin chapter editing, dates, performance, privacy and regression acceptance](docs/design/white-dragon-feedback-2026-11-04.md). The refined order is **WD16 → WD20 → WD21 → WD17 → WD18 → WD19**, plus parallel QA/PERF/PRIVACY gates before widening registration. This dated addendum supersedes the earlier WD16–WD19 ordering only where dependencies differ.
+
 This index supersedes older next-step priorities below; historical milestones and outstanding obligations remain preserved.
 
 ---
