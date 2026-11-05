@@ -32,7 +32,7 @@ async function main() {
     assert.equal((await getComicBySlug(stamp))!.seriesStatus, "UNKNOWN", "declared count cannot infer publication state");
     assert.equal((await getComicBySlug(stamp))!.workType, "UNKNOWN");
     assert.equal((await getComicBySlug(stamp))!.workFormat, "UNKNOWN");
-    for (const workType of ["UNKNOWN", "MANGA", "MANHWA", "MANHUA", "COMIC", "OTHER"] as const) {
+    for (const workType of ["UNKNOWN", "MANGA", "MANHWA", "MANHUA", "COMIC", "OTHER", "GRAPHIC_NOVEL"] as const) {
       for (const workFormat of ["UNKNOWN", "PAGED", "WEBTOON", "OTHER"] as const) {
         await updateSharedCatalogComic({ ...input, workType, workFormat }, actor);
         const result = (await getComicBySlug(stamp))!;
@@ -41,14 +41,25 @@ async function main() {
         assert.equal((await getComics({ categorySlug: stamp, workType: workType === "MANGA" ? "MANHWA" : "MANGA", workFormat })).length, 0);
       }
     }
+    await updateSharedCatalogComic({ ...input, workType: "GRAPHIC_NOVEL", workFormat: "PAGED" }, actor);
+    await updateSharedCatalogComic(input, actor);
+    assert.equal((await getComicBySlug(stamp))!.workType, "GRAPHIC_NOVEL", "old importer preserves graphic novel type");
+    assert.equal((await getComicBySlug(stamp))!.workFormat, "PAGED", "old importer preserves graphic novel format");
     await updateSharedCatalogComic({ ...input, workType: "MANHWA", workFormat: "WEBTOON" }, actor);
     await updateSharedCatalogComic(input, actor);
     assert.equal((await getComicBySlug(stamp))!.workType, "MANHWA", "old importer preserves type");
     assert.equal((await getComicBySlug(stamp))!.workFormat, "WEBTOON", "old importer preserves format");
     await assert.rejects(updateSharedCatalogComic({ ...input, workType: "INVALID" as never }, actor));
     await assert.rejects(updateSharedCatalogComic({ ...input, workFormat: "INVALID" as never }, actor));
+    assert.equal(isWorkType("GRAPHIC_NOVEL"), true, "graphic novel is a first-class work type");
     assert.equal(isWorkType("toString"), false); assert.equal(isWorkFormat("__proto__"), false);
     await db.insert(userComics).values({ userId: owner.id, comicId: shared.id, status: "COMPLETED", ratingArt: 5, personalNote: "Keep", trackingEnabled: false });
+    await updateSharedCatalogComic({ ...input, workType: "GRAPHIC_NOVEL", workFormat: "PAGED" }, actor);
+    const graphicNovelInDiary = (await getUserLibrary(owner.id)).find(item => item.comicId === shared.id)!;
+    assert.equal(graphicNovelInDiary.workType, "GRAPHIC_NOVEL", "diary displays the graphic novel type");
+    assert.equal(graphicNovelInDiary.workFormat, "PAGED", "diary preserves the independent format");
+    assert.equal(graphicNovelInDiary.ratingArt, 5, "classification does not change ratings");
+    await updateSharedCatalogComic({ ...input, workType: "MANHWA", workFormat: "WEBTOON" }, actor);
     for (const seriesStatus of ["ONGOING", "FINISHED", "HIATUS", "CANCELLED", "UNKNOWN"] as const) {
       await updateSharedCatalogComic({ ...input, seriesStatus }, actor);
       assert.equal((await getComicBySlug(stamp))!.seriesStatus, seriesStatus);
@@ -71,6 +82,8 @@ async function main() {
     const privateComic = (await getComicBySlug(privateTitle.slug, owner.id))!; comicIds.push(privateComic.id);
     assert.equal(privateComic.seriesStatus, "HIATUS");
     assert.equal(privateComic.workType, "UNKNOWN"); assert.equal(privateComic.workFormat, "UNKNOWN");
+    await updateOwnPrivateTitleMetadata(owner.id, privateComic.id, { title: stamp, sourceUrl: "https://example.com", totalChapters: null, workType: "GRAPHIC_NOVEL", workFormat: "PAGED" });
+    assert.equal((await getComicBySlug(privateTitle.slug, owner.id))!.workType, "GRAPHIC_NOVEL", "private owner can choose graphic novel");
     await updateOwnPrivateTitleMetadata(owner.id, privateComic.id, { title: stamp, sourceUrl: "https://example.com", totalChapters: null, workType: "MANGA", workFormat: "WEBTOON" });
     await assert.rejects(updateOwnPrivateTitleMetadata(owner.id, privateComic.id, { title: stamp, sourceUrl: "https://example.com", totalChapters: null, workType: "BAD" as never }));
     await assert.rejects(updateOwnPrivateTitleMetadata(other.id, privateComic.id, { title: stamp, sourceUrl: "https://example.com", totalChapters: null, workType: "MANHUA" }));

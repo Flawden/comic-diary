@@ -150,7 +150,7 @@ export const chapterStatus = pgEnum(
     "ARCHIVED",
   ],
 );
-export const comicWorkType = pgEnum("comic_work_type", ["UNKNOWN", "MANGA", "MANHWA", "MANHUA", "COMIC", "OTHER"]);
+export const comicWorkType = pgEnum("comic_work_type", ["UNKNOWN", "MANGA", "MANHWA", "MANHUA", "COMIC", "OTHER", "GRAPHIC_NOVEL"]);
 export const comicWorkFormat = pgEnum("comic_work_format", ["UNKNOWN", "PAGED", "WEBTOON", "OTHER"]);
 
 export const comicSeriesStatus = pgEnum("comic_series_status", ["UNKNOWN", "ONGOING", "FINISHED", "HIATUS", "CANCELLED"]);

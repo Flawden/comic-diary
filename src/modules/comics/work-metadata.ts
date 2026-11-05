@@ -1,5 +1,5 @@
 export const workTypeLabels = {
-  UNKNOWN: "Тип не указан", MANGA: "Манга", MANHWA: "Манхва", MANHUA: "Маньхуа", COMIC: "Комикс", OTHER: "Другое",
+  UNKNOWN: "Тип не указан", MANGA: "Манга", MANHWA: "Манхва", MANHUA: "Маньхуа", COMIC: "Комикс", GRAPHIC_NOVEL: "Графический роман", OTHER: "Другое",
 } as const;
 export const workFormatLabels = {
   UNKNOWN: "Формат не указан", PAGED: "Страничный", WEBTOON: "Вебтун (вертикальный)", OTHER: "Другой формат",

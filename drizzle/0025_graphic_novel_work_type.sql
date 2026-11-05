@@ -1,0 +1,1 @@
+ALTER TYPE "public"."comic_work_type" ADD VALUE IF NOT EXISTS 'GRAPHIC_NOVEL';

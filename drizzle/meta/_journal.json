@@ -176,6 +176,13 @@
       "when": 1793802000000,
       "tag": "0024_chapter_volumes",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793867400000,
+      "tag": "0025_graphic_novel_work_type",
+      "breakpoints": true
     }
   ]
 }
