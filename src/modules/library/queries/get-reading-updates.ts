@@ -4,7 +4,7 @@ import { db } from "@/db";
 export type UpdatesKind = "MAIN" | "SPECIAL" | "UPDATED" | "ALL";
 export type UpdatesStatus = "READING" | "WANT_TO_READ" | "ON_HOLD" | "COMPLETED" | "ALL";
 export type UpdatesOptions = { kind: UpdatesKind; status: UpdatesStatus; q: string; page: number };
-export type UpdatesTitle = { comicId: number; slug: string; title: string; coverUrl: string | null; mainCount: number; specialCount: number; updatedCount: number; total: number };
+export type UpdatesTitle = { comicId: number; slug: string; title: string; coverUrl: string | null; promptChapterRating: boolean; mainCount: number; specialCount: number; updatedCount: number; total: number };
 export type UpdatesChapter = { id: number; displayCode: string; title: string | null; sourceUrl: string | null; kind: string; updated: boolean; volumeNumber: number | null; throughCount: number; total: number };
 
 export function parseUpdatesOptions(params: Record<string, string | string[] | undefined>): UpdatesOptions {
@@ -23,7 +23,7 @@ export function parseUpdatesOptions(params: Record<string, string | string[] | u
 // UNION (rather than UNION ALL) also terminates malformed cyclic revision chains.
 function unreadRegistry(userId: number, status: UpdatesStatus = "ALL") {
   return sql`WITH RECURSIVE eligible AS (
-    SELECT c.id, c.slug, c.title, c.cover_url FROM comics c
+    SELECT c.id, c.slug, c.title, c.cover_url, uc.prompt_chapter_rating FROM comics c
     JOIN user_comics uc ON uc.comic_id = c.id
     WHERE uc.user_id = ${userId} AND uc.tracking_enabled = TRUE
       AND (c.visibility = 'SHARED' OR (c.visibility = 'PRIVATE' AND c.owner_user_id = ${userId}))
@@ -51,13 +51,14 @@ export async function getReadingUpdates(userId: number, options: UpdatesOptions)
   const [titles, counts] = await Promise.all([
     db.execute<UpdatesTitle>(sql`${context}
       SELECT e.id AS "comicId", e.slug, e.title, e.cover_url AS "coverUrl",
+        e.prompt_chapter_rating AS "promptChapterRating",
         count(*) FILTER (WHERE u.kind = 'MAIN')::int AS "mainCount",
         count(*) FILTER (WHERE u.kind = 'SPECIAL')::int AS "specialCount",
         count(*) FILTER (WHERE u.updated)::int AS "updatedCount",
         count(*) OVER ()::int AS total
       FROM eligible e JOIN unread u ON u.comic_id = e.id
       WHERE strpos(lower(e.title), lower(${options.q})) > 0 OR ${options.q} = ''
-      GROUP BY e.id, e.slug, e.title, e.cover_url
+      GROUP BY e.id, e.slug, e.title, e.cover_url, e.prompt_chapter_rating
       HAVING bool_or(${kindPredicate(options.kind)})
       ORDER BY e.title, e.id LIMIT 20 OFFSET ${(options.page - 1) * 20}`),
     db.execute<{ libraryCount: number; missingCount: number; totalCount: number }>(sql`${context}

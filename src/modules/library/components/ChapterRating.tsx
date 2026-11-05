@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PromptSwitch, usePromptPreference, writeReading } from "./WorkControls";
 
-export function ChapterRating({comicId,chapter,rating,onClose}:{comicId:number; chapter:{id:number;title:string|null;displayCode:string};rating:number|null;onClose:()=>void}) {
+export function ChapterRating({comicId,chapter,rating,onClose,onSaved,showPreference=true,refreshOnSave=true}:{comicId:number; chapter:{id:number;title:string|null;displayCode:string};rating:number|null;onClose:()=>void;onSaved?:(rating:number|null)=>void;showPreference?:boolean;refreshOnSave?:boolean}) {
   const dialog=useRef<HTMLDialogElement>(null);
   const [pending,setPending]=useState(false), [error,setError]=useState("");
   const [selected,setSelected]=useState<number|null>(rating);
@@ -16,7 +16,7 @@ export function ChapterRating({comicId,chapter,rating,onClose}:{comicId:number; 
     if(lock.current)return;
     const previous=selected;
     lock.current=true;setSelected(value);setPreview(null);setPending(true);setError("");setSaved(false);
-    try{await writeReading(comicId,{intent:"chapter-rating",chapterId:String(chapter.id),rating:String(value??"")});setSaved(true);router.refresh();}
+    try{await writeReading(comicId,{intent:"chapter-rating",chapterId:String(chapter.id),rating:String(value??"")});setSaved(true);onSaved?.(value);if(refreshOnSave)router.refresh();}
     catch{setSelected(previous);setError("Не удалось сохранить оценку. Попробуйте ещё раз.");}
     finally{lock.current=false;setPending(false);}
   }
@@ -26,6 +26,7 @@ export function ChapterRating({comicId,chapter,rating,onClose}:{comicId:number; 
     {chapter.title && chapter.displayCode && <p>Глава {chapter.displayCode}</p>}
     <div className="wd-stars" role="group" aria-label="Оценка от 1 до 5" onMouseLeave={()=>setPreview(null)}>{[1,2,3,4,5].map(n=><button type="button" key={n} aria-label={n+" из 5"} aria-pressed={selected===n} disabled={pending||prefBusy} onMouseEnter={()=>{if(!pending&&!prefBusy)setPreview(n);}} onFocus={()=>{if(!pending&&!prefBusy)setPreview(n);}} onBlur={()=>setPreview(null)} onClick={()=>void save(n)}>{n<=(preview??selected??0)?"★":"☆"}</button>)}</div>
     {selected!==null && <button type="button" className="tea-text-action" disabled={pending||prefBusy} onClick={()=>void save(null)}>Убрать оценку</button>}
-    <div role="status" aria-live="polite">{pending?"Сохраняем…":error||(saved?(selected===null?"Оценка удалена":"Оценка сохранена"):"")}</div><PromptSwitch inverse/></div>
+    {!showPreference && <p className="wd-rating-optional">Оценивать необязательно. Можно закрыть окно без оценки.</p>}
+    <div role="status" aria-live="polite">{pending?"Сохраняем…":error||(saved?(selected===null?"Оценка удалена":"Оценка сохранена"):"")}</div>{showPreference ? <PromptSwitch inverse/> : null}</div>
   </dialog>;
 }

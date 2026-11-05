@@ -39,9 +39,47 @@ try {
   await firstVolume.locator("ul > li").first().getByText("1 — Охота на быка").waitFor();
   assert.equal(await updateCard.getByText("Просыпание").count(),0);
   await updateCard.getByRole("button",{name:"Отметить 1 — Охота на быка прочитанной"}).click();
+  // WD18.3: reading from Updates offers the existing optional rating sheet.
+  const updateRating=page.getByRole("dialog",{name:"Охота на быка"});
+  await updateRating.waitFor();
+  assert.equal(await updateRating.getByRole("group",{name:"Оценка от 1 до 5"}).locator("button").count(),5);
+  await updateRating.getByText("Оценивать необязательно").waitFor();
+  await updateRating.getByRole("button",{name:"Закрыть окно оценки главы"}).click();
   await page.getByRole("button",{name:"Снять последнюю отметку"}).click();
   await page.getByText("Отметка снята.").waitFor();
   assert.equal((await pool.query("SELECT count(*)::int AS count FROM user_chapter_reads WHERE user_id=$1",[user])).rows[0].count,0);
+  // Rate a read chapter while remaining on the Updates page, then change the rating.
+  await updateCard.getByRole("button",{name:/Показать непрочитанные главы/}).click();
+  await updateCard.getByRole("button",{name:"Отметить 1 — Охота на быка прочитанной"}).click();
+  await updateRating.waitFor();
+  await updateRating.getByRole("button",{name:"4 из 5"}).click();
+  await updateRating.getByText("Оценка сохранена").waitFor();
+  assert.equal((await pool.query("SELECT rating FROM user_chapter_reads WHERE user_id=$1 AND chapter_id=(SELECT id FROM chapters WHERE comic_id=$2 AND display_code='1')",[user,comic])).rows[0].rating,4);
+  await updateRating.getByRole("button",{name:"Закрыть окно оценки главы"}).click();
+  assert.equal(await page.getByRole("button",{name:"Снять последнюю отметку"}).count(),0);
+  await page.getByRole("button",{name:"Изменить оценку"}).click();
+  await updateRating.getByRole("button",{name:"5 из 5"}).click();
+  await updateRating.getByText("Оценка сохранена").waitFor();
+  assert.equal((await pool.query("SELECT rating FROM user_chapter_reads WHERE user_id=$1 AND chapter_id=(SELECT id FROM chapters WHERE comic_id=$2 AND display_code='1')",[user,comic])).rows[0].rating,5);
+  await updateRating.getByRole("button",{name:"Закрыть окно оценки главы"}).click();
+  // Preference disabled on the work page must also suppress automatic prompts
+  // in Updates. Manual rating is still available from the latest-mark banner.
+  await pool.query("UPDATE user_comics SET prompt_chapter_rating=false WHERE user_id=$1 AND comic_id=$2",[user,comic]);
+  await page.goto(origin+"/updates");
+  await updateCard.getByRole("button",{name:/Показать непрочитанные главы/}).click();
+  await updateCard.getByRole("button",{name:"Отметить УРГА прочитанной"}).click();
+  assert.equal(await page.getByRole("dialog").count(),0);
+  await page.getByRole("button",{name:"Оценить главу"}).click();
+  const manualRating=page.getByRole("dialog",{name:"УРГА"});
+  await manualRating.waitFor();
+  await manualRating.getByRole("button",{name:"3 из 5"}).click();
+  await manualRating.getByText("Оценка сохранена").waitFor();
+  assert.equal((await pool.query("SELECT rating FROM user_chapter_reads WHERE user_id=$1 AND chapter_id=(SELECT id FROM chapters WHERE comic_id=$2 AND title='УРГА')",[user,comic])).rows[0].rating,3);
+  await manualRating.getByRole("button",{name:"Закрыть окно оценки главы"}).click();
+  await pool.query("UPDATE user_comics SET prompt_chapter_rating=true WHERE user_id=$1 AND comic_id=$2",[user,comic]);
+  // Isolate all later work-page scenarios from this Updates-only fixture.
+  await pool.query("DELETE FROM user_chapter_reads WHERE user_id=$1 AND chapter_id IN (SELECT id FROM chapters WHERE comic_id=$2)",[user,comic]);
+  console.log("PASS: WD18.3 optional Updates rating, skip, undo, persistence and editing");
   // Restore the original flat-list fixture for the WD12–WD16 reader scenarios.
   await pool.query("UPDATE chapters SET volume_number=NULL WHERE comic_id=$1",[comic]);
   await page.goto(url+"#my-reading");

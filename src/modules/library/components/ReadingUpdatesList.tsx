@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { groupChaptersByVolume } from "@/modules/catalog/chapter-volumes";
 import { CoverImage } from "@/shared/components/media";
+import { ChapterRating } from "./ChapterRating";
 import { Button, Badge } from "@/shared/components/ui";
 import type { UpdatesChapter, UpdatesKind, UpdatesTitle } from "../queries/get-reading-updates";
 import { chapterCountLabel, unreadChapterCount } from "../queries/reading-updates-model";
@@ -30,28 +31,70 @@ function sourceUrl(value: string | null) {
 export function ReadingUpdatesList({ titles, kind }: { titles: UpdatesTitle[]; kind: UpdatesKind }) {
   const router = useRouter();
   const [notice, setNotice] = useState("");
-  const [last, setLast] = useState<{ comicId: number; chapterId: number } | null>(null);
+  const [last, setLast] = useState<{
+    comicId: number;
+    chapter: Pick<UpdatesChapter, "id" | "title" | "displayCode">;
+    rating: number | null;
+    rated: boolean;
+  } | null>(null);
   const [undoBusy, setUndoBusy] = useState(false);
   const [undoVersion, setUndoVersion] = useState(0);
+  const [ratingSheet, setRatingSheet] = useState<{
+    comicId: number;
+    chapter: Pick<UpdatesChapter, "id" | "title" | "displayCode">;
+    rating: number | null;
+  } | null>(null);
   async function undo() {
-    if (!last || undoBusy) return;
+    if (!last || last.rated || undoBusy) return;
     setUndoBusy(true);
     try {
-      await mark(last.comicId, last.chapterId, "unread");
+      await mark(last.comicId, last.chapter.id, "unread");
       setLast(null); setNotice("Отметка снята."); setUndoVersion((v) => v + 1); router.refresh();
     } catch (e) { setNotice((e as Error).message); }
     finally { setUndoBusy(false); }
   }
   return <>
     <div role="status" aria-live="polite" className={notice ? "mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm" : "sr-only"}>
-      {notice}{last ? <Button variant="ghost" disabled={undoBusy} onClick={undo} className="ml-2">{undoBusy ? "Снимаем…" : "Снять последнюю отметку"}</Button> : null}
+      {notice}
+      {last ? <Button variant="ghost" disabled={undoBusy} onClick={() => setRatingSheet({
+        comicId: last.comicId, chapter: last.chapter, rating: last.rating,
+      })} className="ml-2">{last.rated ? "Изменить оценку" : "Оценить главу"}</Button> : null}
+      {last && !last.rated ? <Button variant="ghost" disabled={undoBusy} onClick={undo} className="ml-2">{undoBusy ? "Снимаем…" : "Снять последнюю отметку"}</Button> : null}
     </div>
     <ul className="mt-4 space-y-3">{titles.map((title) => <UpdatesRow key={`${title.comicId}:${undoVersion}`} item={title} kind={kind}
-      onMarked={(chapterId, action) => {
+      onMarked={(chapter, action) => {
         setNotice(action === "read-through" ? "Основные главы до выбранной отмечены. Спецвыпуски не изменены." : "Глава отмечена прочитанной.");
-        setLast(action === "read" ? { comicId: title.comicId, chapterId } : null);
-        router.refresh();
+        setLast(action === "read" ? { comicId: title.comicId, chapter, rating: null, rated: false } : null);
+        if (action === "read" && title.promptChapterRating) {
+          // Honour the same per-title preference used on the work page.
+          // Keep the unread row mounted until the optional rating sheet closes.
+          setRatingSheet({ comicId: title.comicId, chapter, rating: null });
+        } else {
+          if (action === "read") setUndoVersion((v) => v + 1);
+          router.refresh();
+        }
       }} />)}</ul>
+    {ratingSheet ? <ChapterRating
+      key={`${ratingSheet.comicId}:${ratingSheet.chapter.id}`}
+      comicId={ratingSheet.comicId}
+      chapter={ratingSheet.chapter}
+      rating={ratingSheet.rating}
+      showPreference={false}
+      refreshOnSave={false}
+      onSaved={(rating) => {
+        // Even a successful removal counts as a rating edit: don't offer a
+        // misleading one-click undo after the reader has used this control.
+        setLast((previous) => previous && previous.comicId === ratingSheet.comicId &&
+          previous.chapter.id === ratingSheet.chapter.id ? { ...previous, rating, rated: true } : previous);
+        setNotice(rating === null ? "Оценка главы удалена." : "Оценка главы сохранена.");
+      }}
+      onClose={() => {
+        setRatingSheet(null);
+        // Unread feed: discard the old loaded list after completing (or skipping) rating.
+        setUndoVersion((v) => v + 1);
+        router.refresh();
+      }}
+    /> : null}
   </>;
 }
 
@@ -71,7 +114,7 @@ function UpdatesVolume({ group, initiallyOpen, renderChapter }: {
   </details>;
 }
 
-function UpdatesRow({ item, kind, onMarked }: { item: UpdatesTitle; kind: UpdatesKind; onMarked: (id: number, action: MarkAction) => void }) {
+function UpdatesRow({ item, kind, onMarked }: { item: UpdatesTitle; kind: UpdatesKind; onMarked: (chapter: UpdatesChapter, action: MarkAction) => void }) {
   const [open, setOpen] = useState(false);
   const [chapters, setChapters] = useState<UpdatesChapter[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -100,11 +143,19 @@ function UpdatesRow({ item, kind, onMarked }: { item: UpdatesTitle; kind: Update
     if (busy) return;
     setBusy(true); setError("");
     try {
+      const chapter = chapters.find((c) => c.id === id);
+      if (!chapter) throw new Error("Глава не найдена в загруженном списке.");
       await mark(item.comicId, id, action);
       setMarked((previous) => action === "read-through"
         ? [...previous, ...chapters.filter((c) => c.kind === "MAIN" && chapters.findIndex((v) => v.id === c.id) <= chapters.findIndex((v) => v.id === id)).map((c) => c.id)]
         : [...previous, id]);
-      setTarget(""); await load(); onMarked(id, action);
+      setTarget("");
+      if (action === "read") {
+        // Keep the row mounted until the optional rating sheet closes.
+        onMarked(chapter, action);
+      } else {
+        await load(); onMarked(chapter, action);
+      }
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   }

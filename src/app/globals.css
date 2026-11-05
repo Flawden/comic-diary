@@ -805,3 +805,6 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 .wd-bulk-stars button:focus-visible,.wd-bulk-primary:focus-visible,.wd-bulk-secondary:focus-visible,.wd-bulk-undo:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .wd-bulk-undo{display:block;margin:16px auto;color:var(--text-accent);font-size:.875rem;text-decoration:underline;min-height:44px}
 .wd-bulk-error{color:var(--danger)!important;margin:14px 0!important}
+
+/* WD18.3: optional chapter rating in the unread updates flow. */
+.wd-rating-optional {margin:4px 0 10px;color:var(--text-secondary);font-size:.85rem;line-height:1.45}
