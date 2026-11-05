@@ -9,6 +9,8 @@ Source audit and first delivery scope: [b46d6d1 audit](docs/design/white-dragon-
 - WD15: hover/selected star filling and saved confirmation; commit `981f8e7` pushed and working visual behavior reported by the operator on 2026-11-04. Do not infer a separate CI result unless the run is checked.
 - WD16: five work-level rating criteria; WD17: optional volumes/chapters; WD18: expandable reading updates; WD19: first-class "graphic novel" work type. WD19 implementation (05.11.2026) adds `GRAPHIC_NOVEL` through PostgreSQL migration `0025`; CI/production and mobile acceptance remain pending. Existing classifications are not changed.
 
+**BR01 — VPS disk safety (2026-11-05):** prepared for CI: 20-minute disk monitor with Telegram alerts at 80% / 90% (and free-space safeguards), optional conservative Comic Diary image cleanup, retaining running image and two rollback images. **Not installed or enabled on VPS yet.** See [installation and acceptance runbook](docs/operations/br01-disk-guard.md). Incident evidence: 32 GB root filesystem at 100%, PostgreSQL write failure; after manual cleanup 19 GB free. Next gate: test alert delivery, inspect dry-run, then explicitly enable auto prune. Post-deploy HTTP smoke and remaining recovery checks stay open.
+
 Operations confirmed by supplied logs: Telegram welcome/new-copy delivery, three verified Windows copies, manual scheduled-task execution, isolated database restore from a Windows copy. Full media/app restore from that copy, automatic Windows trigger and real error/recovery delivery remain open. CD-07/R9 are not fully closed.
 
 

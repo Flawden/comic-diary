@@ -91,3 +91,10 @@ GitHub Actions publishes with its repository-scoped `GITHUB_TOKEN`.
 
 The VPS must later receive only the minimum credentials required to pull the
 private image. Registry write credentials do not belong on the VPS.
+
+## BR01 VPS disk protection
+
+Disk alerts and conservative Docker-image retention are documented in
+[`docs/operations/br01-disk-guard.md`](../docs/operations/br01-disk-guard.md).
+The timer is installed separately on the VPS; publishing the app image does
+not install it or enable automatic image deletion.

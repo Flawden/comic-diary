@@ -1,0 +1,12 @@
+# Managed by comic-diary-disk-guard-v1
+[Unit]
+Description=Check Comic Diary VPS disk every 20 minutes
+
+[Timer]
+OnBootSec=4min
+OnUnitActiveSec=20min
+AccuracySec=2min
+Unit=comic-diary-disk-guard.service
+
+[Install]
+WantedBy=timers.target
