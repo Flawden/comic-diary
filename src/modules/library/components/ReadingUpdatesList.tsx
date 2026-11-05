@@ -6,29 +6,39 @@ import { useState, type ReactNode } from "react";
 import { groupChaptersByVolume } from "@/modules/catalog/chapter-volumes";
 import { CoverImage } from "@/shared/components/media";
 import { ChapterRating } from "./ChapterRating";
+import { PreviousChaptersPrompt } from "./PreviousChaptersPrompt";
 import { Button, Badge } from "@/shared/components/ui";
 import type { UpdatesChapter, UpdatesKind, UpdatesTitle } from "../queries/get-reading-updates";
 import { chapterCountLabel, unreadChapterCount } from "../queries/reading-updates-model";
 
 type MarkAction = "read" | "unread" | "read-through";
+type PromptChapter = Pick<UpdatesChapter, "id" | "displayCode" | "title">;
+type MarkResult = { missingEarlier?: PromptChapter[] };
 
-async function mark(comicId: number, chapterId: number, action: MarkAction) {
+async function mark(comicId: number, chapterId: number, action: MarkAction, previewPrevious = false): Promise<MarkResult> {
   const body = new FormData();
   body.set("comicId", String(comicId));
   body.set("chapterId", String(chapterId));
   body.set("intent", "chapter-reading");
   body.set("action", action);
+  if (previewPrevious) body.set("previewPrevious", "true");
   const response = await fetch("/api/library/reading-state", {
     method: "POST", headers: { Accept: "application/json" }, body,
   });
   if (!response.ok) throw new Error("Не удалось сохранить отметку. Проверьте соединение и вход в аккаунт.");
+  const result: MarkResult = await response.json();
+  // The preview is only advisory. Bulk changes are checked again on the server.
+  if (Array.isArray(result.missingEarlier) && result.missingEarlier.every((chapter) =>
+    chapter && Number.isSafeInteger(chapter.id) && typeof chapter.displayCode === "string" &&
+    (chapter.title === null || typeof chapter.title === "string"))) return result;
+  return {};
 }
 function sourceUrl(value: string | null) {
   try { if (value && ["http:", "https:"].includes(new URL(value).protocol)) return value; } catch {}
   return null;
 }
 
-export function ReadingUpdatesList({ titles, kind }: { titles: UpdatesTitle[]; kind: UpdatesKind }) {
+export function ReadingUpdatesList({ titles, kind, readerId }: { titles: UpdatesTitle[]; kind: UpdatesKind; readerId: number }) {
   const router = useRouter();
   const [notice, setNotice] = useState("");
   const [last, setLast] = useState<{
@@ -37,7 +47,25 @@ export function ReadingUpdatesList({ titles, kind }: { titles: UpdatesTitle[]; k
     rating: number | null;
     rated: boolean;
   } | null>(null);
+  const [previousPrompt, setPreviousPrompt] = useState<{
+    comicId: number;
+    target: PromptChapter;
+    missing: PromptChapter[];
+    offerRatings: boolean;
+  } | null>(null);
   const [undoBusy, setUndoBusy] = useState(false);
+  function previousPromptEnabled(comicId: number) {
+    try { return localStorage.getItem(`white-dragon:prompt-previous:${readerId}:${comicId}`) !== "off"; }
+    catch { return true; }
+  }
+  function disablePreviousPrompt(comicId: number) {
+    try { localStorage.setItem(`white-dragon:prompt-previous:${readerId}:${comicId}`, "off"); }
+    catch { /* private browsing */ }
+  }
+  function refreshUpdates() {
+    setUndoVersion((version) => version + 1);
+    router.refresh();
+  }
   const [undoVersion, setUndoVersion] = useState(0);
   const [ratingSheet, setRatingSheet] = useState<{
     comicId: number;
@@ -62,10 +90,13 @@ export function ReadingUpdatesList({ titles, kind }: { titles: UpdatesTitle[]; k
       {last && !last.rated ? <Button variant="ghost" disabled={undoBusy} onClick={undo} className="ml-2">{undoBusy ? "Снимаем…" : "Снять последнюю отметку"}</Button> : null}
     </div>
     <ul className="mt-4 space-y-3">{titles.map((title) => <UpdatesRow key={`${title.comicId}:${undoVersion}`} item={title} kind={kind}
-      onMarked={(chapter, action) => {
+      previousPromptEnabled={() => previousPromptEnabled(title.comicId)}
+      onMarked={(chapter, action, missingEarlier) => {
         setNotice(action === "read-through" ? "Основные главы до выбранной отмечены. Спецвыпуски не изменены." : "Глава отмечена прочитанной.");
         setLast(action === "read" ? { comicId: title.comicId, chapter, rating: null, rated: false } : null);
-        if (action === "read" && title.promptChapterRating) {
+        if (action === "read" && missingEarlier.length > 0) {
+          setPreviousPrompt({ comicId: title.comicId, target: chapter, missing: missingEarlier, offerRatings: title.promptChapterRating });
+        } else if (action === "read" && title.promptChapterRating) {
           // Honour the same per-title preference used on the work page.
           // Keep the unread row mounted until the optional rating sheet closes.
           setRatingSheet({ comicId: title.comicId, chapter, rating: null });
@@ -74,6 +105,25 @@ export function ReadingUpdatesList({ titles, kind }: { titles: UpdatesTitle[]; k
           router.refresh();
         }
       }} />)}</ul>
+    {previousPrompt ? <PreviousChaptersPrompt
+      comicId={previousPrompt.comicId}
+      target={previousPrompt.target}
+      missing={previousPrompt.missing}
+      offerRatings={previousPrompt.offerRatings}
+      onChanged={() => {
+        setLast(null);
+        setNotice("Предыдущие главы обновлены.");
+        router.refresh();
+      }}
+      onRemember={(dontAsk) => { if (dontAsk) disablePreviousPrompt(previousPrompt.comicId); }}
+      onDecline={() => {
+        const { comicId, target, offerRatings } = previousPrompt;
+        setPreviousPrompt(null);
+        if (offerRatings) setRatingSheet({ comicId, chapter: target, rating: null });
+        else refreshUpdates();
+      }}
+      onClose={() => { setPreviousPrompt(null); refreshUpdates(); }}
+    /> : null}
     {ratingSheet ? <ChapterRating
       key={`${ratingSheet.comicId}:${ratingSheet.chapter.id}`}
       comicId={ratingSheet.comicId}
@@ -114,7 +164,12 @@ function UpdatesVolume({ group, initiallyOpen, renderChapter }: {
   </details>;
 }
 
-function UpdatesRow({ item, kind, onMarked }: { item: UpdatesTitle; kind: UpdatesKind; onMarked: (chapter: UpdatesChapter, action: MarkAction) => void }) {
+function UpdatesRow({ item, kind, previousPromptEnabled, onMarked }: {
+  item: UpdatesTitle;
+  kind: UpdatesKind;
+  previousPromptEnabled: () => boolean;
+  onMarked: (chapter: UpdatesChapter, action: MarkAction, missingEarlier: PromptChapter[]) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [chapters, setChapters] = useState<UpdatesChapter[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -145,16 +200,17 @@ function UpdatesRow({ item, kind, onMarked }: { item: UpdatesTitle; kind: Update
     try {
       const chapter = chapters.find((c) => c.id === id);
       if (!chapter) throw new Error("Глава не найдена в загруженном списке.");
-      await mark(item.comicId, id, action);
+      const preview = action === "read" && chapter.kind === "MAIN" && previousPromptEnabled();
+      const result = await mark(item.comicId, id, action, preview);
       setMarked((previous) => action === "read-through"
         ? [...previous, ...chapters.filter((c) => c.kind === "MAIN" && chapters.findIndex((v) => v.id === c.id) <= chapters.findIndex((v) => v.id === id)).map((c) => c.id)]
         : [...previous, id]);
       setTarget("");
       if (action === "read") {
         // Keep the row mounted until the optional rating sheet closes.
-        onMarked(chapter, action);
+        onMarked(chapter, action, result.missingEarlier ?? []);
       } else {
-        await load(); onMarked(chapter, action);
+        await load(); onMarked(chapter, action, []);
       }
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }

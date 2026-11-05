@@ -28,7 +28,7 @@ export default async function UpdatesPage({ searchParams }: {
     {result.missingCount > 0 ? <p className="mt-4 text-sm text-[var(--text-secondary)]">У {result.missingCount} тайтлов выбранного статуса список глав ещё не заполнен. Их числовой прогресс доступен в <Link href="/library" className="underline">библиотеке</Link>.</p> : null}
     <p className="mt-6 text-sm text-[var(--text-secondary)]">Историй с непрочитанными главами: {result.total}{options.page > 1 ? ` · страница ${options.page}` : ""}</p>
     <p className="updates-hint">Показаны только вышедшие непрочитанные главы. Разверните историю, чтобы прочитать или отметить главу прямо здесь; запланированные пока не отображаются. Статус «Прочитано» не отключает отслеживание.</p>
-    <ReadingUpdatesList key={`${options.kind}:${options.status}:${options.q}:${options.page}`} titles={result.titles} kind={options.kind} />
+    <ReadingUpdatesList key={`${options.kind}:${options.status}:${options.q}:${options.page}`} titles={result.titles} kind={options.kind} readerId={user.id} />
     {result.titles.length === 0 ? <section className="mt-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
       <h2 className="text-xl font-bold">{options.page > 1 ? "На этой странице нет тайтлов" : options.q ? "По запросу ничего не найдено" : result.libraryCount === 0 ? "Пока нет отслеживаемых историй" : "Здесь пока нет новых глав"}</h2>
       <p className="mt-2 text-[var(--text-secondary)]">{result.missingCount ? "Часть реестров ещё не заполнена, поэтому отсутствие записей здесь не означает, что прочитано всё." : "Попробуйте другие фильтры или включите обновления у нужной истории в библиотеке."}</p>

@@ -1,6 +1,6 @@
 import { completeComicReading } from "@/modules/library/mutations/complete-comic-reading";
 import { isCompletionScope } from "@/modules/library/completion-model";
-import { updateChapterReading, markPreviousChaptersRead, undoPreviousChapterMarks, rateChaptersBatch } from "@/modules/library/mutations/update-chapter-reading";
+import { updateChapterReading, readChapterWithPreviousPreview, markPreviousChaptersRead, undoPreviousChapterMarks, rateChaptersBatch } from "@/modules/library/mutations/update-chapter-reading";
 import {
   NextRequest,
   NextResponse,
@@ -108,6 +108,7 @@ export async function POST(
   try {
     let slug: string;
     let addedIds: number[] | undefined;
+    let missingEarlier: { id: number; displayCode: string; title: string | null }[] | undefined;
 
     if (intent === "complete-reading") {
       const scope = formData.get("scope"), snapshot = formData.get("snapshot");
@@ -147,7 +148,13 @@ export async function POST(
       if (action !== "read" && action !== "unread" && action !== "read-through") {
         return NextResponse.json({ error: "Invalid chapter action" }, { status: 400 });
       }
-      slug = await updateChapterReading(currentUser.id, comicId, chapterId, action);
+      if (action === "read" && formData.get("previewPrevious") === "true") {
+        const result = await readChapterWithPreviousPreview(currentUser.id, comicId, chapterId);
+        slug = result.slug;
+        missingEarlier = result.missingEarlier;
+      } else {
+        slug = await updateChapterReading(currentUser.id, comicId, chapterId, action);
+      }
     } else if (intent === "set-legacy-progress") {
       const count = formData.get("count");
       if (typeof count !== "string" || !/^\d+$/.test(count)) {
@@ -325,7 +332,7 @@ export async function POST(
     }
 
     if ((intent === "bulk-read-previous" || intent === "bulk-undo" || intent === "bulk-chapter-ratings" || intent === "chapter-rating" || intent === "chapter-reading" || intent === "set-status" || intent === "complete-reading" || intent === "rating-prompt" || intent === "add-to-library" || intent === "update-diary" || intent === "set-tracking") && request.headers.get("accept")?.includes("application/json")) {
-      return NextResponse.json({ ok: true, ...(addedIds ? { addedIds } : {}) }, { headers: { "Cache-Control": "private, no-store" } });
+      return NextResponse.json({ ok: true, ...(addedIds ? { addedIds } : {}), ...(missingEarlier ? { missingEarlier } : {}) }, { headers: { "Cache-Control": "private, no-store" } });
     }
 
     return new Response(

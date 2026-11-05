@@ -80,6 +80,33 @@ try {
   // Isolate all later work-page scenarios from this Updates-only fixture.
   await pool.query("DELETE FROM user_chapter_reads WHERE user_id=$1 AND chapter_id IN (SELECT id FROM chapters WHERE comic_id=$2)",[user,comic]);
   console.log("PASS: WD18.3 optional Updates rating, skip, undo, persistence and editing");
+  // WD18.4: the feed is unread-only and paginated. Its previous-chapter
+  // suggestion must use the full registry, preserve read marks, and skip
+  // scheduled chapters even when their sort order precedes the target.
+  await pool.query("INSERT INTO chapters(comic_id,display_code,title,source_url,sort_order,status,volume_number) VALUES ($1,'4','Долина','https://example.com/four',4,'RELEASED',2),($1,'5','Река','https://example.com/five',5,'RELEASED',2),($1,'6','Лес','https://example.com/six',6,'RELEASED',2)",[comic]);
+  await pool.query("INSERT INTO user_chapter_reads(user_id,chapter_id) SELECT $1,id FROM chapters WHERE comic_id=$2 AND status='RELEASED' AND sort_order IN (1,2)",[user,comic]);
+  await page.goto(origin+"/updates");
+  const bulkUpdateCard=page.locator(".updates-item").filter({hasText:"Мезолит"});
+  await bulkUpdateCard.getByRole("button",{name:/Показать непрочитанные главы/}).click();
+  await bulkUpdateCard.getByRole("button",{name:"Отметить 6 — Лес прочитанной"}).click();
+  const updateBulk=page.locator("dialog.wd-bulk-sheet[open]");
+  await updateBulk.getByRole("heading",{name:"Отметить предыдущие главы?"}).waitFor();
+  await updateBulk.getByText("4 · Долина").waitFor();
+  await updateBulk.getByText("5 · Река").waitFor();
+  assert.equal(await updateBulk.getByText("3 · Просыпание").count(),0);
+  assert.equal((await pool.query("SELECT count(*)::int AS count FROM user_chapter_reads WHERE user_id=$1 AND chapter_id IN (SELECT id FROM chapters WHERE comic_id=$2)",[user,comic])).rows[0].count,3);
+  await updateBulk.getByRole("button",{name:"Отметить предыдущие (2)"}).click();
+  await updateBulk.getByRole("heading",{name:"Готово! Хотите оценить?"}).waitFor();
+  await updateBulk.getByRole("button",{name:"4 · Долина: 4 из 5"}).click();
+  await updateBulk.getByRole("button",{name:"6 · Лес: 3 из 5"}).click();
+  await updateBulk.getByRole("button",{name:"Сохранить выбранные оценки (2)"}).click();
+  await updateBulk.getByRole("heading",{name:"Оценки сохранены"}).waitFor();
+  const bulkRows=(await pool.query("SELECT c.display_code, r.rating FROM user_chapter_reads r JOIN chapters c ON c.id=r.chapter_id WHERE r.user_id=$1 AND c.comic_id=$2 ORDER BY c.sort_order",[user,comic])).rows;
+  assert.deepEqual(bulkRows.map(r=>[r.display_code,r.rating]),[["1",null],["",null],["4",4],["5",null],["6",3]]);
+  await updateBulk.getByRole("button",{name:"Готово"}).click();
+  await pool.query("DELETE FROM user_chapter_reads WHERE user_id=$1 AND chapter_id IN (SELECT id FROM chapters WHERE comic_id=$2)",[user,comic]);
+  await pool.query("DELETE FROM chapters WHERE comic_id=$1 AND sort_order IN (4,5,6)",[comic]);
+  console.log("PASS: WD18.4 Updates prior gaps across volumes, scheduled exclusion, single batch and optional ratings");
   // Restore the original flat-list fixture for the WD12–WD16 reader scenarios.
   await pool.query("UPDATE chapters SET volume_number=NULL WHERE comic_id=$1",[comic]);
   await page.goto(url+"#my-reading");

@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { ComicChapter } from "@/modules/comics/queries/get-comic-chapters";
 
-type Chapter = Omit<ComicChapter, "releasedAt">;
+// Both the work page and the paginated Updates feed provide these identifiers.
+// No source links, dates or publication metadata are needed in the prompt.
+type Chapter = Pick<ComicChapter, "id" | "displayCode" | "title">;
 type Phase = "confirm" | "rate" | "done";
 
 type Props = {
