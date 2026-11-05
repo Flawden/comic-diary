@@ -1,6 +1,6 @@
 import { completeComicReading } from "@/modules/library/mutations/complete-comic-reading";
 import { isCompletionScope } from "@/modules/library/completion-model";
-import { updateChapterReading } from "@/modules/library/mutations/update-chapter-reading";
+import { updateChapterReading, markPreviousChaptersRead, undoPreviousChapterMarks, rateChaptersBatch } from "@/modules/library/mutations/update-chapter-reading";
 import {
   NextRequest,
   NextResponse,
@@ -107,6 +107,7 @@ export async function POST(
 
   try {
     let slug: string;
+    let addedIds: number[] | undefined;
 
     if (intent === "complete-reading") {
       const scope = formData.get("scope"), snapshot = formData.get("snapshot");
@@ -122,6 +123,24 @@ export async function POST(
         return NextResponse.json({error: "Invalid chapter rating"}, {status:400});
       }
       slug = await updateChapterReading(currentUser.id, comicId, Number(formData.get("chapterId")), "rate", value === "" ? null : Number(value));
+    } else if (intent === "bulk-read-previous") {
+      const chapterId = Number(formData.get("chapterId"));
+      const result = await markPreviousChaptersRead(currentUser.id, comicId, chapterId);
+      slug = result.slug;
+      addedIds = result.addedIds;
+    } else if (intent === "bulk-undo") {
+      let chapterIds: unknown;
+      try { chapterIds = JSON.parse(String(formData.get("chapterIds"))); } catch { chapterIds = null; }
+      if (!Array.isArray(chapterIds) || !chapterIds.every((id) => typeof id === "number"))
+        return NextResponse.json({ error: "Invalid undo selection" }, { status: 400 });
+      slug = await undoPreviousChapterMarks(currentUser.id, comicId, chapterIds);
+    } else if (intent === "bulk-chapter-ratings") {
+      let ratings: unknown;
+      try { ratings = JSON.parse(String(formData.get("ratings"))); } catch { ratings = null; }
+      if (!Array.isArray(ratings) || !ratings.every((row) => row && typeof row === "object" &&
+        typeof row.id === "number" && typeof row.rating === "number"))
+        return NextResponse.json({ error: "Invalid ratings" }, { status: 400 });
+      slug = await rateChaptersBatch(currentUser.id, comicId, ratings);
     } else if (intent === "chapter-reading") {
       const action = formData.get("action");
       const chapterId = Number(formData.get("chapterId"));
@@ -305,8 +324,8 @@ export async function POST(
       );
     }
 
-    if ((intent === "chapter-rating" || intent === "chapter-reading" || intent === "set-status" || intent === "complete-reading" || intent === "rating-prompt" || intent === "add-to-library" || intent === "update-diary" || intent === "set-tracking") && request.headers.get("accept")?.includes("application/json")) {
-      return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
+    if ((intent === "bulk-read-previous" || intent === "bulk-undo" || intent === "bulk-chapter-ratings" || intent === "chapter-rating" || intent === "chapter-reading" || intent === "set-status" || intent === "complete-reading" || intent === "rating-prompt" || intent === "add-to-library" || intent === "update-diary" || intent === "set-tracking") && request.headers.get("accept")?.includes("application/json")) {
+      return NextResponse.json({ ok: true, ...(addedIds ? { addedIds } : {}) }, { headers: { "Cache-Control": "private, no-store" } });
     }
 
     return new Response(

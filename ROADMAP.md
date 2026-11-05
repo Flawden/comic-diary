@@ -2,7 +2,7 @@
 
 ## Active roadmap — 2026-11-04
 
-**Next product queue: WD16 → WD17 → WD18 → WD19.** Scope, acceptance criteria and dependencies are in the [White Dragon product roadmap](docs/design/white-dragon-roadmap.md#актуализация-4-ноября-2026--wd12wd19). This is the authoritative active product plan; older "next delivery" lines below are historical.
+**Next product queue (historical, refined by later addenda): WD16 → WD17 → WD18 → WD19.** Scope, acceptance criteria and dependencies are in the [White Dragon product roadmap](docs/design/white-dragon-roadmap.md#актуализация-4-ноября-2026--wd12wd19). This is the authoritative active product plan; older "next delivery" lines below are historical.
 Source audit and first delivery scope: [b46d6d1 audit](docs/design/white-dragon-source-audit.md).
 
 - WD12–WD14: chapter toggles without reload, optional rating sheet and three detail tabs; production deployment and visual behavior reported working by the operator on 2026-11-04 after CI cleanup fix `fe9e5c1`.
@@ -10,6 +10,9 @@ Source audit and first delivery scope: [b46d6d1 audit](docs/design/white-dragon-
 - WD16: bring five already-persisted work-level rating criteria into a polished editable review; WD17: optional volumes/chapters; WD18: clearer expandable reading updates; WD19: first-class "graphic novel" work type.
 
 Operations confirmed by supplied logs: Telegram welcome/new-copy delivery, three verified Windows copies, manual scheduled-task execution, isolated database restore from a Windows copy. Full media/app restore from that copy, automatic Windows trigger and real error/recovery delivery remain open. CD-07/R9 are not fully closed.
+
+
+**WD18.2 (2026-11-05):** proposed smart prompt after marking a chapter with unread earlier released main chapters, one-transaction bulk marking and selective batch ratings, atomic undo of only newly created marks, plus opt-out on this device. See [acceptance scope](docs/design/white-dragon-roadmap.md#wd182--умное-предложение-отметить-предыдущие-главы-5-ноября-2026). Status: implementation prepared for CI; not production-approved.
 
 **Pilot feedback addendum — 2026-11-04:** [Admin chapter editing, dates, performance, privacy and regression acceptance](docs/design/white-dragon-feedback-2026-11-04.md). The refined order is **WD16 → WD20 → WD21 → WD17 → WD18 → WD19**, plus parallel QA/PERF/PRIVACY gates before widening registration. This dated addendum supersedes the earlier WD16–WD19 ordering only where dependencies differ.
 

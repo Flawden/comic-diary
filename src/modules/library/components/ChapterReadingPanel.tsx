@@ -1,6 +1,8 @@
 "use client";
 
 import { ChapterRating } from "./ChapterRating";
+import { PreviousChaptersPrompt } from "./PreviousChaptersPrompt";
+import { unreadEarlierMainChapters } from "@/modules/library/chapter-reading-model";
 import { usePromptPreference, writeReading } from "./WorkControls";
 import { useRouter } from "next/navigation";
 import { useOptimistic, useRef, useState, useTransition } from "react";
@@ -10,7 +12,7 @@ import { formatExpectedRelease } from "@/modules/catalog/chapter-release-dates";
 import { groupChaptersByVolume, volumeProgress } from "@/modules/catalog/chapter-volumes";
 
 type Chapter = Omit<ComicChapter, "releasedAt">;
-type Props = { comicId: number; chapters: Chapter[]; ratings: Record<number, number>; readIds: number[]; canMark: boolean };
+type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; readIds: number[]; canMark: boolean };
 
 function safeSource(value: string | null) {
   if (!value) return null;
@@ -18,7 +20,7 @@ function safeSource(value: string | null) {
   catch { return null; }
 }
 
-export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMark }: Props) {
+export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, ratings, canMark }: Props) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("MAIN");
   const [limit, setLimit] = useState(30);
@@ -31,19 +33,32 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMa
   const [sheet,setSheet]=useState<Chapter|null>(null);
   const [failure,setFailure]=useState<{chapter:Chapter;action:"read"|"unread"|"read-through"}|null>(null);
   const {enabled}=usePromptPreference();
+  const [previousPrompt, setPreviousPrompt] = useState<{ target: Chapter; missing: Chapter[] } | null>(null);
+  const preferenceKey = `white-dragon:prompt-previous:${readerId ?? "guest"}:${comicId}`;
+  // Read browser storage only during a user action (not during server rendering).
+  function shouldOfferPrevious() {
+    try { return localStorage.getItem(preferenceKey) !== "off"; }
+    catch { return true; }
+  }
+  function disablePreviousPrompt() {
+    try { localStorage.setItem(preferenceKey, "off"); } catch { /* private browsing */ }
+  }
   function mark(chapter:Chapter,action:"read"|"unread"|"read-through"){
     if(lock.current || pending)return;
     if(action==="unread" && ratings[chapter.id] && !window.confirm("Снять отметку чтения и удалить оценку этой главы?"))return;
+    const missing = action === "read" && shouldOfferPrevious() && chapter.kind === "MAIN"
+      ? unreadEarlierMainChapters(chapters, ids, chapter.id) : [];
     lock.current=true;setFailure(null);
     start(async()=>{
-      const next=new Set(readIds);
+      const next=new Set(ids);
       if(action==="unread")next.delete(chapter.id);
       else if(action==="read")next.add(chapter.id);
       else for(const c of main){next.add(c.id);if(c.id===chapter.id)break;}
       show([...next]);
       try{await writeReading(comicId,{intent:"chapter-reading",action,chapterId:String(chapter.id)});
         router.refresh();
-        if(action==="read" && enabled)setSheet(chapter);
+        if (action === "read" && missing.length) setPreviousPrompt({ target: chapter, missing });
+        else if(action==="read" && enabled)setSheet(chapter);
       }catch{setFailure({chapter,action});router.refresh();}
       finally{lock.current=false;}
     });
@@ -142,6 +157,10 @@ export function ChapterReadingPanel({ comicId, chapters, readIds, ratings, canMa
       {filtered.length === 0 ? <p className="mt-4 text-sm text-[var(--text-secondary)]">{query ? "По запросу ничего не найдено." : hideScheduled ? "В этом разделе пока нет вышедших глав." : "В этом разделе пока нет глав."}</p> : null}
       {filtered.length > limit ? <Button variant="secondary" className="mt-3" onClick={() => setLimit(limit + 30)}>Показать ещё 30</Button> : null}
       {history.length ? <details className="mt-5 rounded-xl border border-[var(--border)] p-3"><summary className="cursor-pointer font-semibold">Прочитанные архивные версии ({history.length})</summary><ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">{history.map((c) => <li key={c.id}>{c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""} · прочитано{ratings[c.id] ? ` · ★ ${ratings[c.id]} / 5` : ""}</li>)}</ul></details> : null}
+      {previousPrompt && <PreviousChaptersPrompt comicId={comicId} target={previousPrompt.target} missing={previousPrompt.missing}
+        offerRatings={enabled} onClose={() => setPreviousPrompt(null)} onDecline={() => {
+          const target = previousPrompt.target; setPreviousPrompt(null); if (enabled) setSheet(target);
+        }} onChanged={() => router.refresh()} onRemember={disablePreviousPrompt} />}
       {sheet && <ChapterRating comicId={comicId} chapter={sheet} rating={ratings[sheet.id]??null} onClose={()=>setSheet(null)}/>}
       {!canMark ? <p className="mt-4 text-sm text-[var(--text-secondary)]">Добавьте комикс в свою библиотеку, чтобы отмечать чтение.</p> : null}
     </section>

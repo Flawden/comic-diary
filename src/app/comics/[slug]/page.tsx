@@ -133,6 +133,7 @@ export default async function ComicPage({
       <WorkTabs count={total} chapters={
             <ChapterReadingPanel
               comicId={comic.id}
+              readerId={currentUser?.id ?? null}
               chapters={(readingState?.chapterReading.registry ?? chapters)
                 .filter((c) => c.status === "RELEASED" || c.status === "SCHEDULED" || (c.status === "ARCHIVED" && readingState?.chapterReading.readIds.includes(c.id)))
                 .map((c) => ({ id: c.id, displayCode: c.displayCode, title: c.title, sourceUrl: c.status === "RELEASED" ? c.sourceUrl : null, sortOrder: c.sortOrder, volumeNumber: c.volumeNumber, status: c.status, kind: c.kind, supersedesChapterId: c.supersedesChapterId, expectedRelease: c.expectedRelease }))}

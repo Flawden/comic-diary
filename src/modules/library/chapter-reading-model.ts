@@ -18,6 +18,16 @@ export function selectReadThrough(chapters: ReadingChapter[], targetId: number) 
     .filter((c) => c.status === "RELEASED" && c.kind === "MAIN");
 }
 
+/** Earlier means registry order, across volumes, not just the visible page or chapter code. */
+export function unreadEarlierMainChapters(chapters: ReadingChapter[], readIds: Iterable<number>, targetId: number) {
+  const alreadyRead = new Set(readIds);
+  const ordered = [...chapters].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+  const index = ordered.findIndex((chapter) => chapter.id === targetId);
+  if (index < 0 || ordered[index].status !== "RELEASED" || ordered[index].kind !== "MAIN") return [];
+  return ordered.slice(0, index).filter((chapter) =>
+    chapter.status === "RELEASED" && chapter.kind === "MAIN" && !alreadyRead.has(chapter.id));
+}
+
 export function summarizeChapterReads(chapters: ReadingChapter[], reads: { chapterId: number; readAt: Date }[]) {
   const readIds = new Set(reads.map((r) => r.chapterId));
   const byId = new Map(chapters.map((c) => [c.id, c]));

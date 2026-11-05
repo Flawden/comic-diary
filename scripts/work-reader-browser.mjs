@@ -141,6 +141,48 @@ try {
   assert.equal(await page.locator("dialog[open]").count(),0);
   await chapters.getByRole("button",{name:"Оценить: УРГА"}).click();
   await page.getByRole("dialog",{name:"УРГА"}).waitFor();
+  await page.getByRole("dialog",{name:"УРГА"}).getByRole("button",{name:"Закрыть окно оценки главы"}).click();
+  await page.getByRole("tab",{name:"Мой дневник"}).click();
+  await diary.getByRole("checkbox",{name:/Предлагать оценку главы/}).check();
+  await page.getByRole("tab",{name:/Главы/}).click();
+  await pool.query("INSERT INTO chapters(comic_id,display_code,title,sort_order,status,volume_number) VALUES ($1,'4','Долина',4,'RELEASED',1),($1,'5','Река',5,'RELEASED',2),($1,'6','Лес',6,'RELEASED',2)",[comic]);
+  await page.reload();
+  const latest = page.getByRole("tabpanel",{name:/Главы/});
+  await latest.locator(".wd-volume").filter({hasText:"Том 2"}).locator("summary").click();
+  await latest.getByRole("button",{name:"Отметить прочитанной: 6 · Лес"}).click();
+  const bulk = page.locator("dialog.wd-bulk-sheet[open]");
+  await bulk.getByRole("heading",{name:"Отметить предыдущие главы?"}).waitFor();
+  await bulk.getByText("4 · Долина").waitFor();
+  await bulk.getByText("5 · Река").waitFor();
+  await bulk.getByRole("button",{name:"Отметить предыдущие (2)"}).click();
+  await bulk.getByRole("heading",{name:"Готово! Хотите оценить?"}).waitFor();
+  assert.equal((await pool.query("SELECT count(*)::int AS count FROM user_chapter_reads WHERE user_id=$1 AND chapter_id IN (SELECT id FROM chapters WHERE comic_id=$2 AND display_code IN ('4','5','6'))",[user,comic])).rows[0].count,3);
+  await bulk.getByRole("button",{name:"4 · Долина: 4 из 5"}).click();
+  await bulk.getByRole("button",{name:"6 · Лес: 3 из 5"}).click();
+  await page.route("**/api/library/reading-state",r=>r.fulfill({status:503,body:"retry"}),{times:1});
+  await bulk.getByRole("button",{name:"Сохранить выбранные оценки (2)"}).click();
+  await bulk.getByRole("alert").waitFor();
+  assert.equal(await bulk.getByRole("button",{name:"4 · Долина: 4 из 5"}).getAttribute("aria-pressed"),"true");
+  await bulk.getByRole("button",{name:"Сохранить выбранные оценки (2)"}).click();
+  await bulk.getByRole("heading",{name:"Оценки сохранены"}).waitFor();
+  const ratingsAfterBulk = (await pool.query("SELECT display_code,rating FROM chapters JOIN user_chapter_reads ON chapters.id=user_chapter_reads.chapter_id WHERE user_chapter_reads.user_id=$1 AND chapters.comic_id=$2 AND chapters.display_code IN ('4','5','6') ORDER BY display_code",[user,comic])).rows;
+  assert.deepEqual(ratingsAfterBulk,[{display_code:"4",rating:4},{display_code:"5",rating:null},{display_code:"6",rating:3}]);
+  await bulk.getByRole("button",{name:"Готово"}).click();
+  // Undo removes only the new earlier mark, never the clicked target nor existing marks.
+  await pool.query("INSERT INTO chapters(comic_id,display_code,title,sort_order,status,volume_number) VALUES ($1,'7','Пещера',7,'RELEASED',2),($1,'8','Гроза',8,'RELEASED',2)",[comic]);
+  await page.reload();
+  const after=page.getByRole("tabpanel",{name:/Главы/});
+  await after.locator(".wd-volume").filter({hasText:"Том 2"}).locator("summary").click();
+  await after.getByRole("button",{name:"Отметить прочитанной: 8 · Гроза"}).click();
+  const undoDialog=page.locator("dialog.wd-bulk-sheet[open]");
+  await undoDialog.getByRole("heading",{name:"Отметить предыдущие главы?"}).waitFor();
+  await undoDialog.getByRole("button",{name:"Отметить предыдущие (1)"}).click();
+  await undoDialog.getByRole("button",{name:"Отменить массовую отметку"}).click();
+  await undoDialog.getByRole("heading",{name:"Отметки отменены"}).waitFor();
+  const undone=(await pool.query("SELECT display_code FROM chapters JOIN user_chapter_reads ON chapters.id=user_chapter_reads.chapter_id WHERE user_chapter_reads.user_id=$1 AND chapters.comic_id=$2 AND chapters.display_code IN ('7','8') ORDER BY display_code",[user,comic])).rows.map(r=>r.display_code);
+  assert.deepEqual(undone,["8"]);
+  await undoDialog.getByRole("button",{name:"Готово"}).click();
+  console.log("PASS: WD18.2 smart prompt, one-request bulk marks, optional batch ratings, retry and undo");
   console.log("PASS: WD12-WD16 and WD21.3 planned chapters, guest visibility, read/rating guards, toggle, persistence and mobile sheet");
 } finally {
   try {

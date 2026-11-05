@@ -8,7 +8,7 @@ import { getChapterProgressCeiling } from "../src/modules/comics/queries/get-cha
 import { getComicChapters } from "../src/modules/comics/queries/get-comic-chapters";
 import { completeComicReading } from "../src/modules/library/mutations/complete-comic-reading";
 import { completionSnapshot } from "../src/modules/library/completion-model";
-import { updateChapterReading } from "../src/modules/library/mutations/update-chapter-reading";
+import { updateChapterReading, markPreviousChaptersRead, undoPreviousChapterMarks, rateChaptersBatch } from "../src/modules/library/mutations/update-chapter-reading";
 import { getUserComicState } from "../src/modules/library/queries/get-user-comic-state";
 import { getUserLibrary } from "../src/modules/library/queries/get-user-library";
 import { setLegacyComicProgress, setUserComicStatus } from "../src/modules/library/mutations/update-user-comic-state";
@@ -213,6 +213,41 @@ async function main() {
     assert.equal(publishedChapter.releasedAt?.toISOString(), publishedDate.toISOString());
     assert.equal(publishedChapter.expectedRelease, null, "publication clears the old plan");
     assert.equal(publishedChapter.id, scheduled.id, "same chapter identity must be preserved");
+    // WD18.2: a receipt contains only new marks; ratings and earlier reads survive undo.
+    const [bulkComic] = await db.insert(comics).values({ slug: `${stamp}-bulk`, title: "Bulk prompt", sourceUrl: "https://example.com" }).returning();
+    comicIds.push(bulkComic.id);
+    await db.insert(userComics).values({ userId: reader.id, comicId: bulkComic.id });
+    const [b1, b2, planned, bonus, b5, b6] = await db.insert(chapters).values([
+      { comicId: bulkComic.id, displayCode: "1", sortOrder: 1, status: "RELEASED" },
+      { comicId: bulkComic.id, displayCode: "2", sortOrder: 2, status: "RELEASED" },
+      { comicId: bulkComic.id, displayCode: "3", sortOrder: 3, status: "SCHEDULED" },
+      { comicId: bulkComic.id, displayCode: "4", sortOrder: 4, status: "RELEASED", kind: "SPECIAL" },
+      { comicId: bulkComic.id, displayCode: "5", sortOrder: 5, status: "RELEASED" },
+      { comicId: bulkComic.id, displayCode: "6", sortOrder: 6, status: "RELEASED" },
+    ]).returning();
+    await updateChapterReading(reader.id, bulkComic.id, b1.id, "read");
+    await updateChapterReading(reader.id, bulkComic.id, b1.id, "rate", 5);
+    await updateChapterReading(reader.id, bulkComic.id, b6.id, "read");
+    const receipt = await markPreviousChaptersRead(reader.id, bulkComic.id, b6.id);
+    assert.deepEqual(receipt.addedIds.sort((a, b) => a - b), [b2.id, b5.id].sort((a, b) => a - b));
+    assert.equal((await getUserComicState(reader.id, bulkComic.id))?.currentChapter, 4);
+    assert(!(await getUserComicState(reader.id, bulkComic.id))?.chapterReading.readIds.includes(planned.id));
+    assert(!(await getUserComicState(reader.id, bulkComic.id))?.chapterReading.readIds.includes(bonus.id));
+    await undoPreviousChapterMarks(reader.id, bulkComic.id, receipt.addedIds);
+    assert.equal((await getUserComicState(reader.id, bulkComic.id))?.currentChapter, 2);
+    assert((await getUserComicState(reader.id, bulkComic.id))?.chapterReading.readIds.includes(b1.id));
+    assert((await getUserComicState(reader.id, bulkComic.id))?.chapterReading.readIds.includes(b6.id));
+    assert.equal((await db.select().from(userChapterReads).where(eq(userChapterReads.chapterId, b1.id)))[0].rating, 5);
+    const again = await markPreviousChaptersRead(reader.id, bulkComic.id, b6.id);
+    await rateChaptersBatch(reader.id, bulkComic.id, [{ id: b2.id, rating: 4 }, { id: b6.id, rating: 3 }]);
+    assert.equal((await db.select().from(userChapterReads).where(eq(userChapterReads.chapterId, b5.id)))[0].rating, null, "unrated chapter stays unrated");
+    await assert.rejects(undoPreviousChapterMarks(reader.id, bulkComic.id, again.addedIds), "rated marks cannot be deleted by undo");
+    assert.equal((await getUserComicState(reader.id, bulkComic.id))?.currentChapter, 4, "failed undo is atomic");
+    await assert.rejects(rateChaptersBatch(reader.id, bulkComic.id, [{ id: planned.id, rating: 5 }]));
+    await assert.rejects(rateChaptersBatch(reader.id, bulkComic.id, [{ id: bonus.id, rating: 5 }]));
+    await assert.rejects(rateChaptersBatch(other.id, bulkComic.id, [{ id: b2.id, rating: 5 }]));
+    await assert.rejects(undoPreviousChapterMarks(reader.id, bulkComic.id, [planned.id]));
+    console.log("PASS: WD18.2 transactional bulk receipt, safe undo, selective ratings, planned/special/ownership guards");
     console.log("PASS: WD21 planned precision, past release, original creation date and publishing transitions");
     console.log("PASS: updates filters, counts, pagination, revision ancestry and access isolation");
     console.log("PASS: read-through, specials, rename/reorder, two revisions, history, idempotency, access isolation, legacy, explicit completion, ratings/notes");
