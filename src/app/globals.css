@@ -748,7 +748,34 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 .wd-volume[open] .wd-volume-heading::before {transform:rotate(90deg)}
 .wd-volume-heading small {font-size:.75rem;color:var(--text-secondary);font-weight:400;margin-left:7px}
 .wd-volume-stats {font-size:.75rem;color:var(--text-secondary);text-align:right}
-.wd-volume-summary progress {grid-column:1/-1;width:100%;height:4px;accent-color:var(--primary)}
+.wd-volume-summary progress {grid-column:1/-1;width:100%;height:5px;appearance:none;border:0;border-radius:9px;overflow:hidden;background:var(--surface);color:var(--text-accent)}
+.wd-volume-summary progress::-webkit-progress-bar {background:var(--surface);border-radius:9px}
+.wd-volume-summary progress::-webkit-progress-value {background:var(--text-accent);border-radius:9px}
+.wd-volume-summary progress::-moz-progress-bar {background:var(--text-accent);border-radius:9px}
 .wd-volume-summary:focus-visible {outline:2px solid var(--primary);outline-offset:-3px}
 .wd-volume .wd-chapters {padding:0 14px 4px}
 @media(max-width:450px){.wd-volume-summary {grid-template-columns:1fr}.wd-volume-stats{text-align:left;padding-left:20px}}
+
+/* WD18: make unread releases discoverable, readable and actionable in place. */
+.updates-item {overflow:hidden;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+.updates-head {display:flex;align-items:center;gap:12px;padding:14px}
+.updates-reveal {display:flex;width:100%;min-height:46px;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--border);padding:10px 14px;color:var(--text-accent);font-size:.875rem;font-weight:650;text-align:left;cursor:pointer}
+.updates-reveal:hover,.updates-reveal[aria-expanded=true] {background:var(--surface-raised)}
+.updates-reveal-icon {font-size:1.15rem;transition:transform .16s ease}
+.updates-reveal[aria-expanded=true] .updates-reveal-icon {transform:rotate(180deg)}
+.updates-panel {border-top:1px solid var(--border);padding:14px}
+.updates-panel-heading {display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px}
+.updates-panel-heading h3 {font-family:var(--cd-font-display);font-size:1.05rem;font-weight:700}
+.updates-panel-heading p {color:var(--text-secondary);font-size:.8rem}
+.updates-volumes {display:grid;gap:10px}
+.updates-volume {overflow:hidden;border:1px solid var(--border);border-radius:10px}
+.updates-volume summary {min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;list-style:none;background:var(--surface-raised);cursor:pointer;font-weight:650}
+.updates-volume summary::-webkit-details-marker {display:none}
+.updates-volume summary::before {content:'▸';color:var(--text-accent);margin-right:2px}
+.updates-volume[open] summary::before {content:'▾'}
+.updates-volume summary span:first-child {flex:1}
+.updates-volume summary small {color:var(--text-secondary);font-size:.75rem;font-weight:400}
+.updates-volume ul {padding-inline:12px}
+.updates-mark {flex-shrink:0}
+@media(max-width:480px) {.updates-head {padding:12px;gap:10px}.updates-panel {padding:12px}.updates-volumes {gap:8px}}
+@media(prefers-reduced-motion:reduce) {.updates-reveal-icon {transition:none}}

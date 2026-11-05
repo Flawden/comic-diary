@@ -22,6 +22,21 @@ try {
   const page=await ctx.newPage();
   page.setDefaultTimeout(25000);
   const url=origin+"/comics/"+prefix;
+  // WD18: the updates feed expands unread chapters in place, grouped by volume.
+  // A scheduled chapter must not appear in the feed or be marked as read there.
+  await pool.query("UPDATE chapters SET volume_number=1 WHERE comic_id=$1 AND status='RELEASED'",[comic]);
+  await page.goto(origin+"/updates");
+  const updateCard=page.locator(".updates-item").filter({hasText:"Мезолит"});
+  await updateCard.getByRole("button",{name:"Показать непрочитанные главы · 2"}).click();
+  await updateCard.locator(".updates-volume summary").getByText("Том 1").waitFor();
+  await updateCard.locator(".updates-volume ul > li").first().getByText("1 — Охота на быка").waitFor();
+  assert.equal(await updateCard.getByText("Просыпание").count(),0);
+  await updateCard.getByRole("button",{name:"Отметить 1 — Охота на быка прочитанной"}).click();
+  await page.getByRole("button",{name:"Снять последнюю отметку"}).click();
+  await page.getByText("Отметка снята.").waitFor();
+  assert.equal((await pool.query("SELECT count(*)::int AS count FROM user_chapter_reads WHERE user_id=$1",[user])).rows[0].count,0);
+  // Restore the original flat-list fixture for the WD12–WD16 reader scenarios.
+  await pool.query("UPDATE chapters SET volume_number=NULL WHERE comic_id=$1",[comic]);
   await page.goto(url+"#my-reading");
   const diary=page.getByRole("tabpanel",{name:"Мой дневник"});
   await diary.waitFor();

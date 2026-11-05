@@ -5,7 +5,7 @@ export type UpdatesKind = "MAIN" | "SPECIAL" | "UPDATED" | "ALL";
 export type UpdatesStatus = "READING" | "WANT_TO_READ" | "ON_HOLD" | "COMPLETED" | "ALL";
 export type UpdatesOptions = { kind: UpdatesKind; status: UpdatesStatus; q: string; page: number };
 export type UpdatesTitle = { comicId: number; slug: string; title: string; coverUrl: string | null; mainCount: number; specialCount: number; updatedCount: number; total: number };
-export type UpdatesChapter = { id: number; displayCode: string; title: string | null; sourceUrl: string | null; kind: string; updated: boolean; throughCount: number; total: number };
+export type UpdatesChapter = { id: number; displayCode: string; title: string | null; sourceUrl: string | null; kind: string; updated: boolean; volumeNumber: number | null; throughCount: number; total: number };
 
 export function parseUpdatesOptions(params: Record<string, string | string[] | undefined>): UpdatesOptions {
   const first = (key: string) => { const v = params[key]; return Array.isArray(v) ? v[0] : v; };
@@ -74,6 +74,7 @@ export async function getUnreadChapters(userId: number, comicId: number, kind: U
   // Restrict the same ownership predicate before returning any chapter metadata.
   const result = await db.execute<UpdatesChapter>(sql`${unreadRegistry(userId)}
     SELECT u.id, u.display_code AS "displayCode", u.title, u.source_url AS "sourceUrl", u.kind, u.updated,
+      u.volume_number AS "volumeNumber",
       CASE WHEN u.kind = 'MAIN' THEN (SELECT count(*)::int FROM unread p
         WHERE p.comic_id = u.comic_id AND p.kind = 'MAIN'
           AND (p.sort_order, p.id) <= (u.sort_order, u.id)) ELSE 0 END AS "throughCount",
