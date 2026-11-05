@@ -1668,3 +1668,13 @@ checks all files before registering its current-user daily/logon task, retaining
 Windows CI, host installation, first actual off-host download and task execution
 remain pending. Restore from a downloaded automatic copy remains a separate gate.
 See `docs/operations/cd07-windows-pull.md`. CD-07 remains IN PROGRESS.
+
+## BR02 — public production verification after deploy (2026-11-05)
+
+Prepared an uncached read-only PostgreSQL readiness endpoint and a retrying
+public HTTPS smoke that verifies the exact build SHA, rendered catalog and
+login page. The deploy job goes red if the public route fails after rollout;
+no automatic schema/image rollback is performed. Unit tests plus disposable
+DB integration checks are in CI. Live acceptance remains pending until
+`PRODUCTION_BASE_URL` is set and a successful deploy is observed.
+See `docs/operations/br02-production-smoke.md`.

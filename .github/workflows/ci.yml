@@ -67,6 +67,11 @@ jobs:
           bash -n deploy/disk-guard/install.sh
           python3 -m unittest discover -s deploy/disk-guard -p test_guard.py -v
 
+      - name: BR02 post-deploy smoke logic tests
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python3 -m unittest discover -s deploy/postdeploy -p test_smoke.py -v
+
       - name: Restricted backup export tests
         env:
           PYTHONDONTWRITEBYTECODE: "1"
@@ -190,6 +195,14 @@ jobs:
           app_pid=$!
           trap 'kill "$app_pid" 2>/dev/null || true' EXIT
           curl -fsS --retry 25 --retry-delay 1 --retry-connrefused http://127.0.0.1:3102/login -o /dev/null
+          node --input-type=module <<'JS'
+          const response = await fetch('http://127.0.0.1:3102/api/health/ready');
+          const data = await response.json();
+          if (!response.ok || data.status !== 'ready') {
+            throw new Error('BR02 database readiness route failed in CI');
+          }
+          console.log('BR02_CI_READINESS=PASS');
+          JS
           node scripts/work-reader-browser.mjs || { tail -60 "$RUNNER_TEMP/wd-next.log"; exit 1; }
 
   publish:
@@ -229,6 +242,7 @@ jobs:
           set -euo pipefail
 
           docker build \
+            --build-arg "COMIC_DIARY_BUILD_SHA=$GITHUB_SHA" \
             -t comic-diary:release \
             .
 
@@ -328,6 +342,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
+      contents: read
       packages: read
 
     concurrency:
@@ -339,8 +354,12 @@ jobs:
       DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
       DEPLOY_USER: ${{ vars.DEPLOY_USER }}
       RELEASE_DIGEST: ${{ needs.publish.outputs.digest }}
+      PRODUCTION_BASE_URL: ${{ vars.PRODUCTION_BASE_URL }}
 
     steps:
+      - name: Checkout repository for post-deploy smoke
+        uses: actions/checkout@v5
+
       - name: Validate deployment contract
         run: |
           set -euo pipefail
@@ -349,6 +368,7 @@ jobs:
           : "${DEPLOY_PORT:?DEPLOY_PORT is missing}"
           : "${DEPLOY_USER:?DEPLOY_USER is missing}"
           : "${RELEASE_DIGEST:?release digest is missing}"
+          : "${PRODUCTION_BASE_URL:?Set the PRODUCTION_BASE_URL GitHub Actions variable to the HTTPS public origin before deployment}"
 
           if [[ ! "$DEPLOY_PORT" =~ ^[0-9]+$ ]]; then
             echo "ERROR: invalid DEPLOY_PORT"
@@ -443,6 +463,15 @@ jobs:
               "$DEPLOY_USER@$DEPLOY_HOST" \
               "deploy $GITHUB_SHA $RELEASE_DIGEST"
 
+      - name: BR02 verify public production and exact commit
+        timeout-minutes: 6
+        run: |
+          python3 deploy/postdeploy/smoke.py \
+            --url "$PRODUCTION_BASE_URL" \
+            --expected-sha "$GITHUB_SHA" \
+            --attempts 18 \
+            --delay-seconds 6
+
       - name: Record successful production deployment
         run: |
           {
@@ -455,6 +484,8 @@ jobs:
             echo "Digest:"
             echo
             echo "\`$RELEASE_DIGEST\`"
+            echo
+            echo "Public readiness, catalog and login smoke: **PASS**"
             echo
             echo "Result: **PASS**"
           } >> "$GITHUB_STEP_SUMMARY"

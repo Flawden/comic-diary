@@ -98,3 +98,10 @@ Disk alerts and conservative Docker-image retention are documented in
 [`docs/operations/br01-disk-guard.md`](../docs/operations/br01-disk-guard.md).
 The timer is installed separately on the VPS; publishing the app image does
 not install it or enable automatic image deletion.
+
+## BR02 public post-deploy smoke
+
+The CI deploy job now verifies the public HTTPS application, PostgreSQL
+readiness and exact image commit before reporting deployment success.
+See [`docs/operations/br02-production-smoke.md`](../docs/operations/br02-production-smoke.md).
+The `PRODUCTION_BASE_URL` GitHub Actions variable is required before deployment.

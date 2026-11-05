@@ -28,12 +28,15 @@ RUN DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build npm run build
 
 FROM node:22-alpine AS runner
 
+ARG COMIC_DIARY_BUILD_SHA=unversioned
+
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
+ENV COMIC_DIARY_BUILD_SHA=${COMIC_DIARY_BUILD_SHA}
 
 RUN addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
