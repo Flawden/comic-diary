@@ -19,7 +19,7 @@ export function selectReadThrough(chapters: ReadingChapter[], targetId: number) 
 }
 
 /** Earlier means registry order, across volumes, not just the visible page or chapter code. */
-export function unreadEarlierMainChapters(chapters: ReadingChapter[], readIds: Iterable<number>, targetId: number) {
+export function unreadEarlierMainChapters<T extends ReadingChapter>(chapters: T[], readIds: Iterable<number>, targetId: number): T[] {
   const alreadyRead = new Set(readIds);
   const ordered = [...chapters].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
   const index = ordered.findIndex((chapter) => chapter.id === targetId);
