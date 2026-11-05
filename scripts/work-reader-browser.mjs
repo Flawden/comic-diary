@@ -28,8 +28,15 @@ try {
   await page.goto(origin+"/updates");
   const updateCard=page.locator(".updates-item").filter({hasText:"Мезолит"});
   await updateCard.getByRole("button",{name:"Показать непрочитанные главы · 2"}).click();
-  await updateCard.locator(".updates-volume summary").getByText("Том 1").waitFor();
-  await updateCard.locator(".updates-volume ul > li").first().getByText("1 — Охота на быка").waitFor();
+  const firstVolume=updateCard.locator(".updates-volume").first();
+  await firstVolume.locator("summary").getByText("Том 1").waitFor();
+  await firstVolume.locator("ul > li").first().getByText("1 — Охота на быка").waitFor();
+  // It opens by default, and native toggle actions remain interactive afterwards.
+  await firstVolume.locator("summary").click();
+  assert.equal(await firstVolume.evaluate(node=>node.open),false);
+  assert.equal(await firstVolume.locator("ul > li").first().getByText("1 — Охота на быка").isVisible(),false);
+  await firstVolume.locator("summary").click();
+  await firstVolume.locator("ul > li").first().getByText("1 — Охота на быка").waitFor();
   assert.equal(await updateCard.getByText("Просыпание").count(),0);
   await updateCard.getByRole("button",{name:"Отметить 1 — Охота на быка прочитанной"}).click();
   await page.getByRole("button",{name:"Снять последнюю отметку"}).click();

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { groupChaptersByVolume } from "@/modules/catalog/chapter-volumes";
 import { CoverImage } from "@/shared/components/media";
 import { Button, Badge } from "@/shared/components/ui";
@@ -53,6 +53,22 @@ export function ReadingUpdatesList({ titles, kind }: { titles: UpdatesTitle[]; k
         router.refresh();
       }} />)}</ul>
   </>;
+}
+
+// Keep each native details group expandable/collapsible, including its initial open state.
+function UpdatesVolume({ group, initiallyOpen, renderChapter }: {
+  group: { number: number | null; chapters: UpdatesChapter[] };
+  initiallyOpen: boolean;
+  renderChapter: (chapter: UpdatesChapter) => ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(initiallyOpen);
+  return <details className="updates-volume" open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)}>
+    <summary>
+      <span>{group.number === null ? "Главы без тома" : `Том ${group.number}`}</span>
+      <small>Загружено: {chapterCountLabel(group.chapters.length)}</small>
+    </summary>
+    <ul className="divide-y divide-[var(--border)]">{group.chapters.map(renderChapter)}</ul>
+  </details>;
 }
 
 function UpdatesRow({ item, kind, onMarked }: { item: UpdatesTitle; kind: UpdatesKind; onMarked: (id: number, action: MarkAction) => void }) {
@@ -151,13 +167,7 @@ function UpdatesRow({ item, kind, onMarked }: { item: UpdatesTitle; kind: Update
         </form>
       </details> : null}
       {hasVolumes ? <div className="updates-volumes" aria-label="Тома с непрочитанными главами">
-        {groups.map((group, index) => <details key={group.number ?? "ungrouped"} className="updates-volume" defaultOpen={index === 0}>
-          <summary>
-            <span>{group.number === null ? "Главы без тома" : `Том ${group.number}`}</span>
-            <small>Загружено: {chapterCountLabel(group.chapters.length)}</small>
-          </summary>
-          <ul className="divide-y divide-[var(--border)]">{group.chapters.map(renderChapter)}</ul>
-        </details>)}
+        {groups.map((group, index) => <UpdatesVolume key={group.number ?? "ungrouped"} group={group} initiallyOpen={index === 0} renderChapter={renderChapter} />)}
       </div> : <ul className="divide-y divide-[var(--border)]">{chapters.map(renderChapter)}</ul>}
       {loaded && chapters.length === 0 ? <p className="text-sm text-[var(--text-secondary)]">Непрочитанных глав в этом разделе уже нет.</p> : null}
       {chapters.length < total ? <Button variant="secondary" className="mt-3" disabled={busy} onClick={() => load(true)}>Показать ещё 30</Button> : null}
