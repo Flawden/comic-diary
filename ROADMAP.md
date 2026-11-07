@@ -1678,3 +1678,7 @@ no automatic schema/image rollback is performed. Unit tests plus disposable
 DB integration checks are in CI. Live acceptance remains pending until
 `PRODUCTION_BASE_URL` is set and a successful deploy is observed.
 See `docs/operations/br02-production-smoke.md`.
+
+## UX / Admin Studio 2.0 — 07.11.2026
+
+[Новый UX Roadmap и визуальные эталоны](docs/roadmaps/UX-ADMIN-2026-11-07.md)
