@@ -37,6 +37,9 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Unread chapter confirmation regression
+        run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
+
       - name: Canonical Origin and Host regression tests
         run: node --import tsx --test src/modules/auth/request-origin.test.ts
 

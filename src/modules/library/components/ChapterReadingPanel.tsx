@@ -1,6 +1,8 @@
 "use client";
 
 import { ChapterRating } from "./ChapterRating";
+import { UnreadChapterConfirmation } from "./UnreadChapterConfirmation";
+import { needsUnreadConfirmation } from "../needs-unread-confirmation";
 import { PreviousChaptersPrompt } from "./PreviousChaptersPrompt";
 import { unreadEarlierMainChapters } from "@/modules/library/chapter-reading-model";
 import { usePromptPreference, writeReading } from "./WorkControls";
@@ -32,6 +34,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, rati
   const read=new Set(ids);
   const [sheet,setSheet]=useState<Chapter|null>(null);
   const [failure,setFailure]=useState<{chapter:Chapter;action:"read"|"unread"|"read-through"}|null>(null);
+  const [confirmUnread,setConfirmUnread]=useState<Chapter|null>(null);
   const {enabled}=usePromptPreference();
   const [previousPrompt, setPreviousPrompt] = useState<{ target: Chapter; missing: Chapter[] } | null>(null);
   const preferenceKey = `white-dragon:prompt-previous:${readerId ?? "guest"}:${comicId}`;
@@ -43,9 +46,13 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, rati
   function disablePreviousPrompt() {
     try { localStorage.setItem(preferenceKey, "off"); } catch { /* private browsing */ }
   }
-  function mark(chapter:Chapter,action:"read"|"unread"|"read-through"){
+  function mark(chapter:Chapter,action:"read"|"unread"|"read-through", approved=false){
     if(lock.current || pending)return;
-    if(action==="unread" && ratings[chapter.id] && !window.confirm("Снять отметку чтения и удалить оценку этой главы?"))return;
+    if(needsUnreadConfirmation(action, ratings[chapter.id]) && !approved){
+      setConfirmUnread(chapter);
+      return;
+    }
+    setConfirmUnread(null);
     const missing = action === "read" && shouldOfferPrevious() && chapter.kind === "MAIN"
       ? unreadEarlierMainChapters(chapters, ids, chapter.id) : [];
     lock.current=true;setFailure(null);
@@ -157,6 +164,10 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, rati
       {filtered.length === 0 ? <p className="mt-4 text-sm text-[var(--text-secondary)]">{query ? "По запросу ничего не найдено." : hideScheduled ? "В этом разделе пока нет вышедших глав." : "В этом разделе пока нет глав."}</p> : null}
       {filtered.length > limit ? <Button variant="secondary" className="mt-3" onClick={() => setLimit(limit + 30)}>Показать ещё 30</Button> : null}
       {history.length ? <details className="mt-5 rounded-xl border border-[var(--border)] p-3"><summary className="cursor-pointer font-semibold">Прочитанные архивные версии ({history.length})</summary><ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">{history.map((c) => <li key={c.id}>{c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""} · прочитано{ratings[c.id] ? ` · ★ ${ratings[c.id]} / 5` : ""}</li>)}</ul></details> : null}
+      {confirmUnread && <UnreadChapterConfirmation
+        chapter={confirmUnread}
+        onCancel={() => setConfirmUnread(null)}
+        onConfirm={() => mark(confirmUnread, "unread", true)} />}
       {previousPrompt && <PreviousChaptersPrompt comicId={comicId} target={previousPrompt.target} missing={previousPrompt.missing}
         offerRatings={enabled} onClose={() => setPreviousPrompt(null)} onDecline={() => {
           const target = previousPrompt.target; setPreviousPrompt(null); if (enabled) setSheet(target);
