@@ -47,7 +47,7 @@ function withEnv(
   const beforeEnv = process.env.NODE_ENV;
   const beforeConfigured = process.env.COMIC_DIARY_PUBLIC_ORIGIN;
   try {
-    process.env.NODE_ENV = nodeEnv;
+    Reflect.set(process.env, "NODE_ENV", nodeEnv);
     if (configured === undefined) {
       delete process.env.COMIC_DIARY_PUBLIC_ORIGIN;
     } else {
@@ -55,8 +55,8 @@ function withEnv(
     }
     run();
   } finally {
-    if (beforeEnv === undefined) delete process.env.NODE_ENV;
-    else process.env.NODE_ENV = beforeEnv;
+    if (beforeEnv === undefined) Reflect.deleteProperty(process.env, "NODE_ENV");
+    else Reflect.set(process.env, "NODE_ENV", beforeEnv);
     if (beforeConfigured === undefined) delete process.env.COMIC_DIARY_PUBLIC_ORIGIN;
     else process.env.COMIC_DIARY_PUBLIC_ORIGIN = beforeConfigured;
   }
