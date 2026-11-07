@@ -414,7 +414,7 @@ function ComicFields({
           </div>
         </div>
         <details className="admin-studio-advanced">
-          <summary>Дополнительные сведения <span>Количество глав и примечания</span></summary>
+          <summary>Дополнительные сведения <span>Количество глав и примечание переводчика</span></summary>
           <div className="admin-studio-field-grid">
             <label>Заявлено глав (справочно)
               <input name="totalChapters" type="number" min={0} step={1}

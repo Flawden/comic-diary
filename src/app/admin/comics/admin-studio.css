@@ -98,7 +98,7 @@
 .admin-studio-section-heading { margin-bottom: 16px; }
 .admin-studio-section-heading h3 { font: 500 22px/1.25 var(--cd-font-display); }
 .admin-studio-section-heading p { color: var(--text-secondary); font-size: 13px; margin-top: 5px; }
-.admin-studio-metadata-grid { display: grid; grid-template-columns: minmax(170px,.48fr) minmax(0,1.35fr); gap: 20px; }
+.admin-studio-metadata-grid { display: grid; grid-template-columns: minmax(220px, 270px) minmax(0, 1fr); gap: 24px; }
 .admin-studio-cover-field, .admin-studio-core-fields { min-width: 0; }
 .admin-studio-field-label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700; }
 .admin-studio-field-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
@@ -115,6 +115,17 @@
   min-height: 43px;
   margin-top: 6px;
   border-radius: 9px;
+}
+/* admin-phase3a-work-selects */
+.admin-studio-core-fields select[name="workType"],
+.admin-studio-core-fields select[name="workFormat"] {
+  width: 100%; min-height: 43px; margin-top: 6px;
+  padding: 9px 12px; border: 1px solid var(--border); border-radius: 9px;
+  background: var(--surface-raised); color: var(--text-primary); font-size: 14px;
+}
+.admin-studio-core-fields select[name="workType"]:focus-visible,
+.admin-studio-core-fields select[name="workFormat"]:focus-visible {
+  outline: 2px solid var(--primary); outline-offset: 2px;
 }
 .admin-studio-input { display: block; width: 100%; min-height: 43px; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-raised); color: var(--text-primary); font-size: 14px; font-weight: 400; }
 .admin-studio-input[readonly] { opacity: .65; }
