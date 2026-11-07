@@ -1,0 +1,75 @@
+/* Phase 2A: route-scoped White Dragon administration shell. */
+.admin-shell {
+  --admin-shell-width: 222px;
+  display: grid;
+  grid-template-columns: var(--admin-shell-width) minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--background);
+}
+.admin-shell-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 550px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 22px 12px 14px;
+  border-right: 1px solid rgba(211, 231, 192, .15);
+  color: #ecf0d9;
+  background-color: #0b261d;
+  background-image:
+    linear-gradient(180deg, rgba(6, 27, 20, .82) 0%, rgba(8, 31, 23, .45) 36%, rgba(7, 28, 20, .4) 65%, rgba(8, 30, 22, .88) 100%),
+    url('/admin/admin-forest.webp');
+  background-size: cover;
+  background-position: center;
+  z-index: 30;
+}
+.admin-shell-brand { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; color: #f0ebcf; padding: 0 6px 24px; text-decoration: none; }
+.admin-shell-brand svg { color: #cbd9a6; }
+.admin-shell-brand > span { font: 500 21px/1.2 var(--cd-font-display); white-space: nowrap; }
+.admin-shell-brand small { color: #c7d5bb; font-size: 10px; }
+.admin-shell-nav { display: flex; flex-direction: column; gap: 5px; }
+.admin-shell-link { min-height: 44px; display: flex; align-items: center; gap: 11px; border: 1px solid transparent; border-radius: 9px; padding: 9px 11px; font-size: 13px; font-weight: 600; color: #e2e9d8; text-decoration: none; transition: background-color .15s ease, border-color .15s ease; }
+.admin-shell-link svg { flex: none; color: #c6d2b1; }
+.admin-shell-link:hover { background: rgba(181, 206, 157, .14); }
+.admin-shell-link.is-active { background: rgba(180, 210, 145, .28); border-color: rgba(200, 221, 171, .28); color: #fff1d8; }
+.admin-shell-link:focus-visible, .admin-shell-brand:focus-visible, .admin-shell-account:focus-visible { outline: 2px solid #c4d79c; outline-offset: 2px; }
+.admin-shell-account { display: flex; align-items: center; gap: 10px; min-height: 50px; margin-top: auto; border: 1px solid rgba(221, 238, 203, .18); border-radius: 11px; padding: 8px; background: rgba(15, 43, 32, .52); font-size: 12px; color: #f1ebd9; }
+.admin-shell-account-icon { width: 32px; height: 32px; border: 1px solid rgba(221, 238, 203, .25); border-radius: 50%; display: grid; place-items: center; }
+.admin-shell-account > span:nth-child(2) { min-width: 0; flex: 1; }
+.admin-shell-account small { display: block; color: #c5d3c0; font-size: 10px; }
+.admin-shell-main { min-width: 0; padding: 22px clamp(14px, 2vw, 32px) 64px; }
+.admin-shell-main .reader-page.admin-page { max-width: 1280px; }
+.admin-shell-main .admin-studio-page {
+  width: 100%; max-width: none;
+  margin: 0; position: static; left: auto; transform: none;
+}
+.admin-shell-main .admin-studio-root { margin-top: 20px; }
+.admin-shell-main .admin-studio-layout { grid-template-columns: minmax(290px, .73fr) minmax(0, 1.55fr); gap: 14px; }
+.admin-shell-main .admin-studio-navigator { top: 18px; max-height: calc(100vh - 36px); }
+.admin-shell-fallback { padding: 48px 24px; }
+.admin-shell-mobile-toggle, .admin-shell-overlay { display: none; }
+.admin-shell-skip { z-index: 70; }
+@media (max-width: 1370px) {
+  .admin-shell-main .admin-studio-layout { grid-template-columns: minmax(250px, .8fr) minmax(0, 1.45fr); }
+  .admin-shell-main .admin-studio-metadata-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 1040px) {
+  .admin-shell { display: block; }
+  .admin-shell-mobile-toggle { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; border-bottom: 1px solid var(--border); background: var(--surface); color: var(--text-primary); text-align: left; padding: 0 20px; font-weight: 700; }
+  .admin-shell-mobile-toggle span:first-child { font-size: 21px; }
+  .admin-shell-sidebar { position: fixed; left: 0; bottom: 0; top: 0; width: min(280px, 84vw); min-height: 0; transform: translateX(-103%); transition: transform .22s ease; }
+  .admin-shell-sidebar.is-open { transform: translateX(0); }
+  .admin-shell-overlay { display: block; position: fixed; inset: 0; z-index: 25; width: 100%; background: rgba(0, 0, 0, .58); }
+  .admin-shell-main { padding: 22px 20px 50px; }
+}
+@media (max-width: 760px) {
+  .admin-shell-main { padding: 16px 12px 48px; }
+  .admin-shell-main .admin-studio-layout { grid-template-columns: minmax(0, 1fr); }
+  .admin-shell-main .admin-studio-navigator { position: static; max-height: 390px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell-sidebar, .admin-shell-link { transition: none; }
+}

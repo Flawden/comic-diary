@@ -79,12 +79,9 @@ export default async function AdminComicsPage() {
           </p>
         </div>
 
-        <Link
-          href="/admin"
-          className="rounded-xl border border-black/10 bg-[var(--surface)] px-4 py-2 text-sm font-semibold"
-        >
-          ← Панель управления
-        </Link>
+        <span className="text-xs font-semibold text-[var(--text-accent)]" aria-label="Рабочее пространство администратора">
+          COMIC STUDIO
+        </span>
       </div>
 
       <AdminComicManager

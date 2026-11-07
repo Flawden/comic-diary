@@ -2,6 +2,7 @@
 
 import { expectedReleasePrecision, formatExpectedRelease, formatReleasedAt, isValidExpectedRelease, type ExpectedReleasePrecision } from "@/modules/catalog/chapter-release-dates";
 import { AdminComicList } from "@/modules/catalog/components/AdminComicList";
+import { useLocationHash } from "@/shared/hooks/useLocationHash";
 import { ChapterRevisionSelector } from "@/modules/catalog/components/ChapterRevisionSelector";
 import { AdminChapterList } from "@/modules/catalog/components/AdminChapterList";
 import { ChapterBatchEditor } from "@/modules/catalog/components/ChapterBatchEditor";
@@ -513,7 +514,17 @@ export function AdminComicManager({
   const router =
     useRouter();
 
-  const [studioTab, setStudioTab] = useState<StudioTab>("metadata");
+  const locationHash = useLocationHash();
+  const studioTab: StudioTab = locationHash === "#chapters"
+    ? "chapters"
+    : locationHash === "#publication" ? "publication" : "metadata";
+
+  function selectStudioTab(tab: StudioTab) {
+    if (window.location.hash !== `#${tab}`) {
+      window.history.replaceState(window.history.state, "", `#${tab}`);
+      window.dispatchEvent(new Event("hashchange"));
+    }
+  }
 
   const [chapterFeedback, setChapterFeedback] = useState<{ comicId: number; kind: "error" | "success"; message: string } | null>(null);
   const [chapterEditFeedback, setChapterEditFeedback] = useState<{ chapterId: number; kind: "error" | "success"; message: string } | null>(null);
@@ -592,7 +603,7 @@ export function AdminComicManager({
     // publication tab. Disable native focus-on-invalid there, then guide the
     // editor back to the fields that need attention instead of silently failing.
     if (mode === "update" && studioTab === "publication" && !event.currentTarget.checkValidity()) {
-      setStudioTab("metadata");
+      selectStudioTab("metadata");
       setError("Заполните обязательные поля и проверьте ссылку на вкладке «Метаданные».");
       setMessage(null);
       return;
@@ -1304,7 +1315,7 @@ export function AdminComicManager({
       {error ? <p role="alert" className="admin-studio-feedback is-error">{error}</p> : null}
       {message ? <p role="status" className="admin-studio-feedback is-success">{message}</p> : null}
       <AdminComicList comics={initialComics} categories={categories}
-        onSelectionChange={() => setStudioTab("metadata")}
+        onSelectionChange={() => selectStudioTab("metadata")}
         locked={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null || Object.values(coverUploads).some(Boolean)}>
         {selectedId => <div className="admin-studio-panels">
           <section hidden={selectedId !== null}
@@ -1441,7 +1452,7 @@ export function AdminComicManager({
                       <button key={tab} type="button" disabled={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null}
                         aria-current={studioTab === tab ? "page" : undefined}
                         className={studioTab === tab ? "is-active" : ""}
-                        onClick={() => setStudioTab(tab)}>{label}</button>
+                        onClick={() => selectStudioTab(tab)}>{label}</button>
                     ))}
                   </nav>
 
