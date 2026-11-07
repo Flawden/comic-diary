@@ -372,7 +372,6 @@ function ComicFields({
         </div>
         <div className="admin-studio-metadata-grid">
           <div className="admin-studio-cover-field">
-            <label className="admin-studio-field-label">Обложка</label>
             <CoverUploadField
               disabled={disabled}
               onUploadingChange={onUploadingChange}
@@ -397,6 +396,13 @@ function ComicFields({
                   {categories.map(item => <option key={item.id} value={item.slug}>{item.name}</option>)}
                 </select>
               </label>
+              <label>Автор
+                <input name="authorName" defaultValue={comic?.authorName ?? ""} className={inputClass} />
+              </label>
+              <label>Переводчик / команда
+                <input name="translatorName" defaultValue={comic?.translatorName ?? ""} className={inputClass} />
+              </label>
+              <WorkMetadataFields workType={comic?.workType} workFormat={comic?.workFormat} />
               <label>Source URL *
                 <input name="sourceUrl" type="url" required defaultValue={comic?.sourceUrl ?? ""}
                   placeholder="https://..." className={inputClass} />
@@ -408,15 +414,8 @@ function ComicFields({
           </div>
         </div>
         <details className="admin-studio-advanced">
-          <summary>Дополнительные сведения <span>Авторство, формат, общее число глав, примечания</span></summary>
+          <summary>Дополнительные сведения <span>Количество глав и примечания</span></summary>
           <div className="admin-studio-field-grid">
-            <label>Автор
-              <input name="authorName" defaultValue={comic?.authorName ?? ""} className={inputClass} />
-            </label>
-            <label>Переводчик
-              <input name="translatorName" defaultValue={comic?.translatorName ?? ""} className={inputClass} />
-            </label>
-            <WorkMetadataFields workType={comic?.workType} workFormat={comic?.workFormat} />
             <label>Заявлено глав (справочно)
               <input name="totalChapters" type="number" min={0} step={1}
                 defaultValue={comic?.totalChapters ?? ""} className={inputClass} />

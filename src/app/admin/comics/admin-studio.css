@@ -103,6 +103,19 @@
 .admin-studio-field-label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700; }
 .admin-studio-field-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
 .admin-studio-field-grid > label, .admin-studio-description-label { display: block; min-width: 0; font-size: 12px; font-weight: 650; }
+/* Match the shared work-type/format controls to the studio field rhythm. */
+.admin-studio-core-fields .admin-studio-field-grid > label > span:first-child {
+  font-size: 12px;
+  font-weight: 650;
+  margin-bottom: 0;
+}
+.admin-studio-core-fields .admin-studio-field-grid > label > select:not(.admin-studio-input) {
+  display: block;
+  width: 100%;
+  min-height: 43px;
+  margin-top: 6px;
+  border-radius: 9px;
+}
 .admin-studio-input { display: block; width: 100%; min-height: 43px; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-raised); color: var(--text-primary); font-size: 14px; font-weight: 400; }
 .admin-studio-input[readonly] { opacity: .65; }
 .admin-studio-input::placeholder { color: var(--text-muted); }
