@@ -344,248 +344,111 @@ function comicPayload(
   };
 }
 
+type StudioTab = "metadata" | "chapters" | "publication";
+
 function ComicFields({
   categories,
   comic,
   create,
   disabled,
   onUploadingChange,
+  activeTab,
 }: {
   categories: Category[];
   comic?: AdminComic;
   create: boolean;
   disabled: boolean;
   onUploadingChange: (uploading: boolean) => void;
+  activeTab?: StudioTab;
 }) {
+  const inputClass = "admin-studio-input";
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">
-            Slug
-          </span>
-
-          <input
-            name="slug"
-            required
-            readOnly={!create}
-            defaultValue={
-              comic?.slug ??
-              ""
-            }
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 read-only:bg-[var(--surface)]"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">
-            Название
-          </span>
-
-          <input
-            name="title"
-            required
-            defaultValue={
-              comic?.title ??
-              ""
-            }
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">
-            Категория
-          </span>
-
-          <select
-            name="categorySlug"
-            required
-            defaultValue={
-              comic?.categorySlug ??
-              ""
-            }
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
-          >
-            <option
-              value=""
-              disabled
-            >
-              Выберите категорию
-            </option>
-
-            {categories.map(
-              (category) => (
-                <option
-                  key={
-                    category.id
-                  }
-                  value={
-                    category.slug
-                  }
-                >
-                  {category.name}
-                </option>
-              ),
-            )}
-          </select>
-        </label>
-
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">
-            Статус публикации
-          </span>
-
-          <select
-            name="publicationStatus"
-            defaultValue={
-              comic?.publicationStatus ??
-              "PUBLISHED"
-            }
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
-          >
-            {(
-              Object.entries(
-                publicationStatusLabels,
-              ) as [
-                PublicationStatus,
-                string,
-              ][]
-            ).map(
-              ([
-                value,
-                label,
-              ]) => (
-                <option
-                  key={value}
-                  value={value}
-                >
-                  {label}
-                </option>
-              ),
-            )}
-          </select>
-        </label>
-
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">
-            Автор
-          </span>
-
-          <input
-            name="authorName"
-            defaultValue={
-              comic?.authorName ??
-              ""
-            }
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">
-            Переводчик
-          </span>
-
-          <input
-            name="translatorName"
-            defaultValue={
-              comic?.translatorName ??
-              ""
-            }
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
-          />
-        </label>
-
-        <WorkMetadataFields workType={comic?.workType} workFormat={comic?.workFormat} />
-<label className="block">
-          <span className="mb-1 block text-sm font-medium">Статус выпуска</span>
-          <select name="seriesStatus" defaultValue={comic?.seriesStatus ?? "UNKNOWN"} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
-            {Object.entries(seriesStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-          <span className="mt-1 block text-xs text-[var(--text-secondary)]">Выпуск произведения. Видимость в каталоге задаётся отдельно.</span>
-        </label>
-
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">
-            Заявлено глав (справочно)
-          </span>
-
-          <input
-            type="number"
-            name="totalChapters"
-            min={0}
-            step={1}
-            defaultValue={
-              comic?.totalChapters ??
-              ""
-            }
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">
-            Source URL
-          </span>
-
-          <input
-            type="url"
-            name="sourceUrl"
-            required
-            defaultValue={
-              comic?.sourceUrl ??
-              ""
-            }
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
-          />
-        </label>
-
-        <CoverUploadField
-          disabled={disabled}
-          onUploadingChange={onUploadingChange}
-          key={
-            comic?.id ??
-            "new-comic"
-          }
-          defaultValue={
-            comic?.coverUrl ??
-            ""
-          }
-        />
+      <div hidden={activeTab === "chapters" || activeTab === "publication"}>
+        <div className="admin-studio-section-heading">
+          <h3>Основная информация</h3>
+          <p>Данные, которые читатель увидит в каталоге.</p>
+        </div>
+        <div className="admin-studio-metadata-grid">
+          <div className="admin-studio-cover-field">
+            <label className="admin-studio-field-label">Обложка</label>
+            <CoverUploadField
+              disabled={disabled}
+              onUploadingChange={onUploadingChange}
+              key={comic?.id ?? "new-comic"}
+              defaultValue={comic?.coverUrl ?? ""}
+            />
+          </div>
+          <div className="admin-studio-core-fields">
+            <div className="admin-studio-field-grid">
+              <label>Название *
+                <input name="title" required defaultValue={comic?.title ?? ""} className={inputClass} />
+              </label>
+              <label>Slug *
+                <input name="slug" required readOnly={!create}
+                  defaultValue={comic?.slug ?? ""} className={inputClass}
+                  aria-describedby={create ? undefined : `comic-slug-note-${comic?.id}`} />
+                {!create && <span id={`comic-slug-note-${comic?.id}`} className="admin-studio-field-hint">Не изменяется после создания.</span>}
+              </label>
+              <label>Категория *
+                <select name="categorySlug" required defaultValue={comic?.categorySlug ?? ""} className={inputClass}>
+                  <option value="" disabled>Выберите категорию</option>
+                  {categories.map(item => <option key={item.id} value={item.slug}>{item.name}</option>)}
+                </select>
+              </label>
+              <label>Source URL *
+                <input name="sourceUrl" type="url" required defaultValue={comic?.sourceUrl ?? ""}
+                  placeholder="https://..." className={inputClass} />
+              </label>
+            </div>
+            <label className="admin-studio-description-label">Описание
+              <textarea name="description" rows={5} defaultValue={comic?.description ?? ""} className={inputClass} />
+            </label>
+          </div>
+        </div>
+        <details className="admin-studio-advanced">
+          <summary>Дополнительные сведения <span>Авторство, формат, общее число глав, примечания</span></summary>
+          <div className="admin-studio-field-grid">
+            <label>Автор
+              <input name="authorName" defaultValue={comic?.authorName ?? ""} className={inputClass} />
+            </label>
+            <label>Переводчик
+              <input name="translatorName" defaultValue={comic?.translatorName ?? ""} className={inputClass} />
+            </label>
+            <WorkMetadataFields workType={comic?.workType} workFormat={comic?.workFormat} />
+            <label>Заявлено глав (справочно)
+              <input name="totalChapters" type="number" min={0} step={1}
+                defaultValue={comic?.totalChapters ?? ""} className={inputClass} />
+            </label>
+            <label className="admin-studio-full">Примечание переводчика
+              <textarea name="translatorNote" rows={3}
+                defaultValue={comic?.translatorNote ?? ""} className={inputClass} />
+            </label>
+          </div>
+        </details>
       </div>
-
-      <label className="mt-4 block">
-        <span className="mb-1 block text-sm font-medium">
-          Описание
-        </span>
-
-        <textarea
-          name="description"
-          rows={4}
-          defaultValue={
-            comic?.description ??
-            ""
-          }
-          className="w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
-        />
-      </label>
-
-      <label className="mt-4 block">
-        <span className="mb-1 block text-sm font-medium">
-          Примечание переводчика
-        </span>
-
-        <textarea
-          name="translatorNote"
-          rows={3}
-          defaultValue={
-            comic?.translatorNote ??
-            ""
-          }
-          className="w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
-        />
-      </label>
+      <section hidden={activeTab !== undefined && activeTab !== "publication"}
+        className="admin-studio-publication-section">
+        <div className="admin-studio-section-heading">
+          <h3>Публикация и видимость</h3>
+          <p>Видимость в каталоге не связана со статусом выхода самого произведения.</p>
+        </div>
+        <div className="admin-studio-field-grid">
+          <label>Статус в каталоге
+            <select name="publicationStatus" defaultValue={comic?.publicationStatus ?? "PUBLISHED"} className={inputClass}>
+              {(Object.entries(publicationStatusLabels) as [PublicationStatus, string][]).map(([value, label]) =>
+                <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+          <label>Статус выхода
+            <select name="seriesStatus" defaultValue={comic?.seriesStatus ?? "UNKNOWN"} className={inputClass}>
+              {Object.entries(seriesStatusLabels).map(([value, label]) =>
+                <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+        </div>
+        <p className="admin-studio-section-note">Настройки вступят в силу только после сохранения изменений.</p>
+      </section>
     </>
   );
 }
@@ -649,6 +512,8 @@ export function AdminComicManager({
 }: Props) {
   const router =
     useRouter();
+
+  const [studioTab, setStudioTab] = useState<StudioTab>("metadata");
 
   const [chapterFeedback, setChapterFeedback] = useState<{ comicId: number; kind: "error" | "success"; message: string } | null>(null);
   const [chapterEditFeedback, setChapterEditFeedback] = useState<{ chapterId: number; kind: "error" | "success"; message: string } | null>(null);
@@ -714,6 +579,24 @@ export function AdminComicManager({
     immutableSlug?: string,
   ) {
     event.preventDefault();
+
+    // The chapter editor shares the DOM form with the comic metadata for now.
+    // Pressing Enter in chapter fields must never submit comic metadata.
+    if (mode === "update" && studioTab === "chapters") {
+      setError("Для изменения глав используйте действия во вкладке «Главы».");
+      setMessage(null);
+      return;
+    }
+
+    // Required metadata inputs remain mounted but are visually hidden on the
+    // publication tab. Disable native focus-on-invalid there, then guide the
+    // editor back to the fields that need attention instead of silently failing.
+    if (mode === "update" && studioTab === "publication" && !event.currentTarget.checkValidity()) {
+      setStudioTab("metadata");
+      setError("Заполните обязательные поля и проверьте ссылку на вкладке «Метаданные».");
+      setMessage(null);
+      return;
+    }
 
     const key =
       mode === "create"
@@ -1417,34 +1300,22 @@ export function AdminComicManager({
   }
 
   return (
-    <div className="mt-8 space-y-8">
-      {error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800"
-        >
-          {error}
-        </p>
-      ) : null}
-
-      {message ? (
-        <p
-          role="status"
-          className="rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-800"
-        >
-          {message}
-        </p>
-      ) : null}
-
-      <details
+    <div className="admin-studio-root">
+      {error ? <p role="alert" className="admin-studio-feedback is-error">{error}</p> : null}
+      {message ? <p role="status" className="admin-studio-feedback is-success">{message}</p> : null}
+      <AdminComicList comics={initialComics} categories={categories}
+        onSelectionChange={() => setStudioTab("metadata")}
+        locked={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null || Object.values(coverUploads).some(Boolean)}>
+        {selectedId => <div className="admin-studio-panels">
+          <section hidden={selectedId !== null}
         className={[
-          "group rounded-2xl",
+          "admin-studio-create-panel group rounded-2xl",
           "border border-[var(--border)]",
           "bg-[var(--surface)]",
           "shadow-[var(--cd-shadow-card)]",
         ].join(" ")}
       >
-        <summary
+        <header
           className={[
             "flex min-h-14 cursor-pointer list-none",
             "items-center justify-between gap-3",
@@ -1467,7 +1338,7 @@ export function AdminComicManager({
           >
             +
           </span>
-        </summary>
+        </header>
 
         <div
           className={[
@@ -1531,44 +1402,17 @@ export function AdminComicManager({
             </form>
           )}
         </div>
-      </details>
-
-      <section>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--text-primary)]">
-              Комиксы
-            </h2>
-
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              Открой комикс, чтобы изменить данные или управлять главами.
-            </p>
-          </div>
-
-          <p className="text-sm text-[var(--muted)]">
-            Всего: {initialComics.length}
-          </p>
-        </div>
-
-        {initialComics.length ===
-        0 ? (
-          <p className="mt-4 text-[var(--muted)]">
-            Комиксов пока нет.
-          </p>
-        ) : (
-          <AdminComicList comics={initialComics} categories={categories}
-            locked={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null || Object.values(coverUploads).some(Boolean)}>
-            {visibleIds => <div className="mt-4 space-y-5">
-            {initialComics.map(
+      </section>
+                      {initialComics.map(
               (comic) => (
-                <details
-                  hidden={!visibleIds.has(comic.id)}
+                <article
+                  hidden={selectedId !== comic.id}
                   key={
                     comic.id
                   }
-                  className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--cd-shadow-card)]"
+                  className="admin-studio-comic-panel rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--cd-shadow-card)]"
                 >
-                  <summary className="cursor-pointer list-none">
+                  <header className="admin-studio-comic-header">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <h3 className="font-semibold">
@@ -1590,9 +1434,19 @@ export function AdminComicManager({
                           "Без категории"}
                       </span>
                     </div>
-                  </summary>
+                  </header>
+
+                  <nav className="admin-studio-tabs" aria-label="Разделы произведения">
+                    {([ ["metadata", "Метаданные"], ["chapters", "Главы"], ["publication", "Публикация"] ] as const).map(([tab, label]) => (
+                      <button key={tab} type="button" disabled={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null}
+                        aria-current={studioTab === tab ? "page" : undefined}
+                        className={studioTab === tab ? "is-active" : ""}
+                        onClick={() => setStudioTab(tab)}>{label}</button>
+                    ))}
+                  </nav>
 
                   <form
+                    noValidate={studioTab !== "metadata"}
                     onSubmit={(
                       event,
                     ) =>
@@ -1605,6 +1459,7 @@ export function AdminComicManager({
                     className="mt-6 border-t border-[var(--border)] pt-6"
                   >
                     <ComicFields
+                      activeTab={studioTab}
                       disabled={busyKey !== null}
                       onUploadingChange={uploading => setCoverUploads(previous => ({ ...previous, [comic.slug]: uploading }))}
                       categories={
@@ -1624,7 +1479,7 @@ export function AdminComicManager({
                       </p>
                     ) : null}
 
-                    <section className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--background)] p-4">
+                    <section hidden={studioTab !== "chapters"} className="admin-studio-chapters-panel mt-6 rounded-xl border border-[var(--border)] bg-[var(--background)] p-4">
                       <h4 className="font-semibold">
                         Главы
                       </h4>
@@ -2141,7 +1996,7 @@ export function AdminComicManager({
                       </div>
                     </section>
 
-                    <div className="mt-5 flex flex-wrap items-center gap-4">
+                    <div hidden={studioTab === "chapters"} className="mt-5 flex flex-wrap items-center gap-4">
                       <button
                         type="submit"
                         disabled={
@@ -2164,13 +2019,11 @@ export function AdminComicManager({
                       </a>
                     </div>
                   </form>
-                </details>
+                </article>
               ),
             )}
-          </div>}
-          </AdminComicList>
-        )}
-      </section>
+        </div>}
+      </AdminComicList>
     </div>
   );
 }

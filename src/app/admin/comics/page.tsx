@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import "./admin-studio.css";
+
 import {
   redirect,
 } from "next/navigation";
@@ -61,7 +63,7 @@ export default async function AdminComicsPage() {
     ]);
 
   return (
-    <div className="reader-page admin-page">
+    <div className="reader-page admin-page admin-studio-page">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-[var(--primary)]">
@@ -73,8 +75,7 @@ export default async function AdminComicsPage() {
           </h1>
 
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-            Slug — канонический идентификатор:
-            после создания он не переименовывается.
+            Компактная рабочая область для произведений, глав и публикации.
           </p>
         </div>
 
