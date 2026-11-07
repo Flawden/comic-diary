@@ -42,19 +42,29 @@
 .admin-shell-account small { display: block; color: #c5d3c0; font-size: 10px; }
 .admin-shell-main { min-width: 0; padding: 22px clamp(14px, 2vw, 32px) 64px; }
 .admin-shell-main .reader-page.admin-page { max-width: 1280px; }
-.admin-shell-main .admin-studio-page {
-  width: 100%; max-width: none;
+.admin-shell-main .reader-page.admin-page.admin-studio-page {
+  /* The ordinary admin page remains capped, but the studio must use the full viewport. */
+  width: 100%;
+  max-width: none;
   margin: 0; position: static; left: auto; transform: none;
 }
 .admin-shell-main .admin-studio-root { margin-top: 20px; }
-.admin-shell-main .admin-studio-layout { grid-template-columns: minmax(290px, .73fr) minmax(0, 1.55fr); gap: 14px; }
+.admin-shell-main .admin-studio-layout {
+  grid-template-columns: clamp(300px, 26vw, 380px) minmax(0, 1fr);
+  gap: 18px;
+}
 .admin-shell-main .admin-studio-navigator { top: 18px; max-height: calc(100vh - 36px); }
 .admin-shell-fallback { padding: 48px 24px; }
 .admin-shell-mobile-toggle, .admin-shell-overlay { display: none; }
 .admin-shell-skip { z-index: 70; }
 @media (max-width: 1370px) {
-  .admin-shell-main .admin-studio-layout { grid-template-columns: minmax(250px, .8fr) minmax(0, 1.45fr); }
+  .admin-shell-main .admin-studio-layout { grid-template-columns: minmax(270px, 33%) minmax(0, 1fr); }
   .admin-shell-main .admin-studio-metadata-grid { grid-template-columns: minmax(0, 1fr); }
+}
+/* Below laptop widths, keep forms usable instead of squeezing two work panes. */
+@media (max-width: 1160px) {
+  .admin-shell-main .admin-studio-layout { grid-template-columns: minmax(0, 1fr); }
+  .admin-shell-main .admin-studio-navigator { position: static; max-height: 380px; }
 }
 @media (max-width: 1040px) {
   .admin-shell { display: block; }
