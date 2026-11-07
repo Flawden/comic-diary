@@ -37,6 +37,9 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Canonical Origin and Host regression tests
+        run: node --import tsx --test src/modules/auth/request-origin.test.ts
+
       - name: Reading destination rules
         run: node --import tsx --test src/modules/comics/work-metadata.test.ts src/modules/library/reading-target.test.ts src/modules/library/list-navigation.test.ts src/modules/library/chapter-rating-summary.test.ts src/modules/library/chapter-reading-model.test.ts src/modules/catalog/chapter-release-dates.test.ts src/modules/catalog/chapter-volumes.test.ts src/modules/library/queries/reading-updates-model.test.ts
 
