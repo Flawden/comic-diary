@@ -19,6 +19,8 @@ export type CatalogComic = {
   translatorName: string | null;
   translatorNote: string | null;
   coverUrl: string | null;
+  // Optional so older catalog imports do not overwrite manually assigned art.
+  bannerUrl?: string | null;
   sourceUrl: string;
   totalChapters: number | null;
   publicationStatus: ComicPublicationStatus;

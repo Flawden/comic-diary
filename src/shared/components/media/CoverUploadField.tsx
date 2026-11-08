@@ -18,6 +18,12 @@ type CoverUploadFieldProps = {
   value?: string;
   onValueChange?: (value: string) => void;
   uploadSuccessMessage?: string;
+  fieldName?: "coverUrl" | "bannerUrl";
+  uploadingFieldName?: "coverUploading" | "bannerUploading";
+  label?: string;
+  widePreview?: boolean;
+  allowExternalUrl?: boolean;
+  canClear?: boolean;
   disabled?: boolean;
   onUploadingChange?: (uploading: boolean) => void;
 };
@@ -62,6 +68,12 @@ export function CoverUploadField({
   value,
   onValueChange,
   uploadSuccessMessage = "Обложка загружена. Нажмите «Сохранить изменения», чтобы закрепить её за тайтлом.",
+  fieldName = "coverUrl",
+  uploadingFieldName = "coverUploading",
+  label = "Обложка",
+  widePreview = false,
+  allowExternalUrl = true,
+  canClear = false,
   disabled = false,
   onUploadingChange,
 }: CoverUploadFieldProps) {
@@ -208,22 +220,23 @@ export function CoverUploadField({
        * comic form contract, but it is now
        * filled automatically after upload.
        */}
-      <input type="hidden" name="coverUploading" value={uploading ? "yes" : "no"} />
+      <input type="hidden" name={uploadingFieldName} value={uploading ? "yes" : "no"} />
       <input
         type="hidden"
-        name="coverUrl"
+        name={fieldName}
         value={url}
       />
 
       <span className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">
-        Обложка
+        {label}
       </span>
 
-      <div className="grid gap-4 sm:grid-cols-[112px_1fr]">
+      <div className={widePreview ? "grid gap-4 md:grid-cols-[minmax(200px,1fr)_minmax(200px,1fr)]" : "grid gap-4 sm:grid-cols-[112px_1fr]"}>
         <CoverImage
           src={url}
-          alt="Предпросмотр обложки"
-          className="aspect-[3/4] w-28 rounded-[var(--cd-radius-card)] border border-[var(--border)]"
+          alt={`Предпросмотр: ${label.toLowerCase()}`}
+          fallback={widePreview ? "Фон не задан" : "Нет обложки"}
+          className={widePreview ? "aspect-video w-full rounded-[var(--cd-radius-card)] border border-[var(--border)]" : "aspect-[3/4] w-28 rounded-[var(--cd-radius-card)] border border-[var(--border)]"}
         />
 
         <div className="space-y-4">
@@ -305,7 +318,15 @@ export function CoverUploadField({
             </p>
           ) : null}
 
-          <details
+          {canClear && url ? (
+            <button type="button" disabled={uploading || disabled}
+              onClick={() => { setUrl(""); setSelectedName(null); setMessage("Фон будет убран после сохранения."); }}
+              className="min-h-11 rounded-xl border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] disabled:opacity-60">
+              Убрать фон
+            </button>
+          ) : null}
+
+          {allowExternalUrl ? <details
             className="rounded-xl border border-[var(--border)] bg-[var(--surface)]"
           >
             <summary
@@ -349,7 +370,7 @@ export function CoverUploadField({
                 ].join(" ")}
               />
             </div>
-          </details>
+          </details> : null}
         </div>
       </div>
     </div>

@@ -117,6 +117,7 @@ function parseCatalogComic(
     !isNullableString(
       value.coverUrl,
     ) ||
+    (value.bannerUrl !== undefined && !isNullableString(value.bannerUrl)) ||
     typeof value.sourceUrl !==
       "string" ||
     typeof value.categorySlug !==
@@ -176,6 +177,8 @@ function parseCatalogComic(
 
     coverUrl:
       value.coverUrl,
+
+    bannerUrl: value.bannerUrl as string | null | undefined,
 
     sourceUrl:
       value.sourceUrl,

@@ -44,6 +44,7 @@ export async function getComicBySlug(
       translatorName: comics.translatorName,
       translatorNote: comics.translatorNote,
       coverUrl: comics.coverUrl,
+      bannerUrl: comics.bannerUrl,
       sourceUrl: comics.sourceUrl,
       seriesStatus: comics.seriesStatus,
       workType: comics.workType,

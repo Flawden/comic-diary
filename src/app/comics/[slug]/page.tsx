@@ -103,46 +103,65 @@ export default async function ComicPage({
   const savedRating = readingState ? calculateAverageRating(readingState) : null;
   const c=target.chapter;
   const caption=target.direct && c ? (continuing?"Продолжить":"Читать")+(c.displayCode?" · глава "+c.displayCode:"") : target.source?.label;
+  const visibleChapters = registry.filter(
+    (chapter) => chapter.status === "RELEASED" || chapter.status === "SCHEDULED" ||
+      (chapter.status === "ARCHIVED" && readIds.includes(chapter.id)),
+  );
   return <WorkPreferences key={comic.id} comicId={comic.id} initial={readingState?.promptChapterRating ?? true}>
     <article className="wd-work">
       <Link href={back.href} className="reader-back">← {back.label}</Link>
-      <header className="wd-hero">
+      <header className={`wd-hero${comic.bannerUrl ? " wd-hero--banner" : ""}`}
+        style={comic.bannerUrl ? {
+          backgroundImage: `url("${comic.bannerUrl}"), url("/art/reader-hills.svg")`,
+        } : undefined}>
         <CoverImage src={comic.coverUrl} alt={`Обложка: ${comic.title}`} className="wd-cover" imageClassName="object-contain" fallback={comic.title}/>
-        <div className="wd-identity"><p>{comic.categoryName}</p><h1>{comic.title}</h1>
-          <span>{[comic.workType!=="UNKNOWN" && workTypeLabels[comic.workType],new Intl.NumberFormat("ru").format(total)+" "+({one:"глава",few:"главы",many:"глав"}[new Intl.PluralRules("ru").select(total) as "one"|"few"|"many"]??"глав")].filter(Boolean).join(" · ")}</span>
-          {comic.seriesStatus!=="UNKNOWN" && <small>● {seriesStatusLabels[comic.seriesStatus]}</small>}
-            {comic.visibility === "PRIVATE" ? (
-              <p className="mt-4 inline-flex rounded-full border border-[var(--primary)]/30 bg-[var(--background)] px-3 py-1 text-xs font-semibold text-[var(--primary)]">
-                Личный тайтл
-              </p>
-            ) : null}
-
+        <div className="wd-identity">
+          <p className="wd-hero-eyebrow">{comic.categoryName}</p>
+          <h1>{comic.title}</h1>
+          <span className="wd-hero-meta">{[comic.workType!=="UNKNOWN" && workTypeLabels[comic.workType],new Intl.NumberFormat("ru").format(total)+" "+({one:"глава",few:"главы",many:"глав"}[new Intl.PluralRules("ru").select(total) as "one"|"few"|"many"]??"глав")].filter(Boolean).join(" · ")}</span>
+          <div className="wd-hero-badges">
+            {comic.seriesStatus!=="UNKNOWN" && <small>● {seriesStatusLabels[comic.seriesStatus]}</small>}
+            {comic.visibility === "PRIVATE" ? <small>Личный тайтл</small> : null}
             {comic.publicationStatus !== "PUBLISHED" ? (
-              <p className="mt-4 inline-flex rounded-full border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-                {comic.publicationStatus === "HIDDEN"
-                  ? "Скрыт из публичного каталога"
-                  : "Архивный комикс"}
-              </p>
+              <small>{comic.publicationStatus === "HIDDEN" ? "Скрыт из публичного каталога" : "Архивный комикс"}</small>
             ) : null}
-
-
+          </div>
+          <div className="wd-hero-actions">
+            {target.source ? <a className="wd-read" href={target.source.href} target="_blank" rel="noopener noreferrer"><strong>{caption} ↗</strong>{c && target.direct && c.title && <span>{c.title}</span>}</a>:<a href="#chapters" className="wd-read">К главам ↓</a>}
+            <div className="wd-shelf"><ShelfAction comicId={comic.id} member={!!readingState?.inLibrary} hasDiary={readingState !== null} login={currentUser?null:`/login?next=${encodeURIComponent("/comics/"+comic.slug)}`}/></div>
+          </div>
         </div>
       </header>
-      {target.source ? <a className="wd-read" href={target.source.href} target="_blank" rel="noopener noreferrer"><strong>{caption} ↗</strong>{c && target.direct && c.title && <span>{c.title}</span>}</a>:<a href="#chapters" className="wd-read">К главам ↓</a>}
       {c && !target.direct && <p className="wd-hint">Прямой ссылки на главу пока нет.{target.source?" Откроется общий источник истории.":""}</p>}
       {target.state==="CAUGHT_UP" && <p className="wd-hint">Все вышедшие основные главы прочитаны.</p>}
-      <div className="wd-shelf"><ShelfAction comicId={comic.id} member={!!readingState?.inLibrary} hasDiary={readingState !== null} login={currentUser?null:`/login?next=${encodeURIComponent("/comics/"+comic.slug)}`}/></div>
       <WorkTabs count={total} chapters={
-            <ChapterReadingPanel
-              comicId={comic.id}
-              readerId={currentUser?.id ?? null}
-              chapters={(readingState?.chapterReading.registry ?? chapters)
-                .filter((c) => c.status === "RELEASED" || c.status === "SCHEDULED" || (c.status === "ARCHIVED" && readingState?.chapterReading.readIds.includes(c.id)))
-                .map((c) => ({ id: c.id, displayCode: c.displayCode, title: c.title, sourceUrl: c.status === "RELEASED" ? c.sourceUrl : null, sortOrder: c.sortOrder, volumeNumber: c.volumeNumber, status: c.status, kind: c.kind, supersedesChapterId: c.supersedesChapterId, expectedRelease: c.expectedRelease }))}
-              ratings={readingState?.chapterReading.ratings ?? {}}
-              readIds={readingState?.chapterReading.readIds ?? []}
-              canMark={readingState?.inLibrary === true}
-            />
+        <div className={`wd-chapter-content${visibleChapters.length === 0 ? " wd-chapter-content--empty" : ""}`}>
+          {visibleChapters.length === 0 ? (
+            <div className="wd-empty-state">
+              <div className="wd-empty-chapter-art" aria-hidden="true">
+                <svg viewBox="0 0 192 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="96" cy="49" r="46" fill="currentColor" opacity=".07"/>
+                  <path d="M29 30c23-7 45-3 67 10 22-13 44-17 67-10v57c-25-4-47 0-67 13-20-13-44-17-67-13V30Z" stroke="currentColor" strokeWidth="2.3" strokeLinejoin="round"/>
+                  <path d="M96 40v59M39 42c19-3 34 1 48 8M39 54c19-3 34 1 48 8M105 50c16-8 30-11 48-8M105 62c16-8 30-11 48-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".65"/>
+                  <path d="M126 30v24l-8-6-8 6V31" fill="currentColor" opacity=".42"/>
+                </svg>
+              </div>
+              <div className="wd-empty-state-copy">
+                <p className="wd-empty-state-eyebrow">ЧИТАТЕЛЬСКИЙ ДНЕВНИК</p>
+                <h2>В этом разделе пока нет глав</h2>
+                <p>Когда главы появятся, здесь можно будет отмечать чтение и возвращаться к истории.</p>
+              </div>
+            </div>
+          ) : null}
+          <ChapterReadingPanel
+            comicId={comic.id}
+            readerId={currentUser?.id ?? null}
+            chapters={visibleChapters.map((chapter) => ({ id: chapter.id, displayCode: chapter.displayCode, title: chapter.title, sourceUrl: chapter.status === "RELEASED" ? chapter.sourceUrl : null, sortOrder: chapter.sortOrder, volumeNumber: chapter.volumeNumber, status: chapter.status, kind: chapter.kind, supersedesChapterId: chapter.supersedesChapterId, expectedRelease: chapter.expectedRelease }))}
+            ratings={readingState?.chapterReading.ratings ?? {}}
+            readIds={readingState?.chapterReading.readIds ?? []}
+            canMark={readingState?.inLibrary === true}
+          />
+        </div>
       } about={<div className="wd-about">
         <StoryExcerpt heading="Описание" text={comic.description}/>
         <StoryExcerpt heading="Примечание переводчика" text={comic.translatorNote}/>

@@ -180,6 +180,8 @@ export const comics = pgTable(
 
     coverUrl: text("cover_url"),
 
+    bannerUrl: text("banner_url"),
+
     sourceUrl: text("source_url").notNull(),
 
     totalChapters: integer("total_chapters"),
