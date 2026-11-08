@@ -37,7 +37,7 @@ function source(
   return readFileSync(
     resolved,
     "utf8",
-  );
+  ).replace(/\r\n?/g, "\n");
 }
 
 const access =

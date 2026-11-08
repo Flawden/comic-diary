@@ -8,7 +8,7 @@ function source(
   return readFileSync(
     path,
     "utf8",
-  );
+  ).replace(/\r\n?/g, "\n");
 }
 
 function assert(
