@@ -1,12 +1,10 @@
 "use client";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { writeReading } from "./reading-state-client";
+import { RemoveFromLibraryControl } from "./RemoveFromLibraryControl";
 
-export async function writeReading(comicId: number, fields: Record<string,string>) {
-  const res = await fetch("/api/library/reading-state", {method:"POST", headers:{Accept:"application/json"},
-    body:new URLSearchParams({comicId:String(comicId), ...fields})});
-  if (!res.ok || !(await res.json()).ok) throw new Error("Не удалось сохранить.");
-}
+export { writeReading };
 
 const Pref = createContext({enabled:true, busy:false, save: async (_enabled:boolean) => { void _enabled; }});
 export function WorkPreferences({comicId, initial, children}:{comicId:number; initial:boolean; children:ReactNode}) {
@@ -29,11 +27,11 @@ export function PromptSwitch({inverse=false}:{inverse?:boolean}) {
     <input type="checkbox" checked={inverse?!enabled:enabled} disabled={busy} onChange={async()=>{setError("");try{await save(!enabled);}catch{setError("Не удалось сохранить настройку.");}}}/></label>
     {error && <small role="alert">{error}</small>}</div>;
 }
-export function ShelfAction({comicId, member, login}:{comicId:number;member:boolean;login:string|null}) {
+export function ShelfAction({comicId, member, hasDiary, login}:{comicId:number;member:boolean;hasDiary:boolean;login:string|null}) {
   const router=useRouter(), [pending,setPending]=useState(false), [error,setError]=useState("");
-  if(member) return <a href="#my-reading" className="wd-bookmark">✓ В дневнике</a>;
+  if(member) return <div className="wd-shelf-actions"><a href="#my-reading" className="wd-bookmark">✓ В дневнике</a><RemoveFromLibraryControl comicId={comicId} variant="work" /></div>;
   if(login) return <a className="wd-bookmark" href={login}>Войти в дневник</a>;
-  return <div><button type="button" className="wd-bookmark" disabled={pending} onClick={async()=>{setPending(true);setError("");try{await writeReading(comicId,{intent:"add-to-library"});router.refresh();}catch{setPending(false);setError("Не удалось добавить. Попробуйте ещё раз.");}}}>{pending?"Добавляем…":"＋ В дневник"}</button>{error && <small role="alert">{error}</small>}</div>;
+  return <div><button type="button" className="wd-bookmark" disabled={pending} onClick={async()=>{setPending(true);setError("");try{await writeReading(comicId,{intent:"add-to-library"});router.refresh();}catch{setPending(false);setError("Не удалось добавить. Попробуйте ещё раз.");}}}>{pending?"Добавляем…":hasDiary?"＋ Вернуть в библиотеку":"＋ В дневник"}</button>{error && <small role="alert">{error}</small>}</div>;
 }
 
 const tabs=[["chapters","Главы"],["about","Об истории"],["my-reading","Мой дневник"]] as const;

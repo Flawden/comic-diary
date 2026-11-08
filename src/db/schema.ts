@@ -663,6 +663,7 @@ export const userComics = pgTable(
 
     promptChapterRating: boolean("prompt_chapter_rating").default(true).notNull(),
     trackingEnabled: boolean("tracking_enabled").default(true).notNull(),
+    inLibrary: boolean("in_library").default(true).notNull(),
 
     currentChapter: integer("current_chapter")
       .default(0)

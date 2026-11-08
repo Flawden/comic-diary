@@ -647,6 +647,22 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 .wd-read span,.wd-hint {font-size:.875rem}.wd-hint {text-align:center;color:var(--text-secondary);margin-top:5px}
 .wd-shelf {text-align:center;margin:8px 0}
 .wd-bookmark {display:inline-grid;align-items:center;min-height:44px;border-radius:8px;padding:0 14px;color:var(--primary);font-weight:600}
+
+.library-remove-control { margin-top: 12px; min-width: 0; }
+.library-remove-trigger { display: inline-flex; align-items: center; min-height: 40px; border: 1px solid var(--border); border-radius: 10px; padding: 7px 11px; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.library-remove-trigger:hover, .wd-bookmark-remove:hover { border-color: var(--primary); color: var(--text-primary); }
+.library-remove-confirm { margin-top: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-raised); }
+.library-remove-confirm p { color: var(--text-secondary); font-size: 12px; line-height: 1.55; }
+.library-remove-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.library-remove-actions button { min-height: 40px; border: 1px solid var(--border); border-radius: 9px; padding: 7px 12px; font-size: 12px; font-weight: 650; }
+.library-remove-actions button[data-action="confirm"] { background: var(--surface); color: var(--text-primary); }
+.library-remove-actions button[data-action="cancel"] { color: var(--text-secondary); }
+.library-remove-actions button:disabled { cursor: wait; opacity: .6; }
+.library-remove-error { margin-top: 7px; color: var(--text-secondary); font-size: 12px; }
+.wd-shelf-actions { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 10px; }
+.wd-bookmark-remove { border: 1px solid var(--border); color: var(--text-secondary); font-size: .8rem; }
+.library-remove-control.is-work { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 0; }
+.library-remove-control.is-work .library-remove-confirm { max-width: 360px; margin-inline: auto; text-align: left; }
 .wd-tabs {display:flex;border-bottom:1px solid var(--border);justify-content:space-between}
 .wd-tabs a {padding:12px 4px;min-height:44px;text-align:center;color:var(--text-secondary);border-bottom:2px solid transparent;font-size:clamp(.8rem,3.4vw,1rem)}
 .wd-tabs a[aria-selected=true] {border-color:var(--primary);color:var(--primary);font-weight:700}
@@ -808,3 +824,57 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 
 /* WD18.3: optional chapter rating in the unread updates flow. */
 .wd-rating-optional {margin:4px 0 10px;color:var(--text-secondary);font-size:.85rem;line-height:1.45}
+
+/* Library shelf: quick, non-destructive removal from a card. */
+.tea-library .shelf-book { position: relative; }
+.tea-library .shelf-book > .library-remove-control.is-icon {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 4px;
+  margin: 0;
+}
+.tea-library .is-list .shelf-book > .shelf-content { padding-right: 48px; }
+.tea-library .is-grid .shelf-book > .library-remove-control.is-icon { top: 10px; right: 10px; }
+.library-remove-icon-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-secondary);
+  box-shadow: 0 2px 10px rgb(0 0 0 / .12);
+  cursor: pointer;
+}
+.library-remove-icon-button:hover { color: var(--text-primary); border-color: var(--primary); background: var(--surface-raised); }
+.library-remove-icon-button:disabled { opacity: .6; cursor: wait; }
+.library-remove-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: 0 24px 80px rgb(0 0 0 / .3);
+}
+.library-remove-dialog::backdrop { background: rgb(8 26 21 / .65); backdrop-filter: blur(3px); }
+.library-remove-dialog-content { padding: 24px; }
+.library-remove-dialog-eyebrow { font-size: 10px; letter-spacing: .09em; font-weight: 750; color: var(--primary); }
+.library-remove-dialog h2 { font-family: var(--cd-font-display); font-weight: 500; font-size: 27px; margin-top: 6px; }
+.library-remove-dialog-title { margin-top: 6px; color: var(--text-secondary); overflow-wrap: anywhere; }
+.library-remove-dialog .library-remove-confirm { margin-top: 14px; padding: 14px; }
+.library-remove-dialog .library-remove-actions { justify-content: flex-end; }
+.library-remove-dialog .library-remove-actions button { min-height: 44px; }
+.library-remove-dialog .library-remove-actions button[data-action="cancel"] { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+.library-remove-dialog .library-remove-error { color: var(--text-primary); }
+@media (max-width: 767px) {
+  .library-remove-dialog-content { padding: 18px; }
+  .library-remove-dialog .library-remove-actions button { flex: 1 1 120px; }
+}

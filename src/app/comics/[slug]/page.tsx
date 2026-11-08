@@ -9,6 +9,7 @@ import { seriesStatusLabels, caughtUpLabel } from "@/modules/comics/series-statu
 import { TrackingControl } from "@/modules/library/components/TrackingControl";
 import { ReadingStatusForm } from "@/modules/library/components/ReadingStatusForm";
 import { completionSnapshot } from "@/modules/library/completion-model";
+import { calculateAverageRating } from "@/modules/library/ratings/calculate-average-rating";
 import { chapterRatingSummary } from "@/modules/library/chapter-rating-summary";
 import { ChapterReadingPanel } from "@/modules/library/components/ChapterReadingPanel";
 import { Button } from "@/shared/components/ui";
@@ -99,6 +100,7 @@ export default async function ComicPage({
   const target=getReadingTarget(registry,readIds,comic.sourceUrl);
   const total=chapters.filter(c=>c.status==="RELEASED" && c.kind==="MAIN").length;
   const continuing=(readingState?.chapterReading.currentChapter ?? 0)>0;
+  const savedRating = readingState ? calculateAverageRating(readingState) : null;
   const c=target.chapter;
   const caption=target.direct && c ? (continuing?"Продолжить":"Читать")+(c.displayCode?" · глава "+c.displayCode:"") : target.source?.label;
   return <WorkPreferences key={comic.id} comicId={comic.id} initial={readingState?.promptChapterRating ?? true}>
@@ -129,7 +131,7 @@ export default async function ComicPage({
       {target.source ? <a className="wd-read" href={target.source.href} target="_blank" rel="noopener noreferrer"><strong>{caption} ↗</strong>{c && target.direct && c.title && <span>{c.title}</span>}</a>:<a href="#chapters" className="wd-read">К главам ↓</a>}
       {c && !target.direct && <p className="wd-hint">Прямой ссылки на главу пока нет.{target.source?" Откроется общий источник истории.":""}</p>}
       {target.state==="CAUGHT_UP" && <p className="wd-hint">Все вышедшие основные главы прочитаны.</p>}
-      <div className="wd-shelf"><ShelfAction comicId={comic.id} member={!!readingState} login={currentUser?null:`/login?next=${encodeURIComponent("/comics/"+comic.slug)}`}/></div>
+      <div className="wd-shelf"><ShelfAction comicId={comic.id} member={!!readingState?.inLibrary} hasDiary={readingState !== null} login={currentUser?null:`/login?next=${encodeURIComponent("/comics/"+comic.slug)}`}/></div>
       <WorkTabs count={total} chapters={
             <ChapterReadingPanel
               comicId={comic.id}
@@ -139,7 +141,7 @@ export default async function ComicPage({
                 .map((c) => ({ id: c.id, displayCode: c.displayCode, title: c.title, sourceUrl: c.status === "RELEASED" ? c.sourceUrl : null, sortOrder: c.sortOrder, volumeNumber: c.volumeNumber, status: c.status, kind: c.kind, supersedesChapterId: c.supersedesChapterId, expectedRelease: c.expectedRelease }))}
               ratings={readingState?.chapterReading.ratings ?? {}}
               readIds={readingState?.chapterReading.readIds ?? []}
-              canMark={readingState !== null}
+              canMark={readingState?.inLibrary === true}
             />
       } about={<div className="wd-about">
         <StoryExcerpt heading="Описание" text={comic.description}/>
@@ -324,7 +326,7 @@ export default async function ComicPage({
                 Мой дневник
               </h2>
 
-              {readingState ? (
+              {readingState?.inLibrary ? (
                 <div className="wd-dashboard">
                   <details className="wd-edit"><summary>Статус <b>{{WANT_TO_READ:"Хочу прочитать",READING:"Читаю",COMPLETED:"Прочитано",ON_HOLD:"На паузе"}[readingState.status]} ⌄</b></summary>
                   <ReadingStatusForm key={`${comic.id}:${comic.seriesStatus}:${readingState.status}:${readingState.currentChapter}:${readingState.chapterReading.specialReadCount}`}
@@ -374,7 +376,19 @@ export default async function ComicPage({
                     return <p key={kind} className="mt-1 text-sm">{kind === "MAIN" ? "Средняя по главам" : "По спецвыпускам"}: <strong>{average === null ? "Без оценки" : average.toLocaleString("ru", {minimumFractionDigits:1, maximumFractionDigits:1}) + " / 5"}</strong> · оценено {rated} из {read} прочитанных</p>;
                   })}
                   <PromptSwitch/>
-                  <details className="journal-editor"><summary>Обновления <span>{readingState.trackingEnabled ? "Включены" : "Выключены"}</span></summary><TrackingControl comicId={comic.id} enabled={readingState.trackingEnabled} /></details>
+                  <details className="journal-editor"><summary>Обновления <span>{!readingState.inLibrary ? "При возврате" : readingState.trackingEnabled ? "Включены" : "Выключены"}</span></summary><TrackingControl comicId={comic.id} enabled={readingState.trackingEnabled} inLibrary={readingState.inLibrary} /></details>
+                </div>
+              ) : readingState ? (
+                <div className="wd-dashboard space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4" role="status">
+                  <p className="font-semibold">Комикс сейчас не в вашей библиотеке</p>
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Прежний дневник сохранён, но произведение больше не считается активным чтением.
+                    Чтобы продолжить, нажмите «Вернуть в библиотеку» выше.
+                  </p>
+                  <p className="text-sm">Ранее сохранённый статус: <strong>{{WANT_TO_READ:"Хочу прочитать",READING:"Читаю",COMPLETED:"Прочитано",ON_HOLD:"На паузе"}[readingState.status]}</strong></p>
+                  <p className="text-sm">Сохранённый прогресс: {readingState.currentChapter}{readingState.progressCeiling === null ? "" : ` из ${readingState.progressCeiling}`}</p>
+                  {savedRating !== null ? <p className="text-sm">Личная оценка: {savedRating.toFixed(1)} / 5</p> : null}
+                  {readingState.personalNote?.trim() ? <blockquote className="whitespace-pre-wrap border-l-2 border-[var(--border)] pl-3 text-sm">{readingState.personalNote}</blockquote> : null}
                 </div>
               ) : !currentUser ? (
                 <p className="mt-4"><Link className="tea-primary" href={`/login?next=${encodeURIComponent(`/comics/${comic.slug}`)}`}>Войти и вести дневник</Link></p>

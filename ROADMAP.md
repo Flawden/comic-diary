@@ -1682,3 +1682,7 @@ See `docs/operations/br02-production-smoke.md`.
 ## UX / Admin Studio 2.0 — 07.11.2026
 
 [Новый UX Roadmap и визуальные эталоны](docs/roadmaps/UX-ADMIN-2026-11-07.md)
+
+## Community Platform & Closed Beta — 08.11.2026
+
+[План закрытой беты, уровней, валюты, магазина, иллюстраций и локализации](docs/roadmaps/COMMUNITY-PLATFORM-2026-11-08.md)

@@ -180,9 +180,10 @@ jobs:
           node --import tsx scripts/chapter-move-probe.ts
           node --import tsx scripts/series-publication-probe.ts
 
-      - name: Account counters and diary export
+      - name: Library membership, account counters and diary export
         run: |
           node --import tsx scripts/chapter-rating-probe.ts
+          node --import tsx scripts/library-membership-probe.ts
           node --import tsx scripts/collection-progress-probe.ts
           node --import tsx scripts/account-reading-stats-probe.ts
           node --import tsx scripts/account-diary-export-probe.ts

@@ -16,7 +16,7 @@ export async function getCollectionProgress(userId: number, slug = teaCollection
     archivedOnShelf: sql<number>`count(${userComics.comicId}) filter (where ${archived})`.mapWith(Number),
   }).from(categories)
     .leftJoin(comics, and(eq(comics.categoryId, categories.id), eq(comics.visibility, "SHARED")))
-    .leftJoin(userComics, and(eq(userComics.comicId, comics.id), eq(userComics.userId, userId)))
+    .leftJoin(userComics, and(eq(userComics.comicId, comics.id), eq(userComics.userId, userId), eq(userComics.inLibrary, true)))
     .where(eq(categories.slug, slug))
     .groupBy(categories.id, categories.name);
   return row ?? null;

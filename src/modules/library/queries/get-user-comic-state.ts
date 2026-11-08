@@ -20,6 +20,7 @@ export async function getUserComicState(
     .select({
       promptChapterRating: userComics.promptChapterRating,
       trackingEnabled: userComics.trackingEnabled,
+      inLibrary: userComics.inLibrary,
       status:
         userComics.status,
 
@@ -106,6 +107,7 @@ export async function getUserComicState(
   return {
     promptChapterRating: state.promptChapterRating,
     trackingEnabled: state.trackingEnabled,
+    inLibrary: state.inLibrary,
     status:
       state.status,
 

@@ -2,7 +2,6 @@
 
 import { expectedReleasePrecision, formatExpectedRelease, formatReleasedAt, isValidExpectedRelease, type ExpectedReleasePrecision } from "@/modules/catalog/chapter-release-dates";
 import { AdminComicList } from "@/modules/catalog/components/AdminComicList";
-import { useLocationHash } from "@/shared/hooks/useLocationHash";
 import { ChapterRevisionSelector } from "@/modules/catalog/components/ChapterRevisionSelector";
 import { AdminChapterList } from "@/modules/catalog/components/AdminChapterList";
 import { ChapterBatchEditor } from "@/modules/catalog/components/ChapterBatchEditor";
@@ -158,7 +157,7 @@ function errorMessage(
 
     case "invalid-catalog":
     case "invalid-catalog-request":
-      return "Проверьте поля комикса: данные не прошли валидацию.";
+      return "Комикс отклонён серверной проверкой. Проверьте Slug (строчные a–z, 0–9 и дефисы), Source URL (http/https), категорию и положительное количество глав, если оно указано.";
 
     case "origin-not-allowed":
       return "Запрос отклонён политикой same-origin.";
@@ -426,8 +425,19 @@ function ComicFields({
               <label>Slug *
                 <input name="slug" required readOnly={!create}
                   defaultValue={comic?.slug ?? ""} className={inputClass}
-                  aria-describedby={create ? undefined : `comic-slug-note-${comic?.id}`} />
-                {!create && <span id={`comic-slug-note-${comic?.id}`} className="admin-studio-field-hint">Не изменяется после создания.</span>}
+                  onInput={create ? event => {
+                    const field = event.currentTarget;
+                    const lowerCaseSlug = field.value.toLowerCase();
+                    if (field.value !== lowerCaseSlug) field.value = lowerCaseSlug;
+                  } : undefined}
+                  aria-describedby={create ? "comic-create-slug-note" : `comic-slug-note-${comic?.id}`} />
+                {create ? (
+                  <span id="comic-create-slug-note" className="admin-studio-field-hint">
+                    Только строчные латинские буквы, цифры и дефисы. Например: test-comic.
+                  </span>
+                ) : (
+                  <span id={`comic-slug-note-${comic?.id}`} className="admin-studio-field-hint">Не изменяется после создания.</span>
+                )}
               </label>
               <label>Категория *
                 <select name="categorySlug" required defaultValue={comic?.categorySlug ?? ""} className={inputClass}>
@@ -456,7 +466,7 @@ function ComicFields({
           <summary>Дополнительные сведения <span>Количество глав и примечание переводчика</span></summary>
           <div className="admin-studio-field-grid">
             <label>Заявлено глав (справочно)
-              <input name="totalChapters" type="number" min={0} step={1}
+              <input name="totalChapters" type="number" min={1} step={1}
                 defaultValue={comic?.totalChapters ?? ""} className={inputClass} />
             </label>
             <label className="admin-studio-full">Примечание переводчика
@@ -552,12 +562,35 @@ export function AdminComicManager({
   const router =
     useRouter();
 
-  const locationHash = useLocationHash();
-  const studioTab: StudioTab = locationHash === "#chapters"
-    ? "chapters"
-    : locationHash === "#publication" ? "publication" : "metadata";
+  // The editor keeps its own tab state while Next.js refreshes the RSC data.
+  // A URL hash is useful for direct links and sidebar navigation, but is not
+  // reliable as the only source of UI state across consecutive chapter saves.
+  const [studioTab, setStudioTab] = useState<StudioTab>("metadata");
+
+  useEffect(() => {
+    function followExplicitHashNavigation() {
+      switch (window.location.hash) {
+        case "#chapters":
+          setStudioTab("chapters");
+          break;
+        case "#publication":
+          setStudioTab("publication");
+          break;
+        case "#metadata":
+          setStudioTab("metadata");
+          break;
+        // Do not reset the workspace for unrelated hashes or a transient
+        // hashless URL during router.refresh().
+      }
+    }
+
+    followExplicitHashNavigation();
+    window.addEventListener("hashchange", followExplicitHashNavigation);
+    return () => window.removeEventListener("hashchange", followExplicitHashNavigation);
+  }, []);
 
   function selectStudioTab(tab: StudioTab) {
+    setStudioTab(tab);
     if (window.location.hash !== `#${tab}`) {
       window.history.replaceState(window.history.state, "", `#${tab}`);
       lastKnownLocationRef.current = {
@@ -968,22 +1001,39 @@ export function AdminComicManager({
       return;
     }
 
-    if (
-      payload.totalChapters !==
-        null &&
-      (
-        !Number.isInteger(
-          payload.totalChapters,
-        ) ||
-        payload.totalChapters <
-          0
-      )
-    ) {
-      setError(
-        "Количество глав должно быть целым неотрицательным числом.",
-      );
+    // Mirror the canonical server rules so users know the offending field.
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(payload.slug)) {
+      setError("Неверный Slug: используйте только строчные латинские буквы, цифры и дефисы (например, test-comic). Без пробелов, заглавных букв и дефиса на краях.");
       saveInFlightRef.current = false;
       setBusyKey(null);
+      form.querySelector<HTMLInputElement>('input[name="slug"]')?.focus();
+      return;
+    }
+
+    let validSourceUrl = false;
+    try {
+      const parsed = new URL(payload.sourceUrl);
+      validSourceUrl = parsed.protocol === "https:" || parsed.protocol === "http:";
+    } catch {
+      // The server rejects malformed and non-HTTP(S) source URLs.
+    }
+    if (!validSourceUrl) {
+      setError("Поле Source URL: укажите полный адрес, начинающийся с https:// или http://.");
+      saveInFlightRef.current = false;
+      setBusyKey(null);
+      form.querySelector<HTMLInputElement>('input[name="sourceUrl"]')?.focus();
+      return;
+    }
+
+    if (
+      payload.totalChapters !== null &&
+      (!Number.isInteger(payload.totalChapters) || payload.totalChapters <= 0)
+    ) {
+      setError("Поле «Заявлено глав»: оставьте пустым или укажите целое число больше нуля.");
+      saveInFlightRef.current = false;
+      setBusyKey(null);
+      // Optional metadata may be inside a collapsed disclosure; do not hide
+      // the actionable error by trying to focus an invisible control.
       return;
     }
 
@@ -1372,6 +1422,8 @@ export function AdminComicManager({
       setChapterEditValues(null);
       setChapterEditFeedback({ chapterId, kind: "success", message: "Изменения главы сохранены." });
       setBusyKey(null);
+      // Keep the editor in the chapter workspace after saving a chapter.
+      selectStudioTab("chapters");
       router.refresh();
     } catch {
       setChapterEditFeedback({ chapterId, kind: "error", message: "Не удалось связаться с сервером. Изменения остались в форме — попробуйте ещё раз." });
@@ -1649,7 +1701,8 @@ export function AdminComicManager({
             if (!confirmed) return false;
             discardComicChanges(currentId);
           }
-          selectStudioTab("metadata");
+          // Switching works must keep the selected workspace tab. A chapter
+          // editor should not be forced into metadata for the next comic.
           return true;
         }}
         locked={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null || Object.values(coverUploads).some(Boolean)}>
@@ -2088,6 +2141,7 @@ export function AdminComicManager({
                                         type="button"
                                         disabled={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null || chapter.status === "ARCHIVED"}
                                         onClick={() => {
+                                          selectStudioTab("chapters");
                                           setChapterEditFeedback(null);
                                           setEditingChapterId(
                                             chapter.id,

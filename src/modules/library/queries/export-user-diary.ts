@@ -18,7 +18,7 @@ export async function exportUserDiary(userId: number) {
           'workType', c.work_type, 'workFormat', c.work_format, 'seriesStatus', c.series_status
         ),
         'diary', jsonb_build_object(
-          'status', uc.status, 'trackingEnabled', uc.tracking_enabled, 'promptChapterRating', uc.prompt_chapter_rating,
+          'status', uc.status, 'trackingEnabled', uc.tracking_enabled, 'inLibrary', uc.in_library, 'promptChapterRating', uc.prompt_chapter_rating,
           'storedCurrentChapter', uc.current_chapter,
           'hasChapterRegistry', EXISTS (SELECT 1 FROM chapters ch WHERE ch.comic_id = c.id),
           'ratings', jsonb_build_object('plot', uc.rating_plot, 'characters', uc.rating_characters,
@@ -49,7 +49,7 @@ export async function exportUserDiary(userId: number) {
     timestampMeaning: "markedAt is the time the mark was recorded, not a confirmed reading date. storedCurrentChapter is stored numeric progress; chapterMarks are authoritative when a chapter registry exists.",
     entries: result.rows[0].entries as Array<{
       comic: { id: number; title: string; visibility: string };
-      diary: { status: string; trackingEnabled: boolean; storedCurrentChapter: number; personalNote: string | null; ratings: { plot: number | null } };
+      diary: { status: string; trackingEnabled: boolean; inLibrary: boolean; storedCurrentChapter: number; personalNote: string | null; ratings: { plot: number | null } };
       chapterMarks: Array<{ chapterId: number; status: string; kind: string; markedAt: string; origin: string; rating: number | null }>;
     }>,
   };

@@ -1,20 +1,22 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 
-/** Library snapshot, including retained diary entries after unsubscribing. */
+/** Active shelf counters plus chapter marks from all retained diary entries. */
 export async function getUserReadingStats(userId: number) {
   if (!Number.isSafeInteger(userId) || userId <= 0) throw new Error("Invalid user ID");
   const result = await db.execute(sql`
-    WITH library AS (
-      SELECT uc.comic_id, uc.status, uc.tracking_enabled, uc.current_chapter
+    WITH diary AS (
+      SELECT uc.comic_id, uc.status, uc.tracking_enabled, uc.current_chapter, uc.in_library
       FROM user_comics uc JOIN comics c ON c.id = uc.comic_id
       WHERE uc.user_id = ${userId}
         AND (c.visibility = 'SHARED' OR (c.visibility = 'PRIVATE' AND c.owner_user_id = ${userId}))
+    ), library AS (
+      SELECT * FROM diary WHERE in_library = TRUE
     ), marks AS (
       SELECT ch.status, ch.kind
       FROM user_chapter_reads r
       JOIN chapters ch ON ch.id = r.chapter_id
-      JOIN library l ON l.comic_id = ch.comic_id
+      JOIN diary l ON l.comic_id = ch.comic_id
       WHERE r.user_id = ${userId}
     )
     SELECT

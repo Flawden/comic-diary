@@ -331,7 +331,7 @@ export async function POST(
       );
     }
 
-    if ((intent === "bulk-read-previous" || intent === "bulk-undo" || intent === "bulk-chapter-ratings" || intent === "chapter-rating" || intent === "chapter-reading" || intent === "set-status" || intent === "complete-reading" || intent === "rating-prompt" || intent === "add-to-library" || intent === "update-diary" || intent === "set-tracking") && request.headers.get("accept")?.includes("application/json")) {
+    if ((intent === "bulk-read-previous" || intent === "bulk-undo" || intent === "bulk-chapter-ratings" || intent === "chapter-rating" || intent === "chapter-reading" || intent === "set-status" || intent === "complete-reading" || intent === "rating-prompt" || intent === "add-to-library" || intent === "remove-from-library" || intent === "update-diary" || intent === "set-tracking") && request.headers.get("accept")?.includes("application/json")) {
       return NextResponse.json({ ok: true, ...(addedIds ? { addedIds } : {}), ...(missingEarlier ? { missingEarlier } : {}) }, { headers: { "Cache-Control": "private, no-store" } });
     }
 

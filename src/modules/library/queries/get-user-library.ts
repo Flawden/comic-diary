@@ -72,6 +72,7 @@ export async function getUserLibrary(
           userComics.userId,
           userId,
         ),
+        eq(userComics.inLibrary, true),
         or(
           eq(
             comics.visibility,

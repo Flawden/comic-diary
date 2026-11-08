@@ -33,6 +33,10 @@ async function main() {
       ]);
       assert.deepEqual(await progress(), expected(3,1,1));
       assert.deepEqual(await progress(other.id), expected(3,1,0));
+      await tx.update(userComics).set({ inLibrary: false }).where(eq(userComics.comicId, done.id));
+      assert.deepEqual(await progress(), expected(3,0,1), "removed titles must not count as completed on the active shelf");
+      await tx.update(userComics).set({ inLibrary: true }).where(eq(userComics.comicId, done.id));
+      assert.deepEqual(await progress(), expected(3,1,1), "re-adding must restore shelf completion");
       await tx.update(comics).set({ publicationStatus:"ARCHIVED" }).where(eq(comics.id, done.id));
       assert.deepEqual(await progress(), expected(2,0,2));
       assert.deepEqual(await progress(other.id), expected(2,1,0));

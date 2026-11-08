@@ -25,7 +25,7 @@ function unreadRegistry(userId: number, status: UpdatesStatus = "ALL") {
   return sql`WITH RECURSIVE eligible AS (
     SELECT c.id, c.slug, c.title, c.cover_url, uc.prompt_chapter_rating FROM comics c
     JOIN user_comics uc ON uc.comic_id = c.id
-    WHERE uc.user_id = ${userId} AND uc.tracking_enabled = TRUE
+    WHERE uc.user_id = ${userId} AND uc.in_library = TRUE AND uc.tracking_enabled = TRUE
       AND (c.visibility = 'SHARED' OR (c.visibility = 'PRIVATE' AND c.owner_user_id = ${userId}))
       AND (${status} = 'ALL' OR uc.status::text = ${status})
   ), read_lineage(id) AS (

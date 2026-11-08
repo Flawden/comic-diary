@@ -31,7 +31,7 @@ async function main() {
     const [shared, hidden, own, legacy, foreign] = inserted;
     await db.insert(userComics).values([
       { userId: owner.id, comicId: shared.id, status: "READING", currentChapter: 77, personalNote: "Привет 🌸\n=SUM(1,2)\t\"цитата\"", ratingPlot: 5 },
-      { userId: owner.id, comicId: hidden.id, status: "COMPLETED", trackingEnabled: false },
+      { userId: owner.id, comicId: hidden.id, status: "COMPLETED", trackingEnabled: false, inLibrary: false },
       { userId: owner.id, comicId: own.id, status: "ON_HOLD" },
       { userId: owner.id, comicId: legacy.id, currentChapter: 12 },
       // Deliberately corrupted association must not expose a foreign private title.
@@ -62,7 +62,9 @@ async function main() {
     assert.equal(sharedEntry.chapterMarks.length, 4);
     assert.deepEqual(sharedEntry.chapterMarks.map((m: { status: string }) => m.status), ["RELEASED", "RELEASED", "ARCHIVED", "SCHEDULED"]);
     assert.ok(sharedEntry.chapterMarks.every((m: { markedAt: string }) => !Number.isNaN(Date.parse(m.markedAt))));
-    assert.equal(exported.entries.find((e: { comic: { id: number } }) => e.comic.id === hidden.id).diary.trackingEnabled, false);
+    const hiddenEntry = exported.entries.find((e: { comic: { id: number } }) => e.comic.id === hidden.id);
+    assert.equal(hiddenEntry.diary.trackingEnabled, false);
+    assert.equal(hiddenEntry.diary.inLibrary, false, "removed diary entries must remain in the export with their membership state");
     const legacyEntry = exported.entries.find((e: { comic: { id: number } }) => e.comic.id === legacy.id);
     assert.equal(legacyEntry.diary.hasChapterRegistry, false);
     assert.equal(legacyEntry.diary.storedCurrentChapter, 12);

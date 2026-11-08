@@ -180,11 +180,15 @@ export async function addComicToUserLibrary(
       status: "WANT_TO_READ",
       currentChapter: 0,
     })
-    .onConflictDoNothing({
+    .onConflictDoUpdate({
       target: [
         userComics.userId,
         userComics.comicId,
       ],
+      set: {
+        inLibrary: true,
+        updatedAt: new Date(),
+      },
     });
 
   return comic.slug;
@@ -194,8 +198,26 @@ export async function removeComicFromUserLibrary(
   userId: number,
   comicId: number,
 ) {
-  // Compatibility for old forms: removing from tracking never deletes the diary.
-  return setUserComicTracking(userId, comicId, false);
+  const comic = await getComic(userId, comicId);
+  const updated = await db
+    .update(userComics)
+    .set({
+      inLibrary: false,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(userComics.userId, userId),
+        eq(userComics.comicId, comicId),
+      ),
+    )
+    .returning({ id: userComics.id });
+
+  if (!updated.length) {
+    throw new Error("Comic is not in the authenticated user's diary");
+  }
+
+  return comic.slug;
 }
 
 export async function setChapterRatingPrompt(userId: number, comicId: number, enabled: boolean) {

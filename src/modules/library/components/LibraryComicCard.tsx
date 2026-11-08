@@ -1,6 +1,7 @@
 import { workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
 import { seriesStatusLabels, caughtUpLabel } from "@/modules/comics/series-status";
 import { TrackingControl } from "./TrackingControl";
+import { RemoveFromLibraryControl } from "./RemoveFromLibraryControl";
 import Link from "next/link";
 import type { UserLibraryItem } from "@/modules/library/queries/get-user-library";
 import { getLibraryProgressPercent } from "@/modules/library/library-view";
@@ -19,6 +20,7 @@ export function LibraryComicCard({ item, href }: { item: UserLibraryItem; href: 
     item.workType !== "UNKNOWN" ? workTypeLabels[item.workType] : null,
     item.workFormat !== "UNKNOWN" ? workFormatLabels[item.workFormat] : null].filter(Boolean);
   return <article id={`book-${item.comicId}`} className="shelf-book" aria-label={item.title}>
+    <RemoveFromLibraryControl comicId={item.comicId} comicTitle={item.title} variant="icon" />
     <Link href={href} className="shelf-cover">
       <CoverImage src={item.coverUrl} alt={`Обложка ${item.title}`} className="shelf-cover-image" imageClassName="object-contain" fallback={item.title} />
     </Link>
