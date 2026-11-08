@@ -9,6 +9,10 @@ import type {
 const slugPattern =
   /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+// Custom page art must come from the authenticated media upload pipeline.
+const bannerPattern =
+  /^\/media\/covers\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp)$/;
+
 const publicationStatuses =
   new Set<ComicPublicationStatus>([
     "PUBLISHED",
@@ -145,6 +149,10 @@ export function validateCatalogData(
       "translator note",
       comic.slug,
     );
+
+    if (comic.bannerUrl != null && !bannerPattern.test(comic.bannerUrl)) {
+      throw new Error(`Comic ${comic.slug} has invalid banner URL`);
+    }
 
     if (
       (comic.workType !== undefined && !isWorkType(comic.workType)) ||

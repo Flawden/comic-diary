@@ -73,6 +73,7 @@ type AdminComic = {
   translatorName: string | null;
   translatorNote: string | null;
   coverUrl: string | null;
+  bannerUrl: string | null;
   sourceUrl: string;
   totalChapters: number | null;
   seriesStatus: SeriesStatus;
@@ -318,6 +319,8 @@ function comicPayload(
         ),
       ),
 
+    bannerUrl: nullableText(form.get("bannerUrl")),
+
     sourceUrl:
       textValue(
         form,
@@ -359,6 +362,7 @@ function restoreComicForm(form: HTMLFormElement, payload: ComicPayload) {
     translatorName: payload.translatorName ?? "",
     translatorNote: payload.translatorNote ?? "",
     coverUrl: payload.coverUrl ?? "",
+    bannerUrl: payload.bannerUrl ?? "",
     sourceUrl: payload.sourceUrl,
     totalChapters: payload.totalChapters === null ? "" : String(payload.totalChapters),
     workType: payload.workType,
@@ -385,18 +389,24 @@ function ComicFields({
   create,
   disabled,
   onUploadingChange,
+  onBannerUploadingChange,
   activeTab,
   coverUrl,
   onCoverUrlChange,
+  bannerUrl,
+  onBannerUrlChange,
 }: {
   categories: Category[];
   comic?: AdminComic;
   create: boolean;
   disabled: boolean;
   onUploadingChange: (uploading: boolean) => void;
+  onBannerUploadingChange: (uploading: boolean) => void;
   activeTab?: StudioTab;
   coverUrl?: string;
   onCoverUrlChange?: (value: string) => void;
+  bannerUrl?: string;
+  onBannerUrlChange?: (value: string) => void;
 }) {
   const inputClass = "admin-studio-input";
   return (
@@ -462,6 +472,27 @@ function ComicFields({
             </label>
           </div>
         </div>
+        <section className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <h3 className="mb-2 font-semibold">Фон страницы комикса</h3>
+          <p className="mb-4 text-sm text-[var(--text-secondary)]">
+            Отдельная широкая иллюстрация, рекомендовано 16:9. Если не выбрать изображение, останется стандартный фон с горами.
+          </p>
+          <CoverUploadField
+            fieldName="bannerUrl"
+            uploadingFieldName="bannerUploading"
+            label="Широкий фон"
+            widePreview
+            allowExternalUrl={false}
+            canClear
+            uploadSuccessMessage="Фон загружен. Нажмите «Сохранить изменения», чтобы применить его."
+            disabled={disabled}
+            onUploadingChange={onBannerUploadingChange}
+            value={bannerUrl}
+            onValueChange={onBannerUrlChange}
+            key={`banner-${comic?.id ?? "new-comic"}`}
+            defaultValue={comic?.bannerUrl ?? ""}
+          />
+        </section>
         <details className="admin-studio-advanced">
           <summary>Дополнительные сведения <span>Количество глав и примечание переводчика</span></summary>
           <div className="admin-studio-field-grid">
@@ -604,6 +635,7 @@ export function AdminComicManager({
   const [chapterFeedback, setChapterFeedback] = useState<{ comicId: number; kind: "error" | "success"; message: string } | null>(null);
   const [chapterEditFeedback, setChapterEditFeedback] = useState<{ chapterId: number; kind: "error" | "success"; message: string } | null>(null);
   const [coverUploads, setCoverUploads] = useState<Record<string, boolean>>({});
+  const [createFormRevision, setCreateFormRevision] = useState(0);
   const comicFormsRef = useRef(new Map<number, HTMLFormElement>());
   const comicBaselinesRef = useRef(new Map<number, ComicPayload>());
   const saveInFlightRef = useRef(false);
@@ -614,6 +646,7 @@ export function AdminComicManager({
   } | null>(null);
   const [comicDirty, setComicDirty] = useState<Record<number, boolean>>({});
   const [comicCoverUrls, setComicCoverUrls] = useState<Record<number, string>>({});
+  const [comicBannerUrls, setComicBannerUrls] = useState<Record<number, string>>({});
   const [unsavedPrompt, setUnsavedPrompt] = useState<UnsavedChangesPrompt | null>(null);
   const unsavedPromptRef = useRef<UnsavedChangesPrompt | null>(null);
   const pendingComicSwitchResolveRef = useRef<((confirmed: boolean) => void) | null>(null);
@@ -714,6 +747,7 @@ export function AdminComicManager({
       ...previous,
       [comicId]: baseline.coverUrl ?? "",
     }));
+    setComicBannerUrls(previous => ({ ...previous, [comicId]: baseline.bannerUrl ?? "" }));
     setComicDirty(previous => ({ ...previous, [comicId]: false }));
     setError(null);
     setMessage(null);
@@ -724,6 +758,14 @@ export function AdminComicManager({
     const form = comicFormsRef.current.get(comic.id);
     if (!form) return;
     setFormControlValue(form, "coverUrl", value);
+    updateComicDirty(comic, form);
+  }
+
+  function handleComicBannerChange(comic: AdminComic, value: string) {
+    setComicBannerUrls(previous => ({ ...previous, [comic.id]: value }));
+    const form = comicFormsRef.current.get(comic.id);
+    if (!form) return;
+    setFormControlValue(form, "bannerUrl", value);
     updateComicDirty(comic, form);
   }
 
@@ -974,8 +1016,8 @@ export function AdminComicManager({
         form,
       );
 
-    if (data.get("coverUploading") === "yes") {
-      setError("Дождитесь завершения загрузки обложки перед сохранением.");
+    if (data.get("coverUploading") === "yes" || data.get("bannerUploading") === "yes") {
+      setError("Дождитесь завершения загрузки изображения перед сохранением.");
       saveInFlightRef.current = false;
       setBusyKey(null);
       return;
@@ -1102,6 +1144,8 @@ export function AdminComicManager({
         "create"
       ) {
         form.reset();
+        // Reset both upload previews after a successful creation.
+        setCreateFormRevision(previous => previous + 1);
         setMessage(
           `Комикс ${payload.slug} создан.`,
         );
@@ -1772,8 +1816,10 @@ export function AdminComicManager({
               className="mt-6"
             >
               <ComicFields
+                key={`create-fields-${createFormRevision}`}
                 disabled={busyKey !== null}
                 onUploadingChange={uploading => setCoverUploads(previous => ({ ...previous, create: uploading }))}
+                onBannerUploadingChange={uploading => setCoverUploads(previous => ({ ...previous, "create-banner": uploading }))}
                 categories={
                   categories
                 }
@@ -1784,7 +1830,7 @@ export function AdminComicManager({
                 <button
                   type="submit"
                   disabled={
-                    coverUploads.create ||
+                    coverUploads.create || coverUploads["create-banner"] ||
                     busyKey !==
                     null
                   }
@@ -1877,6 +1923,9 @@ export function AdminComicManager({
                       activeTab={studioTab}
                       disabled={busyKey !== null}
                       onUploadingChange={uploading => setCoverUploads(previous => ({ ...previous, [comic.slug]: uploading }))}
+                      onBannerUploadingChange={uploading => setCoverUploads(previous => ({ ...previous, [`${comic.slug}:banner`]: uploading }))}
+                      bannerUrl={comicBannerUrls[comic.id] ?? comic.bannerUrl ?? ""}
+                      onBannerUrlChange={value => handleComicBannerChange(comic, value)}
                       coverUrl={comicCoverUrls[comic.id] ?? comic.coverUrl ?? ""}
                       onCoverUrlChange={value => handleComicCoverChange(comic, value)}
                       categories={
@@ -2422,7 +2471,7 @@ export function AdminComicManager({
                       <button
                         type="submit"
                         disabled={
-                          coverUploads[comic.slug] ||
+                          (coverUploads[comic.slug] || coverUploads[`${comic.slug}:banner`]) ||
                           busyKey !==
                           null ||
                           categories.length ===
@@ -2435,7 +2484,7 @@ export function AdminComicManager({
                       <button
                         type="button"
                         onClick={() => discardComicChanges(comic.id)}
-                        disabled={!comicDirty[comic.id] || busyKey !== null || coverUploads[comic.slug]}
+                        disabled={!comicDirty[comic.id] || busyKey !== null || coverUploads[comic.slug] || coverUploads[`${comic.slug}:banner`]}
                         className="min-h-11 rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Отменить

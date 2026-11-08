@@ -82,6 +82,9 @@ export function canonicalComicCreateValues(
     coverUrl:
       comic.coverUrl,
 
+    // Missing field means an older importer should preserve current art.
+    ...(comic.bannerUrl === undefined ? {} : { bannerUrl: comic.bannerUrl }),
+
     sourceUrl:
       comic.sourceUrl,
 

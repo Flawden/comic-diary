@@ -107,6 +107,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, rati
         <span>Скрыть запланированные <small>Ещё не вышли: {scheduledCount}</small></span>
         <input type="checkbox" checked={hideScheduled} onChange={(e) => { setHideScheduled(e.target.checked); setLimit(30); }}/>
       </label>}
+      {chapters.length > 0 && (
       <details className="wd-tools"><summary>Поиск и действия</summary>
       {canMark && main.length > 0 ? (
         <details className="chapter-bulk"><summary>Отметить несколько глав прочитанными</summary>
@@ -141,7 +142,8 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, rati
         {query || kind !== "MAIN" ? <button type="button" className="tea-text-action chapter-filter-reset" onClick={() => { setQuery(""); setKind("MAIN"); setLimit(30); }}>Сбросить фильтры</button> : null}
       </details>
       </details>
-      {failure && <div role="alert">Не удалось подтвердить отметку. <button className="tea-text-action" disabled={pending} onClick={()=>mark(failure.chapter,failure.action)}>Повторить</button></div>}
+      )}
+      {failure && <div className="wd-reading-error" role="alert">Не удалось подтвердить отметку. <button className="tea-text-action" disabled={pending} onClick={()=>mark(failure.chapter,failure.action)}>Повторить</button></div>}
       {hasVolumes ? <div className="wd-volumes" aria-label="Тома и главы">
         {groups.map((group) => {
           const allInVolume = allVolumeGroups.find(candidate => candidate.number === group.number)?.chapters ?? group.chapters;
@@ -161,7 +163,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, rati
           </details>;
         })}
       </div> : <ul className="wd-chapters">{visible.map(renderChapter)}</ul>}
-      {filtered.length === 0 ? <p className="mt-4 text-sm text-[var(--text-secondary)]">{query ? "По запросу ничего не найдено." : hideScheduled ? "В этом разделе пока нет вышедших глав." : "В этом разделе пока нет глав."}</p> : null}
+      {filtered.length === 0 ? <p className="wd-no-chapters mt-4 text-sm text-[var(--text-secondary)]">{query ? "По запросу ничего не найдено." : hideScheduled ? "В этом разделе пока нет вышедших глав." : "В этом разделе пока нет глав."}</p> : null}
       {filtered.length > limit ? <Button variant="secondary" className="mt-3" onClick={() => setLimit(limit + 30)}>Показать ещё 30</Button> : null}
       {history.length ? <details className="mt-5 rounded-xl border border-[var(--border)] p-3"><summary className="cursor-pointer font-semibold">Прочитанные архивные версии ({history.length})</summary><ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">{history.map((c) => <li key={c.id}>{c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""} · прочитано{ratings[c.id] ? ` · ★ ${ratings[c.id]} / 5` : ""}</li>)}</ul></details> : null}
       {confirmUnread && <UnreadChapterConfirmation
@@ -173,7 +175,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, rati
           const target = previousPrompt.target; setPreviousPrompt(null); if (enabled) setSheet(target);
         }} onChanged={() => router.refresh()} onRemember={disablePreviousPrompt} />}
       {sheet && <ChapterRating comicId={comicId} chapter={sheet} rating={ratings[sheet.id]??null} onClose={()=>setSheet(null)}/>}
-      {!canMark ? <p className="mt-4 text-sm text-[var(--text-secondary)]">Добавьте комикс в свою библиотеку, чтобы отмечать чтение.</p> : null}
+      {!canMark && chapters.length > 0 ? <p className="wd-library-hint mt-4 text-sm text-[var(--text-secondary)]">Добавьте комикс в свою библиотеку, чтобы отмечать чтение.</p> : null}
     </section>
   );
 }

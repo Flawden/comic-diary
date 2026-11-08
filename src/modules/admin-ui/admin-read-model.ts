@@ -67,6 +67,8 @@ export async function listAdminComics() {
         comics.translatorNote,
       coverUrl:
         comics.coverUrl,
+      bannerUrl:
+        comics.bannerUrl,
       sourceUrl:
         comics.sourceUrl,
       seriesStatus: comics.seriesStatus,
