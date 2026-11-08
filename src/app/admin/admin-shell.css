@@ -83,3 +83,123 @@
 @media (prefers-reduced-motion: reduce) {
   .admin-shell-sidebar, .admin-shell-link { transition: none; }
 }
+
+
+/* Branded confirmation for unsaved Comic Studio changes. */
+.admin-unsaved-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(5, 19, 14, .62);
+  backdrop-filter: blur(4px);
+  animation: admin-unsaved-fade-in .16s ease-out;
+}
+.admin-unsaved-dialog {
+  width: min(100%, 490px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 76%, #b7c39a);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, .34);
+  animation: admin-unsaved-dialog-in .2s ease-out;
+}
+.admin-unsaved-dialog-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 25px 25px 22px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 9%, var(--surface)), var(--surface) 72%);
+}
+.admin-unsaved-dialog-icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: none;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary) 11%, var(--surface));
+  color: var(--primary);
+}
+.admin-unsaved-dialog-copy-wrap { min-width: 0; }
+.admin-unsaved-dialog-kicker {
+  color: var(--text-accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+.admin-unsaved-dialog-title {
+  margin-top: 7px;
+  font: 500 29px/1.12 var(--cd-font-display);
+  color: var(--text-primary);
+}
+.admin-unsaved-dialog-copy {
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.admin-unsaved-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px 25px 22px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.admin-unsaved-dialog-actions button {
+  min-height: 44px;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
+}
+.admin-unsaved-dialog-actions button:active { transform: translateY(1px); }
+.admin-unsaved-dialog-actions button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.admin-unsaved-dialog-stay {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.admin-unsaved-dialog-stay:hover { filter: brightness(1.06); }
+.admin-unsaved-dialog-leave {
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--border));
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+  color: var(--danger);
+}
+.admin-unsaved-dialog-leave:hover {
+  background: color-mix(in srgb, var(--danger) 13%, var(--surface));
+  border-color: var(--danger);
+}
+@keyframes admin-unsaved-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes admin-unsaved-dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 520px) {
+  .admin-unsaved-dialog-content { gap: 12px; padding: 21px 18px 18px; }
+  .admin-unsaved-dialog-icon { width: 40px; height: 40px; border-radius: 12px; }
+  .admin-unsaved-dialog-title { font-size: 25px; }
+  .admin-unsaved-dialog-actions { display: grid; grid-template-columns: 1fr; padding: 14px 18px 18px; }
+  .admin-unsaved-dialog-actions button { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-unsaved-dialog-overlay,
+  .admin-unsaved-dialog { animation: none; }
+  .admin-unsaved-dialog-actions button { transition: none; }
+}

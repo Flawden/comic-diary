@@ -17,6 +17,8 @@ import {
 
 import {
   type FormEvent,
+  useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -234,7 +236,9 @@ function setFormControlValue(
     control instanceof
       HTMLInputElement ||
     control instanceof
-      HTMLSelectElement
+      HTMLSelectElement ||
+    control instanceof
+      HTMLTextAreaElement
   ) {
     control.value =
       value;
@@ -345,7 +349,36 @@ function comicPayload(
   };
 }
 
+type ComicPayload = ReturnType<typeof comicPayload>;
+
+function restoreComicForm(form: HTMLFormElement, payload: ComicPayload) {
+  const values: Record<string, string> = {
+    slug: payload.slug,
+    title: payload.title,
+    description: payload.description ?? "",
+    authorName: payload.authorName ?? "",
+    translatorName: payload.translatorName ?? "",
+    translatorNote: payload.translatorNote ?? "",
+    coverUrl: payload.coverUrl ?? "",
+    sourceUrl: payload.sourceUrl,
+    totalChapters: payload.totalChapters === null ? "" : String(payload.totalChapters),
+    workType: payload.workType,
+    workFormat: payload.workFormat,
+    seriesStatus: payload.seriesStatus,
+    publicationStatus: payload.publicationStatus,
+    categorySlug: payload.categorySlug,
+  };
+
+  Object.entries(values).forEach(([name, value]) => {
+    setFormControlValue(form, name, value);
+  });
+}
+
 type StudioTab = "metadata" | "chapters" | "publication";
+
+type UnsavedChangesPrompt =
+  | { kind: "navigation"; destination: string }
+  | { kind: "comic-switch" };
 
 function ComicFields({
   categories,
@@ -354,6 +387,8 @@ function ComicFields({
   disabled,
   onUploadingChange,
   activeTab,
+  coverUrl,
+  onCoverUrlChange,
 }: {
   categories: Category[];
   comic?: AdminComic;
@@ -361,6 +396,8 @@ function ComicFields({
   disabled: boolean;
   onUploadingChange: (uploading: boolean) => void;
   activeTab?: StudioTab;
+  coverUrl?: string;
+  onCoverUrlChange?: (value: string) => void;
 }) {
   const inputClass = "admin-studio-input";
   return (
@@ -375,6 +412,8 @@ function ComicFields({
             <CoverUploadField
               disabled={disabled}
               onUploadingChange={onUploadingChange}
+              value={coverUrl}
+              onValueChange={onCoverUrlChange}
               key={comic?.id ?? "new-comic"}
               defaultValue={comic?.coverUrl ?? ""}
             />
@@ -521,6 +560,10 @@ export function AdminComicManager({
   function selectStudioTab(tab: StudioTab) {
     if (window.location.hash !== `#${tab}`) {
       window.history.replaceState(window.history.state, "", `#${tab}`);
+      lastKnownLocationRef.current = {
+        url: window.location.href,
+        state: window.history.state,
+      };
       window.dispatchEvent(new Event("hashchange"));
     }
   }
@@ -528,6 +571,22 @@ export function AdminComicManager({
   const [chapterFeedback, setChapterFeedback] = useState<{ comicId: number; kind: "error" | "success"; message: string } | null>(null);
   const [chapterEditFeedback, setChapterEditFeedback] = useState<{ chapterId: number; kind: "error" | "success"; message: string } | null>(null);
   const [coverUploads, setCoverUploads] = useState<Record<string, boolean>>({});
+  const comicFormsRef = useRef(new Map<number, HTMLFormElement>());
+  const comicBaselinesRef = useRef(new Map<number, ComicPayload>());
+  const saveInFlightRef = useRef(false);
+  const lastKnownLocationRef = useRef<{ url: string; state: unknown } | null>(null);
+  const pendingComicDirtyCheckRef = useRef<{
+    comic: AdminComic;
+    form: HTMLFormElement;
+  } | null>(null);
+  const [comicDirty, setComicDirty] = useState<Record<number, boolean>>({});
+  const [comicCoverUrls, setComicCoverUrls] = useState<Record<number, string>>({});
+  const [unsavedPrompt, setUnsavedPrompt] = useState<UnsavedChangesPrompt | null>(null);
+  const unsavedPromptRef = useRef<UnsavedChangesPrompt | null>(null);
+  const pendingComicSwitchResolveRef = useRef<((confirmed: boolean) => void) | null>(null);
+  const promptReturnFocusRef = useRef<HTMLElement | null>(null);
+  const stayButtonRef = useRef<HTMLButtonElement | null>(null);
+  const leaveButtonRef = useRef<HTMLButtonElement | null>(null);
   const [creationVersions, setCreationVersions] = useState<Record<number, number>>({});
   const [creationStatus, setCreationStatus] = useState<Record<number, ChapterCreateStatus>>({});
   const [creationPrecision, setCreationPrecision] = useState<Record<number, ExpectedReleasePrecision>>({});
@@ -580,6 +639,258 @@ export function AdminComicManager({
     string | null
   >(null);
 
+  function updateComicDirty(comic: AdminComic, form: HTMLFormElement) {
+    const baseline = comicBaselinesRef.current.get(comic.id);
+    if (!baseline) return;
+
+    const current = comicPayload(new FormData(form), comic.slug);
+    const dirty = JSON.stringify(current) !== JSON.stringify(baseline);
+    setComicDirty(previous => {
+      if ((previous[comic.id] ?? false) === dirty) return previous;
+      return { ...previous, [comic.id]: dirty };
+    });
+  }
+
+  useEffect(() => {
+    if (busyKey !== null) return;
+
+    const pending = pendingComicDirtyCheckRef.current;
+    if (!pending) return;
+    pendingComicDirtyCheckRef.current = null;
+
+    const baseline = comicBaselinesRef.current.get(pending.comic.id);
+    if (!baseline) return;
+
+    // Re-read only after busyKey is cleared and disabled controls are enabled again.
+    const current = comicPayload(new FormData(pending.form), pending.comic.slug);
+    const dirty = JSON.stringify(current) !== JSON.stringify(baseline);
+    setComicDirty(previous => {
+      if ((previous[pending.comic.id] ?? false) === dirty) return previous;
+      return { ...previous, [pending.comic.id]: dirty };
+    });
+  }, [busyKey]);
+
+  function discardComicChanges(comicId: number) {
+    const comic = initialComics.find(item => item.id === comicId);
+    const baseline = comicBaselinesRef.current.get(comicId);
+    const form = comicFormsRef.current.get(comicId);
+    if (!comic || !baseline || !form) return;
+
+    restoreComicForm(form, baseline);
+    setComicCoverUrls(previous => ({
+      ...previous,
+      [comicId]: baseline.coverUrl ?? "",
+    }));
+    setComicDirty(previous => ({ ...previous, [comicId]: false }));
+    setError(null);
+    setMessage(null);
+  }
+
+  function handleComicCoverChange(comic: AdminComic, value: string) {
+    setComicCoverUrls(previous => ({ ...previous, [comic.id]: value }));
+    const form = comicFormsRef.current.get(comic.id);
+    if (!form) return;
+    setFormControlValue(form, "coverUrl", value);
+    updateComicDirty(comic, form);
+  }
+
+  const hasUnsavedComicChanges =
+    Object.values(comicDirty).some(Boolean) ||
+    Object.values(coverUploads).some(Boolean);
+
+  function requestComicSwitchConfirmation(): Promise<boolean> {
+    return new Promise(resolve => {
+      if (unsavedPromptRef.current) {
+        resolve(false);
+        return;
+      }
+
+      const prompt = { kind: "comic-switch" } as const;
+      promptReturnFocusRef.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      pendingComicSwitchResolveRef.current = resolve;
+      unsavedPromptRef.current = prompt;
+      setUnsavedPrompt(prompt);
+    });
+  }
+
+  function resolveUnsavedPrompt(confirmed: boolean) {
+    const prompt = unsavedPromptRef.current;
+    if (!prompt) return;
+
+    unsavedPromptRef.current = null;
+    setUnsavedPrompt(null);
+
+    if (prompt.kind === "comic-switch") {
+      const resolve = pendingComicSwitchResolveRef.current;
+      pendingComicSwitchResolveRef.current = null;
+      resolve?.(confirmed);
+      return;
+    }
+
+    if (!confirmed) return;
+
+    router.push(prompt.destination);
+  }
+
+  useEffect(() => {
+    if (!unsavedPrompt) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    stayButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        const prompt = unsavedPromptRef.current;
+        if (!prompt) return;
+
+        unsavedPromptRef.current = null;
+        setUnsavedPrompt(null);
+
+        if (prompt.kind === "comic-switch") {
+          const resolve = pendingComicSwitchResolveRef.current;
+          pendingComicSwitchResolveRef.current = null;
+          resolve?.(false);
+        }
+        return;
+      }
+
+      if (event.key === "Tab") {
+        const first = stayButtonRef.current;
+        const last = leaveButtonRef.current;
+
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+
+      if (!unsavedPromptRef.current) {
+        const target = promptReturnFocusRef.current;
+        promptReturnFocusRef.current = null;
+        if (target?.isConnected) target.focus();
+      }
+    };
+  }, [unsavedPrompt]);
+
+  useEffect(() => {
+    lastKnownLocationRef.current = {
+      url: window.location.href,
+      state: window.history.state,
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasUnsavedComicChanges) return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) return;
+
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const link = target.closest("a[href]");
+      if (!(link instanceof HTMLAnchorElement)) return;
+      if ((link.target && link.target !== "_self") || link.hasAttribute("download")) return;
+
+      const nextUrl = new URL(link.href, window.location.href);
+      if (nextUrl.origin !== window.location.origin) return;
+      if (
+        nextUrl.pathname === window.location.pathname &&
+        nextUrl.search === window.location.search
+      ) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+
+      if (unsavedPromptRef.current) return;
+
+      const prompt = {
+        kind: "navigation",
+        destination: `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`,
+      } as const;
+      promptReturnFocusRef.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      unsavedPromptRef.current = prompt;
+      setUnsavedPrompt(prompt);
+    };
+
+    const handlePopState = (event: PopStateEvent) => {
+      const previous = lastKnownLocationRef.current;
+      const nextUrl = window.location.href;
+      if (!previous || nextUrl === previous.url) return;
+
+      const previousUrl = new URL(previous.url);
+      const destinationUrl = new URL(nextUrl);
+      if (
+        destinationUrl.origin === previousUrl.origin &&
+        destinationUrl.pathname === previousUrl.pathname &&
+        destinationUrl.search === previousUrl.search
+      ) {
+        lastKnownLocationRef.current = {
+          url: nextUrl,
+          state: window.history.state,
+        };
+        return;
+      }
+
+      // Stop Next.js from processing this traversal while the dialog is open.
+      // Restore the current URL; the dialog will navigate to the destination
+      // through the App Router if the user confirms.
+      event.stopImmediatePropagation();
+      window.history.pushState(previous.state, "", previous.url);
+
+      if (unsavedPromptRef.current) return;
+
+      const prompt = {
+        kind: "navigation",
+        destination: `${destinationUrl.pathname}${destinationUrl.search}${destinationUrl.hash}`,
+      } as const;
+      promptReturnFocusRef.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      unsavedPromptRef.current = prompt;
+      setUnsavedPrompt(prompt);
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("popstate", handlePopState, true);
+    document.addEventListener("click", handleDocumentClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("popstate", handlePopState, true);
+      document.removeEventListener("click", handleDocumentClick, true);
+    };
+  }, [hasUnsavedComicChanges]);
+
   async function saveComic(
     event:
       FormEvent<HTMLFormElement>,
@@ -613,13 +924,12 @@ export function AdminComicManager({
         ? "create"
         : `update:${immutableSlug}`;
 
-    if (busyKey) {
+    if (busyKey || saveInFlightRef.current) {
       return;
     }
 
-    setBusyKey(
-      key,
-    );
+    saveInFlightRef.current = true;
+    setBusyKey(key);
     setMessage(null);
     setError(null);
 
@@ -633,6 +943,7 @@ export function AdminComicManager({
 
     if (data.get("coverUploading") === "yes") {
       setError("Дождитесь завершения загрузки обложки перед сохранением.");
+      saveInFlightRef.current = false;
       setBusyKey(null);
       return;
     }
@@ -652,6 +963,7 @@ export function AdminComicManager({
       setError(
         "Slug, название, source URL и категория обязательны.",
       );
+      saveInFlightRef.current = false;
       setBusyKey(null);
       return;
     }
@@ -670,6 +982,7 @@ export function AdminComicManager({
       setError(
         "Количество глав должно быть целым неотрицательным числом.",
       );
+      saveInFlightRef.current = false;
       setBusyKey(null);
       return;
     }
@@ -712,6 +1025,8 @@ export function AdminComicManager({
         response.status ===
         401
       ) {
+        saveInFlightRef.current = false;
+        setBusyKey(null);
         router.replace(
           "/login?next=%2Fadmin%2Fcomics",
         );
@@ -727,6 +1042,7 @@ export function AdminComicManager({
             ),
           ),
         );
+        saveInFlightRef.current = false;
         setBusyKey(null);
         return;
       }
@@ -740,10 +1056,22 @@ export function AdminComicManager({
           `Комикс ${payload.slug} создан.`,
         );
       } else {
+        const savedComic = initialComics.find(
+          (item) => item.slug === immutableSlug,
+        );
+        if (savedComic) {
+          comicBaselinesRef.current.set(savedComic.id, payload);
+          pendingComicDirtyCheckRef.current = {
+            comic: savedComic,
+            form: comicFormsRef.current.get(savedComic.id) ?? form,
+          };
+        }
         setMessage(
           `Комикс ${payload.slug} обновлён.`,
         );
       }
+
+      saveInFlightRef.current = false;
 
       setBusyKey(null);
       router.refresh();
@@ -751,6 +1079,7 @@ export function AdminComicManager({
       setError(
         "Не удалось связаться с сервером.",
       );
+      saveInFlightRef.current = false;
       setBusyKey(null);
     }
   }
@@ -1314,7 +1643,15 @@ export function AdminComicManager({
       {error ? <p role="alert" className="admin-studio-feedback is-error">{error}</p> : null}
       {message ? <p role="status" className="admin-studio-feedback is-success">{message}</p> : null}
       <AdminComicList comics={initialComics} categories={categories}
-        onSelectionChange={() => selectStudioTab("metadata")}
+        onSelectionChange={async currentId => {
+          if (currentId !== null && comicDirty[currentId]) {
+            const confirmed = await requestComicSwitchConfirmation();
+            if (!confirmed) return false;
+            discardComicChanges(currentId);
+          }
+          selectStudioTab("metadata");
+          return true;
+        }}
         locked={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null || Object.values(coverUploads).some(Boolean)}>
         {selectedId => <div className="admin-studio-panels">
           <section hidden={selectedId !== null}
@@ -1456,6 +1793,21 @@ export function AdminComicManager({
                   </nav>
 
                   <form
+                    ref={form => {
+                      if (!form) {
+                        comicFormsRef.current.delete(comic.id);
+                        return;
+                      }
+                      comicFormsRef.current.set(comic.id, form);
+                      if (!comicBaselinesRef.current.has(comic.id)) {
+                        comicBaselinesRef.current.set(
+                          comic.id,
+                          comicPayload(new FormData(form), comic.slug),
+                        );
+                      }
+                    }}
+                    onInput={event => updateComicDirty(comic, event.currentTarget)}
+                    onChange={event => updateComicDirty(comic, event.currentTarget)}
                     noValidate={studioTab !== "metadata"}
                     onSubmit={(
                       event,
@@ -1472,6 +1824,8 @@ export function AdminComicManager({
                       activeTab={studioTab}
                       disabled={busyKey !== null}
                       onUploadingChange={uploading => setCoverUploads(previous => ({ ...previous, [comic.slug]: uploading }))}
+                      coverUrl={comicCoverUrls[comic.id] ?? comic.coverUrl ?? ""}
+                      onCoverUrlChange={value => handleComicCoverChange(comic, value)}
                       categories={
                         categories
                       }
@@ -1480,7 +1834,11 @@ export function AdminComicManager({
                         false
                       }
                     />
-
+                    {comicDirty[comic.id] ? (
+                      <p role="status" className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                        Есть несохранённые изменения.
+                      </p>
+                    ) : null}
                     {comic.categorySlug ===
                     null ? (
                       <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
@@ -2006,7 +2364,7 @@ export function AdminComicManager({
                       </div>
                     </section>
 
-                    <div hidden={studioTab === "chapters"} className="mt-5 flex flex-wrap items-center gap-4">
+                    <div hidden={studioTab === "chapters"} className="mt-5 flex flex-wrap items-center gap-3">
                       <button
                         type="submit"
                         disabled={
@@ -2020,7 +2378,14 @@ export function AdminComicManager({
                       >
                         Сохранить изменения
                       </button>
-
+                      <button
+                        type="button"
+                        onClick={() => discardComicChanges(comic.id)}
+                        disabled={!comicDirty[comic.id] || busyKey !== null || coverUploads[comic.slug]}
+                        className="min-h-11 rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Отменить
+                      </button>
                       <a
                         href={`/comics/${comic.slug}`}
                         className="text-sm font-semibold text-[var(--primary)]"
@@ -2034,6 +2399,66 @@ export function AdminComicManager({
             )}
         </div>}
       </AdminComicList>
+      {unsavedPrompt ? (
+        <div
+          className="admin-unsaved-dialog-overlay"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) {
+              resolveUnsavedPrompt(false);
+            }
+          }}
+        >
+          <section
+            className="admin-unsaved-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-unsaved-dialog-title"
+            aria-describedby="admin-unsaved-dialog-copy"
+          >
+            <div className="admin-unsaved-dialog-content">
+              <div className="admin-unsaved-dialog-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
+                  <path d="M12 3.5 21 19H3l9-15.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                  <path d="M12 9v4.5M12 16.5v.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div className="admin-unsaved-dialog-copy-wrap">
+                <p className="admin-unsaved-dialog-kicker">Белый Дракон · Comic Diary</p>
+                <h2 id="admin-unsaved-dialog-title" className="admin-unsaved-dialog-title">
+                  {unsavedPrompt.kind === "comic-switch"
+                    ? "Продолжить без сохранения?"
+                    : "Покинуть страницу?"}
+                </h2>
+                <p id="admin-unsaved-dialog-copy" className="admin-unsaved-dialog-copy">
+                  {unsavedPrompt.kind === "comic-switch"
+                    ? "У текущего произведения есть несохранённые изменения. Если продолжить, они будут отменены."
+                    : "У этого произведения есть несохранённые изменения. Если покинуть страницу, они будут потеряны."}
+                </p>
+              </div>
+            </div>
+            <div className="admin-unsaved-dialog-actions">
+              <button
+                ref={stayButtonRef}
+                type="button"
+                className="admin-unsaved-dialog-stay"
+                onClick={() => resolveUnsavedPrompt(false)}
+              >
+                Остаться
+              </button>
+              <button
+                ref={leaveButtonRef}
+                type="button"
+                className="admin-unsaved-dialog-leave"
+                onClick={() => resolveUnsavedPrompt(true)}
+              >
+                {unsavedPrompt.kind === "comic-switch"
+                  ? "Отменить и продолжить"
+                  : "Покинуть страницу"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

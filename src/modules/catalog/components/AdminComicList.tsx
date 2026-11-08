@@ -32,7 +32,7 @@ export function AdminComicList({ comics, categories, locked, children, onSelecti
   categories: { slug: string; name: string }[];
   locked: boolean;
   children: (selectedId: number | null) => ReactNode;
-  onSelectionChange?: () => void;
+  onSelectionChange?: (currentId: number | null) => boolean | Promise<boolean>;
 }) {
   const id = useId();
   const [selectedId, setSelectedId] = useState<number | null>(comics[0]?.id ?? null);
@@ -52,10 +52,10 @@ export function AdminComicList({ comics, categories, locked, children, onSelecti
   const visible = filtered.slice(start, start + PAGE_SIZE);
   const fieldClass = "admin-studio-filter";
 
-  function choose(next: number | null) {
+  async function choose(next: number | null) {
     if (locked || selectedId === next) return;
+    if (await onSelectionChange?.(selectedId) === false) return;
     setSelectedId(next);
-    onSelectionChange?.();
   }
   function reset() {
     setSearch(""); setStatus("ALL"); setCategory("ALL"); setPage(1);
