@@ -34,7 +34,7 @@ const mutations =
   readFileSync(
     "src/modules/library/mutations/update-user-comic-state.ts",
     "utf8",
-  );
+  ).replace(/\r\n?/g, "\n");
 
 assert(
   route.includes(
