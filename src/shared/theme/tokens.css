@@ -242,3 +242,24 @@
   --fe-chrome-nav: #191f22;
   --fe-shadow: 0 9px 25px rgb(0 0 0 / .24);
 }
+
+
+/* QA-03B — complete the Night Reader semantic contract.
+   Previously night inherited the generic emerald root outside FE panels.
+   Paper and Tea tokens are intentionally unchanged. */
+[data-theme="night"] {
+  --cd-background: #181b1e;
+  --cd-surface: #252a2c;
+  --cd-surface-raised: #313638;
+  --cd-text-primary: #f1e9db;
+  --cd-text-secondary: #c7c0b3;
+  --cd-text-muted: #b9b2a7;
+  --cd-text-accent: #ecc58d;
+  --cd-primary: #d0ae7b;
+  --cd-primary-foreground: #121717;
+  --cd-border: #756851;
+  --cd-success: #a9d4b5;
+  --cd-warning: #e5bc7a;
+  --cd-danger: #f3a49d;
+  --cd-info: #a5cadb;
+}

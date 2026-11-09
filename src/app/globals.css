@@ -3410,3 +3410,150 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
     border-color: var(--fe-border);
   }
 }
+
+
+/* QA-03B — finish paper/night component contracts.
+   Illustrated hero and empty-state panels stay dark by design; their text
+   remains light. Tea colors and all interaction handlers stay untouched. */
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-page, .fantasy-library) {
+  --fe-focus: var(--fe-action);
+  --fe-status-success: var(--fe-accent);
+  --fe-status-warning: var(--fe-accent);
+}
+:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-related-links {
+  color: var(--fe-muted);
+}
+:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-related-links a {
+  color: var(--fe-accent);
+}
+:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-reading-return strong {
+  color: var(--fe-ink);
+}
+:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-book-cover {
+  border-color: var(--fe-border);
+  background-color: var(--fe-raised);
+}
+:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-personal {
+  border-top-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-more-filters > summary:focus-visible,
+:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-filters :is(input, select):focus-visible {
+  outline-color: var(--fe-focus);
+  border-color: var(--fe-focus);
+}
+
+/* Empty-state backgrounds are photographic, not ordinary surface panels. */
+:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-empty-state,
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .fantasy-library-empty {
+  color-scheme: dark;
+  border-color: #c6ad7b;
+}
+:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-empty-state :is(h3, p),
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .fantasy-library-empty :is(h2, p) {
+  color: #fff0d4;
+}
+:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-empty-state a,
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .fantasy-library-empty a {
+  color: #fff0d4;
+  background-color: #1b5039;
+  border-color: #d2b783;
+}
+
+/* Library content used fixed emerald gradients, unreadable with paper ink. */
+:is([data-theme="paper"], [data-theme="night"]) :is(
+  .fantasy-library .library-collection.is-list,
+  .fantasy-library .diary-continue,
+  .fantasy-library .is-grid .shelf-book,
+  .fantasy-library > .reader-panel,
+  .fantasy-library > details
+) {
+  background: var(--fe-panel);
+  color: var(--fe-ink);
+  border-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .is-list .shelf-book {
+  border-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .shelf-cover {
+  border-color: var(--fe-border);
+  background-color: var(--fe-raised);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .shelf-reading .status-COMPLETED {
+  color: var(--fe-status-success);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .shelf-reading :is(.status-WANT_TO_READ, .status-ON_HOLD) {
+  color: var(--fe-status-warning);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .diary-reading-destination :is(a, button) {
+  color: var(--fe-ink);
+  border-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library > .reader-panel a {
+  color: var(--fe-accent);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .library-search :is(input, select):focus-visible,
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library :is(a, button, summary):focus-visible {
+  outline-color: var(--fe-focus);
+}
+
+/* QA-01's visual button retains a 44px hit target, themed only in paper/night. */
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .library-remove-control.is-icon > .library-remove-icon-button {
+  color: var(--fe-ink);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .library-remove-control.is-icon > .library-remove-icon-button::before {
+  border-color: var(--fe-border);
+  background: var(--fe-raised);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .library-remove-control.is-icon > .library-remove-icon-button:is(:hover, :focus-visible)::before {
+  border-color: var(--fe-action);
+  background: var(--fe-panel);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .library-remove-control.is-icon > .library-remove-icon-button:focus-visible {
+  outline-color: var(--fe-focus);
+}
+
+/* Profile and updates form affordances follow the same surfaces and ink. */
+:is([data-theme="paper"], [data-theme="night"]) :is(
+  .fantasy-account .account-monogram,
+  .fantasy-account .reader-stats a,
+  .fantasy-account .chapter-stat-totals > div,
+  .fantasy-updates .updates-hint,
+  .fantasy-updates .updates-volume summary
+) {
+  border-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-updates .updates-volume summary {
+  background: var(--fe-raised);
+  color: var(--fe-ink);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-account .account-content :is(input, select, textarea),
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-updates .updates-filters :is(input, select),
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-auth-card :is(input, select, textarea) {
+  background-color: var(--fe-raised);
+  color: var(--fe-ink);
+  border-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-account :is(input, select, textarea):focus-visible,
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-updates :is(input, select, summary):focus-visible,
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-auth-card :is(input, select, textarea):focus-visible {
+  outline-color: var(--fe-focus);
+  border-color: var(--fe-focus);
+}
+
+/* Authentication has a dark illustrated backdrop, but its inner card is themed.
+   Explicitly protect readability of the text outside the card. */
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-auth-page {
+  color-scheme: dark;
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-auth-page .fantasy-auth-inner > :is(p:first-of-type, h1, h1 + p),
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-auth-page .fantasy-auth-links {
+  color: #f5e5c9;
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-auth-page .fantasy-auth-links a {
+  color: #f4cf8e;
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-auth-card {
+  color-scheme: light dark;
+}
+[data-theme="paper"] .fantasy-auth-card { color-scheme: light; }
+[data-theme="night"] .fantasy-auth-card { color-scheme: dark; }
