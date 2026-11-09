@@ -2717,3 +2717,65 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   .catalog-shelf { padding: 11px 9px 15px; }
   .catalog-page .catalog-grid { gap: 9px; }
 }
+
+
+/* DS2-04C — balanced, content-sized catalog cards on narrow screens.
+   The public catalog keeps its two-column reading order and all metadata.
+   Short cards no longer inherit the tallest card's empty framed area. */
+@media (max-width: 720px) {
+  .catalog-page .catalog-grid {
+    align-items: start;
+  }
+  .catalog-page .catalog-grid > li {
+    align-self: start;
+    height: auto;
+  }
+  .catalog-page .catalog-book {
+    height: auto;
+    min-height: 0;
+  }
+  .catalog-page .catalog-book-body {
+    flex: 0 0 auto;
+  }
+  .catalog-page .catalog-book-body > p:first-child {
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .catalog-page .catalog-book h3 {
+    margin-top: 5px;
+    min-height: 2.45em;
+    overflow-wrap: anywhere;
+  }
+  .catalog-page .catalog-book-body > div.mt-3 {
+    align-items: flex-start;
+    gap: 5px 7px;
+    margin-top: 8px;
+  }
+  .catalog-page .catalog-personal {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(220, 182, 112, .22);
+  }
+}
+@media (max-width: 440px) {
+  .catalog-page .catalog-book-body {
+    padding: 9px 3px 5px;
+  }
+  .catalog-page .catalog-book h3 {
+    font-size: .97rem;
+    line-height: 1.24;
+    min-height: 2.48em;
+  }
+  .catalog-page .catalog-book-body > div.mt-3 {
+    margin-top: 7px;
+    gap: 4px 5px;
+  }
+  .catalog-page .catalog-book-body > div.mt-3 > span {
+    font-size: .72rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .catalog-page .catalog-personal {
+    font-size: .75rem;
+  }
+}
