@@ -3012,3 +3012,177 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   .fantasy-account form button[type='submit'],
   .fantasy-auth-card form button[type='submit'] { transition: none; }
 }
+
+
+/* DS2-05B — reading updates / new chapters.
+   A page-scoped editorial skin; keeps the filters, pagination, expansion,
+   chapter actions and their server/client handlers unchanged. */
+.fantasy-updates {
+  max-width: 1150px;
+  padding: clamp(10px, 2vw, 23px);
+  border: 1px solid rgba(190, 150, 84, .36);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(131, 161, 101, .075), transparent 43%),
+    var(--surface-raised);
+}
+.fantasy-updates > .reader-heading {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 205px;
+  align-items: center;
+  margin: 0 0 16px;
+  padding: clamp(24px, 3.3vw, 43px);
+  border: 1px solid rgba(236, 195, 123, .56);
+  border-radius: 15px;
+  background:
+    linear-gradient(92deg, rgba(6, 31, 24, .94), rgba(7, 31, 24, .78) 66%, rgba(9, 34, 24, .55)),
+    url('/images/fantasy-editorial/catalog/catalog-library-background.webp') center / cover no-repeat,
+    #0b2b22;
+  box-shadow: inset 0 0 0 3px rgba(7, 29, 23, .5);
+  color: #f9edd6;
+}
+.fantasy-updates > .reader-heading::after {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border: 1px solid rgba(234, 188, 111, .22);
+  border-radius: 9px;
+  pointer-events: none;
+}
+.fantasy-updates > .reader-heading > * { position: relative; z-index: 1; min-width: 0; }
+.fantasy-updates > .reader-heading .reader-eyebrow {
+  color: #edc887;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+}
+.fantasy-updates > .reader-heading h1 {
+  color: #fff0cf;
+  font-size: clamp(2.2rem, 4.1vw, 3.4rem);
+  text-shadow: 0 2px 15px rgba(0, 0, 0, .4);
+}
+.fantasy-updates > .reader-heading p:not(.reader-eyebrow) { color: #ecdfc8; }
+.fantasy-updates > .reader-heading .tea-outline {
+  border-color: #d2ab71;
+  border-radius: 999px;
+  background: rgba(12, 47, 34, .8);
+  color: #fff0d2;
+}
+.fantasy-updates > .reader-heading .tea-outline:hover { background: #276044; }
+.fantasy-updates .updates-filters {
+  gap: 13px;
+  margin-bottom: 17px;
+  padding: clamp(15px, 2.5vw, 24px);
+  border: 1px solid rgba(190, 150, 84, .43);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.fantasy-updates .updates-filters label {
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: .83rem;
+  font-weight: 650;
+}
+.fantasy-updates .updates-filters :is(input, select) {
+  min-width: 0;
+  min-height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+.fantasy-updates .updates-filters button[type='submit'] {
+  min-height: 46px;
+  border-radius: 9px;
+  font-weight: 700;
+}
+.fantasy-updates .updates-filters > a {
+  grid-column: 1 / -1;
+  min-height: 44px;
+  justify-self: start;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fantasy-updates .updates-count {
+  margin-top: 15px;
+  color: var(--text-primary);
+  font-family: var(--cd-font-display), Georgia, serif;
+  font-size: clamp(1.15rem, 2vw, 1.42rem);
+  line-height: 1.35;
+}
+.fantasy-updates .updates-hint {
+  max-width: 80ch;
+  margin: 9px 0 19px;
+  padding: 10px 14px;
+  border-left: 3px solid rgba(190, 150, 84, .72);
+  border-radius: 0 8px 8px 0;
+  background: var(--surface);
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+.fantasy-updates .updates-item {
+  border-color: rgba(190, 150, 84, .45);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .06);
+}
+.fantasy-updates .updates-head { gap: 15px; padding: 16px; }
+.fantasy-updates .updates-reveal {
+  border-top-color: rgba(190, 150, 84, .35);
+  color: var(--text-accent);
+}
+.fantasy-updates .updates-reveal:hover,
+.fantasy-updates .updates-reveal[aria-expanded='true'] { background: var(--surface-raised); }
+.fantasy-updates .updates-panel { border-top-color: rgba(190, 150, 84, .35); }
+.fantasy-updates .updates-panel-heading h3 {
+  font-family: var(--cd-font-display), Georgia, serif;
+  font-size: 1.18rem;
+}
+.fantasy-updates .updates-volume { border-color: rgba(190, 150, 84, .35); }
+.fantasy-updates .updates-volume summary { background: var(--surface-raised); }
+.fantasy-updates .updates-empty {
+  border-color: rgba(190, 150, 84, .42);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.fantasy-updates .updates-empty h2 {
+  font-family: var(--cd-font-display), Georgia, serif;
+  color: var(--text-primary);
+}
+.fantasy-updates .updates-pagination {
+  align-items: center;
+  border-top: 1px solid rgba(190, 150, 84, .37);
+  padding-top: 14px;
+}
+.fantasy-updates .updates-pagination a { min-height: 44px; font-weight: 650; }
+.fantasy-updates :is(a, button, input, select, summary):focus-visible {
+  outline-offset: 3px;
+}
+.fantasy-updates-status {
+  max-width: 750px;
+  padding: clamp(19px, 3vw, 29px);
+  border: 1px solid rgba(190, 150, 84, .42);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+.fantasy-updates-status h1 {
+  font-family: var(--cd-font-display), Georgia, serif;
+  font-size: clamp(1.35rem, 2.6vw, 1.8rem);
+}
+@media (max-width: 767px) {
+  .fantasy-updates { margin-inline: -5px; padding: 8px; border-radius: 16px; }
+  .fantasy-updates > .reader-heading { min-height: 0; padding: 23px 19px; gap: 13px; }
+  .fantasy-updates > .reader-heading h1 { margin: 6px 0 8px; }
+  .fantasy-updates .updates-filters { gap: 10px; padding: 14px; }
+  .fantasy-updates .updates-count { margin-top: 13px; }
+  .fantasy-updates .updates-hint { margin-bottom: 14px; }
+  .fantasy-updates .updates-head { gap: 10px; padding: 12px; }
+}
+@media (max-width: 420px) {
+  .fantasy-updates .updates-filters { gap: 8px; }
+  .fantasy-updates .updates-filters label { font-size: .78rem; }
+  .fantasy-updates .updates-filters :is(input, select) { padding-inline: 8px; }
+  .fantasy-updates .updates-filters button[type='submit'] { grid-column: 1 / -1; }
+}
