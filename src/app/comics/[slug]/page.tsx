@@ -28,11 +28,11 @@ function StoryExcerpt({ heading, text }: { heading: string; text: string | null 
   const full = text.trim();
   const chars = Array.from(full);
   const intro = chars.slice(0, 125).join("").replace(/\s+/g, " ").trimEnd();
-  return <section className="mt-4"><h2 className="font-semibold">{heading}</h2>
-    {chars.length <= 125 ? <p className="whitespace-pre-wrap">{full}</p> :
+  return <section className="wd-story-block"><h2>{heading}</h2>
+    {chars.length <= 125 ? <p className="wd-story-text whitespace-pre-wrap">{full}</p> :
       <details className="story-excerpt">
         <summary><span className="excerpt-short">{intro}… <b>Ещё</b></span><b className="excerpt-close">Свернуть</b></summary>
-        <p className="whitespace-pre-wrap">{full}</p>
+        <p className="wd-story-text whitespace-pre-wrap">{full}</p>
       </details>}
   </section>;
 }
@@ -162,7 +162,12 @@ export default async function ComicPage({
             canMark={readingState?.inLibrary === true}
           />
         </div>
-      } about={<div className="wd-about">
+      } about={<div className="wd-about wd-about-editorial">
+        <header className="wd-section-intro">
+          <p className="wd-section-kicker">ЛЕТОПИСЬ ПРОИЗВЕДЕНИЯ</p>
+          <h2>История и её создатели</h2>
+          <p>Описание, заметки переводчика и сведения о произведении.</p>
+        </header>
         <StoryExcerpt heading="Описание" text={comic.description}/>
         <StoryExcerpt heading="Примечание переводчика" text={comic.translatorNote}/>
             {comic.authorName || comic.translatorName ? (
@@ -192,9 +197,13 @@ export default async function ComicPage({
             ) : null}
 
 
-        {comic.workFormat!=="UNKNOWN" && <p>Формат: {workFormatLabels[comic.workFormat]}</p>}
-        {comic.totalChapters!==null && <p>Заявлено глав: {comic.totalChapters}</p>}
-        {!comic.description && !comic.translatorNote && !comic.authorName && !comic.translatorName && <p>Подробности об истории пока не добавлены.</p>}
+        {(comic.workFormat !== "UNKNOWN" || comic.totalChapters !== null) && (
+          <dl className="wd-about-facts">
+            {comic.workFormat !== "UNKNOWN" && <div><dt>Формат</dt><dd>{workFormatLabels[comic.workFormat]}</dd></div>}
+            {comic.totalChapters !== null && <div><dt>Заявлено глав</dt><dd>{comic.totalChapters}</dd></div>}
+          </dl>
+        )}
+        {!comic.description && !comic.translatorNote && !comic.authorName && !comic.translatorName && <p className="wd-about-placeholder">Подробности об истории пока не добавлены.</p>}
             {comic.visibility ===
               "PRIVATE" &&
             currentUser?.id ===
@@ -341,9 +350,11 @@ export default async function ComicPage({
 
       </div>} diary={
             <section className="wd-diary work-diary">
-              <h2 className="font-semibold">
-                Мой дневник
-              </h2>
+              <header className="wd-section-intro wd-section-intro--diary">
+                <p className="wd-section-kicker">ЛИЧНАЯ БИБЛИОТЕКА</p>
+                <h2>Дневник читателя</h2>
+                <p>Ваш прогресс чтения, впечатления и заметки об этой истории.</p>
+              </header>
 
               {readingState?.inLibrary ? (
                 <div className="wd-dashboard">
@@ -394,11 +405,11 @@ export default async function ComicPage({
                     if (!rated) return null;
                     return <p key={kind} className="mt-1 text-sm">{kind === "MAIN" ? "Средняя по главам" : "По спецвыпускам"}: <strong>{average === null ? "Без оценки" : average.toLocaleString("ru", {minimumFractionDigits:1, maximumFractionDigits:1}) + " / 5"}</strong> · оценено {rated} из {read} прочитанных</p>;
                   })}
-                  <PromptSwitch/>
+                  <div className="wd-diary-prompt-card"><PromptSwitch/></div>
                   <details className="journal-editor"><summary>Обновления <span>{!readingState.inLibrary ? "При возврате" : readingState.trackingEnabled ? "Включены" : "Выключены"}</span></summary><TrackingControl comicId={comic.id} enabled={readingState.trackingEnabled} inLibrary={readingState.inLibrary} /></details>
                 </div>
               ) : readingState ? (
-                <div className="wd-dashboard space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4" role="status">
+                <div className="wd-dashboard wd-diary-return-note" role="status">
                   <p className="font-semibold">Комикс сейчас не в вашей библиотеке</p>
                   <p className="text-sm text-[var(--text-secondary)]">
                     Прежний дневник сохранён, но произведение больше не считается активным чтением.
@@ -410,9 +421,12 @@ export default async function ComicPage({
                   {readingState.personalNote?.trim() ? <blockquote className="whitespace-pre-wrap border-l-2 border-[var(--border)] pl-3 text-sm">{readingState.personalNote}</blockquote> : null}
                 </div>
               ) : !currentUser ? (
-                <p className="mt-4"><Link className="tea-primary" href={`/login?next=${encodeURIComponent(`/comics/${comic.slug}`)}`}>Войти и вести дневник</Link></p>
+                <div className="wd-diary-gate">
+                  <p>Войдите, чтобы сохранять личные впечатления, оценки и историю чтения.</p>
+                  <Link className="tea-primary" href={`/login?next=${encodeURIComponent(`/comics/${comic.slug}`)}`}>Войти и вести дневник</Link>
+                </div>
               ) : (
-                <div className="mt-4">
+                <div className="wd-diary-gate">
                   <p className="text-sm text-[var(--text-secondary)]">
                     Комикс ещё не добавлен в библиотеку.
                   </p>

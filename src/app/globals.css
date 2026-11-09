@@ -1416,3 +1416,302 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
     transition: none;
   }
 }
+
+
+/* DS2-01d — editorial story/about and personal diary.
+   Intentionally scoped to the comic detail page; existing business logic unchanged. */
+.wd-work .wd-about-editorial,
+.wd-work .wd-diary {
+  width: min(100%, 1120px);
+  margin-inline: auto;
+  padding-top: clamp(22px, 3.4vw, 44px);
+  min-width: 0;
+}
+.wd-work .wd-about-editorial {
+  display: grid;
+  gap: clamp(14px, 1.8vw, 22px);
+}
+.wd-work .wd-about-editorial > * {
+  margin: 0;
+  padding: 0;
+  border-bottom: 0;
+  min-width: 0;
+}
+.wd-work .wd-section-intro {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  min-height: 132px;
+  padding: clamp(20px, 3vw, 32px) clamp(22px, 3.4vw, 42px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background:
+    radial-gradient(ellipse at 97% 0%, rgba(199, 167, 121, .14), transparent 64%),
+    var(--surface);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, .035);
+}
+.wd-work .wd-section-intro::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 24px;
+  bottom: 24px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--text-accent);
+}
+.wd-work .wd-section-kicker {
+  color: var(--text-accent);
+  font-size: .68rem;
+  font-weight: 750;
+  letter-spacing: .13em;
+  line-height: 1.5;
+}
+.wd-work .wd-section-intro h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--cd-font-display), Georgia, serif;
+  font-size: clamp(1.55rem, 2.85vw, 2.4rem);
+  line-height: 1.18;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  overflow-wrap: anywhere;
+}
+.wd-work .wd-section-intro > p:last-child {
+  color: var(--text-secondary);
+  font-size: .91rem;
+  line-height: 1.6;
+}
+.wd-work .wd-story-block,
+.wd-work .wd-about-editorial .work-credit-details,
+.wd-work .wd-about-editorial .wd-about-facts,
+.wd-work .wd-about-editorial .wd-about-placeholder {
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  min-width: 0;
+}
+.wd-work .wd-story-block h2 {
+  margin: 0 0 13px;
+  color: var(--text-primary);
+  font-family: var(--cd-font-display), Georgia, serif;
+  font-size: clamp(1.3rem, 2vw, 1.75rem);
+  font-weight: 600;
+  line-height: 1.24;
+}
+.wd-work .wd-story-block .wd-story-text {
+  max-width: 78ch;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: clamp(.94rem, 1.3vw, 1.025rem);
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+.wd-work .wd-story-block .story-excerpt > summary {
+  padding: 6px 0;
+  color: var(--text-secondary);
+  font-size: clamp(.94rem, 1.3vw, 1.025rem);
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.wd-work .wd-story-block .story-excerpt > summary b {
+  color: var(--text-accent);
+  font-size: .93em;
+}
+.wd-work .wd-story-block .story-excerpt[open] > summary {
+  margin-bottom: 15px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--border);
+}
+.wd-work .wd-story-block .story-excerpt > summary:focus-visible,
+.wd-work .wd-about-editorial summary:focus-visible,
+.wd-work .wd-diary summary:focus-visible {
+  outline: 2px solid var(--text-accent);
+  outline-offset: 3px;
+  border-radius: 5px;
+}
+.wd-work .wd-about-editorial .work-credit-details {
+  margin-top: 0;
+  color: var(--text-primary);
+  font-size: .94rem;
+}
+.wd-work .wd-about-editorial .work-credit-details > summary {
+  color: var(--text-accent);
+  font-family: var(--cd-font-display), Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.wd-work .wd-about-editorial .work-credits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+.wd-work .wd-about-editorial .work-credits dt {
+  color: var(--text-secondary);
+  font-size: .78rem;
+}
+.wd-work .wd-about-editorial .work-credits dd {
+  margin: 5px 0 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+.wd-work .wd-about-editorial .wd-about-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 20px;
+  margin: 0;
+}
+.wd-work .wd-about-editorial .wd-about-facts dt {
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+  font-size: .8rem;
+}
+.wd-work .wd-about-editorial .wd-about-facts dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--cd-font-display), Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.wd-work .wd-about-editorial .wd-about-placeholder {
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.wd-work .wd-about-editorial .private-settings {
+  margin-top: 0;
+  padding: clamp(18px, 3vw, 26px);
+  border-radius: 18px;
+}
+.wd-work .wd-diary .wd-section-intro { margin-bottom: clamp(16px, 2vw, 24px); }
+.wd-work .wd-diary .wd-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(12px, 1.5vw, 18px);
+  min-width: 0;
+}
+.wd-work .wd-diary .wd-dashboard > * {
+  margin: 0;
+  min-width: 0;
+  border-bottom: 0;
+}
+.wd-work .wd-diary .wd-dashboard > :is(.wd-edit, .reading-progress-v5, .journal-editor, .wd-diary-prompt-card) {
+  padding: clamp(16px, 2.4vw, 24px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.wd-work .wd-diary .wd-dashboard > .journal-form {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.wd-work .wd-diary .wd-dashboard .wd-review {
+  padding: clamp(18px, 2.5vw, 28px);
+  border-radius: 18px;
+}
+.wd-work .wd-diary .wd-dashboard > .reading-progress-v5 {
+  padding: clamp(16px, 2.4vw, 24px);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.wd-work .wd-diary .wd-dashboard .wd-progress {
+  margin: 0;
+  border-color: var(--border);
+  background: var(--surface-raised);
+}
+.wd-work .wd-diary .wd-dashboard .wd-switch {
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+}
+.wd-work .wd-diary .wd-dashboard .wd-edit > summary,
+.wd-work .wd-diary .wd-dashboard .journal-editor > summary {
+  color: var(--text-primary);
+  font-family: var(--cd-font-display), Georgia, serif;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+.wd-work .wd-diary .wd-dashboard .reading-help-v5 > summary {
+  color: var(--text-accent);
+  font-weight: 600;
+}
+.wd-work .wd-diary .wd-dashboard > p {
+  color: var(--text-secondary);
+  font-size: .85rem;
+  line-height: 1.6;
+}
+.wd-work .wd-diary .wd-diary-return-note,
+.wd-work .wd-diary .wd-diary-gate {
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(199, 167, 121, .09), transparent 60%),
+    var(--surface);
+  color: var(--text-primary);
+}
+.wd-work .wd-diary .wd-diary-return-note { gap: 13px; }
+.wd-work .wd-diary .wd-diary-return-note > p,
+.wd-work .wd-diary .wd-diary-gate > p {
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.wd-work .wd-diary .wd-diary-return-note > p:first-child {
+  color: var(--text-primary);
+  font-family: var(--cd-font-display), Georgia, serif;
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
+  font-weight: 600;
+}
+.wd-work .wd-diary .wd-diary-return-note blockquote {
+  max-width: 75ch;
+  margin: 4px 0 0;
+  padding-left: 16px;
+  border-color: var(--text-accent);
+  color: var(--text-secondary);
+  font-family: var(--cd-font-display), Georgia, serif;
+  font-size: 1.06rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.wd-work .wd-diary .wd-diary-gate {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+.wd-work .wd-diary .wd-diary-gate form { margin: 0; }
+.wd-work .wd-diary .wd-diary-gate .tea-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 10px;
+}
+@media (max-width: 620px) {
+  .wd-work .wd-about-editorial,
+  .wd-work .wd-diary { padding-top: 18px; }
+  .wd-work .wd-section-intro {
+    min-height: auto;
+    padding: 22px 20px;
+    border-radius: 16px;
+  }
+  .wd-work .wd-story-block,
+  .wd-work .wd-about-editorial .work-credit-details,
+  .wd-work .wd-about-editorial .wd-about-facts,
+  .wd-work .wd-diary .wd-diary-gate,
+  .wd-work .wd-diary .wd-diary-return-note {
+    padding: 20px;
+    border-radius: 15px;
+  }
+  .wd-work .wd-diary .wd-dashboard > :is(.wd-edit, .reading-progress-v5, .journal-editor, .wd-diary-prompt-card) {
+    padding: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wd-work .wd-story-block *,
+  .wd-work .wd-diary .wd-dashboard * { scroll-behavior: auto; }
+}
