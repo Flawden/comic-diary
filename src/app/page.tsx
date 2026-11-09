@@ -147,22 +147,55 @@ export default async function Home({
 
   return (
     <div className="reader-page catalog-page">
-      <header className="reader-heading">
-        <div><p className="reader-eyebrow">Comic Diary · истории рядом</p>
-          <h1>Найдите свою историю</h1>
-          <p>Комиксы, к которым захочется возвращаться.</p></div>
-        <Link href="/library" className="tea-outline">Моя библиотека →</Link>
+      <header className="reader-heading catalog-hero">
+        <div className="catalog-hero-copy">
+          <span className="catalog-hero-emblem" aria-hidden="true" />
+          <p className="reader-eyebrow">Чайная Белого Дракона · зал историй</p>
+          <h1>Каталог произведений</h1>
+          <p>Комиксы, манхвы, манги и другие истории, которые стоит открыть.</p>
+        </div>
+        <Link href="/library" className="tea-outline catalog-hero-library">
+          Моя библиотека <span aria-hidden="true">→</span>
+        </Link>
       </header>
-      {readingNow ? <Link href={comicListHref(readingNow.slug, "catalog", resolvedSearchParams)} className="reading-return">
-        <span>Вернуться к чтению</span><strong>{readingNow.title}</strong><span aria-hidden="true">→</span>
-      </Link> : null}
-      <section id="catalog" aria-label="Каталог комиксов">
+
+      <nav className="catalog-shortcuts" aria-label="Разделы библиотеки">
+        <Link href="/#catalog" className="catalog-shortcut is-active" aria-current="page">
+          <span aria-hidden="true">✦</span> Все произведения
+        </Link>
+        <Link href="/updates" className="catalog-shortcut">
+          <span aria-hidden="true">◷</span> Обновления
+        </Link>
+        <Link href="/library" className="catalog-shortcut">
+          <span aria-hidden="true">♧</span> Моя библиотека
+        </Link>
+      </nav>
+
+      {readingNow ? (
+        <Link
+          href={comicListHref(readingNow.slug, "catalog", resolvedSearchParams)}
+          className="reading-return catalog-reading-return"
+        >
+          <span>Вернуться к чтению</span>
+          <strong>{readingNow.title}</strong>
+          <span aria-hidden="true">→</span>
+        </Link>
+      ) : null}
+
+      <section id="catalog" className="catalog-shelf" aria-label="Каталог комиксов">
+        <div className="catalog-shelf-heading">
+          <div>
+            <p className="catalog-overline">На полках нашей чайной</p>
+            <h2>Выберите историю по душе</h2>
+          </div>
+          <span className="catalog-shelf-seal" aria-hidden="true">✧</span>
+        </div>
         <form
           method="get"
           action="/#catalog"
           className="catalog-filters"
         >
-          <label className="block">
+          <label className="block catalog-search-field">
             <span className="mb-2 block text-sm font-medium">
               Поиск по названию
             </span>
@@ -175,7 +208,7 @@ export default async function Home({
               placeholder="Например, Берсерк"
               className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
             />
-          </label>          <label className="block">
+          </label>          <label className="block catalog-sort-field">
             <span className="mb-2 block text-sm font-medium">
               Сортировка
             </span>
@@ -262,18 +295,19 @@ export default async function Home({
 
         </form>
 
-        {hasCatalogFilters ? <Link href="/#catalog" className="reader-back">Сбросить фильтры</Link> : null}
-        {hasCatalogFilters ? (
-          <p className="mt-4 text-sm text-[var(--text-secondary)]">
-            Найдено опубликованных комиксов:{" "}
-            <strong>
-              {comicList.length}
-            </strong>
+        <div className="catalog-results-bar">
+          <p className="catalog-results-count">
+            <span aria-hidden="true">✧</span> Найдено произведений: <strong>{comicList.length}</strong>
           </p>
-        ) : null}
+          {hasCatalogFilters ? (
+            <Link href="/#catalog" className="reader-back catalog-reset-filters">
+              Сбросить фильтры
+            </Link>
+          ) : null}
+        </div>
 
         {comicList.length === 0 ? (
-          <div className="mt-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+          <div className="catalog-empty-state">
             <h3 className="font-semibold">
               {hasCatalogFilters
                 ? "Ничего не найдено"
