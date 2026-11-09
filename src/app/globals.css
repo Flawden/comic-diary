@@ -1834,44 +1834,7 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   background: #25563f;
   border-color: #f4d695;
 }
-/* QA-02: These are ordinary cross-page links, not a segmented control.
-   Mobile users navigate through the persistent bottom navigation instead. */
-.catalog-page .catalog-related-links {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 20px;
-  margin: 0 0 20px;
-  padding: 0 2px;
-  font-size: .875rem;
-  color: var(--text-secondary);
-}
-.catalog-page .catalog-related-links-label {
-  color: var(--text-muted);
-  font-weight: 600;
-}
-.catalog-page .catalog-related-links a {
-  display: inline-flex;
-  gap: 5px;
-  align-items: center;
-  min-height: 44px;
-  padding: 5px 0;
-  color: var(--text-accent);
-  font-weight: 600;
-  text-decoration: underline;
-  text-decoration-color: currentColor;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 4px;
-}
-.catalog-page .catalog-related-links a:hover { color: var(--text-primary); }
-.catalog-page .catalog-related-links a:focus-visible {
-  outline: 2px solid var(--text-accent);
-  outline-offset: 3px;
-  border-radius: 3px;
-}
-@media (max-width: 720px) {
-  .catalog-page .catalog-related-links { display: none; }
-}
+
 .catalog-page .catalog-reading-return {
   margin: 0 0 24px;
   padding: 15px clamp(16px, 3vw, 25px);
@@ -3420,12 +3383,7 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   --fe-status-success: var(--fe-accent);
   --fe-status-warning: var(--fe-accent);
 }
-:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-related-links {
-  color: var(--fe-muted);
-}
-:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-related-links a {
-  color: var(--fe-accent);
-}
+
 :is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-reading-return strong {
   color: var(--fe-ink);
 }
@@ -3564,4 +3522,149 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 :is([data-theme="paper"], [data-theme="night"]) .fantasy-library .diary-reading-destination > .tea-primary {
   background: var(--fe-action);
   color: var(--fe-on-action);
+}
+
+/* Phase 2A — desktop editorial rail for the White Dragon catalog.
+   It is atmosphere, not navigation. Existing catalog data and interactions stay untouched. */
+.catalog-editorial-main {
+  min-width: 0;
+}
+
+.catalog-editorial-rail {
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  .catalog-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(196px, 220px);
+    column-gap: clamp(18px, 1.8vw, 24px);
+    align-items: start;
+  }
+
+  .catalog-editorial-rail {
+    position: sticky;
+    top: 88px;
+    display: flex;
+    min-width: 0;
+    min-height: 610px;
+    flex-direction: column;
+    justify-content: space-between;
+    align-self: start;
+    overflow: hidden;
+    isolation: isolate;
+    padding: 25px 8px 22px 22px;
+    border-left: 1px solid var(--border);
+    color: var(--text-secondary);
+    background:
+      radial-gradient(ellipse at 82% 84%, var(--surface-raised), transparent 70%);
+  }
+
+  .catalog-editorial-rail-top,
+  .catalog-editorial-rail-copy,
+  .catalog-editorial-rail-bottom {
+    position: relative;
+    z-index: 1;
+  }
+
+  .catalog-editorial-rail-top {
+    display: grid;
+    justify-items: start;
+    gap: 12px;
+  }
+
+  .catalog-editorial-rail-symbol {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: var(--primary);
+    font-family: var(--cd-font-display), Georgia, serif;
+    font-size: 25px;
+    line-height: 1;
+  }
+
+  .catalog-editorial-rail-kicker {
+    color: var(--text-accent);
+    font-size: .66rem;
+    font-weight: 750;
+    letter-spacing: .16em;
+    line-height: 1.5;
+    text-transform: uppercase;
+  }
+
+  .catalog-editorial-rail-ornament {
+    display: block;
+    width: min(100%, 176px);
+    height: 30px;
+    background: url('/images/fantasy-editorial/catalog/catalog-heading-ornament.webp') left center / contain no-repeat;
+    opacity: .82;
+  }
+
+  .catalog-editorial-rail-spacer {
+    flex: 1;
+    min-height: 100px;
+  }
+
+  .catalog-editorial-rail-copy {
+    min-height: 225px;
+    padding: 0 4px 20px 0;
+    animation: catalog-editorial-note-in .55s ease both;
+  }
+
+  .catalog-editorial-rail-index {
+    margin-bottom: 15px;
+    color: var(--text-muted);
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .15em;
+  }
+
+  .catalog-editorial-rail-copy h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-family: var(--cd-font-display), Georgia, serif;
+    font-size: clamp(1.55rem, 2vw, 1.95rem);
+    font-weight: 500;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  .catalog-editorial-rail-copy > p:last-child {
+    margin-top: 16px;
+    color: var(--text-secondary);
+    font-family: var(--cd-font-display), Georgia, serif;
+    font-size: .94rem;
+    font-style: italic;
+    line-height: 1.75;
+  }
+
+  .catalog-editorial-rail-divider {
+    display: block;
+    width: min(100%, 190px);
+    height: 16px;
+    margin-bottom: 13px;
+    background: url('/images/fantasy-editorial/catalog/catalog-divider.webp') left center / contain no-repeat;
+    opacity: .76;
+  }
+
+  .catalog-editorial-rail-bottom p {
+    color: var(--text-accent);
+    font-size: .72rem;
+    letter-spacing: .035em;
+    line-height: 1.6;
+  }
+}
+
+@keyframes catalog-editorial-note-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .catalog-editorial-rail-copy {
+    animation: none;
+  }
 }
