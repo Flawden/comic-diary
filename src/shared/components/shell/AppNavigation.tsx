@@ -15,7 +15,7 @@ export function AppNavigation() {
       {items.map((item) => {
         const active = item.href === "/" ? pathname === "/" || pathname.startsWith("/comics/") : pathname === item.href || pathname.startsWith(`${item.href}/`);
         return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`tea-nav-link ${active ? "is-active" : ""}`}>
-          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={item.path} /></svg>{item.label}
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={item.path} /></svg><span className="tea-nav-label">{item.label}</span>
         </Link>;
       })}
     </div>

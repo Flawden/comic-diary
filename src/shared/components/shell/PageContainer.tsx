@@ -6,7 +6,7 @@ export function PageContainer({
   children: ReactNode;
 }) {
   return (
-    <main id="main-content" className="min-h-screen px-4 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:pb-16 lg:px-8">
+    <main id="main-content" className="fantasy-page-container min-h-screen px-4 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:pb-16 lg:px-8">
       <div className="mx-auto max-w-6xl">
         {children}
       </div>

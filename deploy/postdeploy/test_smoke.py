@@ -15,6 +15,12 @@ class FakeApp(http.server.BaseHTTPRequestHandler):
     commit = SHA
     database_ok = True
     fail_catalog = False
+    catalog_body = (
+        '<html lang="ru"><body><div class="reader-page catalog-page">'
+        '<header><h1>Каталог произведений</h1></header>'
+        '<section id="catalog" aria-label="Каталог комиксов"></section>'
+        '</div></body></html>'
+    ).encode("utf-8")
     redirect_login = False
     request_count = 0
 
@@ -26,7 +32,7 @@ class FakeApp(http.server.BaseHTTPRequestHandler):
                 return self.reply(503, b'{"status":"unavailable"}')
             return self.reply(200, ('{"status":"ready","commit":"' + self.commit + '"}').encode())
         if route == "/":
-            return self.reply(500 if self.fail_catalog else 200, "Найдите свою историю".encode())
+            return self.reply(500 if self.fail_catalog else 200, self.catalog_body)
         if route == "/login":
             if self.redirect_login:
                 self.send_response(302)
@@ -51,6 +57,12 @@ def server():
     FakeApp.commit = SHA
     FakeApp.database_ok = True
     FakeApp.fail_catalog = False
+    FakeApp.catalog_body = (
+        '<html lang="ru"><body><div class="reader-page catalog-page">'
+        '<header><h1>Каталог произведений</h1></header>'
+        '<section id="catalog" aria-label="Каталог комиксов"></section>'
+        '</div></body></html>'
+    ).encode("utf-8")
     FakeApp.redirect_login = False
     FakeApp.request_count = 0
     service = http.server.ThreadingHTTPServer(("127.0.0.1", 0), FakeApp)
@@ -83,6 +95,28 @@ class SmokeTests(unittest.TestCase):
     def test_broken_catalog_is_rejected(self):
         with server() as url:
             FakeApp.fail_catalog = True
+            self.assertFalse(smoke.run(url, SHA, 1, 0, 2))
+
+    def test_new_editorial_copy_does_not_break_catalog(self):
+        with server() as url:
+            FakeApp.catalog_body = FakeApp.catalog_body.replace(
+                "Каталог произведений".encode(), "Добро пожаловать в Чайную".encode()
+            )
+            self.assertTrue(smoke.run(url, SHA, 1, 0, 2))
+
+    def test_old_headline_alone_does_not_count_as_catalog(self):
+        with server() as url:
+            FakeApp.catalog_body = b"<html><body>" + "Найдите свою историю".encode() + b"</body></html>"
+            self.assertFalse(smoke.run(url, SHA, 1, 0, 2))
+
+    def test_missing_catalog_shelf_is_rejected(self):
+        with server() as url:
+            FakeApp.catalog_body = FakeApp.catalog_body.replace(b'id="catalog"', b'id="missing"')
+            self.assertFalse(smoke.run(url, SHA, 1, 0, 2))
+
+    def test_missing_catalog_page_container_is_rejected(self):
+        with server() as url:
+            FakeApp.catalog_body = FakeApp.catalog_body.replace(b"catalog-page", b"other-page")
             self.assertFalse(smoke.run(url, SHA, 1, 0, 2))
 
     def test_redirect_does_not_count_as_login_page(self):

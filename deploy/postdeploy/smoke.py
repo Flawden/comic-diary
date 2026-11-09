@@ -2,6 +2,7 @@
 """BR02: read-only public smoke check for the exact deployed Comic Diary release."""
 
 import argparse
+from html.parser import HTMLParser
 import json
 import re
 import sys
@@ -70,6 +71,34 @@ def fetch(origin: str, path: str, timeout: float = 8.0) -> bytes:
         raise SmokeFailure(f"{path.split('?')[0]} network error ({type(exc).__name__})") from exc
 
 
+class CatalogDocument(HTMLParser):
+    """Verify catalog landmarks, not presentation copy that changes with redesigns."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.has_catalog_page = False
+        self.has_catalog_shelf = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attributes = dict(attrs)
+        if tag == "div" and "catalog-page" in (attributes.get("class") or "").split():
+            self.has_catalog_page = True
+        if tag == "section" and attributes.get("id") == "catalog":
+            self.has_catalog_shelf = True
+
+
+def check_catalog(body: bytes) -> None:
+    try:
+        html = body.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise SmokeFailure("/ did not return UTF-8 HTML") from exc
+    parser = CatalogDocument()
+    parser.feed(html)
+    parser.close()
+    if not parser.has_catalog_page or not parser.has_catalog_shelf:
+        raise SmokeFailure("/ did not render its catalog container and shelf")
+
+
 def check_once(origin: str, expected_sha: str, timeout: float = 8.0) -> None:
     try:
         response = json.loads(fetch(origin, f"/api/health/ready?br02={expected_sha}", timeout))
@@ -80,10 +109,9 @@ def check_once(origin: str, expected_sha: str, timeout: float = 8.0) -> None:
     if response.get("commit") != expected_sha:
         raise SmokeFailure("Public site is serving a different commit")
 
-    for path, marker in (("/", "Найдите свою историю"), ("/login", "Вход")):
-        body = fetch(origin, path, timeout)
-        if marker.encode("utf-8") not in body:
-            raise SmokeFailure(f"{path} did not render its expected page")
+    check_catalog(fetch(origin, "/", timeout))
+    if "Вход".encode("utf-8") not in fetch(origin, "/login", timeout):
+        raise SmokeFailure("/login did not render its expected page")
 
 
 def run(origin: str, expected_sha: str, attempts: int, delay: float, timeout: float) -> bool:
