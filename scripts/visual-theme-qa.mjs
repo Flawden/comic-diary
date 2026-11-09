@@ -123,7 +123,7 @@ async function capture(viewport, theme, route, fixture) {
   const file = `${theme}-${viewport.id}-${route.id}.png`;
   const evidence = { theme, viewport: viewport.id, route: route.id, file: null };
   try {
-    const response = await page.goto(`${ORIGIN}${path}`, { waitUntil: 'domcontentloaded', timeout: 35000 });
+    const response = await page.goto(`${ORIGIN}${path}`, { waitUntil: 'load', timeout: 35000 });
     assert.equal(response?.status(), 200, `${route.id}: HTTP status`);
     assert.equal(new URL(page.url()).pathname, path, `${route.id}: unexpected auth redirect`);
     await page.locator(route.selector).first().waitFor({ state: 'visible' });
@@ -137,6 +137,7 @@ async function capture(viewport, theme, route, fixture) {
       h1: document.querySelector('h1')?.textContent?.trim() ?? '',
     }));
     assert.equal(metrics.theme, theme, `${route.id}: theme is wrong`);
+    assert.equal(await page.locator('nextjs-portal').count(), 0, `${route.id}: Next.js development overlay must not appear in release-mode screenshots`);
     assert.ok(metrics.semanticBackground, `${route.id}: semantic background token missing`);
     evidence.metrics = metrics;
     if (metrics.pageWidth > metrics.viewportWidth + 8) {
@@ -182,19 +183,48 @@ async function capture(viewport, theme, route, fixture) {
 
 async function checkThemeSelector(fixture) {
   const ctx = await makeContext(VIEWPORTS[0], 'paper', fixture.token, true);
+  const page = await ctx.newPage();
+  page.setDefaultTimeout(15000);
+  page.on('pageerror', error => console.error(`VISUAL_QA_THEME_CLIENT_ERROR: ${error.message}`));
+  page.on('console', message => {
+    if (message.type() === 'error') console.error(`VISUAL_QA_THEME_CONSOLE_ERROR: ${message.text().slice(0, 500)}`);
+  });
   try {
-    const page = await ctx.newPage();
-    await page.goto(`${ORIGIN}/account`, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('heading', { name: 'Оформление' }).waitFor();
+    const response = await page.goto(`${ORIGIN}/account`, { waitUntil: 'load', timeout: 35000 });
+    assert.equal(response?.status(), 200, 'Theme selector: unexpected account response');
+    await page.getByRole('heading', { name: 'Оформление' }).waitFor({ state: 'visible' });
+    const labels = { night: 'Ночная', tea: 'Чайная', paper: 'Бумажная' };
     for (const theme of ['night', 'tea', 'paper']) {
-      await page.locator(`input[name="theme"][value="${theme}"]`).check();
-      await page.waitForFunction(value => document.documentElement.getAttribute('data-theme') === value, theme);
-      await page.reload({ waitUntil: 'domcontentloaded' });
-      assert.equal(await page.locator('html').getAttribute('data-theme'), theme);
+      const radio = page.locator(`input[name="theme"][value="${theme}"]`);
+      await radio.waitFor({ state: 'visible' });
+      await radio.check();
+      // A checked native radio alone doesn't prove that React handled the change.
+      // Wait for the component's accessible status message before testing persistence.
+      await page.getByRole('status').getByText(`Тема «${labels[theme]}» сохранена.`).waitFor({ state: 'visible', timeout: 10000 });
+      assert.equal(await page.locator('html').getAttribute('data-theme'), theme, `Live theme switch to ${theme} failed`);
       const cookies = await ctx.cookies(ORIGIN);
-      assert.equal(cookies.find(cookie => cookie.name === 'comic-diary-theme')?.value, theme);
+      assert.equal(cookies.find(cookie => cookie.name === 'comic-diary-theme')?.value, theme, `Theme cookie missing for ${theme}`);
+      await page.reload({ waitUntil: 'load' });
+      assert.equal(await page.locator('html').getAttribute('data-theme'), theme, `Theme ${theme} did not survive reload`);
+      assert.equal(await page.locator(`input[name="theme"][value="${theme}"]`).isChecked(), true, `Selected radio reset after ${theme} reload`);
+      console.log(`VISUAL_QA_THEME_OK: ${theme}; react_message=ok; cookie=ok; reload=ok`);
     }
     console.log('VISUAL_QA_THEME_SWITCH=PASS; selected theme survives reload');
+  } catch (err) {
+    try {
+      const diag = 'theme-selector-diagnostic.png';
+      await page.screenshot({ path: join(OUTPUT, diag), fullPage: true, timeout: 10000 });
+      console.error(`VISUAL_QA_THEME_DIAGNOSTIC: ${diag}`);
+      console.error(`VISUAL_QA_THEME_STATE: ${JSON.stringify(await page.evaluate(() => ({
+        theme: document.documentElement.getAttribute('data-theme'),
+        checked: document.querySelector('input[name="theme"]:checked')?.getAttribute('value'),
+        status: document.querySelector('[role="status"]')?.textContent?.trim() ?? '',
+        cookie: document.cookie.split(';').map(x => x.trim()).find(x => x.startsWith('comic-diary-theme=')) ?? '',
+      })))}`);
+    } catch (diagError) {
+      console.error(`VISUAL_QA_THEME_DIAGNOSTIC_ERROR: ${String(diagError)}`);
+    }
+    throw err;
   } finally {
     await ctx.close();
   }

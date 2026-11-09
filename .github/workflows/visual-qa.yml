@@ -17,7 +17,7 @@ jobs:
   theme-screenshots:
     name: Three themes / mobile and desktop
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     permissions:
       contents: read
 
@@ -66,14 +66,17 @@ jobs:
           WD_BROWSER_ROOT: ${{ runner.temp }}/wd-browser
         run: npm install --prefix "$WD_BROWSER_ROOT" --no-audit --no-fund playwright-core@1.56.1
 
+      - name: Build release-mode app using disposable database
+        run: npm run build
+
       - name: Capture themes with isolated app and synthetic account
-        timeout-minutes: 12
+        timeout-minutes: 15
         env:
           WD_BROWSER_ROOT: ${{ runner.temp }}/wd-browser
           VISUAL_QA_DIR: ${{ runner.temp }}/comic-diary-visual-qa
         run: |
           set -euo pipefail
-          ./node_modules/.bin/next dev --webpack -H 127.0.0.1 -p 3102 > "$RUNNER_TEMP/visual-next.log" 2>&1 &
+          ./node_modules/.bin/next start -H 127.0.0.1 -p 3102 > "$RUNNER_TEMP/visual-next.log" 2>&1 &
           app_pid=$!
           trap 'kill "$app_pid" 2>/dev/null || true' EXIT
           curl -fsS --retry 35 --retry-delay 1 --retry-connrefused http://127.0.0.1:3102/login -o /dev/null
