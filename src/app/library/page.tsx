@@ -221,14 +221,25 @@ export default async function LibraryPage({
     );
 
   return (
-    <div className="tea-library">
-      <header className="library-heading library-heading-v5">
-        <div>
+    <div className="tea-library fantasy-library">
+      <header className="library-heading library-heading-v5 fantasy-library-hero">
+        <div className="fantasy-library-hero-copy">
+          <p className="fantasy-library-eyebrow">Чайная Белого Дракона · Личная полка</p>
+          <span className="fantasy-library-emblem" aria-hidden="true" />
           <h1>Мой дневник</h1>
-          <p>{library.length ? `На полке: ${library.length} · Читаю: ${readingCount}` : "Ваша следующая история начинается здесь."}</p>
+          <p className="fantasy-library-lead">Каждая история оставляет след. Здесь хранятся твои.</p>
         </div>
-        <Link href="/" className="tea-text-action">В каталог <span aria-hidden="true">↗</span></Link>
+        <Link href="/" className="tea-text-action fantasy-library-hero-action">
+          В каталог <span aria-hidden="true">↗</span>
+        </Link>
       </header>
+
+      <section className="fantasy-library-stats" aria-label="Статистика моей полки">
+        <div className="fantasy-library-stat"><strong>{library.length}</strong><span>На полке</span></div>
+        <div className="fantasy-library-stat"><strong>{readingCount}</strong><span>Читаю</span></div>
+        <div className="fantasy-library-stat"><strong>{completedCount}</strong><span>Прочитано</span></div>
+        <div className="fantasy-library-stat"><strong>{wantToReadCount}</strong><span>В планах</span></div>
+      </section>
 
       {activeFilter === "ALL" && !query ? <ContinueReading items={library} listQuery={resolvedSearchParams} /> : null}
 
@@ -332,7 +343,7 @@ export default async function LibraryPage({
       ) : null}
 
       {library.length === 0 ? (
-        <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm">
+        <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm fantasy-library-empty">
           <h2 className="text-lg font-semibold">
             В библиотеке пока пусто
           </h2>
@@ -349,7 +360,7 @@ export default async function LibraryPage({
           </Link>
         </section>
       ) : filteredLibrary.length === 0 ? (
-        <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm">
+        <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm fantasy-library-empty">
           <h2 className="text-lg font-semibold">
             {query ? "Ничего не найдено" : "В этом разделе пока пусто"}
           </h2>
