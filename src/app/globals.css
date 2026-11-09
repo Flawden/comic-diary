@@ -3557,3 +3557,11 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 }
 [data-theme="paper"] .fantasy-auth-card { color-scheme: light; }
 [data-theme="night"] .fantasy-auth-card { color-scheme: dark; }
+
+/* QA-04: foreground on reading actions must match the button, not the page ink.
+   In QA-03B the generic link rule overwrote tea-primary contrast in paper/night.
+   Tea uses its existing scheme unchanged. */
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .diary-reading-destination > .tea-primary {
+  background: var(--fe-action);
+  color: var(--fe-on-action);
+}
