@@ -3186,3 +3186,57 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   .fantasy-updates .updates-filters :is(input, select) { padding-inline: 8px; }
   .fantasy-updates .updates-filters button[type='submit'] { grid-column: 1 / -1; }
 }
+
+/* QA-01: library removal affordance.
+   Keep a 44px touch target but make the drawn icon much quieter.
+   The native confirmation dialog and its mutation path are unchanged. */
+.fantasy-library .shelf-book > .library-remove-control.is-icon {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+.fantasy-library .library-remove-control.is-icon > .library-remove-icon-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
+  color: #f5dab0;
+  -webkit-tap-highlight-color: transparent;
+}
+.fantasy-library .library-remove-control.is-icon > .library-remove-icon-button::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(221, 184, 124, .56);
+  border-radius: 9px;
+  background: rgba(8, 37, 30, .9);
+  pointer-events: none;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+.fantasy-library .library-remove-control.is-icon > .library-remove-icon-button svg {
+  position: relative;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+}
+.fantasy-library .library-remove-control.is-icon > .library-remove-icon-button:hover::before,
+.fantasy-library .library-remove-control.is-icon > .library-remove-icon-button:focus-visible::before {
+  background: rgba(24, 69, 48, .95);
+  border-color: #edcc90;
+}
+.fantasy-library .library-remove-control.is-icon > .library-remove-icon-button:focus-visible {
+  outline: 2px solid #edcc90;
+  outline-offset: 1px;
+}
