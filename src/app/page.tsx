@@ -159,11 +159,7 @@ export default async function Home({
         </Link>
       </header>
 
-      <nav className="catalog-related-links" aria-label="Переход к другим разделам">
-        <span className="catalog-related-links-label">Другие разделы:</span>
-        <Link href="/updates">Обновления <span aria-hidden="true">↗</span></Link>
-        <Link href="/library">Моя библиотека <span aria-hidden="true">↗</span></Link>
-      </nav>
+
 
       {readingNow ? (
         <Link

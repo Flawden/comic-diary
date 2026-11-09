@@ -1834,44 +1834,7 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   background: #25563f;
   border-color: #f4d695;
 }
-/* QA-02: These are ordinary cross-page links, not a segmented control.
-   Mobile users navigate through the persistent bottom navigation instead. */
-.catalog-page .catalog-related-links {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 20px;
-  margin: 0 0 20px;
-  padding: 0 2px;
-  font-size: .875rem;
-  color: var(--text-secondary);
-}
-.catalog-page .catalog-related-links-label {
-  color: var(--text-muted);
-  font-weight: 600;
-}
-.catalog-page .catalog-related-links a {
-  display: inline-flex;
-  gap: 5px;
-  align-items: center;
-  min-height: 44px;
-  padding: 5px 0;
-  color: var(--text-accent);
-  font-weight: 600;
-  text-decoration: underline;
-  text-decoration-color: currentColor;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 4px;
-}
-.catalog-page .catalog-related-links a:hover { color: var(--text-primary); }
-.catalog-page .catalog-related-links a:focus-visible {
-  outline: 2px solid var(--text-accent);
-  outline-offset: 3px;
-  border-radius: 3px;
-}
-@media (max-width: 720px) {
-  .catalog-page .catalog-related-links { display: none; }
-}
+
 .catalog-page .catalog-reading-return {
   margin: 0 0 24px;
   padding: 15px clamp(16px, 3vw, 25px);
@@ -3420,12 +3383,7 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   --fe-status-success: var(--fe-accent);
   --fe-status-warning: var(--fe-accent);
 }
-:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-related-links {
-  color: var(--fe-muted);
-}
-:is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-related-links a {
-  color: var(--fe-accent);
-}
+
 :is([data-theme="paper"], [data-theme="night"]) .catalog-page .catalog-reading-return strong {
   color: var(--fe-ink);
 }

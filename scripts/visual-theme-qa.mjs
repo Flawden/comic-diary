@@ -143,10 +143,20 @@ async function capture(viewport, theme, route, fixture) {
     if (metrics.pageWidth > metrics.viewportWidth + 8) {
       recordIssue(`${file}: horizontal page overflow ${metrics.pageWidth - metrics.viewportWidth}px`);
     }
-    if (route.id === 'catalog' && viewport.id === 'mobile') {
-      const links = page.locator('.catalog-related-links');
-      assert.equal(await links.count(), 1, 'QA-02 catalog links selector missing');
-      assert.equal(await links.isVisible(), false, 'QA-02 catalog pseudo tabs visible on mobile');
+    if (route.id === 'catalog') {
+      assert.equal(
+        await page.locator('.catalog-related-links').count(),
+        0,
+        'Catalog must not render a duplicate cross-page navigation row',
+      );
+
+      const libraryCta = page.locator('.catalog-hero-library');
+      assert.equal(await libraryCta.count(), 1, 'Catalog library CTA is missing');
+      assert.equal(
+        await libraryCta.getAttribute('href'),
+        '/library',
+        'Catalog library CTA destination changed',
+      );
     }
     await page.screenshot({ path: join(OUTPUT, file), fullPage: true, animations: 'disabled' });
     evidence.file = file;
