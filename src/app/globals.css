@@ -3229,3 +3229,184 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   outline: 2px solid #edcc90;
   outline-offset: 1px;
 }
+
+/* QA-03A — theming foundations for Fantasy Editorial.
+   Paper and night use semantic surfaces instead of inheriting tea-only greens.
+   The tea palette and shared illustration assets remain unchanged.
+   Visual verification for each theme is still required before release. */
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-page, .fantasy-library) {
+  --surface: var(--fe-panel);
+  --surface-raised: var(--fe-raised);
+  --text-primary: var(--fe-ink);
+  --text-secondary: var(--fe-muted);
+  --text-muted: var(--fe-muted);
+  --text-accent: var(--fe-accent);
+  --primary: var(--fe-action);
+  --primary-foreground: var(--fe-on-action);
+  --border: var(--fe-border);
+  color-scheme: normal;
+  color: var(--fe-ink);
+  border-color: var(--fe-border);
+  background: var(--fe-page);
+  box-shadow: var(--fe-shadow);
+}
+[data-theme="paper"] :is(.catalog-page, .fantasy-library) { color-scheme: light; }
+[data-theme="night"] :is(.catalog-page, .fantasy-library) { color-scheme: dark; }
+
+/* The illustrative heroes remain dark; all outer reading surfaces follow the theme. */
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-page .catalog-reading-return, .catalog-shelf, .fantasy-library .diary-continue, .fantasy-library .fantasy-library-stat, .fantasy-library .library-search.library-search-v4, .fantasy-library .library-collection.is-list, .fantasy-library .is-grid .shelf-book, .fantasy-library > .reader-panel, .fantasy-library > details) {
+  background: var(--fe-panel);
+  border-color: var(--fe-border);
+  color: var(--fe-ink);
+  box-shadow: var(--fe-shadow);
+}
+:is([data-theme="paper"], [data-theme="night"]) .catalog-shelf { background: var(--fe-panel); }
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-shelf-heading, .catalog-page .catalog-filters, .fantasy-library .diary-continue-heading) {
+  border-bottom-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-overline, .catalog-shelf-seal, .catalog-results-count > span, .catalog-results-count strong, .fantasy-library .diary-continue-heading > a, .fantasy-library .diary-continue-copy .tea-text-action, .fantasy-library .library-sort-v4 > summary span, .fantasy-library .library-reset-v4) {
+  color: var(--fe-accent);
+}
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-shelf-heading h2, .catalog-results-count, .catalog-page .catalog-more-filters > summary, .catalog-page .catalog-reading-return, .catalog-page .catalog-reading-return > span:first-child, .fantasy-library .fantasy-library-stat strong, .fantasy-library .diary-continue-heading h2, .fantasy-library .diary-continue-copy h3, .fantasy-library .diary-reading-destination, .fantasy-library .library-view-toolbar, .fantasy-library .shelf-content h2, .fantasy-library > .reader-panel h2, .fantasy-library > details :is(h2, summary)) {
+  color: var(--fe-ink);
+}
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-page .catalog-filters label, .catalog-page .catalog-filters label > span, .catalog-page .catalog-more-filters > summary span, .catalog-page .catalog-book-body, .catalog-page .catalog-book-body :is(p, small), .catalog-page .catalog-personal, .fantasy-library .fantasy-library-stat span, .fantasy-library .diary-continue-copy :is(p, .diary-eyebrow), .fantasy-library .diary-continue-progress, .fantasy-library .library-sort-v4 > summary, .fantasy-library .shelf-metadata, .fantasy-library .shelf-count, .fantasy-library .shelf-extras, .fantasy-library .shelf-signals-v6, .fantasy-library > .reader-panel p, .fantasy-library > details p) {
+  color: var(--fe-muted);
+}
+
+/* Search controls / reading status / progress remain legible in each palette. */
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-page .catalog-filters :is(input, select), .fantasy-library .library-search :is(input, select), .fantasy-library > details :is(input, select, textarea)) {
+  border-color: var(--fe-border);
+  background-color: var(--fe-raised);
+  color: var(--fe-ink);
+}
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-page .catalog-filters :is(input, select)::placeholder, .fantasy-library .library-search input::placeholder) {
+  color: var(--fe-muted);
+  opacity: 1;
+}
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-page .catalog-search-button, .fantasy-library .library-search button[type="submit"], .fantasy-library > details button[type="submit"]) {
+  border-color: var(--fe-action);
+  background: var(--fe-action);
+  color: var(--fe-on-action);
+}
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-page .catalog-search-button:hover, .fantasy-library .library-search button[type="submit"]:hover) { filter: brightness(1.08); }
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-page .catalog-grid > li, .fantasy-library .is-grid .shelf-book) {
+  background: var(--fe-panel);
+  border-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-page .catalog-book h3, .catalog-page .catalog-book-body > div:last-child > a, .catalog-page .catalog-book h3 a:hover, .fantasy-library .shelf-content h2 a:hover, .fantasy-library .shelf-details summary, .fantasy-library .shelf-details[open] summary, .fantasy-library .shelf-details-body .tea-text-action) {
+  color: var(--fe-accent);
+}
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-page .catalog-progress, .fantasy-library .shelf-progress, .fantasy-library .diary-continue-progress progress, .fantasy-library .diary-continue-progress progress::-webkit-progress-bar) {
+  background: var(--fe-track);
+}
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-page .catalog-progress > span, .fantasy-library .shelf-progress span, .fantasy-library .diary-continue-progress progress::-webkit-progress-value, .fantasy-library .diary-continue-progress progress::-moz-progress-bar) {
+  background: var(--fe-progress);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .shelf-reading .shelf-status {
+  background: var(--fe-raised);
+  color: var(--fe-accent);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .shelf-details-body {
+  background: var(--fe-raised);
+  color: var(--fe-ink);
+  border-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .shelf-details-body :is(input, select, textarea) { color: var(--fe-ink); }
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .library-view-switch {
+  background: var(--fe-raised);
+  border-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .library-view-switch button { color: var(--fe-ink); }
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .library-view-switch button[aria-pressed="true"] {
+  background: var(--fe-action);
+  color: var(--fe-on-action);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .shelf-book > .library-remove-control.is-icon {
+  border-color: transparent;
+  background: transparent;
+  color: var(--fe-ink);
+}
+:is([data-theme="paper"], [data-theme="night"]) :is(.catalog-page .catalog-reset-filters, .fantasy-library .library-search .library-reset-v4) { color: var(--fe-accent); }
+
+/* Progress pseudo-elements must be separate from :is() selectors. */
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .diary-continue-progress progress::-webkit-progress-bar { background: var(--fe-track); }
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .diary-continue-progress progress::-webkit-progress-value { background: var(--fe-progress); }
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .diary-continue-progress progress::-moz-progress-bar { background: var(--fe-progress); }
+
+/* Library tabs have their own visual state; unlike catalog links, these filter locally. */
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .library-tabs {
+  background: var(--fe-raised);
+  border-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .library-tab { color: var(--fe-ink); }
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .library-tab:hover {
+  background: var(--fe-panel);
+  color: var(--fe-ink);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-library .library-tab[aria-current] {
+  background: var(--fe-action);
+  border-color: var(--fe-action);
+  color: var(--fe-on-action);
+}
+
+/* Account and updates already use shared theme surfaces; unify their decorative outlines. */
+:is([data-theme="paper"], [data-theme="night"]) :is(.fantasy-account, .fantasy-updates, .fantasy-updates-status) {
+  border-color: var(--fe-border);
+  background: var(--fe-page);
+  color: var(--fe-ink);
+}
+:is([data-theme="paper"], [data-theme="night"]) :is(.fantasy-account .account-identity, .fantasy-account .account-content > div > section, .fantasy-account .account-settings, .fantasy-updates .updates-filters, .fantasy-updates .updates-item, .fantasy-updates .updates-empty, .fantasy-auth-card) {
+  border-color: var(--fe-border);
+  background: var(--fe-panel);
+  color: var(--fe-ink);
+}
+:is([data-theme="paper"], [data-theme="night"]) :is(.fantasy-account .reader-section-nav, .fantasy-account .account-settings > details, .fantasy-updates .updates-panel, .fantasy-updates .updates-reveal, .fantasy-updates .updates-volume, .fantasy-updates .updates-pagination) { border-color: var(--fe-border); }
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-updates .updates-hint { border-left-color: var(--fe-accent); }
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-auth-page { border-color: var(--fe-border); }
+
+/* The public navigation follows the reader's mood; tea remains emerald/gold. */
+:is([data-theme="paper"], [data-theme="night"]) .tea-header {
+  --shell-gold: var(--fe-accent);
+  --shell-cream: var(--fe-ink);
+  color-scheme: normal;
+  background: var(--fe-chrome);
+  color: var(--fe-ink);
+  border-bottom-color: var(--fe-border);
+}
+[data-theme="paper"] .tea-header { color-scheme: light; }
+[data-theme="night"] .tea-header { color-scheme: dark; }
+:is([data-theme="paper"], [data-theme="night"]) .tea-brand-mark {
+  background: var(--fe-panel);
+  color: var(--fe-accent);
+  border-color: var(--fe-border);
+  box-shadow: none;
+}
+:is([data-theme="paper"], [data-theme="night"]) :is(.tea-brand-caption, .tea-header .tea-nav-link, .tea-header .tea-nav-link:hover, .tea-brand:hover .tea-brand-copy strong) { color: var(--fe-ink); }
+:is([data-theme="paper"], [data-theme="night"]) :is(.tea-header .tea-nav-link.is-active, .tea-header .tea-nav-link[aria-current="page"]) {
+  color: var(--fe-accent);
+  background: var(--fe-panel);
+  border-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) .tea-header .tea-nav-link.is-active::after { background: var(--fe-accent); }
+:is([data-theme="paper"], [data-theme="night"]) .tea-header .tea-account {
+  color: var(--fe-accent);
+  background: var(--fe-panel);
+  border-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) .tea-header .tea-account:hover { background: var(--fe-raised); }
+:is([data-theme="paper"], [data-theme="night"]) .tea-header :is(.tea-brand, .tea-nav-link, .tea-account, .skip-link):focus-visible { outline-color: var(--fe-accent); }
+@media (max-width: 767px) {
+  :is([data-theme="paper"], [data-theme="night"]) .tea-header .tea-navigation {
+    background: var(--fe-chrome-nav);
+    border-top-color: var(--fe-border);
+  }
+  :is([data-theme="paper"], [data-theme="night"]) .tea-header .tea-nav-link {
+    color: var(--fe-ink);
+  }
+  :is([data-theme="paper"], [data-theme="night"]) :is(.tea-header .tea-nav-link.is-active, .tea-header .tea-nav-link[aria-current="page"]) {
+    color: var(--fe-accent);
+    background: var(--fe-panel);
+    border-color: var(--fe-border);
+  }
+}
