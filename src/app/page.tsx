@@ -159,16 +159,10 @@ export default async function Home({
         </Link>
       </header>
 
-      <nav className="catalog-shortcuts" aria-label="Разделы библиотеки">
-        <Link href="/#catalog" className="catalog-shortcut is-active" aria-current="page">
-          <span aria-hidden="true">✦</span> Все произведения
-        </Link>
-        <Link href="/updates" className="catalog-shortcut">
-          <span aria-hidden="true">◷</span> Обновления
-        </Link>
-        <Link href="/library" className="catalog-shortcut">
-          <span aria-hidden="true">♧</span> Моя библиотека
-        </Link>
+      <nav className="catalog-related-links" aria-label="Переход к другим разделам">
+        <span className="catalog-related-links-label">Другие разделы:</span>
+        <Link href="/updates">Обновления <span aria-hidden="true">↗</span></Link>
+        <Link href="/library">Моя библиотека <span aria-hidden="true">↗</span></Link>
       </nav>
 
       {readingNow ? (
