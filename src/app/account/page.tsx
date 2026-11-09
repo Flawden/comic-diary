@@ -59,7 +59,7 @@ export default async function AccountPage() {
   const theme = resolveTheme((await cookies()).get(THEME_COOKIE)?.value);
 
   return (
-    <div className="reader-page account-page">
+    <div className="reader-page account-page fantasy-account">
       <header className="reader-heading">
         <div><p className="reader-eyebrow">Ваш уголок</p><h1>Профиль</h1>
         <p>Дневник, оформление и настройки аккаунта.</p></div>

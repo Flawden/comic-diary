@@ -57,8 +57,8 @@ export default async function RegisterPage({
     )}`;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10 sm:px-8">
-      <div className="w-full">
+    <main className="fantasy-auth-page mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10 sm:px-8">
+      <div className="fantasy-auth-inner w-full">
         <p className="text-sm font-semibold text-[var(--primary)]">
           Comic Diary
         </p>
@@ -73,7 +73,7 @@ export default async function RegisterPage({
           оценки и заметки.
         </p>
 
-        <section className="mt-8 rounded-2xl bg-[var(--surface)] p-6 shadow-sm sm:p-8">
+        <section className="fantasy-auth-card mt-8 rounded-2xl bg-[var(--surface)] p-6 shadow-sm sm:p-8">
           <h2 className="text-lg font-semibold">
             Новый аккаунт
           </h2>
@@ -90,7 +90,7 @@ export default async function RegisterPage({
           />
         </section>
 
-        <div className="mt-6 text-center text-sm text-[var(--muted)]">
+        <div className="fantasy-auth-links mt-6 text-center text-sm text-[var(--muted)]">
           Уже есть аккаунт?{" "}
           <Link
             href={
@@ -102,7 +102,7 @@ export default async function RegisterPage({
           </Link>
         </div>
 
-        <div className="mt-3 text-center">
+        <div className="fantasy-auth-links mt-3 text-center">
           <Link
             href="/"
             className="text-sm font-medium text-[var(--primary)] hover:underline"
