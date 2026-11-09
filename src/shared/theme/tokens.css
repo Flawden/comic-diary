@@ -206,3 +206,60 @@
   --cd-danger: #f3a49d;
   --cd-info: #aac9dc;
 }
+
+/* QA-03A: Fantasy Editorial semantic palette.
+   These tokens are intentionally separate from the reader's existing contract.
+   Tea retains the launched art direction; paper and night use independent ink/surfaces. */
+[data-theme="paper"] {
+  --fe-page: #f1eadc;
+  --fe-panel: #fffaf1;
+  --fe-raised: #ede4d4;
+  --fe-ink: #263329;
+  --fe-muted: #526052;
+  --fe-accent: #75521e;
+  --fe-border: #bda985;
+  --fe-action: #355844;
+  --fe-on-action: #fff9e9;
+  --fe-track: #d7ddcf;
+  --fe-progress: #54754f;
+  --fe-chrome: #f1e8d8;
+  --fe-chrome-nav: #e9dec9;
+  --fe-shadow: 0 7px 24px rgb(44 36 24 / .10);
+}
+[data-theme="night"] {
+  --fe-page: #181b1e;
+  --fe-panel: #252a2c;
+  --fe-raised: #313638;
+  --fe-ink: #f1e9db;
+  --fe-muted: #c7c0b3;
+  --fe-accent: #ecc58d;
+  --fe-border: #756851;
+  --fe-action: #af8d5c;
+  --fe-on-action: #121717;
+  --fe-track: #394c48;
+  --fe-progress: #e5bc7a;
+  --fe-chrome: #23282b;
+  --fe-chrome-nav: #191f22;
+  --fe-shadow: 0 9px 25px rgb(0 0 0 / .24);
+}
+
+
+/* QA-03B — complete the Night Reader semantic contract.
+   Previously night inherited the generic emerald root outside FE panels.
+   Paper and Tea tokens are intentionally unchanged. */
+[data-theme="night"] {
+  --cd-background: #181b1e;
+  --cd-surface: #252a2c;
+  --cd-surface-raised: #313638;
+  --cd-text-primary: #f1e9db;
+  --cd-text-secondary: #c7c0b3;
+  --cd-text-muted: #b9b2a7;
+  --cd-text-accent: #ecc58d;
+  --cd-primary: #d0ae7b;
+  --cd-primary-foreground: #121717;
+  --cd-border: #756851;
+  --cd-success: #a9d4b5;
+  --cd-warning: #e5bc7a;
+  --cd-danger: #f3a49d;
+  --cd-info: #a5cadb;
+}

@@ -1,0 +1,101 @@
+name: Visual theme QA (isolated)
+
+on:
+  push:
+    branches:
+      - fix/qa-visual-harness
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-qa-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  theme-screenshots:
+    name: Three themes / mobile and desktop
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: comic_diary_release
+          POSTGRES_USER: comic_diary_ci
+          POSTGRES_PASSWORD: ci_ephemeral_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U comic_diary_ci -d comic_diary_release"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      CI: "true"
+      DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+      NEXT_TELEMETRY_DISABLED: "1"
+      VISUAL_QA_MODE: isolated-ci
+
+    steps:
+      - name: Checkout QA branch
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install application dependencies
+        run: npm ci
+
+      - name: Migrate and seed disposable PostgreSQL
+        run: |
+          set -euo pipefail
+          node scripts/migrate-production.mjs
+          node --import tsx scripts/seed.ts
+
+      - name: Install Chrome driver (browser is preinstalled on runner)
+        env:
+          WD_BROWSER_ROOT: ${{ runner.temp }}/wd-browser
+        run: npm install --prefix "$WD_BROWSER_ROOT" --no-audit --no-fund playwright-core@1.56.1
+
+      - name: Build release-mode app using disposable database
+        run: npm run build
+
+      - name: Capture themes with isolated app and synthetic account
+        timeout-minutes: 15
+        env:
+          WD_BROWSER_ROOT: ${{ runner.temp }}/wd-browser
+          VISUAL_QA_DIR: ${{ runner.temp }}/comic-diary-visual-qa
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/next start -H 127.0.0.1 -p 3102 > "$RUNNER_TEMP/visual-next.log" 2>&1 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          curl -fsS --retry 35 --retry-delay 1 --retry-connrefused http://127.0.0.1:3102/login -o /dev/null
+          node --input-type=module <<'JS'
+          const response = await fetch('http://127.0.0.1:3102/api/health/ready');
+          const data = await response.json();
+          if (!response.ok || data.status !== 'ready') throw new Error('Disposable CI database is not ready');
+          console.log('VISUAL_QA_CI_READINESS=PASS');
+          JS
+          node scripts/visual-theme-qa.mjs || {
+            tail -70 "$RUNNER_TEMP/visual-next.log" || true
+            exit 1
+          }
+
+      - name: Upload screenshot evidence (even on failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-qa-${{ github.sha }}
+          path: ${{ runner.temp }}/comic-diary-visual-qa/
+          retention-days: 7
+          if-no-files-found: warn
