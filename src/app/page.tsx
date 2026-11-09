@@ -7,6 +7,7 @@ import { getChapterProgressCeiling } from "@/modules/comics/queries/get-chapter-
 import { Button } from "@/shared/components/ui";
 
 import { ComicCard } from "@/modules/comics/components/ComicCard";
+import { CatalogEditorialRail } from "@/modules/comics/components/CatalogEditorialRail";
 import {
   getComics,
   getPublishedCatalogCategories,
@@ -147,6 +148,7 @@ export default async function Home({
 
   return (
     <div className="reader-page catalog-page">
+      <div className="catalog-editorial-main">
       <header className="reader-heading catalog-hero">
         <div className="catalog-hero-copy">
           <span className="catalog-hero-emblem" aria-hidden="true" />
@@ -344,5 +346,7 @@ export default async function Home({
         )}
       </section>
     </div>
+    <CatalogEditorialRail />
+  </div>
   );
 }

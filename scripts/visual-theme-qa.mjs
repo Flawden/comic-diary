@@ -10,6 +10,7 @@ const ORIGIN = 'http://127.0.0.1:3102';
 const THEMES = ['paper', 'night', 'tea'];
 const VIEWPORTS = [
   { id: 'mobile', width: 390, height: 844 },
+  { id: 'tablet', width: 1024, height: 900 },
   { id: 'desktop', width: 1440, height: 900 },
 ];
 const ROUTES = [
@@ -64,7 +65,7 @@ function saveEvidence() {
   writeFileSync(join(OUTPUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
   const files = log.filter(item => item.file).map(item =>
     `<figure><a href="${item.file}"><img loading="lazy" src="${item.file}" alt="${item.theme} ${item.viewport} ${item.route}"></a><figcaption>${item.theme} · ${item.viewport} · ${item.route}</figcaption></figure>`);
-  const markup = `<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Comic Diary · Visual QA</title><style>body{margin:0;padding:24px;background:#15191a;color:#f7ebd6;font:16px system-ui}header{max-width:850px;margin:auto auto 26px}a{color:inherit}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}figure{margin:0;background:#262c2d;padding:10px;border-radius:12px}img{width:100%;height:auto;max-height:650px;object-fit:contain;object-position:top;display:block}figcaption{padding:10px 2px}</style><header><h1>Comic Diary · Visual QA</h1><p>${files.length} снимков: три темы, два размера экрана, изолированная тестовая база. Это свидетельства для ручного просмотра, а не гарантия визуального качества.</p><p>Подробности и ошибки — в <a href="manifest.json">manifest.json</a>.</p></header><main>${files.join('')}</main></html>`;
+  const markup = `<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Comic Diary · Visual QA</title><style>body{margin:0;padding:24px;background:#15191a;color:#f7ebd6;font:16px system-ui}header{max-width:850px;margin:auto auto 26px}a{color:inherit}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}figure{margin:0;background:#262c2d;padding:10px;border-radius:12px}img{width:100%;height:auto;max-height:650px;object-fit:contain;object-position:top;display:block}figcaption{padding:10px 2px}</style><header><h1>Comic Diary · Visual QA</h1><p>${files.length} снимков: три темы, три размера экрана, изолированная тестовая база. Это свидетельства для ручного просмотра, а не гарантия визуального качества.</p><p>Подробности и ошибки — в <a href="manifest.json">manifest.json</a>.</p></header><main>${files.join('')}</main></html>`;
   writeFileSync(join(OUTPUT, 'index.html'), markup);
 }
 
@@ -157,6 +158,15 @@ async function capture(viewport, theme, route, fixture) {
         '/library',
         'Catalog library CTA destination changed',
       );
+      const editorialRail = page.locator('.catalog-editorial-rail');
+      assert.equal(await editorialRail.count(), 1, 'Catalog editorial rail markup is missing');
+      const railVisible = await editorialRail.isVisible();
+      if (viewport.id === 'desktop') {
+        assert.equal(railVisible, true, 'Catalog editorial rail must be visible on desktop');
+        assert.ok((await editorialRail.innerText()).trim().length > 0, 'Catalog editorial rail has no content');
+      } else {
+        assert.equal(railVisible, false, `Catalog editorial rail must be hidden on ${viewport.id}`);
+      }
     }
     await page.screenshot({ path: join(OUTPUT, file), fullPage: true, animations: 'disabled' });
     evidence.file = file;
@@ -287,5 +297,5 @@ if (problems.length) {
   console.error(`VISUAL_QA=FAIL; SCREENSHOTS=${captured}/${expected}; ISSUES=${problems.length}`);
   process.exitCode = 1;
 } else {
-  console.log(`VISUAL_QA=PASS; SCREENSHOTS=${captured}/${expected}; THEMES=paper,night,tea; VIEWPORTS=mobile,desktop`);
+  console.log(`VISUAL_QA=PASS; SCREENSHOTS=${captured}/${expected}; THEMES=paper,night,tea; VIEWPORTS=mobile,tablet,desktop`);
 }
