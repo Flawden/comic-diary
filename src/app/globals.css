@@ -2589,3 +2589,131 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   .tea-header .tea-nav-link,
   .tea-header .tea-account { transition: none; }
 }
+
+
+/* DS2-04B — compact mobile catalog. Purely presentational overrides.
+   Mobile users reach the catalog earlier; native filters, links and URLs stay intact.
+   These rules intentionally do not modify desktop or shared library components. */
+@media (max-width: 720px) {
+  .catalog-page {
+    padding: 7px;
+    margin-top: -6px;
+  }
+  .catalog-page .catalog-hero {
+    min-height: 185px;
+    padding: 17px 18px 20px;
+    margin-bottom: 9px;
+    gap: 6px;
+  }
+  .catalog-hero-copy { gap: 6px; }
+  .catalog-hero-emblem { height: 23px; width: 108px; }
+  .catalog-page .catalog-hero .reader-eyebrow {
+    font-size: .6rem;
+    letter-spacing: .1em;
+  }
+  .catalog-page .catalog-hero h1 {
+    font-size: clamp(1.85rem, 7.2vw, 2.6rem);
+    line-height: 1.07;
+    margin: 2px 0;
+  }
+  .catalog-page .catalog-hero p:not(.reader-eyebrow),
+  .catalog-page .catalog-hero .catalog-hero-library { display: none; }
+  .catalog-shortcuts {
+    margin-bottom: 10px;
+    padding: 3px;
+  }
+  .catalog-shortcut {
+    min-height: 44px;
+    padding: 7px 4px;
+    gap: 5px;
+    font-size: .74rem;
+  }
+  .catalog-shortcut span { font-size: 1rem; }
+  .catalog-page .catalog-reading-return {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2px 12px;
+    padding: 9px 13px;
+    margin-bottom: 10px;
+  }
+  .catalog-page .catalog-reading-return > span:first-child {
+    grid-column: 1;
+    grid-row: 1;
+    width: auto;
+    font-size: .72rem;
+  }
+  .catalog-page .catalog-reading-return strong {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: .95rem;
+  }
+  .catalog-page .catalog-reading-return > span:last-child {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+  .catalog-shelf { padding: 12px 11px 16px; }
+  .catalog-shelf-heading {
+    gap: 8px;
+    padding-bottom: 9px;
+    margin-bottom: 12px;
+  }
+  .catalog-overline {
+    margin-bottom: 4px;
+    font-size: .61rem;
+    letter-spacing: .12em;
+  }
+  .catalog-shelf-heading h2 {
+    font-size: clamp(1.35rem, 5.6vw, 1.8rem);
+    line-height: 1.14;
+  }
+  .catalog-shelf-seal { font-size: 1.6rem; }
+  .catalog-page .catalog-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding-bottom: 8px;
+  }
+  .catalog-page .catalog-search-field { grid-column: 1 / -1; }
+  .catalog-page .catalog-sort-field { grid-column: 1; }
+  .catalog-page .catalog-search-button { grid-column: 2; }
+  .catalog-page .catalog-filters label > span { margin-bottom: 4px; }
+  .catalog-page .catalog-filters :is(input, select) {
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: .86rem;
+  }
+  .catalog-page .catalog-search-button {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+  .catalog-page .catalog-more-filters { margin-top: 0; }
+  .catalog-page .catalog-more-filters > summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 0;
+    font-size: .89rem;
+  }
+  .catalog-page .catalog-more-filters > summary span { display: none; }
+  .catalog-page .catalog-filter-fields { gap: 8px; margin-top: 5px; }
+  .catalog-results-bar {
+    margin: 9px 0 4px;
+    min-height: 34px;
+  }
+  .catalog-results-count { font-size: .84rem; }
+  .catalog-page .catalog-grid {
+    padding-top: 19px;
+    background-size: min(75%, 310px) 12px;
+    gap: 10px;
+  }
+}
+@media (max-width: 440px) {
+  .catalog-page { margin-inline: -6px; }
+  .catalog-page .catalog-hero {
+    min-height: 175px;
+    padding: 16px 12px 18px;
+  }
+  .catalog-shortcut { font-size: .71rem; }
+  .catalog-shelf { padding: 11px 9px 15px; }
+  .catalog-page .catalog-grid { gap: 9px; }
+}
