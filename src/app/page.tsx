@@ -2,6 +2,7 @@ import { comicListHref } from "@/modules/library/list-navigation";
 import { isWorkType, isWorkFormat, workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
 import { isSeriesStatus, seriesStatusLabels } from "@/modules/comics/series-status";
 import Link from "next/link";
+import { ResponsiveFilterPanel } from "@/shared/components/ResponsiveFilterPanel";
 
 import { getChapterProgressCeiling } from "@/modules/comics/queries/get-chapter-progress-ceiling";
 import { Button } from "@/shared/components/ui";
@@ -182,6 +183,7 @@ export default async function Home({
           </div>
           <span className="catalog-shelf-seal" aria-hidden="true">✧</span>
         </div>
+        <ResponsiveFilterPanel label="Поиск и фильтры" initiallyExpanded={hasCatalogFilters} className="catalog-mobile-filter-panel">
         <form
           method="get"
           action="/#catalog"
@@ -286,6 +288,7 @@ export default async function Home({
           </details>
 
         </form>
+        </ResponsiveFilterPanel>
 
         <div className="catalog-results-bar">
           <p className="catalog-results-count">

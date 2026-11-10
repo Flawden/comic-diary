@@ -3789,3 +3789,185 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   .catalog-page .catalog-book h3 { font-size: 1rem; }
 }
 /* CD-TYPOGRAPHY-PHASE3-B-END */
+
+/* CD-PUBLIC-CATALOG-POLISH-3C-BEGIN
+   Public catalog refinement, based on Typography B.
+   Keep the editorial rail and the three established themes unchanged.
+   This is a reversible visual experiment, not a global design reset. */
+
+/* With the editorial rail present, four columns squeeze the book covers.
+   Use three readable columns only on wide desktop layouts. */
+@media (min-width: 1200px) {
+  .catalog-page .catalog-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(14px, 1.6vw, 22px);
+  }
+  .catalog-page .catalog-grid > li {
+    padding: 10px;
+  }
+  .catalog-page .catalog-book-body {
+    padding: 14px 7px 8px;
+  }
+}
+
+/* Golos remains the work-title font; slightly soften its mobile weight.
+   Preserve the two-column mobile catalogue and all visible metadata. */
+@media (max-width: 720px) {
+  .catalog-page .catalog-book h3 {
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.008em;
+  }
+}
+
+/* Long book names can wrap without forcing a wider layout. */
+.catalog-page .catalog-book h3 {
+  overflow-wrap: break-word;
+}
+
+.catalog-page .catalog-book h3 a:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+/* CD-PUBLIC-CATALOG-POLISH-3C-END */
+
+
+/* CD-MOBILE-UX-3D-BEGIN
+   First mobile UX pass: reach the books and chapters sooner.
+   Scoped to <=720px; preserve Tea/Paper/Night tokens and desktop layouts. */
+.responsive-filter-toggle { display: none; }
+.responsive-filter-content[hidden] { display: none !important; }
+@media (max-width: 720px) {
+  .responsive-filter-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 15px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font: 650 .94rem / 1.4 var(--cd-font-ui), sans-serif;
+    text-align: left;
+    cursor: pointer;
+  }
+  .responsive-filter-toggle:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+  }
+  .responsive-filter-chevron {
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: transform .18s ease;
+  }
+  .responsive-filter-toggle[aria-expanded="true"] .responsive-filter-chevron {
+    transform: rotate(180deg);
+  }
+  .responsive-filter-content:not([hidden]) { margin-top: 9px; }
+
+  /* Diary: retain atmosphere while removing a full screen of introduction. */
+  .fantasy-library .fantasy-library-hero {
+    min-height: 0;
+    padding: 16px 16px 18px;
+    margin-bottom: 9px;
+    gap: 0;
+  }
+  .fantasy-library .fantasy-library-eyebrow {
+    margin-bottom: 4px;
+    font-size: .59rem;
+    letter-spacing: .09em;
+  }
+  .fantasy-library .fantasy-library-emblem,
+  .fantasy-library .fantasy-library-hero .fantasy-library-lead,
+  .fantasy-library .fantasy-library-hero-action { display: none; }
+  .fantasy-library .fantasy-library-hero h1 {
+    font-size: clamp(1.85rem, 7vw, 2.45rem);
+    line-height: 1.1;
+  }
+  .fantasy-library .fantasy-library-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    margin-bottom: 9px;
+  }
+  .fantasy-library .fantasy-library-stat {
+    min-height: 64px;
+    padding: 8px 2px;
+    gap: 4px;
+  }
+  .fantasy-library .fantasy-library-stat strong { font-size: 1.4rem; }
+  .fantasy-library .fantasy-library-stat span {
+    font-size: .64rem;
+    overflow-wrap: anywhere;
+  }
+  .fantasy-library .library-tabs {
+    gap: 3px;
+    margin: 0 0 9px;
+    padding: 4px;
+    scroll-margin-top: 80px;
+  }
+  .fantasy-library .library-tab {
+    min-height: 42px;
+    padding: 7px 10px;
+    font-size: .76rem;
+  }
+  .fantasy-library .diary-continue {
+    padding: 13px;
+    margin-bottom: 10px;
+  }
+  .fantasy-library .diary-continue-heading { padding-bottom: 7px; }
+  .fantasy-library .diary-continue-heading h2 { font-size: 1.16rem; }
+  .fantasy-library .diary-continue-book {
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .fantasy-library .diary-continue-copy h3 { font-size: 1.25rem; }
+  .fantasy-library .diary-continue-copy .diary-eyebrow { display: none; }
+  .fantasy-library .library-mobile-filter-panel { margin-bottom: 9px; }
+  .fantasy-library .library-mobile-filter-panel .responsive-filter-toggle {
+    border-color: rgba(215, 174, 110, .56);
+    background: #123b30;
+    color: #f3dbad;
+  }
+
+  /* Catalog: existing cards remain unchanged; filters are one tap away. */
+  .catalog-page .catalog-mobile-filter-panel { margin: 8px 0 10px; }
+  .catalog-page .catalog-mobile-filter-panel .responsive-filter-toggle {
+    border-color: rgba(215, 174, 110, .56);
+    background: #123b30;
+    color: #f3dbad;
+  }
+
+  /* Updates: foreground the unread list instead of the introduction. */
+  .fantasy-updates > .reader-heading {
+    min-height: 0;
+    margin: 0 0 10px;
+    padding: 17px 16px;
+    gap: 0;
+  }
+  .fantasy-updates > .reader-heading h1 {
+    margin: 4px 0 0;
+    font-size: clamp(1.85rem, 7vw, 2.45rem);
+    line-height: 1.12;
+  }
+  .fantasy-updates > .reader-heading p:not(.reader-eyebrow),
+  .fantasy-updates > .reader-heading .tea-outline { display: none; }
+  .fantasy-updates .updates-mobile-filter-panel { margin-bottom: 9px; }
+  .fantasy-updates .updates-mobile-filter-panel .updates-filters {
+    gap: 9px;
+    padding-bottom: 12px;
+  }
+  .fantasy-updates .updates-count { margin: 10px 0 6px; }
+  .fantasy-updates .updates-hint {
+    margin: 4px 0 10px;
+    font-size: .76rem;
+    line-height: 1.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .responsive-filter-chevron { transition: none; }
+}
+/* CD-MOBILE-UX-3D-END */

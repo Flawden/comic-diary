@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/modules/auth/request-identity";
 import { getReadingUpdates, parseUpdatesOptions } from "@/modules/library/queries/get-reading-updates";
 import { ReadingUpdatesList } from "@/modules/library/components/ReadingUpdatesList";
 import { Button } from "@/shared/components/ui";
+import { ResponsiveFilterPanel } from "@/shared/components/ResponsiveFilterPanel";
 
 export const dynamic = "force-dynamic";
 export default async function UpdatesPage({ searchParams }: {
@@ -17,6 +18,7 @@ export default async function UpdatesPage({ searchParams }: {
   const control = "mt-2 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm";
   return <div className="reader-page updates-page fantasy-updates">
     <header className="reader-heading"><div><p className="reader-eyebrow">На вашей полке</p><h1>Новое для чтения</h1><p>Свежие главы и истории, которые ждут продолжения.</p></div><Link href="/library" className="tea-outline">Моя библиотека →</Link></header>
+    <ResponsiveFilterPanel label="Поиск и фильтры" initiallyExpanded={Boolean(options.q)} className="updates-mobile-filter-panel">
     <form key={`${options.q}:${options.status}:${options.kind}`} action="/updates" className="updates-filters">
       <label className="text-sm updates-search">Поиск по названию<input name="q" type="search" maxLength={160} defaultValue={options.q} placeholder="Название истории" className={control} /></label>
       <label className="text-sm">Мой статус<select name="status" defaultValue={options.status} className={control}>
@@ -25,6 +27,7 @@ export default async function UpdatesPage({ searchParams }: {
         <option value="MAIN">Основные</option><option value="SPECIAL">Спецвыпуски</option><option value="UPDATED">Обновлённые редакции</option><option value="ALL">Все главы</option></select></label>
       <Button type="submit">Применить</Button><Link href="/updates" className="inline-flex min-h-11 items-center justify-center text-sm text-[var(--text-accent)]">Сбросить фильтры</Link>
     </form>
+    </ResponsiveFilterPanel>
     {result.missingCount > 0 ? <p className="mt-4 text-sm text-[var(--text-secondary)]">У {result.missingCount} тайтлов выбранного статуса список глав ещё не заполнен. Их числовой прогресс доступен в <Link href="/library" className="underline">библиотеке</Link>.</p> : null}
     <p className="updates-count">Историй с непрочитанными главами: {result.total}{options.page > 1 ? ` · страница ${options.page}` : ""}</p>
     <p className="updates-hint">Показаны только вышедшие непрочитанные главы. Разверните историю, чтобы прочитать или отметить главу прямо здесь; запланированные пока не отображаются. Статус «Прочитано» не отключает отслеживание.</p>
