@@ -2,6 +2,7 @@ import { comicListHref } from "@/modules/library/list-navigation";
 import { isWorkType, isWorkFormat, workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
 import { isSeriesStatus, seriesStatusLabels } from "@/modules/comics/series-status";
 import Link from "next/link";
+import { ResponsiveFilterPanel } from "@/shared/components/ResponsiveFilterPanel";
 
 import { getChapterProgressCeiling } from "@/modules/comics/queries/get-chapter-progress-ceiling";
 import { Button } from "@/shared/components/ui";
@@ -21,6 +22,7 @@ import {
 } from "@/modules/comics/catalog-view";
 import { getCurrentUser } from "@/modules/auth/request-identity";
 import { getUserLibrary } from "@/modules/library/queries/get-user-library";
+import { getReadingUpdates, parseUpdatesOptions } from "@/modules/library/queries/get-reading-updates";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +94,7 @@ export default async function Home({
     categoryList,
     comicList,
     library,
+    unreadSummary,
   ] = await Promise.all([
     getPublishedCatalogCategories(),
     getComics({
@@ -107,6 +110,9 @@ export default async function Home({
           currentUser.id,
         )
       : [],
+    currentUser
+      ? getReadingUpdates(currentUser.id, parseUpdatesOptions({ status: "ALL" }))
+      : null,
   ]);
 
   const catalogWithProgress = await Promise.all(
@@ -182,6 +188,7 @@ export default async function Home({
           </div>
           <span className="catalog-shelf-seal" aria-hidden="true">✧</span>
         </div>
+        <ResponsiveFilterPanel label="Поиск и фильтры" initiallyExpanded={hasCatalogFilters} className="catalog-mobile-filter-panel">
         <form
           method="get"
           action="/#catalog"
@@ -286,6 +293,7 @@ export default async function Home({
           </details>
 
         </form>
+        </ResponsiveFilterPanel>
 
         <div className="catalog-results-bar">
           <p className="catalog-results-count">
@@ -344,9 +352,16 @@ export default async function Home({
             )}
           </ul>
         )}
+
       </section>
     </div>
-    <CatalogEditorialRail />
+    <CatalogEditorialRail
+      readingNow={readingNow ? {
+        title: readingNow.title,
+        href: comicListHref(readingNow.slug, "catalog", resolvedSearchParams),
+      } : null}
+      unreadTitles={unreadSummary?.total ?? null}
+    />
   </div>
   );
 }

@@ -2,6 +2,7 @@ import { getCollectionProgress } from "@/modules/library/queries/get-collection-
 import { CollectionProgress } from "@/modules/library/components/CollectionProgress";
 import { comicListHref } from "@/modules/library/list-navigation";
 import { ContinueReading } from "@/modules/library/components/ContinueReading";
+import { ResponsiveFilterPanel } from "@/shared/components/ResponsiveFilterPanel";
 import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
 import { seriesStatusLabels } from "@/modules/comics/series-status";
 import Link from "next/link";
@@ -241,8 +242,6 @@ export default async function LibraryPage({
         <div className="fantasy-library-stat"><strong>{wantToReadCount}</strong><span>В планах</span></div>
       </section>
 
-      {activeFilter === "ALL" && !query ? <ContinueReading items={library} listQuery={resolvedSearchParams} /> : null}
-
       {library.length > 0 ? (
         <nav
           aria-label="Фильтр библиотеки"
@@ -267,6 +266,7 @@ export default async function LibraryPage({
               <Link
                 key={filter}
                 href={href}
+                scroll={false}
                 aria-current={isActive ? "page" : undefined}
                 className="library-tab"
               >
@@ -280,7 +280,10 @@ export default async function LibraryPage({
         </nav>
       ) : null}
 
+      {activeFilter === "ALL" && !query ? <ContinueReading items={library} listQuery={resolvedSearchParams} /> : null}
+
       {library.length > 0 ? (
+        <ResponsiveFilterPanel label="Поиск и сортировка" initiallyExpanded={Boolean(query) || activeSort !== "UPDATED"} className="library-mobile-filter-panel">
         <form
           method="get"
           key={`${activeFilter}:${activeSort}:${query}`}
@@ -340,6 +343,7 @@ export default async function LibraryPage({
           </details>
           {query ? <Link className="library-reset-v4" href={libraryHref(activeFilter, activeSort, "")}>Сбросить поиск</Link> : null}
         </form>
+        </ResponsiveFilterPanel>
       ) : null}
 
       {library.length === 0 ? (

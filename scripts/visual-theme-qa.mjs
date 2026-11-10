@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import pg from 'pg';
+import { checkMobileUxInteractions } from './mobile-ux-interactions.mjs';
 
 const ORIGIN = 'http://127.0.0.1:3102';
 const THEMES = ['paper', 'night', 'tea'];
@@ -168,6 +169,25 @@ async function capture(viewport, theme, route, fixture) {
         assert.equal(railVisible, false, `Catalog editorial rail must be hidden on ${viewport.id}`);
       }
     }
+    // The original artist WebP now decorates the catalog HERO, not a lower figure.
+    // Decode it explicitly so test captures are meaningful on every viewport.
+    if (route.id === 'catalog') {
+      const hero = page.locator('.catalog-page .catalog-hero');
+      assert.equal(await hero.count(), 1, 'Catalog hero missing');
+      const dragon = await hero.evaluate(async (element) => {
+        const background = getComputedStyle(element).backgroundImage;
+        if (!background.includes('catalog-fireplace-dragon.webp')) {
+          throw new Error('Original dragon is not the catalog hero background');
+        }
+        const img = new Image();
+        img.src = '/images/fantasy-editorial/catalog/catalog-fireplace-dragon.webp';
+        await img.decode();
+        return { width: img.naturalWidth, height: img.naturalHeight };
+      });
+      assert.deepEqual(dragon, { width: 3000, height: 1200 }, 'Hero dragon failed to load at expected resolution');
+      assert.equal(await page.locator('.catalog-fireplace').count(), 0, 'Old bottom dragon figure was not removed');
+      console.log(`VISUAL_QA_DRAGON_HERO_LOADED: ${viewport.id} ${theme}`);
+    }
     await page.screenshot({ path: join(OUTPUT, file), fullPage: true, animations: 'disabled' });
     evidence.file = file;
     console.log(`VISUAL_QA_CAPTURED: ${file}`);
@@ -259,6 +279,11 @@ try {
         await capture(viewport, theme, route, fixture);
       }
     }
+  }
+  try {
+    await checkMobileUxInteractions({ makeContext, viewport: VIEWPORTS.find(item => item.id === 'mobile'), origin: ORIGIN, fixture });
+  } catch (err) {
+    recordIssue(`Mobile UX interactions: ${err instanceof Error ? err.message : String(err)}`);
   }
   try {
     await checkThemeSelector(fixture);

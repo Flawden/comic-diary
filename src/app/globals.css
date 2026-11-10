@@ -3668,3 +3668,441 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
     animation: none;
   }
 }
+/* CD-TYPOGRAPHY-PHASE3-A-BEGIN
+   Local candidate A: Cormorant Garamond + Onest.
+   Self-hosted Fontsource subsets (OFL-1.1); see public/fonts/white-dragon/.
+   Keep separate from existing theme palette and responsive rules. */
+@font-face {
+  font-family: 'WD Onest';
+  src: url('/fonts/white-dragon/onest-cyrillic.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'WD Onest';
+  src: url('/fonts/white-dragon/onest-latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'WD Cormorant';
+  src: url('/fonts/white-dragon/cormorant-cyrillic.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'WD Cormorant';
+  src: url('/fonts/white-dragon/cormorant-latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'WD Cormorant';
+  src: url('/fonts/white-dragon/cormorant-cyrillic-italic.woff2') format('woff2');
+  font-style: italic;
+  font-weight: 300 700;
+  font-display: swap;
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'WD Cormorant';
+  src: url('/fonts/white-dragon/cormorant-latin-italic.woff2') format('woff2');
+  font-style: italic;
+  font-weight: 300 700;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+:root {
+  --cd-font-ui: 'WD Onest', 'Segoe UI', Arial, sans-serif;
+  --cd-font-display: 'WD Cormorant', Georgia, 'Times New Roman', serif;
+}
+/* CD-TYPOGRAPHY-PHASE3-A-END */
+
+/* CD-TYPOGRAPHY-PHASE3-B-BEGIN
+   Candidate B: keep Onest for UI and Cormorant for display headings;
+   use the self-hosted Golos Text variable font for compact reading titles.
+   Scoped, reversible experiment; existing palettes and layouts are unchanged. */
+@font-face {
+  font-family: 'WD Golos';
+  src: url('/fonts/white-dragon/golos-cyrillic.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'WD Golos';
+  src: url('/fonts/white-dragon/golos-latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+:root {
+  --cd-font-work: 'WD Golos', 'WD Onest', 'Segoe UI', Arial, sans-serif;
+}
+
+/* Titles of catalog books should read like book labels, not ornamentation. */
+.catalog-page .catalog-book h3 {
+  font-family: var(--cd-font-work);
+  font-size: clamp(1.0625rem, 1.45vw, 1.16rem);
+  font-weight: 650;
+  line-height: 1.38;
+  letter-spacing: -.015em;
+}
+
+/* Chapter titles: target the selectors confirmed in the current stylesheet.
+   Do not change decorative headings, metadata or other action buttons. */
+.wd-work .wd-row-title > a,
+.wd-work .wd-row-title a,
+.chapter-row > div:first-child a {
+  font-family: var(--cd-font-work);
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -.012em;
+}
+.wd-work .wd-row-title a { font-size: .98rem; }
+.chapter-row > div:first-child a { font-size: .96rem; }
+
+/* Keep the editorial book typography, but strengthen its section heading. */
+.catalog-page .catalog-shelf-heading h2 {
+  font-weight: 600;
+  letter-spacing: -.012em;
+}
+@media (max-width: 440px) {
+  .catalog-page .catalog-book h3 { font-size: 1rem; }
+}
+/* CD-TYPOGRAPHY-PHASE3-B-END */
+
+/* CD-PUBLIC-CATALOG-POLISH-3C-BEGIN
+   Public catalog refinement, based on Typography B.
+   Keep the editorial rail and the three established themes unchanged.
+   This is a reversible visual experiment, not a global design reset. */
+
+/* With the editorial rail present, four columns squeeze the book covers.
+   Use three readable columns only on wide desktop layouts. */
+@media (min-width: 1200px) {
+  .catalog-page .catalog-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(14px, 1.6vw, 22px);
+  }
+  .catalog-page .catalog-grid > li {
+    padding: 10px;
+  }
+  .catalog-page .catalog-book-body {
+    padding: 14px 7px 8px;
+  }
+}
+
+/* Golos remains the work-title font; slightly soften its mobile weight.
+   Preserve the two-column mobile catalogue and all visible metadata. */
+@media (max-width: 720px) {
+  .catalog-page .catalog-book h3 {
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.008em;
+  }
+}
+
+/* Long book names can wrap without forcing a wider layout. */
+.catalog-page .catalog-book h3 {
+  overflow-wrap: break-word;
+}
+
+.catalog-page .catalog-book h3 a:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+/* CD-PUBLIC-CATALOG-POLISH-3C-END */
+
+
+/* CD-MOBILE-UX-3D-BEGIN
+   First mobile UX pass: reach the books and chapters sooner.
+   Scoped to <=720px; preserve Tea/Paper/Night tokens and desktop layouts. */
+.responsive-filter-toggle { display: none; }
+.responsive-filter-content[hidden] { display: none !important; }
+@media (max-width: 720px) {
+  .responsive-filter-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 15px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font: 650 .94rem / 1.4 var(--cd-font-ui), sans-serif;
+    text-align: left;
+    cursor: pointer;
+  }
+  .responsive-filter-toggle:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+  }
+  .responsive-filter-chevron {
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: transform .18s ease;
+  }
+  .responsive-filter-toggle[aria-expanded="true"] .responsive-filter-chevron {
+    transform: rotate(180deg);
+  }
+  .responsive-filter-content:not([hidden]) { margin-top: 9px; }
+
+  /* Diary: retain atmosphere while removing a full screen of introduction. */
+  .fantasy-library .fantasy-library-hero {
+    min-height: 0;
+    padding: 16px 16px 18px;
+    margin-bottom: 9px;
+    gap: 0;
+  }
+  .fantasy-library .fantasy-library-eyebrow {
+    margin-bottom: 4px;
+    font-size: .59rem;
+    letter-spacing: .09em;
+  }
+  .fantasy-library .fantasy-library-emblem,
+  .fantasy-library .fantasy-library-hero .fantasy-library-lead,
+  .fantasy-library .fantasy-library-hero-action { display: none; }
+  .fantasy-library .fantasy-library-hero h1 {
+    font-size: clamp(1.85rem, 7vw, 2.45rem);
+    line-height: 1.1;
+  }
+  .fantasy-library .fantasy-library-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    margin-bottom: 9px;
+  }
+  .fantasy-library .fantasy-library-stat {
+    min-height: 64px;
+    padding: 8px 2px;
+    gap: 4px;
+  }
+  .fantasy-library .fantasy-library-stat strong { font-size: 1.4rem; }
+  .fantasy-library .fantasy-library-stat span {
+    font-size: .64rem;
+    overflow-wrap: anywhere;
+  }
+  .fantasy-library .library-tabs {
+    gap: 3px;
+    margin: 0 0 9px;
+    padding: 4px;
+    scroll-margin-top: 80px;
+  }
+  .fantasy-library .library-tab {
+    min-height: 42px;
+    padding: 7px 10px;
+    font-size: .76rem;
+  }
+  .fantasy-library .diary-continue {
+    padding: 13px;
+    margin-bottom: 10px;
+  }
+  .fantasy-library .diary-continue-heading { padding-bottom: 7px; }
+  .fantasy-library .diary-continue-heading h2 { font-size: 1.16rem; }
+  .fantasy-library .diary-continue-book {
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .fantasy-library .diary-continue-copy h3 { font-size: 1.25rem; }
+  .fantasy-library .diary-continue-copy .diary-eyebrow { display: none; }
+  .fantasy-library .library-mobile-filter-panel { margin-bottom: 9px; }
+  .fantasy-library .library-mobile-filter-panel .responsive-filter-toggle {
+    border-color: rgba(215, 174, 110, .56);
+    background: #123b30;
+    color: #f3dbad;
+  }
+
+  /* Catalog: existing cards remain unchanged; filters are one tap away. */
+  .catalog-page .catalog-mobile-filter-panel { margin: 8px 0 10px; }
+  .catalog-page .catalog-mobile-filter-panel .responsive-filter-toggle {
+    border-color: rgba(215, 174, 110, .56);
+    background: #123b30;
+    color: #f3dbad;
+  }
+
+  /* Updates: foreground the unread list instead of the introduction. */
+  .fantasy-updates > .reader-heading {
+    min-height: 0;
+    margin: 0 0 10px;
+    padding: 17px 16px;
+    gap: 0;
+  }
+  .fantasy-updates > .reader-heading h1 {
+    margin: 4px 0 0;
+    font-size: clamp(1.85rem, 7vw, 2.45rem);
+    line-height: 1.12;
+  }
+  .fantasy-updates > .reader-heading p:not(.reader-eyebrow),
+  .fantasy-updates > .reader-heading .tea-outline { display: none; }
+  .fantasy-updates .updates-mobile-filter-panel { margin-bottom: 9px; }
+  .fantasy-updates .updates-mobile-filter-panel .updates-filters {
+    gap: 9px;
+    padding-bottom: 12px;
+  }
+  .fantasy-updates .updates-count { margin: 10px 0 6px; }
+  .fantasy-updates .updates-hint {
+    margin: 4px 0 10px;
+    font-size: .76rem;
+    line-height: 1.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .responsive-filter-chevron { transition: none; }
+}
+/* CD-MOBILE-UX-3D-END */
+
+/* CD-PUBLIC-UX-3E-BEGIN
+   Editorial third column is useful on desktop and hidden on smaller screens.
+   Keep catalog covers readable and restore a balanced grid for odd counts. */
+@media (min-width: 1200px) {
+  .catalog-page .catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .catalog-page .catalog-grid > li:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    width: calc((100% - clamp(14px, 1.6vw, 22px)) / 2);
+    justify-self: center;
+  }
+  .catalog-page .catalog-reading-return { display: none; }
+  .catalog-editorial-rail {
+    justify-content: flex-start;
+    gap: 20px;
+    min-height: 0;
+  }
+  .catalog-editorial-rail-spacer { display: none; }
+  .catalog-editorial-rail-copy { min-height: 0; padding-bottom: 4px; }
+  .catalog-editorial-rail-bottom { margin-top: 8px; }
+  .catalog-rail-reader,
+  .catalog-rail-updates {
+    min-width: 0;
+    padding: 0 4px 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .catalog-rail-reader .catalog-editorial-rail-kicker,
+  .catalog-rail-updates .catalog-editorial-rail-kicker { margin-bottom: 9px; }
+  .catalog-rail-action {
+    display: grid;
+    min-height: 50px;
+    gap: 6px;
+    padding: 11px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    overflow-wrap: break-word;
+  }
+  .catalog-rail-action > span,
+  .catalog-rail-subtle { color: var(--text-secondary); font-size: .77rem; line-height: 1.55; }
+  .catalog-rail-action strong { font-size: .99rem; line-height: 1.3; font-weight: 650; }
+  .catalog-rail-link {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--text-accent);
+    font-size: .8rem;
+    font-weight: 650;
+    text-underline-offset: 3px;
+    text-decoration: underline;
+  }
+  .catalog-rail-action:focus-visible,
+  .catalog-rail-link:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+  }
+}
+
+/* Compact update thumbnails show an ornament, never a long cover title.
+   Their adjacent accessible link already contains the full work name. */
+.updates-head .cover-fallback { padding: 4px; }
+.updates-head .cover-fallback-symbol { font-size: 26px; margin-bottom: 0; }
+.updates-head div[aria-hidden="true"].absolute { font-size: 0; }
+/* CD-PUBLIC-UX-3E-END */
+
+
+/* CD-PUBLIC-UX-3H-DRAGON-HERO-BEGIN
+   The original artist-supplied WebP replaces the catalog hero background.
+   Keep titles as real text and the content compact on mobile.
+   No additional network asset or separate bottom figure. */
+.catalog-page .catalog-hero {
+  background:
+    linear-gradient(90deg,
+      rgba(4, 24, 20, .96) 0%,
+      rgba(4, 27, 22, .91) 36%,
+      rgba(4, 27, 22, .38) 70%,
+      rgba(4, 27, 22, .13) 100%),
+    url('/images/fantasy-editorial/catalog/catalog-fireplace-dragon.webp') 61% center / cover no-repeat;
+}
+@media (min-width: 768px) {
+  .catalog-page .catalog-hero {
+    align-items: flex-start;
+    text-align: left;
+    padding-inline: clamp(25px, 4.5vw, 52px);
+  }
+  .catalog-page .catalog-hero-copy {
+    justify-items: start;
+    max-width: 56%;
+  }
+  .catalog-page .catalog-hero .catalog-hero-library {
+    align-self: flex-start;
+  }
+}
+@media (max-width: 767px) {
+  .catalog-page .catalog-hero {
+    /* Legibility wins over the illustration on narrow screens. */
+    background:
+      linear-gradient(90deg,
+        rgba(4, 24, 20, .79),
+        rgba(4, 24, 20, .70)),
+      url('/images/fantasy-editorial/catalog/catalog-fireplace-dragon.webp') 60% center / cover no-repeat;
+  }
+  .catalog-page .catalog-hero-copy {
+    max-width: 100%;
+  }
+}
+/* CD-PUBLIC-UX-3H-DRAGON-HERO-END */
+
+/* CD-PUBLIC-UX-3H1-DRAGON-FRAMING-BEGIN
+   Visual QA 3H: the dragon's face was hidden under the hero copy.
+   Crop the original artwork toward the LEFT edge of the image so its face
+   moves into the visible right side of the banner; keep the text on the left.
+   No new artwork, no mobile layout changes, no data/behavior changes. */
+@media (min-width: 768px) {
+  .catalog-page .catalog-hero {
+    background-color: #0a251e;
+    background-image:
+      linear-gradient(90deg,
+        rgba(4, 24, 20, .96) 0%,
+        rgba(4, 27, 22, .87) 30%,
+        rgba(4, 27, 22, .52) 52%,
+        rgba(4, 27, 22, .12) 70%,
+        rgba(4, 27, 22, .05) 100%),
+      url('/images/fantasy-editorial/catalog/catalog-fireplace-dragon.webp');
+    background-size: 100% 100%, auto 132%;
+    background-position: center center, left 18%;
+    background-repeat: no-repeat;
+  }
+  .catalog-page .catalog-hero-copy {
+    text-shadow: 0 1px 8px rgba(0, 0, 0, .45);
+  }
+}
+/* CD-PUBLIC-UX-3H1-DRAGON-FRAMING-END */

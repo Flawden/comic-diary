@@ -228,7 +228,7 @@ function UpdatesRow({ item, kind, previousPromptEnabled, onMarked }: {
       <div className="min-w-0 flex-1 break-words">
         <p className="font-semibold">{label}</p>
         <div className="mt-1 flex flex-wrap gap-2">{c.kind === "SPECIAL" ? <Badge>Спецвыпуск</Badge> : null}{c.updated ? <Badge>Обновлённая редакция</Badge> : null}</div>
-        {source ? <a href={source} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm text-[var(--text-accent)]">Читать в источнике ↗</a> : null}
+        {source ? <a href={source} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm text-[var(--text-accent)]">Читать в источнике</a> : null}
       </div>
       <Button iconOnly className="updates-mark" variant={done ? "primary" : "secondary"} disabled={busy || done}
         aria-label={done ? `${label}: прочитано` : `Отметить ${label} прочитанной`} onClick={() => save(c.id, "read")}>
@@ -240,7 +240,7 @@ function UpdatesRow({ item, kind, previousPromptEnabled, onMarked }: {
   return <li className="updates-item">
     <div className="updates-head">
       <Link href={`/comics/${encodeURIComponent(item.slug)}`} aria-label={`Открыть ${item.title}`} className="w-16 shrink-0 sm:w-20">
-        <CoverImage src={item.coverUrl} alt="" className="aspect-[3/4] rounded-lg" imageClassName="object-contain" fallback={item.title} />
+        <CoverImage src={item.coverUrl} alt="" className="aspect-[3/4] rounded-lg" imageClassName="object-contain" fallback="" />
       </Link>
       <div className="min-w-0 flex-1">
         <Link href={`/comics/${encodeURIComponent(item.slug)}`} className="block break-words text-base font-bold sm:text-lg">{item.title}</Link>
@@ -278,7 +278,7 @@ function UpdatesRow({ item, kind, previousPromptEnabled, onMarked }: {
       </div> : <ul className="divide-y divide-[var(--border)]">{chapters.map(renderChapter)}</ul>}
       {loaded && chapters.length === 0 ? <p className="text-sm text-[var(--text-secondary)]">Непрочитанных глав в этом разделе уже нет.</p> : null}
       {chapters.length < total ? <Button variant="secondary" className="mt-3" disabled={busy} onClick={() => load(true)}>Показать ещё 30</Button> : null}
-      <Link href={`/comics/${encodeURIComponent(item.slug)}`} className="mt-3 flex min-h-11 items-center text-sm text-[var(--text-accent)]">Все главы и мой дневник →</Link>
+      <Link href={`/comics/${encodeURIComponent(item.slug)}`} className="mt-3 flex min-h-11 items-center text-sm text-[var(--text-accent)]">Все главы и мой дневник</Link>
     </div> : null}
   </li>;
 }
