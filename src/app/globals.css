@@ -3977,12 +3977,12 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
    Keep catalog covers readable and restore a balanced grid for odd counts. */
 @media (min-width: 1200px) {
   .catalog-page .catalog-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .catalog-page .catalog-grid > li:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-    width: calc((100% - clamp(14px, 1.6vw, 22px)) / 2);
-    justify-self: center;
+  .catalog-page .catalog-grid > li:last-child:nth-child(3n + 1) {
+    grid-column: 2;
+    width: 100%;
+    justify-self: stretch;
   }
   .catalog-page .catalog-reading-return { display: none; }
   .catalog-editorial-rail {
