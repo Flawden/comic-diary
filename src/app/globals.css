@@ -4080,3 +4080,29 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   }
 }
 /* CD-PUBLIC-UX-3H-DRAGON-HERO-END */
+
+/* CD-PUBLIC-UX-3H1-DRAGON-FRAMING-BEGIN
+   Visual QA 3H: the dragon's face was hidden under the hero copy.
+   Crop the original artwork toward the LEFT edge of the image so its face
+   moves into the visible right side of the banner; keep the text on the left.
+   No new artwork, no mobile layout changes, no data/behavior changes. */
+@media (min-width: 768px) {
+  .catalog-page .catalog-hero {
+    background-color: #0a251e;
+    background-image:
+      linear-gradient(90deg,
+        rgba(4, 24, 20, .96) 0%,
+        rgba(4, 27, 22, .87) 30%,
+        rgba(4, 27, 22, .52) 52%,
+        rgba(4, 27, 22, .12) 70%,
+        rgba(4, 27, 22, .05) 100%),
+      url('/images/fantasy-editorial/catalog/catalog-fireplace-dragon.webp');
+    background-size: 100% 100%, auto 132%;
+    background-position: center center, left 18%;
+    background-repeat: no-repeat;
+  }
+  .catalog-page .catalog-hero-copy {
+    text-shadow: 0 1px 8px rgba(0, 0, 0, .45);
+  }
+}
+/* CD-PUBLIC-UX-3H1-DRAGON-FRAMING-END */
