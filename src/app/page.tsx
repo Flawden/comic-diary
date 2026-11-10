@@ -22,6 +22,7 @@ import {
 } from "@/modules/comics/catalog-view";
 import { getCurrentUser } from "@/modules/auth/request-identity";
 import { getUserLibrary } from "@/modules/library/queries/get-user-library";
+import { getReadingUpdates, parseUpdatesOptions } from "@/modules/library/queries/get-reading-updates";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,7 @@ export default async function Home({
     categoryList,
     comicList,
     library,
+    unreadSummary,
   ] = await Promise.all([
     getPublishedCatalogCategories(),
     getComics({
@@ -108,6 +110,9 @@ export default async function Home({
           currentUser.id,
         )
       : [],
+    currentUser
+      ? getReadingUpdates(currentUser.id, parseUpdatesOptions({ status: "ALL" }))
+      : null,
   ]);
 
   const catalogWithProgress = await Promise.all(
@@ -349,7 +354,13 @@ export default async function Home({
         )}
       </section>
     </div>
-    <CatalogEditorialRail />
+    <CatalogEditorialRail
+      readingNow={readingNow ? {
+        title: readingNow.title,
+        href: comicListHref(readingNow.slug, "catalog", resolvedSearchParams),
+      } : null}
+      unreadTitles={unreadSummary?.total ?? null}
+    />
   </div>
   );
 }

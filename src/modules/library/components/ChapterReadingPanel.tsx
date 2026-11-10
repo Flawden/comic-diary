@@ -90,7 +90,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, rati
     const isRead = read.has(c.id);
     const label=[c.displayCode,c.title].filter(Boolean).join(" · ")||"Глава";
     return <li key={c.id} className={isScheduled ? "wd-row wd-row--scheduled" : "wd-row"}><div className="wd-row-title">
-        {source?<a href={source} target="_blank" rel="noopener noreferrer" aria-label={label+" — открыть источник в новой вкладке"}>{label} <small>↗</small></a>:<span>{label}</span>}
+        {source?<a href={source} target="_blank" rel="noopener noreferrer" aria-label={label+" — открыть источник в новой вкладке"}>{label}</a>:<span>{label}</span>}
         {isScheduled ? <small className="wd-planned-date">{c.expectedRelease ? `Ожидается: ${formatExpectedRelease(c.expectedRelease)}` : "Запланирована · дата неизвестна"}</small> : null}
         {!isScheduled && c.supersedesChapterId ? <details className="chapter-revision"><summary>Новая редакция</summary><p>Отметка прежней версии хранится в архиве.</p></details>:null}
       </div>

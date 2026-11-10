@@ -3971,3 +3971,69 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   .responsive-filter-chevron { transition: none; }
 }
 /* CD-MOBILE-UX-3D-END */
+
+/* CD-PUBLIC-UX-3E-BEGIN
+   Editorial third column is useful on desktop and hidden on smaller screens.
+   Keep catalog covers readable and restore a balanced grid for odd counts. */
+@media (min-width: 1200px) {
+  .catalog-page .catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .catalog-page .catalog-grid > li:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    width: calc((100% - clamp(14px, 1.6vw, 22px)) / 2);
+    justify-self: center;
+  }
+  .catalog-page .catalog-reading-return { display: none; }
+  .catalog-editorial-rail {
+    justify-content: flex-start;
+    gap: 20px;
+    min-height: 0;
+  }
+  .catalog-editorial-rail-spacer { display: none; }
+  .catalog-editorial-rail-copy { min-height: 0; padding-bottom: 4px; }
+  .catalog-editorial-rail-bottom { margin-top: 8px; }
+  .catalog-rail-reader,
+  .catalog-rail-updates {
+    min-width: 0;
+    padding: 0 4px 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .catalog-rail-reader .catalog-editorial-rail-kicker,
+  .catalog-rail-updates .catalog-editorial-rail-kicker { margin-bottom: 9px; }
+  .catalog-rail-action {
+    display: grid;
+    min-height: 50px;
+    gap: 6px;
+    padding: 11px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    overflow-wrap: break-word;
+  }
+  .catalog-rail-action > span,
+  .catalog-rail-subtle { color: var(--text-secondary); font-size: .77rem; line-height: 1.55; }
+  .catalog-rail-action strong { font-size: .99rem; line-height: 1.3; font-weight: 650; }
+  .catalog-rail-link {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--text-accent);
+    font-size: .8rem;
+    font-weight: 650;
+    text-underline-offset: 3px;
+    text-decoration: underline;
+  }
+  .catalog-rail-action:focus-visible,
+  .catalog-rail-link:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+  }
+}
+
+/* Compact update thumbnails show an ornament, never a long cover title.
+   Their adjacent accessible link already contains the full work name. */
+.updates-head .cover-fallback { padding: 4px; }
+.updates-head .cover-fallback-symbol { font-size: 26px; margin-bottom: 0; }
+.updates-head div[aria-hidden="true"].absolute { font-size: 0; }
+/* CD-PUBLIC-UX-3E-END */
