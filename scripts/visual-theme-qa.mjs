@@ -169,6 +169,19 @@ async function capture(viewport, theme, route, fixture) {
         assert.equal(railVisible, false, `Catalog editorial rail must be hidden on ${viewport.id}`);
       }
     }
+    // Full-page screenshots do not automatically fetch images below the viewport.
+    // Force-load the local artist illustration so desktop evidence is meaningful.
+    if (route.id === 'catalog') {
+      const dragon = page.locator('.catalog-fireplace-image');
+      assert.equal(await dragon.count(), 1, 'Dragon illustration missing from catalog');
+      const dimensions = await dragon.evaluate(async (img) => {
+        img.loading = 'eager';
+        await img.decode();
+        return { width: img.naturalWidth, height: img.naturalHeight };
+      });
+      assert.deepEqual(dimensions, { width: 3000, height: 1200 }, 'Dragon image failed to load at expected resolution');
+      console.log(`VISUAL_QA_DRAGON_IMAGE_LOADED: ${viewport.id} ${theme}`);
+    }
     await page.screenshot({ path: join(OUTPUT, file), fullPage: true, animations: 'disabled' });
     evidence.file = file;
     console.log(`VISUAL_QA_CAPTURED: ${file}`);
