@@ -4037,3 +4037,42 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 .updates-head .cover-fallback-symbol { font-size: 26px; margin-bottom: 0; }
 .updates-head div[aria-hidden="true"].absolute { font-size: 0; }
 /* CD-PUBLIC-UX-3E-END */
+
+/* CD-PUBLIC-UX-3G-DRAGON-BEGIN
+   Artist-supplied atmosphere after the catalog; never ahead of the books.
+   A framed, lazy-loaded WebP that preserves the full original composition. */
+.catalog-page .catalog-fireplace {
+  display: grid;
+  gap: 6px;
+  margin: clamp(28px, 4vw, 48px) 0 0;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface-raised);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .12);
+  overflow: hidden;
+}
+.catalog-page .catalog-fireplace-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 11px;
+}
+.catalog-page .catalog-fireplace figcaption {
+  padding: 6px 8px 9px;
+  color: var(--text-secondary);
+  font-family: var(--cd-font-display), Georgia, serif;
+  font-size: clamp(1.03rem, 1.8vw, 1.3rem);
+  line-height: 1.45;
+  text-align: center;
+}
+@media (max-width: 767px) {
+  .catalog-page .catalog-fireplace {
+    margin-top: 23px;
+    padding: 6px;
+    border-radius: 13px;
+  }
+  .catalog-page .catalog-fireplace-image { border-radius: 8px; }
+  .catalog-page .catalog-fireplace figcaption { font-size: 1rem; }
+}
+/* CD-PUBLIC-UX-3G-DRAGON-END */
