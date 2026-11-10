@@ -278,7 +278,7 @@ function UpdatesRow({ item, kind, previousPromptEnabled, onMarked }: {
       </div> : <ul className="divide-y divide-[var(--border)]">{chapters.map(renderChapter)}</ul>}
       {loaded && chapters.length === 0 ? <p className="text-sm text-[var(--text-secondary)]">Непрочитанных глав в этом разделе уже нет.</p> : null}
       {chapters.length < total ? <Button variant="secondary" className="mt-3" disabled={busy} onClick={() => load(true)}>Показать ещё 30</Button> : null}
-      <Link href={`/comics/${encodeURIComponent(item.slug)}`} className="mt-3 flex min-h-11 items-center text-sm text-[var(--text-accent)]">Все главы и мой дневник →</Link>
+      <Link href={`/comics/${encodeURIComponent(item.slug)}`} className="mt-3 flex min-h-11 items-center text-sm text-[var(--text-accent)]">Все главы и мой дневник</Link>
     </div> : null}
   </li>;
 }

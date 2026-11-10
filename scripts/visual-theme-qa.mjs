@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import pg from 'pg';
+import { checkMobileUxInteractions } from './mobile-ux-interactions.mjs';
 
 const ORIGIN = 'http://127.0.0.1:3102';
 const THEMES = ['paper', 'night', 'tea'];
@@ -259,6 +260,11 @@ try {
         await capture(viewport, theme, route, fixture);
       }
     }
+  }
+  try {
+    await checkMobileUxInteractions({ makeContext, viewport: VIEWPORTS.find(item => item.id === 'mobile'), origin: ORIGIN, fixture });
+  } catch (err) {
+    recordIssue(`Mobile UX interactions: ${err instanceof Error ? err.message : String(err)}`);
   }
   try {
     await checkThemeSelector(fixture);

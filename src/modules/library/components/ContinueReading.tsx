@@ -19,7 +19,7 @@ export function ContinueReading({ items, listQuery }: { items: UserLibraryItem[]
     </div>
     <div className="diary-continue-book">
       <Link href={href} className="diary-continue-cover">
-        <CoverImage src={item.coverUrl} alt={`Обложка ${item.title}`} fallback={item.title} className="aspect-[2/3]" imageClassName="object-contain" />
+        <CoverImage src={item.coverUrl} alt={`Обложка ${item.title}`} fallback="" className="aspect-[2/3]" imageClassName="object-contain" />
       </Link>
       <div className="diary-continue-copy">
         <p className="diary-eyebrow">{item.visibility === "PRIVATE" ? "Личная история" : item.categoryName ?? "На вашей полке"}</p>

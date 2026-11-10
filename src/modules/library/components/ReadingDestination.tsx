@@ -10,7 +10,7 @@ export function ReadingDestination({ target, comicHref, className = "" }: Props)
       : <p className="reading-destination-hint">{state === "CAUGHT_UP" ? "Все вышедшие основные главы отмечены прочитанными." : "Нет доступных основных глав для продолжения."}</p>}
     {source ? <a className="tea-primary" href={source.href} target="_blank" rel="noopener noreferrer">
       {direct && chapter ? (chapter.displayCode ? `Читать главу ${chapter.displayCode}` : `Читать: ${chapter.title}`) : source.label} <span className="sr-only"> — в новой вкладке</span>
-    </a> : <Link href={comicHref + "#chapters"} className="tea-primary">К списку глав →</Link>}
+    </a> : <Link href={comicHref + "#chapters"} className="tea-primary">К списку глав</Link>}
     {chapter && !direct ? <p className="reading-destination-hint">Прямой ссылки на эту главу пока нет.{source ? " Откроется общий источник истории." : " Ссылку можно проверить в списке глав."}</p> : null}
     <p className="reading-destination-note">После чтения вернитесь и отметьте главу в дневнике.</p>
   </div>;

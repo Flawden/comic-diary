@@ -22,7 +22,7 @@ export function LibraryComicCard({ item, href }: { item: UserLibraryItem; href: 
   return <article id={`book-${item.comicId}`} className="shelf-book" aria-label={item.title}>
     <RemoveFromLibraryControl comicId={item.comicId} comicTitle={item.title} variant="icon" />
     <Link href={href} className="shelf-cover">
-      <CoverImage src={item.coverUrl} alt={`Обложка ${item.title}`} className="shelf-cover-image" imageClassName="object-contain" fallback={item.title} />
+      <CoverImage src={item.coverUrl} alt={`Обложка ${item.title}`} className="shelf-cover-image" imageClassName="object-contain" fallback="" />
     </Link>
     <div className="shelf-content">
       <h2><Link href={href}>{item.title}</Link></h2>
