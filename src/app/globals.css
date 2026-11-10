@@ -4038,41 +4038,45 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 .updates-head div[aria-hidden="true"].absolute { font-size: 0; }
 /* CD-PUBLIC-UX-3E-END */
 
-/* CD-PUBLIC-UX-3G-DRAGON-BEGIN
-   Artist-supplied atmosphere after the catalog; never ahead of the books.
-   A framed, lazy-loaded WebP that preserves the full original composition. */
-.catalog-page .catalog-fireplace {
-  display: grid;
-  gap: 6px;
-  margin: clamp(28px, 4vw, 48px) 0 0;
-  padding: 9px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: var(--surface-raised);
-  box-shadow: 0 12px 34px rgba(0, 0, 0, .12);
-  overflow: hidden;
+
+/* CD-PUBLIC-UX-3H-DRAGON-HERO-BEGIN
+   The original artist-supplied WebP replaces the catalog hero background.
+   Keep titles as real text and the content compact on mobile.
+   No additional network asset or separate bottom figure. */
+.catalog-page .catalog-hero {
+  background:
+    linear-gradient(90deg,
+      rgba(4, 24, 20, .96) 0%,
+      rgba(4, 27, 22, .91) 36%,
+      rgba(4, 27, 22, .38) 70%,
+      rgba(4, 27, 22, .13) 100%),
+    url('/images/fantasy-editorial/catalog/catalog-fireplace-dragon.webp') 61% center / cover no-repeat;
 }
-.catalog-page .catalog-fireplace-image {
-  display: block;
-  width: 100%;
-  height: auto;
-  border-radius: 11px;
-}
-.catalog-page .catalog-fireplace figcaption {
-  padding: 6px 8px 9px;
-  color: var(--text-secondary);
-  font-family: var(--cd-font-display), Georgia, serif;
-  font-size: clamp(1.03rem, 1.8vw, 1.3rem);
-  line-height: 1.45;
-  text-align: center;
+@media (min-width: 768px) {
+  .catalog-page .catalog-hero {
+    align-items: flex-start;
+    text-align: left;
+    padding-inline: clamp(25px, 4.5vw, 52px);
+  }
+  .catalog-page .catalog-hero-copy {
+    justify-items: start;
+    max-width: 56%;
+  }
+  .catalog-page .catalog-hero .catalog-hero-library {
+    align-self: flex-start;
+  }
 }
 @media (max-width: 767px) {
-  .catalog-page .catalog-fireplace {
-    margin-top: 23px;
-    padding: 6px;
-    border-radius: 13px;
+  .catalog-page .catalog-hero {
+    /* Legibility wins over the illustration on narrow screens. */
+    background:
+      linear-gradient(90deg,
+        rgba(4, 24, 20, .79),
+        rgba(4, 24, 20, .70)),
+      url('/images/fantasy-editorial/catalog/catalog-fireplace-dragon.webp') 60% center / cover no-repeat;
   }
-  .catalog-page .catalog-fireplace-image { border-radius: 8px; }
-  .catalog-page .catalog-fireplace figcaption { font-size: 1rem; }
+  .catalog-page .catalog-hero-copy {
+    max-width: 100%;
+  }
 }
-/* CD-PUBLIC-UX-3G-DRAGON-END */
+/* CD-PUBLIC-UX-3H-DRAGON-HERO-END */

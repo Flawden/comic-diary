@@ -2,7 +2,6 @@ import { comicListHref } from "@/modules/library/list-navigation";
 import { isWorkType, isWorkFormat, workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
 import { isSeriesStatus, seriesStatusLabels } from "@/modules/comics/series-status";
 import Link from "next/link";
-import Image from "next/image";
 import { ResponsiveFilterPanel } from "@/shared/components/ResponsiveFilterPanel";
 
 import { getChapterProgressCeiling } from "@/modules/comics/queries/get-chapter-progress-ceiling";
@@ -354,18 +353,6 @@ export default async function Home({
           </ul>
         )}
 
-        <figure className="catalog-fireplace">
-          <Image
-            src="/images/fantasy-editorial/catalog/catalog-fireplace-dragon.webp"
-            alt="Белый дракон с открытой книгой отдыхает перед горящим камином"
-            width={3000}
-            height={1200}
-            loading="lazy"
-            unoptimized
-            className="catalog-fireplace-image"
-          />
-          <figcaption>У камина Белого Дракона всегда найдётся место для ещё одной истории.</figcaption>
-        </figure>
       </section>
     </div>
     <CatalogEditorialRail
