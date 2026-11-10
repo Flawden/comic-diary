@@ -22,13 +22,79 @@ try {
   const page=await ctx.newPage();
   page.setDefaultTimeout(25000);
   const url=origin+"/comics/"+prefix;
+  // BR02/3J: treat "visible button" and "hydrated, functioning button" as
+  // different states.  CI occasionally clicks /updates before React attaches
+  // the event handler.  Verify the UI transition and the lazy chapter request.
+  async function expandUnreadChapters(card, step) {
+    const reveal = card.getByRole("button", { name: /Показать непрочитанные главы/ });
+    await reveal.waitFor({ state: "visible" });
+    assert.equal(await reveal.getAttribute("aria-expanded"), "false", `${step}: unread panel was already open`);
+    const panelId = await reveal.getAttribute("aria-controls");
+    assert.ok(panelId && /^updates-[0-9]+$/.test(panelId), `${step}: unexpected panel id`);
+    const responses = [];
+    const requestFailures = [];
+    const onResponse = response => {
+      if (response.url().startsWith(origin + "/api/library/updates?")) responses.push(response.status());
+    };
+    const onFailed = request => {
+      if (request.url().startsWith(origin + "/api/library/updates?")) {
+        requestFailures.push(request.failure()?.errorText || "request failed");
+      }
+    };
+    page.on("response", onResponse);
+    page.on("requestfailed", onFailed);
+    try {
+      await reveal.click();
+      // A panel is mounted only after the React onClick has run. This is not
+      // merely a visibility check on the initial server-rendered button.
+      try {
+        await page.waitForFunction(id => !!document.getElementById(id), panelId, { timeout: 3500 });
+      } catch (firstAttemptError) {
+        const expanded = await reveal.getAttribute("aria-expanded");
+        // Retry once only if there was NO state transition and NO API traffic.
+        // Never double-toggle a panel that already opened or is loading.
+        if (expanded !== "false" || responses.length || requestFailures.length) throw firstAttemptError;
+        console.warn(`BR02_UPDATES_HYDRATION_RETRY step=${step}`);
+        await reveal.click();
+        await page.waitForFunction(id => !!document.getElementById(id), panelId, { timeout: 12000 });
+      }
+      const panel = page.locator(`[id="${panelId}"]`);
+      await panel.waitFor({ state: "visible" });
+      await panel.locator(".updates-panel-heading").getByText(/^Показано \d+ из \d+$/).waitFor({ state: "visible", timeout: 20000 });
+      assert.equal(await panel.locator('[role="alert"]').count(), 0, `${step}: chapter loading returned a UI error`);
+      assert.ok(responses.some(status => status >= 200 && status < 300), `${step}: no successful /api/library/updates response`);
+      console.log(`BR02_UPDATES_LOADED step=${step}; responses=${responses.join(",")}`);
+    } catch (error) {
+      // Log non-sensitive diagnostics only: never session cookies, tokens, or
+      // the full response payload from the disposable test account.
+      const panel = page.locator(`[id="${panelId}"]`);
+      const diagnostic = {
+        step,
+        expanded: await reveal.getAttribute("aria-expanded").catch(() => "detached"),
+        panelCount: await panel.count().catch(() => -1),
+        heading: (await panel.locator(".updates-panel-heading").allTextContents().catch(() => [])).map(x => x.slice(0, 100)),
+        error: (await panel.locator('[role="alert"]').allTextContents().catch(() => [])).map(x => x.slice(0, 150)),
+        volumes: (await panel.locator(".updates-volume summary").allTextContents().catch(() => [])).map(x => x.slice(0, 100)),
+        apiStatuses: responses,
+        requestFailures,
+      };
+      console.error("BR02_UPDATES_DIAGNOSTICS=" + JSON.stringify(diagnostic));
+      throw error;
+    } finally {
+      page.off("response", onResponse);
+      page.off("requestfailed", onFailed);
+    }
+  }
   // WD18: the updates feed expands unread chapters in place, grouped by volume.
   // A scheduled chapter must not appear in the feed or be marked as read there.
   await pool.query("UPDATE chapters SET volume_number=1 WHERE comic_id=$1 AND status='RELEASED'",[comic]);
   await page.goto(origin+"/updates");
   const updateCard=page.locator(".updates-item").filter({hasText:"Мезолит"});
-  await updateCard.getByRole("button",{name:"Показать непрочитанные главы · 2"}).click();
+  await expandUnreadChapters(updateCard, "WD18 first open");
   const firstVolume=updateCard.locator(".updates-volume").first();
+  const volumeSummaries=await updateCard.locator(".updates-volume summary").allTextContents();
+  assert.ok(volumeSummaries.some(text => text.includes("Том 1")),
+    `WD18: expected Том 1 after chapter loading; observed: ${JSON.stringify(volumeSummaries)}`);
   await firstVolume.locator("summary").getByText("Том 1").waitFor();
   await firstVolume.locator("ul > li").first().getByText("1 — Охота на быка").waitFor();
   // It opens by default, and native toggle actions remain interactive afterwards.
@@ -49,7 +115,7 @@ try {
   await page.getByText("Отметка снята.").waitFor();
   assert.equal((await pool.query("SELECT count(*)::int AS count FROM user_chapter_reads WHERE user_id=$1",[user])).rows[0].count,0);
   // Rate a read chapter while remaining on the Updates page, then change the rating.
-  await updateCard.getByRole("button",{name:/Показать непрочитанные главы/}).click();
+  await expandUnreadChapters(updateCard, "WD18 reopen");
   await updateCard.getByRole("button",{name:"Отметить 1 — Охота на быка прочитанной"}).click();
   await updateRating.waitFor();
   await updateRating.getByRole("button",{name:"4 из 5"}).click();
@@ -66,7 +132,7 @@ try {
   // in Updates. Manual rating is still available from the latest-mark banner.
   await pool.query("UPDATE user_comics SET prompt_chapter_rating=false WHERE user_id=$1 AND comic_id=$2",[user,comic]);
   await page.goto(origin+"/updates");
-  await updateCard.getByRole("button",{name:/Показать непрочитанные главы/}).click();
+  await expandUnreadChapters(updateCard, "WD18 reopen");
   await updateCard.getByRole("button",{name:"Отметить УРГА прочитанной"}).click();
   assert.equal(await page.getByRole("dialog").count(),0);
   await page.getByRole("button",{name:"Оценить главу"}).click();
@@ -87,7 +153,7 @@ try {
   await pool.query("INSERT INTO user_chapter_reads(user_id,chapter_id) SELECT $1,id FROM chapters WHERE comic_id=$2 AND status='RELEASED' AND sort_order IN (1,2)",[user,comic]);
   await page.goto(origin+"/updates");
   const bulkUpdateCard=page.locator(".updates-item").filter({hasText:"Мезолит"});
-  await bulkUpdateCard.getByRole("button",{name:/Показать непрочитанные главы/}).click();
+  await expandUnreadChapters(bulkUpdateCard, "WD18.4 bulk open");
   await bulkUpdateCard.getByRole("button",{name:"Отметить 6 — Лес прочитанной"}).click();
   const updateBulk=page.locator("dialog.wd-bulk-sheet[open]");
   await updateBulk.getByRole("heading",{name:"Отметить предыдущие главы?"}).waitFor();
