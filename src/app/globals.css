@@ -4106,3 +4106,25 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   }
 }
 /* CD-PUBLIC-UX-3H1-DRAGON-FRAMING-END */
+
+/* CD-PUBLIC-THEME-3I-BEGIN
+   Illustrated dark-green hero artwork remains part of the tea-room identity.
+   Actual interface controls follow Paper / Night semantic action colors.
+   Tea, structure, and interaction handlers are unchanged. */
+@media (max-width: 720px) {
+  :is([data-theme="paper"], [data-theme="night"]) :is(
+    .catalog-page .catalog-mobile-filter-panel .responsive-filter-toggle,
+    .fantasy-library .library-mobile-filter-panel .responsive-filter-toggle
+  ) {
+    background: var(--fe-action);
+    border-color: var(--fe-border);
+    color: var(--fe-on-action);
+  }
+  :is([data-theme="paper"], [data-theme="night"]) :is(
+    .catalog-page .catalog-mobile-filter-panel .responsive-filter-toggle,
+    .fantasy-library .library-mobile-filter-panel .responsive-filter-toggle
+  ):hover {
+    filter: brightness(1.06);
+  }
+}
+/* CD-PUBLIC-THEME-3I-END */
