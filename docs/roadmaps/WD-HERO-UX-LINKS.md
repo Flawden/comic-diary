@@ -46,3 +46,26 @@ The work page hero presents the work itself (cover, identity, a single live read
 ## Remaining work / current checkpoint
 
 WD-LINK-01 was applied locally on 2026-11-11 to `feature/wd-link-01-optional-work-source` from `d6eb841`; reviewed diff SHA-256 `af88e1becbb6fc4f180c38d542c7fac8f5b955ae6be67aea995cd712c0d9c093`, 13 files, offline tests 11/11. This branch still requires CI (lint, typecheck, build, disposable PostgreSQL) and a separate rehearsal of migration `0029` against an existing staging database before merge/deploy. No production database or deployment was touched by the apply step. After a chat handoff, check the Git branch, PR and CI status; do not reapply the patch.
+
+
+## WD-LINK-02 · Reading destinations (2026-11-11 checkpoint)
+
+- Base: `4c572d4bb32596812ef9fa8e40d040d8a5186111` on `feature/wd-link-01-optional-work-source` (WD-LINK-01 CI reported green by the user). WD-LINK-01 database migration still not released.
+- Work in isolated branch `feature/wd-link-02-reading-destinations` once the reviewed apply script is run.
+- Remove the external-source CTA from the work hero; preserve the diary/shelf action.
+- Put a persistent, accurately labelled common source action in the **chapters** tab only when a valid common URL exists.
+- Per released chapter: direct URL wins, else show **general work source** (never falsely labelled as a direct chapter link), else nonclickable explanation. Scheduled/archived entries are never linked.
+- Use the same HTTP(S), no-credentials URL safety helper used by reading targets; do not infer a URL or skip an unlinked chapter.
+- Keep volume titles, read tracking, per-volume and overall progress unchanged in this stage. Description/hero progress redesign is reserved for WD-HERO-01.
+- No database migrations, deployment, or merges from the apply script. Run all CI checks after human review/commit.
+- Backup/restore tests were previously run on a test copy according to the user; avoid re-running infrastructure reconnaissance absent a specific new risk.
+
+
+## WD-LINK-02 · Applied / CI handoff checkpoint (2026-11-11)
+
+- Verified local apply on `feature/wd-link-02-reading-destinations` from parent `4c572d4bb32596812ef9fa8e40d040d8a5186111`; patch SHA-256 `d0f27b6382b5e67275978d0614c114f9d733abbeeb099aef3d93164719503208`; 5 changed files.
+- Reading sources live in the chapters tab: direct chapter URL, clearly labelled general work source, or an explanation that no URL is available. Scheduled/archived chapters remain nonclickable; unlinked chapters are not skipped.
+- WD-LINK-01 (`4c572d4`) CI was confirmed green by the user. The `0029` migration is not confirmed as deployed; do not merge or deploy this stacked branch independently of its parent.
+- This checkpoint is being committed and pushed for full CI; CI outcome is **pending** until independently checked. No migration, server changes, PR merge, or deployment performed by the commit script.
+- Prior backup restore tests on an isolated copy were confirmed by the user; further backup reconnaissance is out of scope of the UI work.
+- Next product stage after CI: WD-HERO-01 — hero description and one client-owned reading progress widget, retaining per-volume progress and unique About content.

@@ -12,21 +12,17 @@ import { Button } from "@/shared/components/ui";
 import type { ComicChapter } from "@/modules/comics/queries/get-comic-chapters";
 import { formatExpectedRelease } from "@/modules/catalog/chapter-release-dates";
 import { groupChaptersByVolume, volumeHeading, volumeProgress } from "@/modules/catalog/chapter-volumes";
+import { getChapterReadingSource, readingSource } from "@/modules/library/reading-target";
 
 type Chapter = Omit<ComicChapter, "releasedAt">;
-type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; readIds: number[]; canMark: boolean; volumeTitles?: Record<number, string> };
+type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; readIds: number[]; canMark: boolean; workSourceUrl: string | null; volumeTitles?: Record<number, string> };
 
-function safeSource(value: string | null) {
-  if (!value) return null;
-  try { const url = new URL(value); return ["http:", "https:"].includes(url.protocol) ? value : null; }
-  catch { return null; }
-}
-
-export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, ratings, canMark, volumeTitles = {} }: Props) {
+export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, ratings, canMark, workSourceUrl, volumeTitles = {} }: Props) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("MAIN");
   const [limit, setLimit] = useState(30);
   const [hideScheduled, setHideScheduled] = useState(false);
+  const sharedSource = readingSource(workSourceUrl);
   const router=useRouter();
   const [pending,start]=useTransition();
   const lock=useRef(false);
@@ -86,11 +82,14 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, rati
 
   function renderChapter(c: Chapter) {
     const isScheduled = c.status === "SCHEDULED";
-    const source = isScheduled ? null : safeSource(c.sourceUrl);
+    const destination = getChapterReadingSource(c.sourceUrl, workSourceUrl, c.status);
+    const direct = destination.kind === "direct" ? destination.source : null;
     const isRead = read.has(c.id);
     const label=[c.displayCode,c.title].filter(Boolean).join(" · ")||"Глава";
     return <li key={c.id} className={isScheduled ? "wd-row wd-row--scheduled" : "wd-row"}><div className="wd-row-title">
-        {source?<a href={source} target="_blank" rel="noopener noreferrer" aria-label={label+" — открыть источник в новой вкладке"}>{label}</a>:<span>{label}</span>}
+        {direct?<a href={direct.href} target="_blank" rel="noopener noreferrer" aria-label={label+" — открыть главу в новой вкладке"}>{label} <span aria-hidden="true">↗</span></a>:<span className="block py-2 font-semibold">{label}</span>}
+        {destination.kind === "general" && destination.source ? <a className="!inline-flex !py-1 text-sm text-[var(--text-accent)]" href={destination.source.href} target="_blank" rel="noopener noreferrer" aria-label={label+" — открыть общий источник произведения в новой вкладке"}>Прямой ссылки нет · открыть общий источник ↗</a> : null}
+        {destination.kind === "missing" ? <small className="block text-xs text-[var(--text-secondary)]">Ссылка на чтение пока не добавлена. Главу можно найти самостоятельно.</small> : null}
         {isScheduled ? <small className="wd-planned-date">{c.expectedRelease ? `Ожидается: ${formatExpectedRelease(c.expectedRelease)}` : "Запланирована · дата неизвестна"}</small> : null}
         {!isScheduled && c.supersedesChapterId ? <details className="chapter-revision"><summary>Новая редакция</summary><p>Отметка прежней версии хранится в архиве.</p></details>:null}
       </div>
@@ -102,7 +101,12 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, rati
 
   return (
     <section className="chapter-panel" aria-label="Главы и история чтения">
+      {sharedSource ? <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+        <div><p className="font-semibold">Общий источник произведения</p><p className="text-xs text-[var(--text-secondary)]">Переход ведёт к произведению целиком, не к отдельной главе.</p></div>
+        <a className="inline-flex min-h-11 items-center rounded-lg border border-[var(--border)] px-3 text-sm font-semibold text-[var(--text-accent)]" href={sharedSource.href} target="_blank" rel="noopener noreferrer">{sharedSource.label} ↗</a>
+      </div> : null}
       {canMark && main.length>0 && <div className="wd-progress"><span>Прочитано: {main.filter(c=>read.has(c.id)).length} из {main.length}</span><progress max={main.length} value={main.filter(c=>read.has(c.id)).length}/></div>}
+      {canMark && main.length > 0 && main.every(c => read.has(c.id)) ? <p className="text-sm text-[var(--text-secondary)]">Все вышедшие основные главы прочитаны.</p> : null}
       {scheduledCount > 0 && <label className="wd-planned-toggle">
         <span>Скрыть запланированные <small>Ещё не вышли: {scheduledCount}</small></span>
         <input type="checkbox" checked={hideScheduled} onChange={(e) => { setHideScheduled(e.target.checked); setLimit(30); }}/>

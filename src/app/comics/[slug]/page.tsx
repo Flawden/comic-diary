@@ -1,5 +1,4 @@
 import { listReturn } from "@/modules/library/list-navigation";
-import { getReadingTarget } from "@/modules/library/reading-target";
 import { WorkTabs, WorkPreferences, PromptSwitch, ShelfAction, DiaryForm } from "@/modules/library/components/WorkControls";
 import Link from "next/link";
 import { DiaryRatingFields } from "@/modules/library/components/DiaryRatingFields";
@@ -100,12 +99,8 @@ export default async function ComicPage({
 
   const registry=readingState?.chapterReading.registry ?? chapters;
   const readIds=readingState?.chapterReading.readIds ?? [];
-  const target=getReadingTarget(registry,readIds,comic.sourceUrl);
   const total=chapters.filter(c=>c.status==="RELEASED" && c.kind==="MAIN").length;
-  const continuing=(readingState?.chapterReading.currentChapter ?? 0)>0;
   const savedRating = readingState ? calculateAverageRating(readingState) : null;
-  const c=target.chapter;
-  const caption=target.direct && c ? (continuing?"Продолжить":"Читать")+(c.displayCode?" · глава "+c.displayCode:"") : target.source?.label;
   const visibleChapters = registry.filter(
     (chapter) => chapter.status === "RELEASED" || chapter.status === "SCHEDULED" ||
       (chapter.status === "ARCHIVED" && readIds.includes(chapter.id)),
@@ -130,13 +125,10 @@ export default async function ComicPage({
             ) : null}
           </div>
           <div className="wd-hero-actions">
-            {target.source ? <a className="wd-read" href={target.source.href} target="_blank" rel="noopener noreferrer"><strong>{caption} ↗</strong>{c && target.direct && c.title && <span>{c.title}</span>}</a>:<a href="#chapters" className="wd-read">К главам ↓</a>}
             <div className="wd-shelf"><ShelfAction comicId={comic.id} member={!!readingState?.inLibrary} hasDiary={readingState !== null} login={currentUser?null:`/login?next=${encodeURIComponent("/comics/"+comic.slug)}`}/></div>
           </div>
         </div>
       </header>
-      {c && !target.direct && <p className="wd-hint">Прямой ссылки на главу пока нет.{target.source?" Откроется общий источник истории.":""}</p>}
-      {target.state==="CAUGHT_UP" && <p className="wd-hint">Все вышедшие основные главы прочитаны.</p>}
       <WorkTabs count={total} chapters={
         <div className={`wd-chapter-content${visibleChapters.length === 0 ? " wd-chapter-content--empty" : ""}`}>
           {visibleChapters.length === 0 ? (
@@ -163,6 +155,7 @@ export default async function ComicPage({
             ratings={readingState?.chapterReading.ratings ?? {}}
             readIds={readingState?.chapterReading.readIds ?? []}
             canMark={readingState?.inLibrary === true}
+            workSourceUrl={comic.sourceUrl}
             volumeTitles={volumeTitles}
           />
         </div>
