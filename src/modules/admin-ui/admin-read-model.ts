@@ -13,6 +13,7 @@ import {
   administrativeAuditEvents,
   categories,
   chapters,
+  comicVolumeTitles,
   comics,
   userEntitlements,
   users,
@@ -114,6 +115,24 @@ export async function listAdminComics() {
       ),
     );
 
+  // One batch query, never a separate DB read for each comic.
+  const volumeTitleRows = comicRows.length > 0
+    ? await db.select({
+        comicId: comicVolumeTitles.comicId,
+        number: comicVolumeTitles.volumeNumber,
+        title: comicVolumeTitles.title,
+      }).from(comicVolumeTitles)
+        .where(inArray(comicVolumeTitles.comicId, comicRows.map(comic => comic.id)))
+        .orderBy(asc(comicVolumeTitles.volumeNumber))
+    : [];
+
+  const titlesByComic = new Map<number, Array<{ number: number; title: string }>>();
+  for (const row of volumeTitleRows) {
+    const current = titlesByComic.get(row.comicId) ?? [];
+    current.push({ number: row.number, title: row.title });
+    titlesByComic.set(row.comicId, current);
+  }
+
   // Keep chapter rows typed through the per-comic lookup and into the admin UI.
   const chaptersByComic =
     new Map<number, typeof chapterRows>();
@@ -142,6 +161,7 @@ export async function listAdminComics() {
         chaptersByComic.get(
           comic.id,
         ) ?? [],
+      volumeTitles: titlesByComic.get(comic.id) ?? [],
     }),
   );
 }

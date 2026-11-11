@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { groupChaptersByVolume, volumeProgress } from "./chapter-volumes";
+import { groupChaptersByVolume, volumeHeading, volumeProgress } from "./chapter-volumes";
 
 const chapter = (id: number, volumeNumber: number | null, status = "RELEASED") => ({ id, volumeNumber, status });
 
@@ -20,4 +20,11 @@ test("volumes sort numerically, keep chapter order and retain the ungrouped sect
 test("scheduled chapters are not counted or marked as read in volume progress", () => {
   const rows = [chapter(1, 1), chapter(2, 1), chapter(3, 1, "SCHEDULED")];
   assert.deepEqual(volumeProgress(rows, new Set([1, 3])), { read: 1, total: 2 });
+});
+
+test("optional volume titles do not alter fallback labels", () => {
+  assert.equal(volumeHeading(1), "Том 1");
+  assert.equal(volumeHeading(2, "  Начало пути  "), "Том 2 — Начало пути");
+  assert.equal(volumeHeading(null, "Без тома"), "Главы без тома");
+  assert.equal(volumeHeading(3, ""), "Том 3");
 });

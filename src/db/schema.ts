@@ -242,6 +242,21 @@ export const comics = pgTable(
 
 
 
+// Optional titles for volume groups. Chapter identity and reading history are untouched.
+export const comicVolumeTitles = pgTable(
+  "comic_volume_titles",
+  {
+    comicId: integer("comic_id").notNull().references(() => comics.id, { onDelete: "cascade" }),
+    volumeNumber: integer("volume_number").notNull(),
+    title: varchar("title", { length: 160 }).notNull(),
+  },
+  (table) => [
+    primaryKey({ name: "comic_volume_titles_pkey", columns: [table.comicId, table.volumeNumber] }),
+    check("comic_volume_titles_number_valid", sql`${table.volumeNumber} BETWEEN 1 AND 99`),
+    check("comic_volume_titles_title_nonempty", sql`length(btrim(${table.title})) > 0`),
+  ],
+);
+
 export const chapters = pgTable(
   "chapters",
   {

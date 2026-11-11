@@ -2,6 +2,7 @@
 
 import { expectedReleasePrecision, formatExpectedRelease, formatReleasedAt, isValidExpectedRelease, type ExpectedReleasePrecision } from "@/modules/catalog/chapter-release-dates";
 import { AdminComicList } from "@/modules/catalog/components/AdminComicList";
+import { AdminVolumeTitles } from "./AdminVolumeTitles";
 import { ChapterRevisionSelector } from "@/modules/catalog/components/ChapterRevisionSelector";
 import { AdminChapterList } from "@/modules/catalog/components/AdminChapterList";
 import { ChapterBatchEditor } from "@/modules/catalog/components/ChapterBatchEditor";
@@ -87,6 +88,7 @@ type AdminComic = {
   categoryName: string | null;
   updatedAt: string;
   chapters: AdminChapter[];
+  volumeTitles: Array<{ number: number; title: string }>;
 };
 
 type Props = {
@@ -792,6 +794,8 @@ export function AdminComicManager({
     form: HTMLFormElement;
   } | null>(null);
   const [comicDirty, setComicDirty] = useState<Record<number, boolean>>({});
+  const [volumeTitleDirty, setVolumeTitleDirty] = useState<Record<number, boolean>>({});
+  const [volumeTitleRevision, setVolumeTitleRevision] = useState<Record<number, number>>({});
   const [comicCoverUrls, setComicCoverUrls] = useState<Record<number, string>>({});
   const [comicBannerUrls, setComicBannerUrls] = useState<Record<number, string>>({});
   const [unsavedPrompt, setUnsavedPrompt] = useState<UnsavedChangesPrompt | null>(null);
@@ -896,6 +900,8 @@ export function AdminComicManager({
     }));
     setComicBannerUrls(previous => ({ ...previous, [comicId]: baseline.bannerUrl ?? "" }));
     setComicDirty(previous => ({ ...previous, [comicId]: false }));
+    setVolumeTitleDirty(previous => ({ ...previous, [comicId]: false }));
+    setVolumeTitleRevision(previous => ({ ...previous, [comicId]: (previous[comicId] ?? 0) + 1 }));
     setError(null);
     setMessage(null);
   }
@@ -919,6 +925,7 @@ export function AdminComicManager({
   const hasUnsavedComicChanges =
     Object.values(comicDirty).some(Boolean) ||
     Object.values(coverUploads).some(Boolean) ||
+    Object.values(volumeTitleDirty).some(Boolean) ||
     createDirty;
 
   function requestComicSwitchConfirmation(): Promise<boolean> {
@@ -1986,7 +1993,7 @@ export function AdminComicManager({
       <AdminComicList comics={initialComics} categories={categories}
         onCreate={openCreateWizard}
         onSelectionChange={async currentId => {
-          if (currentId !== null && comicDirty[currentId]) {
+          if (currentId !== null && (comicDirty[currentId] || volumeTitleDirty[currentId])) {
             const confirmed = await requestComicSwitchConfirmation();
             if (!confirmed) return false;
             discardComicChanges(currentId);
@@ -2105,6 +2112,16 @@ export function AdminComicManager({
                       <h4 className="font-semibold">
                         Главы
                       </h4>
+
+                      <AdminVolumeTitles
+                        key={`${comic.id}:${volumeTitleRevision[comic.id] ?? 0}`}
+                        comicId={comic.id}
+                        volumeNumbers={comic.chapters.map(chapter => chapter.volumeNumber)}
+                        initialTitles={comic.volumeTitles}
+                        disabled={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null}
+                        onDirtyChange={dirty => setVolumeTitleDirty(previous =>
+                          (previous[comic.id] ?? false) === dirty ? previous : { ...previous, [comic.id]: dirty })}
+                      />
 
                       {comic.chapters.length > 0 ? (
                         <AdminChapterList chapters={comic.chapters} locked={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null}>
