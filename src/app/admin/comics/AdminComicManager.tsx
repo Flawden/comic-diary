@@ -77,7 +77,7 @@ type AdminComic = {
   translatorNote: string | null;
   coverUrl: string | null;
   bannerUrl: string | null;
-  sourceUrl: string;
+  sourceUrl: string | null;
   totalChapters: number | null;
   seriesStatus: SeriesStatus;
   workType: WorkType;
