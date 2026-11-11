@@ -322,3 +322,85 @@ textarea.admin-studio-input { resize: vertical; }
   font-size: 13px;
   color: var(--text-secondary);
 }
+
+
+/* Admin A3.2 — condensed editor; the existing FormData contract is unchanged.
+   Both image uploaders live in native dialogs, always mounted inside the form. */
+.admin-studio-artwork-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+.admin-studio-background-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.admin-studio-background-card .admin-studio-background-button {
+  align-self: flex-start;
+}
+.admin-studio-cover-thumbnail {
+  flex-basis: 66px;
+  width: 66px;
+  height: 88px;
+}
+/* WorkMetadataFields are now under the optional parameters disclosure. */
+.admin-studio-advanced select[name="workType"],
+.admin-studio-advanced select[name="workFormat"] {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+.admin-studio-advanced select[name="workType"]:focus-visible,
+.admin-studio-advanced select[name="workFormat"]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.admin-studio-advanced .admin-studio-field-grid > label { min-width: 0; }
+.admin-studio-save-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+.admin-studio-dirty-indicator {
+  flex-basis: 100%;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-accent);
+}
+@media (max-width: 1240px) {
+  .admin-studio-artwork-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .admin-studio-artwork-grid { grid-template-columns: 1fr; gap: 10px; }
+  .admin-studio-background-card { padding: 12px; }
+  .admin-studio-background-summary { gap: 10px; }
+  .admin-studio-background-thumbnail { flex-basis: 88px; width: 88px; height: 60px; }
+  .admin-studio-cover-thumbnail { flex-basis: 60px; width: 60px; height: 80px; }
+  .admin-studio-background-card .admin-studio-background-button { margin-top: 10px; }
+  /* Sticky is restricted to the editing form, not chapter tools or menus. */
+  .admin-studio-save-actions {
+    position: sticky;
+    bottom: max(0px, env(safe-area-inset-bottom));
+    z-index: 5;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--surface);
+    box-shadow: 0 -7px 24px rgb(0 0 0 / .18);
+  }
+  .admin-studio-save-actions button { min-height: 44px; }
+  .admin-studio-save-actions > a { flex-basis: 100%; }
+}
+@media (max-width: 760px) and (max-height: 500px) {
+  /* The mobile software keyboard can reduce the visual viewport dramatically. */
+  .admin-studio-save-actions { position: static; }
+}
