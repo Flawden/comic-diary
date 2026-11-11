@@ -380,6 +380,7 @@ function restoreComicForm(form: HTMLFormElement, payload: ComicPayload) {
 }
 
 type StudioTab = "metadata" | "chapters" | "publication";
+type CreateWizardStep = "information" | "artwork" | "finish";
 
 type UnsavedChangesPrompt =
   | { kind: "navigation"; destination: string }
@@ -393,6 +394,7 @@ function ComicFields({
   onUploadingChange,
   onBannerUploadingChange,
   activeTab,
+  createStep,
   coverUrl,
   onCoverUrlChange,
   bannerUrl,
@@ -405,6 +407,7 @@ function ComicFields({
   onUploadingChange: (uploading: boolean) => void;
   onBannerUploadingChange: (uploading: boolean) => void;
   activeTab?: StudioTab;
+  createStep?: CreateWizardStep;
   coverUrl?: string;
   onCoverUrlChange?: (value: string) => void;
   bannerUrl?: string;
@@ -438,7 +441,8 @@ function ComicFields({
 
   return (
     <>
-      <div hidden={activeTab === "chapters" || activeTab === "publication"}>
+      <div data-create-step={create ? createStep : undefined}
+        hidden={activeTab === "chapters" || activeTab === "publication"}>
         <section className="admin-studio-work-card" aria-label="Основная информация о произведении">
           <div className="admin-studio-section-heading">
             <p className="admin-studio-overline">01 · ИСТОРИЯ</p>
@@ -452,6 +456,7 @@ function ComicFields({
             </label>
             <label>Slug *
               <input name="slug" required readOnly={!create}
+                pattern={create ? "[a-z0-9]+(?:-[a-z0-9]+)*" : undefined}
                 defaultValue={comic?.slug ?? ""} placeholder="latinskoe-nazvanie" className={inputClass}
                 onInput={create ? event => {
                   const field = event.currentTarget;
@@ -627,7 +632,7 @@ function ComicFields({
           </div>
         </details>
       </div>
-      <section hidden={activeTab !== undefined && activeTab !== "publication"}
+      <section hidden={create ? createStep !== "finish" : activeTab !== undefined && activeTab !== "publication"}
         className="admin-studio-publication-section">
         <div className="admin-studio-section-heading">
           <p className="admin-studio-overline">03 · ВИДИМОСТЬ</p>
@@ -638,8 +643,8 @@ function ComicFields({
           {create ? (
             <div className="admin-studio-create-hidden-status">
               <input type="hidden" name="publicationStatus" value="HIDDEN" />
-              <strong>Статус в каталоге</strong>
-              <span>Скрыт · безопасный черновик</span>
+              <strong>Видимость после сохранения</strong>
+              <span>Выбирается кнопкой завершения ниже</span>
             </div>
           ) : (
             <label>Статус в каталоге
@@ -658,7 +663,7 @@ function ComicFields({
         </div>
         {create ? (
           <p className="admin-studio-section-note">
-            Новое произведение изначально скрыто. Открой его в редакторе, когда обложка, главы и описание будут готовы.
+            Главы можно добавить позднее. Если опубликовать сейчас без глав, читатели увидят произведение в каталоге, но читать пока будет нечего.
           </p>
         ) : (
           <p className="admin-studio-section-note">
@@ -773,6 +778,11 @@ export function AdminComicManager({
   const [chapterEditFeedback, setChapterEditFeedback] = useState<{ chapterId: number; kind: "error" | "success"; message: string } | null>(null);
   const [coverUploads, setCoverUploads] = useState<Record<string, boolean>>({});
   const [createFormRevision, setCreateFormRevision] = useState(0);
+  const [createStep, setCreateStep] = useState<CreateWizardStep>("information");
+  const [createDirty, setCreateDirty] = useState(false);
+  const [createSummary, setCreateSummary] = useState<ComicPayload | null>(null);
+  const createDialogRef = useRef<HTMLDialogElement>(null);
+  const createFormRef = useRef<HTMLFormElement>(null);
   const comicFormsRef = useRef(new Map<number, HTMLFormElement>());
   const comicBaselinesRef = useRef(new Map<number, ComicPayload>());
   const saveInFlightRef = useRef(false);
@@ -908,7 +918,8 @@ export function AdminComicManager({
 
   const hasUnsavedComicChanges =
     Object.values(comicDirty).some(Boolean) ||
-    Object.values(coverUploads).some(Boolean);
+    Object.values(coverUploads).some(Boolean) ||
+    createDirty;
 
   function requestComicSwitchConfirmation(): Promise<boolean> {
     return new Promise(resolve => {
@@ -1040,6 +1051,15 @@ export function AdminComicManager({
       event.stopPropagation();
       event.stopImmediatePropagation();
 
+      // A creation dialog is in the browser top layer: the normal unsaved
+      // overlay would appear behind it. Confirm here instead.
+      if (createDialogRef.current?.open && createDirty) {
+        if (!window.confirm("Покинуть страницу? Несохранённое произведение будет потеряно.")) return;
+        createDialogRef.current.close();
+        setCreateDirty(false);
+        router.push(`${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+        return;
+      }
       if (unsavedPromptRef.current) return;
 
       const prompt = {
@@ -1079,6 +1099,13 @@ export function AdminComicManager({
       event.stopImmediatePropagation();
       window.history.pushState(previous.state, "", previous.url);
 
+      if (createDialogRef.current?.open && createDirty) {
+        if (!window.confirm("Покинуть страницу? Несохранённое произведение будет потеряно.")) return;
+        createDialogRef.current.close();
+        setCreateDirty(false);
+        router.push(`${destinationUrl.pathname}${destinationUrl.search}${destinationUrl.hash}`);
+        return;
+      }
       if (unsavedPromptRef.current) return;
 
       const prompt = {
@@ -1101,7 +1128,58 @@ export function AdminComicManager({
       window.removeEventListener("popstate", handlePopState, true);
       document.removeEventListener("click", handleDocumentClick, true);
     };
-  }, [hasUnsavedComicChanges]);
+  }, [hasUnsavedComicChanges, createDirty, router]);
+
+  function openCreateWizard() {
+    if (busyKey !== null || createDialogRef.current?.open) return;
+    setError(null);
+    setMessage(null);
+    setCreateStep("information");
+    setCreateSummary(null);
+    createDialogRef.current?.showModal();
+  }
+
+  function closeCreateWizard() {
+    if (busyKey !== null || coverUploads.create || coverUploads["create-banner"]) return;
+    if (createDirty && !window.confirm("Закрыть создание произведения? Несохранённые данные будут потеряны.")) {
+      return;
+    }
+    createDialogRef.current?.close();
+    createFormRef.current?.reset();
+    setCreateFormRevision(previous => previous + 1);
+    setCreateDirty(false);
+    setCreateStep("information");
+    setCreateSummary(null);
+    setError(null);
+  }
+
+  function advanceCreateWizard() {
+    const form = createFormRef.current;
+    if (!form || busyKey !== null) return;
+    if (createStep === "information") {
+      // Only advance after checking required fields. Hidden steps remain
+      // mounted so uploaded media and FormData do not get lost.
+      if (!form.checkValidity()) {
+        const invalid = form.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(":invalid");
+        invalid?.closest("details")?.setAttribute("open", "");
+        invalid?.reportValidity();
+        setError("Заполните обязательные поля первого этапа.");
+        return;
+      }
+      setError(null);
+      setCreateStep("artwork");
+      return;
+    }
+    if (createStep === "artwork") {
+      if (coverUploads.create || coverUploads["create-banner"]) {
+        setError("Дождитесь окончания загрузки изображения.");
+        return;
+      }
+      setCreateSummary(comicPayload(new FormData(form)));
+      setError(null);
+      setCreateStep("finish");
+    }
+  }
 
   async function saveComic(
     event:
@@ -1112,6 +1190,24 @@ export function AdminComicManager({
     immutableSlug?: string,
   ) {
     event.preventDefault();
+
+    if (mode === "create") {
+      if (createStep !== "finish") {
+        advanceCreateWizard();
+        return;
+      }
+      if (!event.currentTarget.checkValidity()) {
+        const form = event.currentTarget;
+        setCreateStep("information");
+        setError("Проверьте обязательные поля перед созданием произведения.");
+        window.requestAnimationFrame(() => {
+          const invalid = form.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(":invalid");
+          invalid?.closest("details")?.setAttribute("open", "");
+          invalid?.reportValidity();
+        });
+        return;
+      }
+    }
 
     // The chapter editor shares the DOM form with the comic metadata for now.
     // Pressing Enter in chapter fields must never submit comic metadata.
@@ -1165,6 +1261,14 @@ export function AdminComicManager({
         data,
         immutableSlug,
       );
+
+    // Only a deliberate click on the publish button makes a new work public.
+    // Implicit Enter/unknown submitters safely create a hidden draft.
+    if (mode === "create") {
+      const submitter = (event.nativeEvent as SubmitEvent).submitter;
+      payload.publicationStatus = submitter instanceof HTMLButtonElement &&
+        submitter.value === "PUBLISHED" ? "PUBLISHED" : "HIDDEN";
+    }
 
     if (
       !payload.slug ||
@@ -1281,10 +1385,14 @@ export function AdminComicManager({
         "create"
       ) {
         form.reset();
-        // Reset both upload previews after a successful creation.
+        // Close and reset the wizard only after the server confirms creation.
+        setCreateDirty(false);
+        createDialogRef.current?.close();
+        setCreateStep("information");
+        setCreateSummary(null);
         setCreateFormRevision(previous => previous + 1);
         setMessage(
-          `Комикс ${payload.slug} создан.`,
+          `Произведение ${payload.slug} создано (${payload.publicationStatus === "PUBLISHED" ? "опубликовано" : "черновик"}). Главы можно добавить в редакторе.`,
         );
       } else {
         const savedComic = initialComics.find(
@@ -1876,6 +1984,7 @@ export function AdminComicManager({
       {error ? <p role="alert" className="admin-studio-feedback is-error">{error}</p> : null}
       {message ? <p role="status" className="admin-studio-feedback is-success">{message}</p> : null}
       <AdminComicList comics={initialComics} categories={categories}
+        onCreate={openCreateWizard}
         onSelectionChange={async currentId => {
           if (currentId !== null && comicDirty[currentId]) {
             const confirmed = await requestComicSwitchConfirmation();
@@ -1888,104 +1997,15 @@ export function AdminComicManager({
         }}
         locked={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null || Object.values(coverUploads).some(Boolean)}>
         {selectedId => <div className="admin-studio-panels">
-          <section hidden={selectedId !== null}
-        className={[
-          "admin-studio-create-panel group rounded-2xl",
-          "border border-[var(--border)]",
-          "bg-[var(--surface)]",
-          "shadow-[var(--cd-shadow-card)]",
-        ].join(" ")}
-      >
-        <header
-          className={[
-            "flex min-h-14 cursor-pointer list-none",
-            "items-center justify-between gap-3",
-            "px-5 py-4",
-            "text-sm font-semibold",
-            "text-[var(--text-primary)]",
-          ].join(" ")}
-        >
-          <span>
-            + Добавить комикс
-          </span>
-
-          <span
-            aria-hidden="true"
-            className={[
-              "text-lg text-[var(--text-muted)]",
-              "transition-transform",
-              "group-open:rotate-45",
-            ].join(" ")}
-          >
-            +
-          </span>
-        </header>
-
-        <div
-          className={[
-            "border-t border-[var(--border)]",
-            "px-5 pb-5 pt-5",
-          ].join(" ")}
-        >
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">
-            Новая история
-          </h2>
-
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Укажи автора и переводчика, оформи обложку и фон. Сохраним историю скрытой, пока она не готова к читателям.
-          </p>
-
-          {categories.length ===
-          0 ? (
-            <p className="mt-4 rounded-xl border border-[var(--danger)] p-3 text-sm text-[var(--danger)]">
-              Создание недоступно: в PostgreSQL нет категорий.
-            </p>
-          ) : (
-            <form
-              onSubmit={(
-                event,
-              ) =>
-                saveComic(
-                  event,
-                  "create",
-                )
-              }
-              className="mt-6"
-            >
-              <ComicFields
-                key={`create-fields-${createFormRevision}`}
-                disabled={busyKey !== null}
-                onUploadingChange={uploading => setCoverUploads(previous => ({ ...previous, create: uploading }))}
-                onBannerUploadingChange={uploading => setCoverUploads(previous => ({ ...previous, "create-banner": uploading }))}
-                categories={
-                  categories
-                }
-                create
-              />
-
-              <div className="admin-studio-save-actions admin-studio-create-actions">
-                <button
-                  type="submit"
-                  disabled={
-                    coverUploads.create || coverUploads["create-banner"] ||
-                    busyKey !==
-                    null
-                  }
-                  className={[
-                    "min-h-11 rounded-[var(--cd-radius-button)]",
-                    "bg-[var(--primary)] px-5 py-3",
-                    "text-sm font-semibold",
-                    "text-[var(--primary-foreground)]",
-                    "disabled:cursor-wait disabled:opacity-60",
-                  ].join(" ")}
-                >
-                  Создать скрытый черновик
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      </section>
+          {selectedId === null ? (
+            <section className="admin-studio-create-placeholder">
+              <h2>Выберите произведение</h2>
+              <p>Откройте существующую историю слева или нажмите «+ Добавить», чтобы создать новую в отдельном окне.</p>
+              <button type="button" className="admin-studio-background-button" onClick={openCreateWizard} disabled={busyKey !== null}>
+                Создать произведение
+              </button>
+            </section>
+          ) : null}
                       {initialComics.map(
               (comic) => (
                 <article
@@ -2637,6 +2657,94 @@ export function AdminComicManager({
             )}
         </div>}
       </AdminComicList>
+
+      <dialog ref={createDialogRef} className="admin-studio-create-dialog"
+        aria-labelledby="admin-create-wizard-title"
+        onCancel={event => { event.preventDefault(); closeCreateWizard(); }}
+        onClick={event => { if (event.target === event.currentTarget) closeCreateWizard(); }}>
+        <div className="admin-studio-create-dialog-inner">
+          <header className="admin-studio-create-header">
+            <div>
+              <p className="admin-studio-overline">БЕЛЫЙ ДРАКОН · COMIC STUDIO</p>
+              <h2 id="admin-create-wizard-title">Новое произведение</h2>
+              <p>Создайте основу истории сейчас. Главы можно добавить позже.</p>
+            </div>
+            <button type="button" className="admin-studio-dialog-close"
+              onClick={() => closeCreateWizard()} aria-label="Закрыть создание произведения"
+              disabled={busyKey !== null || !!coverUploads.create || !!coverUploads["create-banner"]}>✕</button>
+          </header>
+          <nav className="admin-studio-create-steps" aria-label="Этапы создания">
+            {([ ["information", "Информация"], ["artwork", "Оформление"], ["finish", "Завершение"] ] as const).map(([step, label], index) => (
+              <div key={step} className={createStep === step ? "is-current" : ""}
+                aria-current={createStep === step ? "step" : undefined}>
+                <span>{index + 1}</span>{label}
+              </div>
+            ))}
+          </nav>
+          {categories.length === 0 ? (
+            <p role="alert" className="admin-studio-feedback is-error">Создание недоступно: сначала добавьте категорию.</p>
+          ) : (
+            <form ref={createFormRef} noValidate
+              onInput={() => setCreateDirty(true)}
+              onChange={() => setCreateDirty(true)}
+              onSubmit={event => saveComic(event, "create")}
+              className="admin-studio-create-form">
+              {error ? <p role="alert" className="admin-studio-feedback is-error">{error}</p> : null}
+              <ComicFields key={`create-fields-${createFormRevision}`}
+                create createStep={createStep}
+                disabled={busyKey !== null}
+                onUploadingChange={uploading => setCoverUploads(previous => ({ ...previous, create: uploading }))}
+                onBannerUploadingChange={uploading => setCoverUploads(previous => ({ ...previous, "create-banner": uploading }))}
+                onCoverUrlChange={() => setCreateDirty(true)}
+                onBannerUrlChange={() => setCreateDirty(true)}
+                categories={categories} />
+              {createStep === "finish" ? (
+                <section className="admin-studio-create-review" aria-label="Проверка перед созданием">
+                  <h3>Всё готово?</h3>
+                  <p><strong>Название:</strong> {createSummary?.title || "Не указано"}</p>
+                  <p><strong>Автор:</strong> {createSummary?.authorName || "Не указан"}</p>
+                  <p><strong>Переводчик:</strong> {createSummary?.translatorName || "Не указан"}</p>
+                  <p><strong>Обложка:</strong> {createSummary?.coverUrl ? "Выбрана" : "Пока нет"}</p>
+                  <p><strong>Фон:</strong> {createSummary?.bannerUrl ? "Выбран" : "Стандартный"}</p>
+                  <p className="admin-studio-create-no-chapters">Главы не обязательны. После создания откройте произведение и добавьте их через вкладку «Главы».</p>
+                </section>
+              ) : null}
+              <footer className="admin-studio-create-footer">
+                <span className="admin-studio-create-draft-note" role="status">
+                  {createDirty ? "Есть несохранённые данные" : "Черновик ещё не создан"}
+                </span>
+                {createStep !== "information" ? (
+                  <button type="button" className="admin-studio-create-back"
+                    disabled={busyKey !== null}
+                    onClick={() => { setError(null); setCreateStep(createStep === "finish" ? "artwork" : "information"); }}>
+                    Назад
+                  </button>
+                ) : null}
+                {createStep === "finish" ? (
+                  <>
+                    <button type="submit" name="createPublicationStatus" value="HIDDEN"
+                      disabled={busyKey !== null || !!coverUploads.create || !!coverUploads["create-banner"]}
+                      className="admin-studio-create-draft">
+                      {busyKey === "create" ? "Сохраняем…" : "Сохранить черновик"}
+                    </button>
+                    <button type="submit" name="createPublicationStatus" value="PUBLISHED"
+                      disabled={busyKey !== null || !!coverUploads.create || !!coverUploads["create-banner"]}
+                      className="admin-studio-create-publish">
+                      Опубликовать сейчас
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" className="admin-studio-create-publish"
+                    disabled={busyKey !== null || !!coverUploads.create || !!coverUploads["create-banner"]}
+                    onClick={advanceCreateWizard}>
+                    Далее →
+                  </button>
+                )}
+              </footer>
+            </form>
+          )}
+        </div>
+      </dialog>
       {unsavedPrompt ? (
         <div
           className="admin-unsaved-dialog-overlay"
