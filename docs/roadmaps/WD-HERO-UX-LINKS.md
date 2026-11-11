@@ -80,3 +80,13 @@ WD-LINK-01 was applied locally on 2026-11-11 to `feature/wd-link-01-optional-wor
 - About tab retains translator notes, author/translator metadata, work format, declared chapter count and private-title controls. Its duplicate story description is removed; full description remains expandable in the hero.
 - Browser regression checks are updated for the new description placement and lack of duplicate chapter/diary progress. Full CI, visual and mobile QA remain gates before PR/merge/deploy.
 - No DB migration, production changes, history rewriting, or deployment belongs to WD-HERO-01 apply.
+
+
+## WD-HERO-02 · Real browser visual capture (2026-11-11)
+
+- Source branch: `feature/wd-hero-01-live-progress`, CI-green commit `8fe8f4bc6c54ce38f7775c1d1aaa7f3ee53c55d6` (confirmed by user).
+- Capture actual Next.js renders in the existing disposable CI browser test at 360 px (mobile), 768 px (tablet), and 1440 px (desktop).
+- GitHub Actions uploads three PNGs as a seven-day artifact. Screenshots use disposable CI user and comic fixtures, never production accounts or live DB.
+- These are review inputs, NOT a substitute for user visual inspection, accessibility or functional testing.
+- Browser tests must remain strict. No DB migration, PR merge or production deployment from this stage.
+- Product release freeze: `docs/roadmaps/COMIC-DIARY-PRODUCT.md` was pushed separately to `docs/product-roadmap-release-gates` at `7382a06`; do not merge that docs branch into `master` casually because master triggers release workflows.

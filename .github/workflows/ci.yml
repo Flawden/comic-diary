@@ -226,7 +226,18 @@ jobs:
           }
           console.log('BR02_CI_READINESS=PASS');
           JS
+          export WD_VISUAL_OUTPUT="$RUNNER_TEMP/wd-visual"
+          mkdir -p "$WD_VISUAL_OUTPUT"
           node scripts/work-reader-browser.mjs || { tail -60 "$RUNNER_TEMP/wd-next.log"; exit 1; }
+
+      - name: Upload WD-HERO-02 screenshots (synthetic CI fixtures only)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wd-hero-02-visual-${{ github.run_id }}
+          path: ${{ runner.temp }}/wd-visual/*.png
+          if-no-files-found: warn
+          retention-days: 7
 
   publish:
     name: Publish immutable image

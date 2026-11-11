@@ -2,6 +2,8 @@
 import assert from "node:assert/strict";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
+import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import pg from "pg";
 if (process.env.CI !== "true" || new URL(process.env.DATABASE_URL).pathname !== "/comic_diary_release")
   throw new Error("This probe requires the disposable CI database");
@@ -192,6 +194,27 @@ try {
   await heroProgress.getByText("Прочитано: 0 из 2").waitFor();
   assert.equal(await chapters.locator(".wd-progress").count(),0, "WD-HERO-01: no duplicate overall progress in chapters");
   assert.equal(await page.getByRole("tabpanel",{name:"Мой дневник"}).locator(".wd-progress").count(),0, "WD-HERO-01: registered chapters have only hero progress");
+  // WD-HERO-02: only synthetic CI test data, never a real member account.
+  // Capture the actual rendered work page at three widths before mutating reads.
+  // The GitHub workflow uploads these PNG files for a human visual review.
+  if (process.env.WD_VISUAL_OUTPUT) {
+    const screenshots = process.env.WD_VISUAL_OUTPUT;
+    await mkdir(screenshots, {recursive:true});
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({path:join(screenshots,"01-mobile-360.png"),fullPage:true,animations:"disabled"});
+    const desktopContext = await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1});
+    try {
+      await desktopContext.addCookies([{name:"comic_diary_session",value:token,url:origin}]);
+      const desktopPage = await desktopContext.newPage();
+      await desktopPage.goto(url+"#chapters");
+      await desktopPage.locator(".wd-hero-progress").getByText("Прочитано: 0 из 2").waitFor();
+      await desktopPage.evaluate(() => document.fonts.ready);
+      await desktopPage.screenshot({path:join(screenshots,"02-desktop-1440.png"),fullPage:true,animations:"disabled"});
+      await desktopPage.setViewportSize({width:768,height:900});
+      await desktopPage.screenshot({path:join(screenshots,"03-tablet-768.png"),fullPage:true,animations:"disabled"});
+    } finally { await desktopContext.close(); }
+    console.log("WD_HERO_02_VISUAL_SCREENSHOTS=3");
+  }
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).check();
   assert.equal(await chapters.locator(".wd-row--scheduled").count(), 0);
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).uncheck();
