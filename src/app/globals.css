@@ -4128,3 +4128,11 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   }
 }
 /* CD-PUBLIC-THEME-3I-END */
+
+/* WD-BORDER-FIX-01: banner art must not peek out under its translucent 1px frame. */
+.wd-work .wd-hero--banner {
+  background-clip: padding-box;
+}
+.wd-work .wd-hero--banner::before {
+  inset: -1px;
+}
