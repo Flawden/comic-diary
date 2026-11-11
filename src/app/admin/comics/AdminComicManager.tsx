@@ -13,9 +13,11 @@ import { seriesStatusLabels, type SeriesStatus } from "@/modules/comics/series-s
 import {
   CoverUploadField,
 } from "@/shared/components/media/CoverUploadField";
+import { CoverImage } from "@/shared/components/media/CoverImage";
 
 import {
   type FormEvent,
+  useId,
   useEffect,
   useRef,
   useState,
@@ -409,90 +411,155 @@ function ComicFields({
   onBannerUrlChange?: (value: string) => void;
 }) {
   const inputClass = "admin-studio-input";
+  const backgroundDialogRef = useRef<HTMLDialogElement>(null);
+  const backgroundDialogTitleId = useId();
+  const backgroundDialogId = useId();
+  // In the create form there is no parent-controlled banner. Keep its preview
+  // synchronized with the mounted upload field; the form contract stays intact.
+  const [localBannerUrl, setLocalBannerUrl] = useState(comic?.bannerUrl ?? "");
+  const currentBannerUrl = bannerUrl ?? localBannerUrl;
+
+  function updateBackground(next: string) {
+    setLocalBannerUrl(next);
+    onBannerUrlChange?.(next);
+  }
+
   return (
     <>
       <div hidden={activeTab === "chapters" || activeTab === "publication"}>
-        <div className="admin-studio-section-heading">
-          <h3>Основная информация</h3>
-          <p>Данные, которые читатель увидит в каталоге.</p>
-        </div>
-        <div className="admin-studio-metadata-grid">
-          <div className="admin-studio-cover-field">
-            <CoverUploadField
-              disabled={disabled}
-              onUploadingChange={onUploadingChange}
-              value={coverUrl}
-              onValueChange={onCoverUrlChange}
-              key={comic?.id ?? "new-comic"}
-              defaultValue={comic?.coverUrl ?? ""}
-            />
+        <section className="admin-studio-work-card" aria-label="Основная информация о произведении">
+          <div className="admin-studio-section-heading">
+            <p className="admin-studio-overline">01 · ИСТОРИЯ</p>
+            <h3>Основная информация</h3>
+            <p>Название, авторы и данные для каталога.</p>
           </div>
-          <div className="admin-studio-core-fields">
-            <div className="admin-studio-field-grid">
-              <label>Название *
-                <input name="title" required defaultValue={comic?.title ?? ""} className={inputClass} />
-              </label>
-              <label>Slug *
-                <input name="slug" required readOnly={!create}
-                  defaultValue={comic?.slug ?? ""} className={inputClass}
-                  onInput={create ? event => {
-                    const field = event.currentTarget;
-                    const lowerCaseSlug = field.value.toLowerCase();
-                    if (field.value !== lowerCaseSlug) field.value = lowerCaseSlug;
-                  } : undefined}
-                  aria-describedby={create ? "comic-create-slug-note" : `comic-slug-note-${comic?.id}`} />
-                {create ? (
-                  <span id="comic-create-slug-note" className="admin-studio-field-hint">
-                    Только строчные латинские буквы, цифры и дефисы. Например: test-comic.
-                  </span>
-                ) : (
-                  <span id={`comic-slug-note-${comic?.id}`} className="admin-studio-field-hint">Не изменяется после создания.</span>
-                )}
-              </label>
-              <label>Категория *
-                <select name="categorySlug" required defaultValue={comic?.categorySlug ?? ""} className={inputClass}>
-                  <option value="" disabled>Выберите категорию</option>
-                  {categories.map(item => <option key={item.id} value={item.slug}>{item.name}</option>)}
-                </select>
-              </label>
-              <label>Автор
-                <input name="authorName" defaultValue={comic?.authorName ?? ""} className={inputClass} />
-              </label>
-              <label>Переводчик / команда
-                <input name="translatorName" defaultValue={comic?.translatorName ?? ""} className={inputClass} />
-              </label>
-              <WorkMetadataFields workType={comic?.workType} workFormat={comic?.workFormat} />
-              <label>Source URL *
-                <input name="sourceUrl" type="url" required defaultValue={comic?.sourceUrl ?? ""}
-                  placeholder="https://..." className={inputClass} />
-              </label>
-            </div>
-            <label className="admin-studio-description-label">Описание
-              <textarea name="description" rows={5} defaultValue={comic?.description ?? ""} className={inputClass} />
+          <div className="admin-studio-field-grid">
+            <label className="admin-studio-full">Название *
+              <input name="title" required defaultValue={comic?.title ?? ""}
+                placeholder="Название произведения" className={inputClass} />
+            </label>
+            <label>Slug *
+              <input name="slug" required readOnly={!create}
+                defaultValue={comic?.slug ?? ""} placeholder="latinskoe-nazvanie" className={inputClass}
+                onInput={create ? event => {
+                  const field = event.currentTarget;
+                  const lowerCaseSlug = field.value.toLowerCase();
+                  if (field.value !== lowerCaseSlug) field.value = lowerCaseSlug;
+                } : undefined}
+                aria-describedby={create ? "comic-create-slug-note" : `comic-slug-note-${comic?.id}`} />
+              {create ? (
+                <span id="comic-create-slug-note" className="admin-studio-field-hint">
+                  Строчные a–z, цифры и дефисы.
+                </span>
+              ) : (
+                <span id={`comic-slug-note-${comic?.id}`} className="admin-studio-field-hint">
+                  Не изменяется после создания.
+                </span>
+              )}
+            </label>
+            <label>Категория *
+              <select name="categorySlug" required defaultValue={comic?.categorySlug ?? ""} className={inputClass}>
+                <option value="" disabled>Выберите категорию</option>
+                {categories.map(item => <option key={item.id} value={item.slug}>{item.name}</option>)}
+              </select>
+            </label>
+            <label>Автор
+              <input name="authorName" defaultValue={comic?.authorName ?? ""}
+                placeholder="Имя автора" className={inputClass} />
+            </label>
+            <label>Переводчик / команда
+              <input name="translatorName" defaultValue={comic?.translatorName ?? ""}
+                placeholder="Если есть перевод" className={inputClass} />
+            </label>
+            <WorkMetadataFields workType={comic?.workType} workFormat={comic?.workFormat} />
+            <label className="admin-studio-full">Ссылка на источник *
+              <input name="sourceUrl" type="url" required defaultValue={comic?.sourceUrl ?? ""}
+                placeholder="https://..." className={inputClass} />
+            </label>
+            <label className="admin-studio-full admin-studio-description-label">Описание
+              <textarea name="description" rows={3} defaultValue={comic?.description ?? ""}
+                placeholder="О чём эта история?" className={inputClass} />
             </label>
           </div>
-        </div>
-        <section className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <h3 className="mb-2 font-semibold">Фон страницы комикса</h3>
-          <p className="mb-4 text-sm text-[var(--text-secondary)]">
-            Отдельная широкая иллюстрация, рекомендовано 16:9. Если не выбрать изображение, останется стандартный фон с горами.
-          </p>
-          <CoverUploadField
-            fieldName="bannerUrl"
-            uploadingFieldName="bannerUploading"
-            label="Широкий фон"
-            widePreview
-            allowExternalUrl={false}
-            canClear
-            uploadSuccessMessage="Фон загружен. Нажмите «Сохранить изменения», чтобы применить его."
-            disabled={disabled}
-            onUploadingChange={onBannerUploadingChange}
-            value={bannerUrl}
-            onValueChange={onBannerUrlChange}
-            key={`banner-${comic?.id ?? "new-comic"}`}
-            defaultValue={comic?.bannerUrl ?? ""}
-          />
         </section>
+
+        <section className="admin-studio-work-card" aria-label="Оформление произведения">
+          <div className="admin-studio-section-heading">
+            <p className="admin-studio-overline">02 · ОФОРМЛЕНИЕ</p>
+            <h3>Обложка и фон</h3>
+            <p>Две иллюстрации рядом — без длинной формы для фона.</p>
+          </div>
+          <div className="admin-studio-artwork-grid">
+            <div className="admin-studio-artwork-cover">
+              <CoverUploadField
+                disabled={disabled}
+                onUploadingChange={onUploadingChange}
+                value={coverUrl}
+                onValueChange={onCoverUrlChange}
+                key={comic?.id ?? "new-comic"}
+                defaultValue={comic?.coverUrl ?? ""}
+              />
+            </div>
+            <div className="admin-studio-background-card">
+              <span className="admin-studio-background-label">Фон страницы комикса</span>
+              <div className="admin-studio-background-summary">
+                <CoverImage src={currentBannerUrl} alt="Предпросмотр фона комикса"
+                  fallback="Стандартный фон"
+                  className="admin-studio-background-thumbnail" />
+                <p>{currentBannerUrl ? "Фон выбран · 16:9" : "По умолчанию — фон с горами"}</p>
+              </div>
+              <button type="button" disabled={disabled} aria-haspopup="dialog"
+                aria-controls={backgroundDialogId} className="admin-studio-background-button"
+                onClick={() => backgroundDialogRef.current?.showModal()}>
+                {currentBannerUrl ? "Изменить фон" : "Выбрать фон"} <span aria-hidden="true">↗</span>
+              </button>
+              <span className="admin-studio-field-hint">Широкая иллюстрация · рекомендовано 16:9</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Keep the uploader mounted even while the dialog is closed:
+            bannerUrl and bannerUploading remain part of FormData. */}
+        <dialog id={backgroundDialogId} ref={backgroundDialogRef} className="admin-studio-background-dialog"
+          aria-labelledby={backgroundDialogTitleId}>
+          <div className="admin-studio-background-dialog-inner">
+            <div className="admin-studio-background-dialog-header">
+              <div>
+                <p className="admin-studio-overline">COMIC STUDIO · ОФОРМЛЕНИЕ</p>
+                <h3 id={backgroundDialogTitleId}>Фон комикса</h3>
+              </div>
+              <button type="button" className="admin-studio-dialog-close"
+                onClick={() => backgroundDialogRef.current?.close()}
+                aria-label="Закрыть окно выбора фона">✕</button>
+            </div>
+            <p className="admin-studio-background-dialog-intro">
+              Добавь широкую иллюстрацию (16:9). Без неё останется стандартный фон с горами.
+            </p>
+            <CoverUploadField
+              fieldName="bannerUrl"
+              uploadingFieldName="bannerUploading"
+              label="Широкий фон"
+              widePreview
+              allowExternalUrl={false}
+              canClear
+              uploadSuccessMessage="Фон загружен. Сохрани произведение, чтобы применить его."
+              disabled={disabled}
+              onUploadingChange={onBannerUploadingChange}
+              value={currentBannerUrl}
+              onValueChange={updateBackground}
+              key={`banner-${comic?.id ?? "new-comic"}`}
+              defaultValue={comic?.bannerUrl ?? ""}
+            />
+            <div className="admin-studio-background-dialog-footer">
+              <button type="button" className="admin-studio-background-button"
+                onClick={() => backgroundDialogRef.current?.close()}>
+                Готово
+              </button>
+              <span>Изменения применятся к произведению только после его сохранения.</span>
+            </div>
+          </div>
+        </dialog>
+
         <details className="admin-studio-advanced">
           <summary>Дополнительные сведения <span>Количество глав и примечание переводчика</span></summary>
           <div className="admin-studio-field-grid">
@@ -510,16 +577,25 @@ function ComicFields({
       <section hidden={activeTab !== undefined && activeTab !== "publication"}
         className="admin-studio-publication-section">
         <div className="admin-studio-section-heading">
+          <p className="admin-studio-overline">03 · ВИДИМОСТЬ</p>
           <h3>Публикация и видимость</h3>
-          <p>Видимость в каталоге не связана со статусом выхода самого произведения.</p>
+          <p>Статус выхода произведения не определяет его видимость в каталоге.</p>
         </div>
         <div className="admin-studio-field-grid">
-          <label>Статус в каталоге
-            <select name="publicationStatus" defaultValue={comic?.publicationStatus ?? "PUBLISHED"} className={inputClass}>
-              {(Object.entries(publicationStatusLabels) as [PublicationStatus, string][]).map(([value, label]) =>
-                <option key={value} value={value}>{label}</option>)}
-            </select>
-          </label>
+          {create ? (
+            <div className="admin-studio-create-hidden-status">
+              <input type="hidden" name="publicationStatus" value="HIDDEN" />
+              <strong>Статус в каталоге</strong>
+              <span>Скрыт · безопасный черновик</span>
+            </div>
+          ) : (
+            <label>Статус в каталоге
+              <select name="publicationStatus" defaultValue={comic?.publicationStatus ?? "HIDDEN"} className={inputClass}>
+                {(Object.entries(publicationStatusLabels) as [PublicationStatus, string][]).map(([value, label]) =>
+                  <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
+          )}
           <label>Статус выхода
             <select name="seriesStatus" defaultValue={comic?.seriesStatus ?? "UNKNOWN"} className={inputClass}>
               {Object.entries(seriesStatusLabels).map(([value, label]) =>
@@ -527,7 +603,15 @@ function ComicFields({
             </select>
           </label>
         </div>
-        <p className="admin-studio-section-note">Настройки вступят в силу только после сохранения изменений.</p>
+        {create ? (
+          <p className="admin-studio-section-note">
+            Новое произведение изначально скрыто. Открой его в редакторе, когда обложка, главы и описание будут готовы.
+          </p>
+        ) : (
+          <p className="admin-studio-section-note">
+            Настройки вступят в силу после сохранения изменений.
+          </p>
+        )}
       </section>
     </>
   );
@@ -1791,11 +1875,11 @@ export function AdminComicManager({
           ].join(" ")}
         >
           <h2 className="text-xl font-semibold text-[var(--text-primary)]">
-            Новый комикс
+            Новая история
           </h2>
 
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Заполни только нужные данные. Обложку можно выбрать с устройства.
+            Укажи автора и переводчика, оформи обложку и фон. Сохраним историю скрытой, пока она не готова к читателям.
           </p>
 
           {categories.length ===
@@ -1842,7 +1926,7 @@ export function AdminComicManager({
                     "disabled:cursor-wait disabled:opacity-60",
                   ].join(" ")}
                 >
-                  Создать комикс
+                  Создать скрытый черновик
                 </button>
               </div>
             </form>

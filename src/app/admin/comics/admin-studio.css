@@ -165,3 +165,160 @@ textarea.admin-studio-input { resize: vertical; }
   .admin-studio-item { min-height: 90px; }
   .admin-studio-item-cover { width: 57px; height: 77px; }
 }
+
+
+/* Admin A3.1 · Compact creation/editing and media dialog.
+   Form inputs remain mounted across tabs and a closed native dialog. */
+.admin-studio-work-card {
+  min-width: 0;
+  margin-bottom: 15px;
+  padding: clamp(16px, 2.1vw, 24px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--background);
+}
+.admin-studio-overline {
+  margin: 0 0 6px !important;
+  color: var(--text-accent) !important;
+  font-size: 10px !important;
+  font-weight: 750;
+  letter-spacing: .14em;
+}
+.admin-studio-work-card .admin-studio-field-grid { gap: 15px; }
+.admin-studio-work-card .admin-studio-description-label { margin: 0; }
+.admin-studio-artwork-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+.admin-studio-artwork-cover,
+.admin-studio-background-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface);
+}
+.admin-studio-artwork-cover > div { min-width: 0; }
+.admin-studio-artwork-cover img { max-width: 112px; }
+.admin-studio-background-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.admin-studio-background-summary {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+.admin-studio-background-summary p {
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.admin-studio-background-thumbnail {
+  display: block;
+  flex: 0 0 100px;
+  width: 100px;
+  height: 67px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.admin-studio-background-button,
+.admin-studio-dialog-close {
+  min-height: 44px;
+  padding: 10px 15px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+.admin-studio-background-button { margin-top: 14px; }
+.admin-studio-background-button:disabled { opacity: .5; cursor: wait; }
+.admin-studio-background-button span { padding-left: 8px; }
+.admin-studio-background-button:hover:not(:disabled),
+.admin-studio-dialog-close:hover { border-color: var(--primary); }
+.admin-studio-background-card > .admin-studio-field-hint { margin-top: 8px; }
+.admin-studio-background-button:focus-visible,
+.admin-studio-dialog-close:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.admin-studio-background-dialog {
+  position: fixed;
+  inset: 0;
+  width: min(660px, calc(100vw - 28px));
+  max-width: 660px;
+  max-height: min(90dvh, 840px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: 0 24px 90px #0009;
+}
+.admin-studio-background-dialog::backdrop {
+  background: rgb(0 0 0 / .72);
+  backdrop-filter: blur(4px);
+}
+.admin-studio-background-dialog-inner { padding: clamp(18px, 3vw, 28px); }
+.admin-studio-background-dialog-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.admin-studio-background-dialog-header h3 {
+  font: 500 clamp(27px, 4vw, 37px)/1.15 var(--cd-font-display);
+}
+.admin-studio-background-dialog-intro {
+  margin: 9px 0 22px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.admin-studio-background-dialog-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.admin-studio-background-dialog-footer button { margin: 0; }
+.admin-studio-background-dialog-footer span {
+  max-width: 370px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.admin-studio-create-panel .admin-studio-publication-section { margin-top: 15px; }
+@media (max-width: 1240px) {
+  .admin-studio-artwork-grid { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 760px) {
+  .admin-studio-work-card { padding: 16px; }
+  .admin-studio-artwork-grid { grid-template-columns: minmax(0,1fr); }
+  .admin-studio-background-thumbnail { flex-basis: 94px; width: 94px; height: 64px; }
+}
+
+.admin-studio-create-hidden-status { display: grid; align-content: center; gap: 7px; }
+.admin-studio-create-hidden-status strong { font-size: 12px; font-weight: 700; }
+.admin-studio-create-hidden-status span {
+  width: fit-content;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-raised);
+  padding: 11px 13px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
