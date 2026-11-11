@@ -31,6 +31,9 @@ const icons = {
 } as const;
 
 type IconName = keyof typeof icons;
+type AdminNavItem = { href: string; label: string; icon: IconName; active: boolean };
+type AdminNavSection = { key: string; label: string; items: AdminNavItem[] };
+
 function Icon({ name }: { name: IconName }) {
   return (
     <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24"
@@ -56,24 +59,42 @@ export function AdminShell({ children, role, permissions }: AdminShellProps) {
 
   const inComics = pathname === "/admin/comics" || pathname.startsWith("/admin/comics/");
   const isChapterTab = inComics && hash === "#chapters";
-  const items: { href: string; label: string; icon: IconName; active: boolean }[] = [
-    { href: "/admin", label: "Панель управления", icon: "home", active: pathname === "/admin" },
-    { href: "/", label: "Каталог сайта", icon: "grid", active: false },
-    ...(permissions.editCatalog ? [
-      { href: "/admin/comics#metadata", label: "Комиксы", icon: "books" as const, active: inComics && !isChapterTab },
-      { href: "/admin/comics#chapters", label: "Главы", icon: "layers" as const, active: isChapterTab },
-      { href: "/admin/categories", label: "Категории", icon: "grid" as const, active: pathname.startsWith("/admin/categories") },
-    ] : []),
-    ...(permissions.manageUsers ? [
-      { href: "/admin/users", label: "Пользователи", icon: "users" as const, active: pathname.startsWith("/admin/users") },
-    ] : []),
-    ...(permissions.runImport ? [
-      { href: "/admin/catalog-import/vk", label: "Импорт", icon: "import" as const, active: pathname.startsWith("/admin/catalog-import") },
-    ] : []),
-    ...(permissions.viewAudit ? [
-      { href: "/admin/audit", label: "Журнал аудита", icon: "audit" as const, active: pathname.startsWith("/admin/audit") },
-    ] : []),
-    { href: "/account", label: "Настройки профиля", icon: "settings", active: false },
+  // Navigation is organized by tasks, not by implementation routes.
+  // Permission gates and existing destinations intentionally remain unchanged.
+  const sections: AdminNavSection[] = [
+    {
+      key: "workspace",
+      label: "Рабочее место",
+      items: [
+        { href: "/admin", label: "Панель управления", icon: "home", active: pathname === "/admin" },
+      ],
+    },
+    {
+      key: "catalog",
+      label: "Каталог",
+      items: [
+        ...(permissions.editCatalog ? [
+          { href: "/admin/comics#metadata", label: "Произведения", icon: "books" as const, active: inComics && !isChapterTab },
+          { href: "/admin/comics#chapters", label: "Главы", icon: "layers" as const, active: isChapterTab },
+          { href: "/admin/categories", label: "Категории", icon: "grid" as const, active: pathname.startsWith("/admin/categories") },
+        ] : []),
+        ...(permissions.runImport ? [
+          { href: "/admin/catalog-import/vk", label: "Импорт VK", icon: "import" as const, active: pathname.startsWith("/admin/catalog-import") },
+        ] : []),
+      ],
+    },
+    {
+      key: "management",
+      label: "Администрирование",
+      items: [
+        ...(permissions.manageUsers ? [
+          { href: "/admin/users", label: "Пользователи", icon: "users" as const, active: pathname.startsWith("/admin/users") },
+        ] : []),
+        ...(permissions.viewAudit ? [
+          { href: "/admin/audit", label: "Журнал аудита", icon: "audit" as const, active: pathname.startsWith("/admin/audit") },
+        ] : []),
+      ],
+    },
   ];
 
   return (
@@ -97,30 +118,41 @@ export function AdminShell({ children, role, permissions }: AdminShellProps) {
           <small>Админ-панель Comic Diary</small>
         </Link>
         <nav aria-label="Разделы админ-панели" className="admin-shell-nav">
-          {items.map(item => (
-            <Link key={item.href} href={item.href}
-              aria-current={item.active ? "page" : undefined}
-              className={`admin-shell-link${item.active ? " is-active" : ""}`}
-              onClick={event => {
-                setOpen(false);
-                // A same-page fragment needs a native hashchange so the
-                // chapter tab and sidebar selection update together.
-                if (inComics && item.href.startsWith("/admin/comics#")) {
-                  event.preventDefault();
-                  const target = item.href.substring(item.href.indexOf("#"));
-                  if (window.location.hash !== target) window.location.hash = target;
-                }
-              }}>
-              <Icon name={item.icon} />
-              <span>{item.label}</span>
-            </Link>
+          {sections.filter(section => section.items.length > 0).map(section => (
+            <div key={section.key} className="admin-shell-nav-section" role="group" aria-label={section.label}>
+              <span className="admin-shell-nav-heading" aria-hidden="true">{section.label}</span>
+              {section.items.map(item => (
+                <Link key={item.href} href={item.href}
+                  aria-current={item.active ? "page" : undefined}
+                  className={`admin-shell-link${item.active ? " is-active" : ""}`}
+                  onClick={event => {
+                    setOpen(false);
+                    // Preserve same-page hash updates for the studio tab and sidebar.
+                    if (inComics && item.href.startsWith("/admin/comics#")) {
+                      event.preventDefault();
+                      const target = item.href.substring(item.href.indexOf("#"));
+                      if (window.location.hash !== target) window.location.hash = target;
+                    }
+                  }}>
+                  <Icon name={item.icon} />
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
-        <Link href="/account" className="admin-shell-account" onClick={() => setOpen(false)}>
-          <span className="admin-shell-account-icon"><Icon name="person" /></span>
-          <span>{role === "ADMIN" ? "Администратор" : "Редактор"}<small>Личный профиль</small></span>
-          <span aria-hidden="true">⌄</span>
-        </Link>
+        <div className="admin-shell-footer">
+          <Link href="/" className="admin-shell-link admin-shell-public-link" onClick={() => setOpen(false)}>
+            <Icon name="grid" />
+            <span>Открыть сайт</span>
+            <span aria-hidden="true" className="admin-shell-external-mark">↗</span>
+          </Link>
+          <Link href="/account" className="admin-shell-account" onClick={() => setOpen(false)}>
+            <span className="admin-shell-account-icon"><Icon name="person" /></span>
+            <span>{role === "ADMIN" ? "Администратор" : "Редактор"}<small>Личный профиль</small></span>
+            <span aria-hidden="true">⌄</span>
+          </Link>
+        </div>
       </aside>
       <main id="main-content" className="admin-shell-main">
         {children}
