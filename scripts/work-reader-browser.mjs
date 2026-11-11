@@ -2,6 +2,8 @@
 import assert from "node:assert/strict";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import pg from "pg";
 if (process.env.CI !== "true" || new URL(process.env.DATABASE_URL).pathname !== "/comic_diary_release")
   throw new Error("This probe requires the disposable CI database");
@@ -180,14 +182,230 @@ try {
   await diary.waitFor();
   await diary.locator("textarea").fill("Моя заметка");
   await page.getByRole("tab",{name:"Об истории"}).click();
-  await page.getByText("Описание истории",{exact:true}).waitFor();
+  await page.locator(".wd-hero-summary").getByText("Описание истории",{exact:true}).waitFor();
+  assert.equal(await page.getByRole("tabpanel",{name:"Об истории"}).getByText("Описание истории",{exact:true}).count(),0);
   await page.getByRole("tab",{name:/Главы/}).click();
   const chapters=page.getByRole("tabpanel",{name:/Главы/});
   const planned=chapters.locator(".wd-row--scheduled");
   await planned.getByText("3 · Просыпание").waitFor();
   await planned.getByText("Ожидается: ноябрь 2026 г.").waitFor();
   assert.equal(await planned.locator("a, button").count(), 0);
-  assert.equal(await chapters.getByText("Прочитано: 0 из 2").count(), 1);
+  const heroProgress=page.locator(".wd-hero-progress");
+  await heroProgress.getByText("Прочитано: 0 из 2").waitFor();
+  assert.equal(await chapters.locator(".wd-progress").count(),0, "WD-HERO-01: no duplicate overall progress in chapters");
+  assert.equal(await page.getByRole("tabpanel",{name:"Мой дневник"}).locator(".wd-progress").count(),0, "WD-HERO-01: registered chapters have only hero progress");
+  // WD-HERO-02B: real-browser diagnostics and difficult reader states.
+  // All fixtures live in comic_diary_release and are removed/restored below.
+  // Capture only bounded, sanitized diagnostics; never cookies or session tokens.
+  if (process.env.WD_VISUAL_OUTPUT) {
+    const screenshots = process.env.WD_VISUAL_OUTPUT;
+    await mkdir(screenshots, {recursive:true});
+    const stripSecrets = value => String(value ?? "")
+      .replaceAll(token, "[session-redacted]")
+      .replaceAll(prefix, "[fixture-redacted]")
+      .replace(/postgres(?:ql)?:\/\/\S+/gi, "[database-url-redacted]")
+      .slice(0, 1400);
+    const redactObject = object => JSON.parse(JSON.stringify(object, (_key,value) =>
+      typeof value === "string" ? stripSecrets(value) : value));
+    const diagnostics = {stage:"WD-HERO-02D",viewportChecks:{},browserEvents:{},devOverlay:{},violations:[]};
+    // Keep screenshot mutations and warnings correlated with their exact capture.
+    const screenshotPhase = new WeakMap();
+    const setPhase = (testPage, phase) => screenshotPhase.set(testPage, phase);
+    const capture = async (testPage, filename, options={}) => {
+      setPhase(testPage, `capture ${filename}`);
+      await testPage.screenshot({path:join(screenshots,filename),animations:"disabled",caret:"initial",...options});
+      // Give asynchronously emitted console warnings a chance to be attributed
+      // to the capture, rather than a later navigation.
+      await testPage.waitForTimeout(150);
+      setPhase(testPage, `after ${filename}`);
+    };
+    const recordEvents = (testPage, label) => {
+      const events={pageErrors:[],consoleErrors:[],hydrationPhases:[],failedRequests:[],httpErrors:[]};
+      const push=(list, item)=>{if(list.length<15) list.push(stripSecrets(item));};
+      setPhase(testPage,"navigation / before first capture");
+      testPage.on("pageerror", error => push(events.pageErrors,error?.message));
+      testPage.on("console", msg=>{
+        if(msg.type()!=="error") return;
+        const message=msg.text();
+        push(events.consoleErrors,message);
+        if(/a tree hydrated but some attributes|hydration failed|text content does not match server-rendered html/i.test(message))
+          push(events.hydrationPhases,screenshotPhase.get(testPage)||"unknown");
+      });
+      testPage.on("requestfailed", req => {
+        if(req.url().startsWith(origin))push(events.failedRequests,`${new URL(req.url()).pathname}: ${req.failure()?.errorText}`);
+      });
+      testPage.on("response", response => {
+        if(response.status()>=400 && response.url().startsWith(origin))
+          push(events.httpErrors,`${response.status()} ${new URL(response.url()).pathname}`);
+      });
+      diagnostics.browserEvents[label]=events;
+    };
+    const inspectOverlay = async testPage => testPage.evaluate(() => {
+      const host=document.querySelector("nextjs-portal");
+      const root=host?.shadowRoot;
+      if(!host) return {present:false};
+      if(!root) return {present:true,shadowAccessible:false};
+      const nodes=Array.from(root.querySelectorAll('[role="dialog"], [data-nextjs-dialog], [aria-live], button'));
+      return {present:true,shadowAccessible:true,
+        visibleNodes:nodes.filter(el=>el.getBoundingClientRect().width>0)
+          .slice(0,16).map(el=>({role:el.getAttribute('role'),label:el.getAttribute('aria-label'),
+            text:(el.innerText||el.textContent||'').trim().slice(0,600)}))};
+    });
+    const layout = async testPage => testPage.evaluate(() => ({
+      width:window.innerWidth,
+      scrollWidth:document.documentElement.scrollWidth,
+      viewportHeight:window.innerHeight,
+      heroHeight:Math.round(document.querySelector('.wd-hero')?.getBoundingClientRect().height||0),
+    }));
+    let desktopContext, mobileContext, controlContext;
+    try {
+      // Control: navigate without taking any screenshots. If React still warns
+      // about hydration here, the issue is independent of screenshot capture.
+      controlContext=await browser.newContext({viewport:{width:1440,height:900}});
+      await controlContext.addCookies([{name:"comic_diary_session",value:token,url:origin}]);
+      const controlPage=await controlContext.newPage();
+      recordEvents(controlPage,"no-screenshot-control");
+      await controlPage.goto(url+"#chapters");
+      await controlPage.locator(".wd-hero-progress").getByText("Прочитано: 0 из 2").waitFor();
+      await controlPage.waitForLoadState("load");
+      await controlPage.waitForTimeout(700);
+      await controlContext.close();
+      controlContext=null;
+      // First reproduce the original 0/2 case with event listeners attached
+      // BEFORE navigation, so hydration warnings/errors are not missed.
+      recordEvents(page,"original-mobile");
+      await page.evaluate(() => document.fonts.ready);
+      await capture(page,"01-mobile-360.png",{fullPage:true});
+      desktopContext=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1});
+      await desktopContext.addCookies([{name:"comic_diary_session",value:token,url:origin}]);
+      const desktopPage=await desktopContext.newPage();
+      recordEvents(desktopPage,"desktop-1440");
+      await desktopPage.goto(url+"#chapters");
+      await desktopPage.locator(".wd-hero-progress").getByText("Прочитано: 0 из 2").waitFor();
+      await desktopPage.evaluate(() => document.fonts.ready);
+      await capture(desktopPage,"02-desktop-1440.png",{fullPage:true});
+      diagnostics.devOverlay.beforeClick=redactObject(await inspectOverlay(desktopPage));
+      const issueTrigger=desktopPage.locator("nextjs-portal").getByText(/\b\d+ Issues?\b/i).first();
+      if (await issueTrigger.count()) {
+        try {
+          await issueTrigger.click({timeout:2500});
+          diagnostics.devOverlay.clickedIssue=true;
+          diagnostics.devOverlay.afterClick=redactObject(await inspectOverlay(desktopPage));
+          await capture(desktopPage,"04-next-dev-issue.png");
+        } catch (error) {
+          diagnostics.devOverlay.clickError=stripSecrets(error.message);
+        }
+      }
+      setPhase(desktopPage,"tablet viewport / reload");
+      await desktopPage.setViewportSize({width:768,height:900});
+      // The Next.js issue overlay may have opened. Close it by navigating to
+      // the same isolated test page rather than hiding or muting its indicator.
+      await desktopPage.reload();
+      await desktopPage.locator(".wd-hero-progress").getByText("Прочитано: 0 из 2").waitFor();
+      await desktopPage.evaluate(() => document.fonts.ready);
+      await capture(desktopPage,"03-tablet-768.png",{fullPage:true});
+      diagnostics.viewportChecks.tablet=await layout(desktopPage);
+      if(diagnostics.viewportChecks.tablet.scrollWidth > 769)
+        diagnostics.violations.push("tablet horizontal overflow");
+
+      mobileContext=await browser.newContext({viewport:{width:360,height:800},deviceScaleFactor:1});
+      await mobileContext.addCookies([{name:"comic_diary_session",value:token,url:origin}]);
+      const mobilePage=await mobileContext.newPage();
+      recordEvents(mobilePage,"mobile-fresh");
+      await mobilePage.goto(url+"#chapters");
+      await mobilePage.locator(".wd-hero-progress").getByText("Прочитано: 0 из 2").waitFor();
+      // Fixed navigation must not occlude the bottom chapter after a genuine
+      // scroll inside a 360x800 viewport (fullPage screenshots cannot prove it).
+      await mobilePage.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));
+      await mobilePage.waitForTimeout(100);
+      diagnostics.viewportChecks.mobileBottom=await mobilePage.evaluate(() => {
+        const nav=document.querySelector('.tea-navigation');
+        const row=Array.from(document.querySelectorAll('.wd-chapter-content .wd-row')).at(-1);
+        const nr=nav?.getBoundingClientRect(), rr=row?.getBoundingClientRect();
+        return {navFound:!!nr,lastRowFound:!!rr,
+          navTop:nr?Math.round(nr.top):null,lastRowBottom:rr?Math.round(rr.bottom):null,
+          scrollY:Math.round(window.scrollY),scrollWidth:document.documentElement.scrollWidth,
+          viewport:window.innerWidth};
+      });
+      const mb=diagnostics.viewportChecks.mobileBottom;
+      if(!mb.navFound || !mb.lastRowFound || mb.lastRowBottom>mb.navTop-4 || mb.scrollWidth>mb.viewport+1)
+        diagnostics.violations.push("mobile bottom navigation overlaps final chapter or horizontal overflow");
+
+      // Isolated SQL fixture: long multi-paragraph description, genuine image
+      // element with a local synthetic SVG cover, not an external URL.
+      const longDescription=[
+        "Туман поднимался над долиной. Герои искали тропу через густой лес, и каждый новый поворот раскрывал ещё одну часть древней истории. За старым мостом их ждало забытое поселение, о котором не говорили даже самые старые книги.",
+        "Второй абзац описывает путешествие гораздо подробнее. Важны отношения персонажей, маленькие решения и последствия каждого шага. Это проверка переносов строк, размера карточки и поведения длинного текста рядом с обложкой.",
+        "Третий абзац остаётся доступным после раскрытия. Проверяем длинное_слово_без_пробелов_для_безопасного_переноса_строк_в_узком_интерфейсе_комикса_и_проверки_переполнения.",
+      ].join("\n\n");
+      await pool.query("UPDATE comics SET description=$1,cover_url=$2 WHERE id=$3",
+        [longDescription,"/art/wd-hero-ci-cover.svg",comic]);
+      try {
+        await mobilePage.reload();
+        await mobilePage.locator('.wd-hero-summary .story-excerpt > summary').waitFor();
+        await mobilePage.locator('.wd-cover img').waitFor();
+        await mobilePage.waitForFunction(() => {
+          const img=document.querySelector('.wd-cover img');
+          return !!img && img.complete && img.naturalWidth>0;
+        },null,{timeout:12000});
+        await capture(mobilePage,"05-mobile-long-cover.png",{fullPage:true});
+        const summary=mobilePage.locator('.wd-hero-summary .story-excerpt > summary');
+        await summary.focus();
+        await mobilePage.keyboard.press('Enter');
+        assert.equal(await mobilePage.locator('.wd-hero-summary details').evaluate(el=>el.open),true,
+          "expanded description must work from keyboard");
+        await capture(mobilePage,"06-mobile-expanded.png",{fullPage:true});
+        diagnostics.viewportChecks.mobileExpanded=await layout(mobilePage);
+        if(diagnostics.viewportChecks.mobileExpanded.scrollWidth>361)
+          diagnostics.violations.push('expanded long description causes mobile horizontal overflow');
+        await mobilePage.setViewportSize({width:320,height:740});
+        await capture(mobilePage,"09-mobile-expanded-320.png",{fullPage:true});
+        diagnostics.viewportChecks.mobile320=await layout(mobilePage);
+        if(diagnostics.viewportChecks.mobile320.scrollWidth>321)
+          diagnostics.violations.push('320px long description causes horizontal overflow');
+        setPhase(desktopPage,"desktop long-description viewport / reload");
+        await desktopPage.setViewportSize({width:1440,height:900});
+        await desktopPage.reload();
+        await desktopPage.locator('.wd-hero-summary .story-excerpt > summary').waitFor();
+        await capture(desktopPage,"07-desktop-long-cover.png",{fullPage:true});
+        diagnostics.viewportChecks.desktopLong=await layout(desktopPage);
+        if(diagnostics.viewportChecks.desktopLong.scrollWidth>1441)
+          diagnostics.violations.push('long description causes desktop horizontal overflow');
+        // Data-state edges: both partial and complete reading must be truthful.
+        for(const [n,code] of [[1,1],[2,2]]) {
+          await pool.query(`INSERT INTO user_chapter_reads(user_id,chapter_id)
+            SELECT $1,id FROM chapters WHERE comic_id=$2 AND sort_order=$3 AND status='RELEASED'
+            ON CONFLICT DO NOTHING`,[user,comic,code]);
+          setPhase(desktopPage,`progress ${n}/2 reload`);
+          await desktopPage.reload();
+          await desktopPage.locator('.wd-hero-progress').getByText(`Прочитано: ${n} из 2`).waitFor();
+          await capture(desktopPage,`08-desktop-read-${n}-of-2.png`);
+        }
+      } finally {
+        await pool.query("DELETE FROM user_chapter_reads WHERE user_id=$1 AND chapter_id IN (SELECT id FROM chapters WHERE comic_id=$2)",[user,comic]);
+        await pool.query("UPDATE comics SET description='Описание истории',cover_url=NULL WHERE id=$1",[comic]);
+      }
+      // Record the dev issue without treating a mere dev indicator as proof
+      // of a production defect. Genuine JavaScript exceptions fail CI.
+      for (const [label,events] of Object.entries(diagnostics.browserEvents)) {
+        if(events.pageErrors.length) diagnostics.violations.push(`${label}: ${events.pageErrors.length} page error(s)`);
+        const hydrationWarnings=events.consoleErrors.filter(message =>
+          /a tree hydrated but some attributes|hydration failed|text content does not match server-rendered html/i.test(message));
+        if(hydrationWarnings.length) diagnostics.violations.push(`${label}: ${hydrationWarnings.length} hydration warning(s)`);
+      }
+    } finally {
+      if(controlContext) await controlContext.close();
+      if(mobileContext) await mobileContext.close();
+      if(desktopContext) await desktopContext.close();
+      await writeFile(join(screenshots,"wd-hero-02b-diagnostics.json"),
+        JSON.stringify(diagnostics,null,2)+"\n","utf8");
+      console.log("WD_HERO_02B_DIAGNOSTICS="+JSON.stringify({
+        violations:diagnostics.violations,devOverlay:diagnostics.devOverlay.beforeClick,
+        screenshotDirectory:screenshots}));
+    }
+    assert.deepEqual(diagnostics.violations,[],"WD-HERO-02B: viewport or browser failures; see uploaded diagnostic JSON");
+    console.log("WD_HERO_02B_VISUAL_QA=PASS");
+  }
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).check();
   assert.equal(await chapters.locator(".wd-row--scheduled").count(), 0);
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).uncheck();
@@ -206,7 +424,10 @@ try {
   // Rejection must roll the check back and leave an explicit retry.
   await page.route("**/api/library/reading-state",r=>r.fulfill({status:503,body:"retry"}),{times:1});
   await mark.click();
+  await heroProgress.getByText("Прочитано: 0 из 2").waitFor();
   await chapters.getByRole("button",{name:"Повторить"}).click();
+  await heroProgress.getByText("Прочитано: 1 из 2").waitFor();
+  assert.equal(await heroProgress.getByRole("progressbar",{name:"Прогресс чтения"}).getAttribute("value"),"1");
   const sheet=page.getByRole("dialog",{name:"Охота на быка"});
   await sheet.waitFor();
   // Layout coordinates ignore the hover scale transform applied to rating stars.
@@ -224,7 +445,18 @@ try {
   assert.deepEqual(await sheet.locator(".wd-stars button").allTextContents(),["★","★","★","★","☆"]);
   await chapters.getByRole("button",{name:/Оценить: 1/}).filter({hasText:"4"}).waitFor();
   await sheet.getByRole("button",{name:"Закрыть окно оценки главы"}).click();
-  assert.equal(await page.locator(".wd-read").getAttribute("href"),"https://example.com/two");
+  // WD-LINK-02: chapter destinations moved out of the hero. Reading one chapter
+  // must not remove or repoint the other chapter links in the Chapters tab.
+  assert.equal(await page.locator(".wd-read").count(), 0);
+  const firstChapterLink = chapters.getByRole("link", {name:"1 · Охота на быка — открыть главу в новой вкладке"});
+  assert.equal(await firstChapterLink.getAttribute("href"), "https://example.com/one");
+  const secondChapterLink = chapters.getByRole("link", {name:"УРГА — открыть главу в новой вкладке"});
+  assert.equal(await secondChapterLink.getAttribute("href"), "https://example.com/two");
+  assert.equal(await secondChapterLink.getAttribute("target"), "_blank");
+  // A discoverable general source remains available even if every released
+  // chapter also has its own direct link.
+  const sharedWorkSource = chapters.getByRole("link", {name:"Открыть источник ↗"});
+  assert.equal(await sharedWorkSource.getAttribute("href"), "https://example.com/book");
   await page.getByRole("tab",{name:"Мой дневник"}).click();
   assert.equal(await diary.locator("textarea").inputValue(),"Моя заметка");
   assert.equal(await page.evaluate(()=>window.readerDocument),"kept");
@@ -268,7 +500,8 @@ try {
   await page.getByRole("tab",{name:/Главы/}).click();
   await chapters.getByRole("button",{name:"Отметить прочитанной: УРГА"}).click();
   await chapters.getByRole("button",{name:"Снять отметку: УРГА",disabled:false}).waitFor();
-  await page.getByText("Все вышедшие основные главы прочитаны.").waitFor();
+  await heroProgress.getByText("Прочитано: 2 из 2").waitFor();
+  await heroProgress.getByText("Все вышедшие основные главы прочитаны.").waitFor();
   assert.equal(await page.locator("dialog[open]").count(),0);
   await chapters.getByRole("button",{name:"Оценить: УРГА"}).click();
   await page.getByRole("dialog",{name:"УРГА"}).waitFor();
@@ -313,6 +546,65 @@ try {
   const undone=(await pool.query("SELECT display_code FROM chapters JOIN user_chapter_reads ON chapters.id=user_chapter_reads.chapter_id WHERE user_chapter_reads.user_id=$1 AND chapters.comic_id=$2 AND chapters.display_code IN ('7','8') ORDER BY display_code",[user,comic])).rows.map(r=>r.display_code);
   assert.deepEqual(undone,["8"]);
   await undoDialog.getByRole("button",{name:"Готово"}).click();
+  // WD-LINK-02: no direct link must lead to the explicitly labeled general
+  // work source, not to a later chapter. Then no URLs means no phantom link,
+  // while marking a released chapter as read still remains possible.
+  const updatedChapter = await pool.query("UPDATE chapters SET source_url=NULL WHERE comic_id=$1 AND title='УРГА' RETURNING id,source_url", [comic]);
+  assert.equal(updatedChapter.rowCount, 1, "WD-LINK-02: expected to update exactly one chapter URL");
+  assert.equal(updatedChapter.rows[0].source_url, null);
+  // The browser can already be at this exact #chapters URL. A same-URL goto
+  // is not a reliable refresh of server-rendered data after an external SQL write.
+  await page.reload();
+  const fallbackPanel = page.getByRole("tabpanel", {name:/Главы/});
+  const fallbackGroup = fallbackPanel.locator(".wd-volume").filter({hasText:"Главы без тома"});
+  await fallbackGroup.locator("summary").waitFor();
+  if (!(await fallbackGroup.evaluate(node => node.open))) await fallbackGroup.locator("summary").click();
+  const fallbackRow = fallbackPanel.locator("li.wd-row").filter({hasText:"УРГА"});
+  const fallbackSource = fallbackRow.getByRole("link", {name:"УРГА — открыть общий источник произведения в новой вкладке"});
+  try {
+    await fallbackSource.waitFor({timeout:6000});
+  } catch (error) {
+    // The test uses synthetic example.com URLs; never print cookies or tokens.
+    console.error("WD_LINK_02_FALLBACK_DIAGNOSTICS=" + JSON.stringify({
+      panelHidden: await fallbackPanel.getAttribute("hidden"),
+      groupOpen: await fallbackGroup.evaluate(node => node.open),
+      rows: (await fallbackRow.allTextContents()).map(text => text.trim().slice(0,180)),
+      links: await fallbackRow.locator("a").evaluateAll(nodes => nodes.map(node => ({
+        label: node.getAttribute("aria-label"), href: node.getAttribute("href"),
+      }))),
+      commonSourceCount: await fallbackPanel.getByText("Общий источник произведения", {exact:true}).count(),
+    }));
+    throw error;
+  }
+  assert.equal(await fallbackSource.getAttribute("href"), "https://example.com/book");
+  assert.equal(await fallbackRow.getByRole("link", {name:"УРГА — открыть главу в новой вкладке"}).count(), 0);
+  const updatedWork = await pool.query("UPDATE comics SET source_url=NULL WHERE id=$1 RETURNING source_url", [comic]);
+  assert.equal(updatedWork.rowCount, 1, "WD-LINK-02: expected to update exactly one work URL");
+  assert.equal(updatedWork.rows[0].source_url, null);
+  await page.reload();
+  const noSourcePanel = page.getByRole("tabpanel", {name:/Главы/});
+  const noSourceGroup = noSourcePanel.locator(".wd-volume").filter({hasText:"Главы без тома"});
+  await noSourceGroup.locator("summary").waitFor();
+  if (!(await noSourceGroup.evaluate(node => node.open))) await noSourceGroup.locator("summary").click();
+  const noSourceRow = noSourcePanel.locator("li.wd-row").filter({hasText:"УРГА"});
+  try {
+    await noSourceRow.getByText("Ссылка на чтение пока не добавлена. Главу можно найти самостоятельно.").waitFor({timeout:6000});
+  } catch (error) {
+    console.error("WD_LINK_02_MISSING_DIAGNOSTICS=" + JSON.stringify({
+      panelHidden: await noSourcePanel.getAttribute("hidden"),
+      groupOpen: await noSourceGroup.evaluate(node => node.open),
+      rows: (await noSourceRow.allTextContents()).map(text => text.trim().slice(0,180)),
+      links: await noSourceRow.locator("a").evaluateAll(nodes => nodes.map(node => ({
+        label: node.getAttribute("aria-label"), href: node.getAttribute("href"),
+      }))),
+      commonSourceCount: await noSourcePanel.getByText("Общий источник произведения", {exact:true}).count(),
+    }));
+    throw error;
+  }
+  assert.equal(await noSourceRow.locator("a").count(), 0);
+  assert.equal(await noSourcePanel.getByText("Общий источник произведения", {exact:true}).count(), 0);
+  assert.equal(await noSourceRow.getByRole("button", {name:"Снять отметку: УРГА"}).count(), 1);
+  console.log("PASS: WD-LINK-02 direct links, persistent general source, fallback, and missing-link read controls");
   console.log("PASS: WD18.2 smart prompt, one-request bulk marks, optional batch ratings, retry and undo");
   console.log("PASS: WD12-WD16 and WD21.3 planned chapters, guest visibility, read/rating guards, toggle, persistence and mobile sheet");
 } finally {

@@ -118,8 +118,7 @@ function parseCatalogComic(
       value.coverUrl,
     ) ||
     (value.bannerUrl !== undefined && !isNullableString(value.bannerUrl)) ||
-    typeof value.sourceUrl !==
-      "string" ||
+    !isNullableString(value.sourceUrl) ||
     typeof value.categorySlug !==
       "string"
   ) {
@@ -181,7 +180,7 @@ function parseCatalogComic(
     bannerUrl: value.bannerUrl as string | null | undefined,
 
     sourceUrl:
-      value.sourceUrl,
+      typeof value.sourceUrl === "string" ? (value.sourceUrl.trim() || null) : null,
 
     totalChapters:
       value.totalChapters,

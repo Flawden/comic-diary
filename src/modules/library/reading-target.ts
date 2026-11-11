@@ -13,6 +13,17 @@ export function readingSource(value: string | null) {
   } catch { return null; }
 }
 
+// All chapter entry points use the same URL policy: an unlinked chapter may
+// lead to the work's general source, but never to a later linked chapter.
+export function getChapterReadingSource(chapterUrl: string | null, workUrl: string | null, status: string) {
+  if (status !== "RELEASED") return { kind: "unavailable" as const, source: null };
+  const direct = readingSource(chapterUrl);
+  if (direct) return { kind: "direct" as const, source: direct };
+  const general = readingSource(workUrl);
+  if (general) return { kind: "general" as const, source: general };
+  return { kind: "missing" as const, source: null };
+}
+
 // Reading order is editorial sortOrder, then id; display codes are never numbers.
 // Old revision marks do not mark their replacements read. No writes occur here.
 export function getReadingTarget(chapters: readonly SourceChapter[], readIds: readonly number[], sourceUrl: string | null) {

@@ -43,6 +43,9 @@ jobs:
       - name: Canonical Origin and Host regression tests
         run: node --import tsx --test src/modules/auth/request-origin.test.ts
 
+      - name: Optional work source URL rules
+        run: node --import tsx --test src/catalog/validate-catalog.test.ts
+
       - name: Reading destination rules
         run: node --import tsx --test src/modules/comics/work-metadata.test.ts src/modules/library/reading-target.test.ts src/modules/library/list-navigation.test.ts src/modules/library/chapter-rating-summary.test.ts src/modules/library/chapter-reading-model.test.ts src/modules/catalog/chapter-release-dates.test.ts src/modules/catalog/chapter-volumes.test.ts src/modules/library/queries/reading-updates-model.test.ts
 
@@ -150,6 +153,19 @@ jobs:
           node scripts/migrate-production.mjs
           node scripts/migrate-production.mjs
 
+      - name: Verify optional comic source URL migration
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import pg from 'pg';
+          const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+          try {
+            const { rows } = await pool.query("SELECT is_nullable FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'comics' AND column_name = 'source_url'");
+            assert.deepEqual(rows, [{ is_nullable: 'YES' }]);
+            console.log('OPTIONAL_COMIC_SOURCE_URL_SCHEMA=PASS');
+          } finally { await pool.end(); }
+          JS
+
       - name: Seed disposable database twice
         run: |
           node --import tsx scripts/seed.ts
@@ -210,7 +226,20 @@ jobs:
           }
           console.log('BR02_CI_READINESS=PASS');
           JS
+          export WD_VISUAL_OUTPUT="$RUNNER_TEMP/wd-visual"
+          mkdir -p "$WD_VISUAL_OUTPUT"
           node scripts/work-reader-browser.mjs || { tail -60 "$RUNNER_TEMP/wd-next.log"; exit 1; }
+
+      - name: Upload WD-HERO-02B visual QA and sanitized browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wd-hero-02b-diagnostics-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/wd-visual/*.png
+            ${{ runner.temp }}/wd-visual/*.json
+          if-no-files-found: warn
+          retention-days: 7
 
   publish:
     name: Publish immutable image

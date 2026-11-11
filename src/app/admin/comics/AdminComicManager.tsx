@@ -77,7 +77,7 @@ type AdminComic = {
   translatorNote: string | null;
   coverUrl: string | null;
   bannerUrl: string | null;
-  sourceUrl: string;
+  sourceUrl: string | null;
   totalChapters: number | null;
   seriesStatus: SeriesStatus;
   workType: WorkType;
@@ -467,11 +467,11 @@ function ComicFields({
                 } : undefined}
                 aria-describedby={create ? "comic-create-slug-note" : `comic-slug-note-${comic?.id}`} />
               {create ? (
-                <span id="comic-create-slug-note" className="admin-studio-field-hint">
+                <span id="comic-create-slug-note" className="mt-1 block text-xs text-[var(--text-secondary)]">
                   Строчные a–z, цифры и дефисы.
                 </span>
               ) : (
-                <span id={`comic-slug-note-${comic?.id}`} className="admin-studio-field-hint">
+                <span id={`comic-slug-note-${comic?.id}`} className="mt-1 block text-xs text-[var(--text-secondary)]">
                   Не изменяется после создания.
                 </span>
               )}
@@ -490,9 +490,10 @@ function ComicFields({
               <input name="translatorName" defaultValue={comic?.translatorName ?? ""}
                 placeholder="Если есть перевод" className={inputClass} />
             </label>
-            <label className="admin-studio-full">Ссылка на источник *
-              <input name="sourceUrl" type="url" required defaultValue={comic?.sourceUrl ?? ""}
+            <label className="admin-studio-full">Ссылка на источник (необязательно)
+              <input name="sourceUrl" type="url" defaultValue={comic?.sourceUrl ?? ""}
                 placeholder="https://..." className={inputClass} />
+              <span className="mt-1 block text-xs text-[var(--text-secondary)]">Можно оставить пустой. Произведение и главы будут доступны в каталоге без внешней ссылки.</span>
             </label>
             <label className="admin-studio-full admin-studio-description-label">Описание
               <textarea name="description" rows={3} defaultValue={comic?.description ?? ""}
@@ -521,7 +522,7 @@ function ComicFields({
                 onClick={() => coverDialogRef.current?.showModal()}>
                 {currentCoverUrl ? "Изменить обложку" : "Выбрать обложку"} <span aria-hidden="true">↗</span>
               </button>
-              <span className="admin-studio-field-hint">JPG, PNG или WebP · до 6 МБ</span>
+              <span className="mt-1 block text-xs text-[var(--text-secondary)]">JPG, PNG или WebP · до 6 МБ</span>
             </div>
             <div className="admin-studio-background-card">
               <span className="admin-studio-background-label">Фон страницы комикса</span>
@@ -536,7 +537,7 @@ function ComicFields({
                 onClick={() => backgroundDialogRef.current?.showModal()}>
                 {currentBannerUrl ? "Изменить фон" : "Выбрать фон"} <span aria-hidden="true">↗</span>
               </button>
-              <span className="admin-studio-field-hint">Широкая иллюстрация · рекомендовано 16:9</span>
+              <span className="mt-1 block text-xs text-[var(--text-secondary)]">Широкая иллюстрация · рекомендовано 16:9</span>
             </div>
           </div>
         </section>
@@ -1280,11 +1281,10 @@ export function AdminComicManager({
     if (
       !payload.slug ||
       !payload.title ||
-      !payload.sourceUrl ||
       !payload.categorySlug
     ) {
       setError(
-        "Slug, название, source URL и категория обязательны.",
+        "Slug, название и категория обязательны.",
       );
       saveInFlightRef.current = false;
       setBusyKey(null);
@@ -1300,19 +1300,21 @@ export function AdminComicManager({
       return;
     }
 
-    let validSourceUrl = false;
-    try {
-      const parsed = new URL(payload.sourceUrl);
-      validSourceUrl = parsed.protocol === "https:" || parsed.protocol === "http:";
-    } catch {
-      // The server rejects malformed and non-HTTP(S) source URLs.
-    }
-    if (!validSourceUrl) {
-      setError("Поле Source URL: укажите полный адрес, начинающийся с https:// или http://.");
-      saveInFlightRef.current = false;
-      setBusyKey(null);
-      form.querySelector<HTMLInputElement>('input[name="sourceUrl"]')?.focus();
-      return;
+    if (payload.sourceUrl.trim()) {
+      let validSourceUrl = false;
+      try {
+        const parsed = new URL(payload.sourceUrl);
+        validSourceUrl = parsed.protocol === "https:" || parsed.protocol === "http:";
+      } catch {
+        // The server rejects malformed and non-HTTP(S) source URLs.
+      }
+      if (!validSourceUrl) {
+        setError("Поле Source URL: оставьте пустым или укажите полный адрес с https:// или http://.");
+        saveInFlightRef.current = false;
+        setBusyKey(null);
+        form.querySelector<HTMLInputElement>('input[name="sourceUrl"]')?.focus();
+        return;
+      }
     }
 
     if (

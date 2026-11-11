@@ -49,9 +49,11 @@ function validateUniqueSlugs(
 }
 
 function validateSourceUrl(
-  sourceUrl: string,
+  sourceUrl: string | null,
   comicSlug: string,
 ) {
+  // Absence is valid; a supplied URL must still meet the existing HTTP(S) rules.
+  if (sourceUrl === null) return;
   let parsed: URL;
 
   try {

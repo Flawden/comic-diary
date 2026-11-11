@@ -204,6 +204,13 @@
       "when": 1794387600000,
       "tag": "0028_comic_volume_titles",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794397200000,
+      "tag": "0029_optional_comic_source_url",
+      "breakpoints": true
     }
   ]
 }

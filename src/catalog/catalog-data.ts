@@ -21,7 +21,8 @@ export type CatalogComic = {
   coverUrl: string | null;
   // Optional so older catalog imports do not overwrite manually assigned art.
   bannerUrl?: string | null;
-  sourceUrl: string;
+  // A work can be catalogued even when its reading source is not known.
+  sourceUrl: string | null;
   totalChapters: number | null;
   publicationStatus: ComicPublicationStatus;
   seriesStatus?: SeriesStatus;
