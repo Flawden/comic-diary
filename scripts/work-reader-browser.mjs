@@ -224,7 +224,18 @@ try {
   assert.deepEqual(await sheet.locator(".wd-stars button").allTextContents(),["★","★","★","★","☆"]);
   await chapters.getByRole("button",{name:/Оценить: 1/}).filter({hasText:"4"}).waitFor();
   await sheet.getByRole("button",{name:"Закрыть окно оценки главы"}).click();
-  assert.equal(await page.locator(".wd-read").getAttribute("href"),"https://example.com/two");
+  // WD-LINK-02: chapter destinations moved out of the hero. Reading one chapter
+  // must not remove or repoint the other chapter links in the Chapters tab.
+  assert.equal(await page.locator(".wd-read").count(), 0);
+  const firstChapterLink = chapters.getByRole("link", {name:"1 · Охота на быка — открыть главу в новой вкладке"});
+  assert.equal(await firstChapterLink.getAttribute("href"), "https://example.com/one");
+  const secondChapterLink = chapters.getByRole("link", {name:"УРГА — открыть главу в новой вкладке"});
+  assert.equal(await secondChapterLink.getAttribute("href"), "https://example.com/two");
+  assert.equal(await secondChapterLink.getAttribute("target"), "_blank");
+  // A discoverable general source remains available even if every released
+  // chapter also has its own direct link.
+  const sharedWorkSource = chapters.getByRole("link", {name:"Открыть источник ↗"});
+  assert.equal(await sharedWorkSource.getAttribute("href"), "https://example.com/book");
   await page.getByRole("tab",{name:"Мой дневник"}).click();
   assert.equal(await diary.locator("textarea").inputValue(),"Моя заметка");
   assert.equal(await page.evaluate(()=>window.readerDocument),"kept");
@@ -313,6 +324,26 @@ try {
   const undone=(await pool.query("SELECT display_code FROM chapters JOIN user_chapter_reads ON chapters.id=user_chapter_reads.chapter_id WHERE user_chapter_reads.user_id=$1 AND chapters.comic_id=$2 AND chapters.display_code IN ('7','8') ORDER BY display_code",[user,comic])).rows.map(r=>r.display_code);
   assert.deepEqual(undone,["8"]);
   await undoDialog.getByRole("button",{name:"Готово"}).click();
+  // WD-LINK-02: no direct link must lead to the explicitly labeled general
+  // work source, not to a later chapter. Then no URLs means no phantom link,
+  // while marking a released chapter as read still remains possible.
+  await pool.query("UPDATE chapters SET source_url=NULL WHERE comic_id=$1 AND title='УРГА'", [comic]);
+  await page.goto(url+"#chapters");
+  const fallbackPanel = page.getByRole("tabpanel", {name:/Главы/});
+  const fallbackRow = fallbackPanel.locator("li.wd-row").filter({hasText:"УРГА"});
+  const fallbackSource = fallbackRow.getByRole("link", {name:"УРГА — открыть общий источник произведения в новой вкладке"});
+  await fallbackSource.waitFor();
+  assert.equal(await fallbackSource.getAttribute("href"), "https://example.com/book");
+  assert.equal(await fallbackRow.getByRole("link", {name:"УРГА — открыть главу в новой вкладке"}).count(), 0);
+  await pool.query("UPDATE comics SET source_url=NULL WHERE id=$1", [comic]);
+  await page.reload();
+  const noSourcePanel = page.getByRole("tabpanel", {name:/Главы/});
+  const noSourceRow = noSourcePanel.locator("li.wd-row").filter({hasText:"УРГА"});
+  await noSourceRow.getByText("Ссылка на чтение пока не добавлена. Главу можно найти самостоятельно.").waitFor();
+  assert.equal(await noSourceRow.locator("a").count(), 0);
+  assert.equal(await noSourcePanel.getByText("Общий источник произведения", {exact:true}).count(), 0);
+  assert.equal(await noSourceRow.getByRole("button", {name:"Снять отметку: УРГА"}).count(), 1);
+  console.log("PASS: WD-LINK-02 direct links, persistent general source, fallback, and missing-link read controls");
   console.log("PASS: WD18.2 smart prompt, one-request bulk marks, optional batch ratings, retry and undo");
   console.log("PASS: WD12-WD16 and WD21.3 planned chapters, guest visibility, read/rating guards, toggle, persistence and mobile sheet");
 } finally {
