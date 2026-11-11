@@ -330,6 +330,8 @@ try {
   await pool.query("UPDATE chapters SET source_url=NULL WHERE comic_id=$1 AND title='УРГА'", [comic]);
   await page.goto(url+"#chapters");
   const fallbackPanel = page.getByRole("tabpanel", {name:/Главы/});
+  // Later fixture inserts numbered volumes; URGA stays in the collapsed ungrouped volume.
+  await fallbackPanel.locator(".wd-volume").filter({hasText:"Главы без тома"}).locator("summary").click();
   const fallbackRow = fallbackPanel.locator("li.wd-row").filter({hasText:"УРГА"});
   const fallbackSource = fallbackRow.getByRole("link", {name:"УРГА — открыть общий источник произведения в новой вкладке"});
   await fallbackSource.waitFor();
@@ -338,6 +340,8 @@ try {
   await pool.query("UPDATE comics SET source_url=NULL WHERE id=$1", [comic]);
   await page.reload();
   const noSourcePanel = page.getByRole("tabpanel", {name:/Главы/});
+  // Reload closes the native details element again; open it before testing visibility.
+  await noSourcePanel.locator(".wd-volume").filter({hasText:"Главы без тома"}).locator("summary").click();
   const noSourceRow = noSourcePanel.locator("li.wd-row").filter({hasText:"УРГА"});
   await noSourceRow.getByText("Ссылка на чтение пока не добавлена. Главу можно найти самостоятельно.").waitFor();
   assert.equal(await noSourceRow.locator("a").count(), 0);
