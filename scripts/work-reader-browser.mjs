@@ -207,12 +207,30 @@ try {
       .slice(0, 1400);
     const redactObject = object => JSON.parse(JSON.stringify(object, (_key,value) =>
       typeof value === "string" ? stripSecrets(value) : value));
-    const diagnostics = {stage:"WD-HERO-02B",viewportChecks:{},browserEvents:{},devOverlay:{},violations:[]};
+    const diagnostics = {stage:"WD-HERO-02D",viewportChecks:{},browserEvents:{},devOverlay:{},violations:[]};
+    // Keep screenshot mutations and warnings correlated with their exact capture.
+    const screenshotPhase = new WeakMap();
+    const setPhase = (testPage, phase) => screenshotPhase.set(testPage, phase);
+    const capture = async (testPage, filename, options={}) => {
+      setPhase(testPage, `capture ${filename}`);
+      await testPage.screenshot({path:join(screenshots,filename),animations:"disabled",caret:"initial",...options});
+      // Give asynchronously emitted console warnings a chance to be attributed
+      // to the capture, rather than a later navigation.
+      await testPage.waitForTimeout(150);
+      setPhase(testPage, `after ${filename}`);
+    };
     const recordEvents = (testPage, label) => {
-      const events={pageErrors:[],consoleErrors:[],failedRequests:[],httpErrors:[]};
+      const events={pageErrors:[],consoleErrors:[],hydrationPhases:[],failedRequests:[],httpErrors:[]};
       const push=(list, item)=>{if(list.length<15) list.push(stripSecrets(item));};
+      setPhase(testPage,"navigation / before first capture");
       testPage.on("pageerror", error => push(events.pageErrors,error?.message));
-      testPage.on("console", msg=>{if(msg.type()==="error")push(events.consoleErrors,msg.text());});
+      testPage.on("console", msg=>{
+        if(msg.type()!=="error") return;
+        const message=msg.text();
+        push(events.consoleErrors,message);
+        if(/a tree hydrated but some attributes|hydration failed|text content does not match server-rendered html/i.test(message))
+          push(events.hydrationPhases,screenshotPhase.get(testPage)||"unknown");
+      });
       testPage.on("requestfailed", req => {
         if(req.url().startsWith(origin))push(events.failedRequests,`${new URL(req.url()).pathname}: ${req.failure()?.errorText}`);
       });
@@ -257,7 +275,7 @@ try {
       // BEFORE navigation, so hydration warnings/errors are not missed.
       recordEvents(page,"original-mobile");
       await page.evaluate(() => document.fonts.ready);
-      await page.screenshot({path:join(screenshots,"01-mobile-360.png"),fullPage:true,animations:"disabled",caret:"initial"});
+      await capture(page,"01-mobile-360.png",{fullPage:true});
       desktopContext=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1});
       await desktopContext.addCookies([{name:"comic_diary_session",value:token,url:origin}]);
       const desktopPage=await desktopContext.newPage();
@@ -265,7 +283,7 @@ try {
       await desktopPage.goto(url+"#chapters");
       await desktopPage.locator(".wd-hero-progress").getByText("Прочитано: 0 из 2").waitFor();
       await desktopPage.evaluate(() => document.fonts.ready);
-      await desktopPage.screenshot({path:join(screenshots,"02-desktop-1440.png"),fullPage:true,animations:"disabled",caret:"initial"});
+      await capture(desktopPage,"02-desktop-1440.png",{fullPage:true});
       diagnostics.devOverlay.beforeClick=redactObject(await inspectOverlay(desktopPage));
       const issueTrigger=desktopPage.locator("nextjs-portal").getByText(/\b\d+ Issues?\b/i).first();
       if (await issueTrigger.count()) {
@@ -273,18 +291,19 @@ try {
           await issueTrigger.click({timeout:2500});
           diagnostics.devOverlay.clickedIssue=true;
           diagnostics.devOverlay.afterClick=redactObject(await inspectOverlay(desktopPage));
-          await desktopPage.screenshot({path:join(screenshots,"04-next-dev-issue.png"),animations:"disabled",caret:"initial"});
+          await capture(desktopPage,"04-next-dev-issue.png");
         } catch (error) {
           diagnostics.devOverlay.clickError=stripSecrets(error.message);
         }
       }
+      setPhase(desktopPage,"tablet viewport / reload");
       await desktopPage.setViewportSize({width:768,height:900});
       // The Next.js issue overlay may have opened. Close it by navigating to
       // the same isolated test page rather than hiding or muting its indicator.
       await desktopPage.reload();
       await desktopPage.locator(".wd-hero-progress").getByText("Прочитано: 0 из 2").waitFor();
       await desktopPage.evaluate(() => document.fonts.ready);
-      await desktopPage.screenshot({path:join(screenshots,"03-tablet-768.png"),fullPage:true,animations:"disabled",caret:"initial"});
+      await capture(desktopPage,"03-tablet-768.png",{fullPage:true});
       diagnostics.viewportChecks.tablet=await layout(desktopPage);
       if(diagnostics.viewportChecks.tablet.scrollWidth > 769)
         diagnostics.violations.push("tablet horizontal overflow");
@@ -329,25 +348,26 @@ try {
           const img=document.querySelector('.wd-cover img');
           return !!img && img.complete && img.naturalWidth>0;
         },null,{timeout:12000});
-        await mobilePage.screenshot({path:join(screenshots,"05-mobile-long-cover.png"),fullPage:true,animations:"disabled",caret:"initial"});
+        await capture(mobilePage,"05-mobile-long-cover.png",{fullPage:true});
         const summary=mobilePage.locator('.wd-hero-summary .story-excerpt > summary');
         await summary.focus();
         await mobilePage.keyboard.press('Enter');
         assert.equal(await mobilePage.locator('.wd-hero-summary details').evaluate(el=>el.open),true,
           "expanded description must work from keyboard");
-        await mobilePage.screenshot({path:join(screenshots,"06-mobile-expanded.png"),fullPage:true,animations:"disabled",caret:"initial"});
+        await capture(mobilePage,"06-mobile-expanded.png",{fullPage:true});
         diagnostics.viewportChecks.mobileExpanded=await layout(mobilePage);
         if(diagnostics.viewportChecks.mobileExpanded.scrollWidth>361)
           diagnostics.violations.push('expanded long description causes mobile horizontal overflow');
         await mobilePage.setViewportSize({width:320,height:740});
-        await mobilePage.screenshot({path:join(screenshots,"09-mobile-expanded-320.png"),fullPage:true,animations:"disabled",caret:"initial"});
+        await capture(mobilePage,"09-mobile-expanded-320.png",{fullPage:true});
         diagnostics.viewportChecks.mobile320=await layout(mobilePage);
         if(diagnostics.viewportChecks.mobile320.scrollWidth>321)
           diagnostics.violations.push('320px long description causes horizontal overflow');
+        setPhase(desktopPage,"desktop long-description viewport / reload");
         await desktopPage.setViewportSize({width:1440,height:900});
         await desktopPage.reload();
         await desktopPage.locator('.wd-hero-summary .story-excerpt > summary').waitFor();
-        await desktopPage.screenshot({path:join(screenshots,"07-desktop-long-cover.png"),fullPage:true,animations:"disabled",caret:"initial"});
+        await capture(desktopPage,"07-desktop-long-cover.png",{fullPage:true});
         diagnostics.viewportChecks.desktopLong=await layout(desktopPage);
         if(diagnostics.viewportChecks.desktopLong.scrollWidth>1441)
           diagnostics.violations.push('long description causes desktop horizontal overflow');
@@ -356,9 +376,10 @@ try {
           await pool.query(`INSERT INTO user_chapter_reads(user_id,chapter_id)
             SELECT $1,id FROM chapters WHERE comic_id=$2 AND sort_order=$3 AND status='RELEASED'
             ON CONFLICT DO NOTHING`,[user,comic,code]);
+          setPhase(desktopPage,`progress ${n}/2 reload`);
           await desktopPage.reload();
           await desktopPage.locator('.wd-hero-progress').getByText(`Прочитано: ${n} из 2`).waitFor();
-          await desktopPage.screenshot({path:join(screenshots,`08-desktop-read-${n}-of-2.png`),animations:"disabled"});
+          await capture(desktopPage,`08-desktop-read-${n}-of-2.png`);
         }
       } finally {
         await pool.query("DELETE FROM user_chapter_reads WHERE user_id=$1 AND chapter_id IN (SELECT id FROM chapters WHERE comic_id=$2)",[user,comic]);
