@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppNavigation } from "./AppNavigation";
+import { ProfileEntryMenu } from "./ProfileEntryMenu";
 
 export function AppHeader() {
   return (
@@ -19,9 +20,7 @@ export function AppHeader() {
           </span>
         </Link>
         <AppNavigation />
-        <Link href="/account" className="tea-account" aria-label="Профиль и оформление" title="Профиль и оформление">
-          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2Z"/></svg>
-        </Link>
+        <ProfileEntryMenu />
       </div>
     </header>
   );
