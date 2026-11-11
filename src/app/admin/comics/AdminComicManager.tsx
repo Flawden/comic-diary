@@ -411,9 +411,21 @@ function ComicFields({
   onBannerUrlChange?: (value: string) => void;
 }) {
   const inputClass = "admin-studio-input";
+  const coverDialogRef = useRef<HTMLDialogElement>(null);
+  const coverDialogTitleId = useId();
+  const coverDialogId = useId();
   const backgroundDialogRef = useRef<HTMLDialogElement>(null);
   const backgroundDialogTitleId = useId();
   const backgroundDialogId = useId();
+  // Both uploaders stay mounted in their dialogs so FormData always retains
+  // coverUrl, bannerUrl and the in-progress upload indicators.
+  const [localCoverUrl, setLocalCoverUrl] = useState(comic?.coverUrl ?? "");
+  const currentCoverUrl = coverUrl ?? localCoverUrl;
+
+  function updateCover(next: string) {
+    setLocalCoverUrl(next);
+    onCoverUrlChange?.(next);
+  }
   // In the create form there is no parent-controlled banner. Keep its preview
   // synchronized with the mounted upload field; the form contract stays intact.
   const [localBannerUrl, setLocalBannerUrl] = useState(comic?.bannerUrl ?? "");
@@ -471,7 +483,6 @@ function ComicFields({
               <input name="translatorName" defaultValue={comic?.translatorName ?? ""}
                 placeholder="Если есть перевод" className={inputClass} />
             </label>
-            <WorkMetadataFields workType={comic?.workType} workFormat={comic?.workFormat} />
             <label className="admin-studio-full">Ссылка на источник *
               <input name="sourceUrl" type="url" required defaultValue={comic?.sourceUrl ?? ""}
                 placeholder="https://..." className={inputClass} />
@@ -490,15 +501,20 @@ function ComicFields({
             <p>Две иллюстрации рядом — без длинной формы для фона.</p>
           </div>
           <div className="admin-studio-artwork-grid">
-            <div className="admin-studio-artwork-cover">
-              <CoverUploadField
-                disabled={disabled}
-                onUploadingChange={onUploadingChange}
-                value={coverUrl}
-                onValueChange={onCoverUrlChange}
-                key={comic?.id ?? "new-comic"}
-                defaultValue={comic?.coverUrl ?? ""}
-              />
+            <div className="admin-studio-background-card admin-studio-cover-summary-card">
+              <span className="admin-studio-background-label">Обложка</span>
+              <div className="admin-studio-background-summary">
+                <CoverImage src={currentCoverUrl} alt="Предпросмотр обложки произведения"
+                  fallback="Без обложки"
+                  className="admin-studio-background-thumbnail admin-studio-cover-thumbnail" />
+                <p>{currentCoverUrl ? "Обложка выбрана" : "Вертикальное изображение"}</p>
+              </div>
+              <button type="button" disabled={disabled} aria-haspopup="dialog"
+                aria-controls={coverDialogId} className="admin-studio-background-button"
+                onClick={() => coverDialogRef.current?.showModal()}>
+                {currentCoverUrl ? "Изменить обложку" : "Выбрать обложку"} <span aria-hidden="true">↗</span>
+              </button>
+              <span className="admin-studio-field-hint">JPG, PNG или WebP · до 6 МБ</span>
             </div>
             <div className="admin-studio-background-card">
               <span className="admin-studio-background-label">Фон страницы комикса</span>
@@ -517,6 +533,40 @@ function ComicFields({
             </div>
           </div>
         </section>
+
+        {/* Modal is visual only: do not unmount uploader inputs when closed. */}
+        <dialog id={coverDialogId} ref={coverDialogRef} className="admin-studio-background-dialog"
+          aria-labelledby={coverDialogTitleId}>
+          <div className="admin-studio-background-dialog-inner">
+            <div className="admin-studio-background-dialog-header">
+              <div>
+                <p className="admin-studio-overline">COMIC STUDIO · ОФОРМЛЕНИЕ</p>
+                <h3 id={coverDialogTitleId}>Обложка произведения</h3>
+              </div>
+              <button type="button" className="admin-studio-dialog-close"
+                onClick={() => coverDialogRef.current?.close()}
+                aria-label="Закрыть окно выбора обложки">✕</button>
+            </div>
+            <p className="admin-studio-background-dialog-intro">
+              Загрузи вертикальную обложку. Она появится в каталоге после сохранения произведения.
+            </p>
+            <CoverUploadField
+              disabled={disabled}
+              onUploadingChange={onUploadingChange}
+              value={currentCoverUrl}
+              onValueChange={updateCover}
+              key={`cover-${comic?.id ?? "new-comic"}`}
+              defaultValue={comic?.coverUrl ?? ""}
+            />
+            <div className="admin-studio-background-dialog-footer">
+              <button type="button" className="admin-studio-background-button"
+                onClick={() => coverDialogRef.current?.close()}>
+                Готово
+              </button>
+              <span>Обложка закрепится за произведением только после сохранения.</span>
+            </div>
+          </div>
+        </dialog>
 
         {/* Keep the uploader mounted even while the dialog is closed:
             bannerUrl and bannerUploading remain part of FormData. */}
@@ -561,8 +611,11 @@ function ComicFields({
         </dialog>
 
         <details className="admin-studio-advanced">
-          <summary>Дополнительные сведения <span>Количество глав и примечание переводчика</span></summary>
+          <summary>Дополнительные параметры
+            <span>Тип, формат, количество глав и примечание переводчика</span>
+          </summary>
           <div className="admin-studio-field-grid">
+            <WorkMetadataFields workType={comic?.workType} workFormat={comic?.workFormat} />
             <label>Заявлено глав (справочно)
               <input name="totalChapters" type="number" min={1} step={1}
                 defaultValue={comic?.totalChapters ?? ""} className={inputClass} />
@@ -1910,7 +1963,7 @@ export function AdminComicManager({
                 create
               />
 
-              <div className="mt-5 flex flex-wrap gap-3">
+              <div className="admin-studio-save-actions admin-studio-create-actions">
                 <button
                   type="submit"
                   disabled={
@@ -2020,11 +2073,6 @@ export function AdminComicManager({
                         false
                       }
                     />
-                    {comicDirty[comic.id] ? (
-                      <p role="status" className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                        Есть несохранённые изменения.
-                      </p>
-                    ) : null}
                     {comic.categorySlug ===
                     null ? (
                       <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
@@ -2551,7 +2599,10 @@ export function AdminComicManager({
                       </div>
                     </section>
 
-                    <div hidden={studioTab === "chapters"} className="mt-5 flex flex-wrap items-center gap-3">
+                    <div hidden={studioTab === "chapters"} className="admin-studio-save-actions">
+                      {comicDirty[comic.id] ? (
+                        <span className="admin-studio-dirty-indicator" role="status">Несохранённые изменения</span>
+                      ) : null}
                       <button
                         type="submit"
                         disabled={
