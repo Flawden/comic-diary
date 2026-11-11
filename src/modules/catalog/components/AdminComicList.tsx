@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/shared/components/ui/Button";
 import { CoverImage } from "@/shared/components/media/CoverImage";
 
@@ -37,6 +37,12 @@ export function AdminComicList({ comics, categories, locked, children, onSelecti
 }) {
   const id = useId();
   const [selectedId, setSelectedId] = useState<number | null>(comics[0]?.id ?? null);
+  // On mobile, selecting a work opens its editor as a separate screen.
+  // Desktop retains its existing side-by-side editor and initial selection.
+  const [mobileEditorOpen, setMobileEditorOpen] = useState(false);
+  const navigatorRef = useRef<HTMLElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const firstSelectionRender = useRef(true);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
   const [category, setCategory] = useState("ALL");
@@ -54,17 +60,42 @@ export function AdminComicList({ comics, categories, locked, children, onSelecti
   const fieldClass = "admin-studio-filter";
 
   async function choose(next: number | null) {
-    if (locked || selectedId === next) return;
+    if (locked) return;
+    if (selectedId === next) {
+      // The first work may already be selected on desktop. Its mobile editor
+      // must still open when the user explicitly taps the card.
+      if (next !== null) setMobileEditorOpen(true);
+      return;
+    }
     if (await onSelectionChange?.(selectedId) === false) return;
     setSelectedId(next);
+    setMobileEditorOpen(next !== null);
   }
+  async function returnToList() {
+    if (locked) return;
+    // Keep the existing unsaved-change confirmation/discard behavior.
+    if (await onSelectionChange?.(selectedId) === false) return;
+    setMobileEditorOpen(false);
+  }
+  useEffect(() => {
+    if (firstSelectionRender.current) {
+      firstSelectionRender.current = false;
+      return;
+    }
+    if (!window.matchMedia("(max-width: 760px)").matches) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = mobileEditorOpen ? editorRef.current : navigatorRef.current;
+      target?.scrollIntoView({ block: "start", behavior: "auto" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [mobileEditorOpen, selectedId]);
   function reset() {
     setSearch(""); setStatus("ALL"); setCategory("ALL"); setPage(1);
   }
 
   return (
-    <div className="admin-studio-layout">
-      <aside className="admin-studio-navigator" aria-label="Список произведений">
+    <div className={`admin-studio-layout${mobileEditorOpen ? " is-mobile-editing" : ""}`}>
+      <aside ref={navigatorRef} className="admin-studio-navigator" aria-label="Список произведений">
         <div className="admin-studio-navigator-heading">
           <div>
             <h2>Произведения</h2>
@@ -134,7 +165,13 @@ export function AdminComicList({ comics, categories, locked, children, onSelecti
             onClick={() => setPage(currentPage + 1)}>→</Button>
         </nav>}
       </aside>
-      <div className="admin-studio-editor" aria-label="Редактор произведения">
+      <div ref={editorRef} className="admin-studio-editor" aria-label="Редактор произведения">
+        {mobileEditorOpen && selectedId !== null ? (
+          <button type="button" className="admin-studio-return-to-list"
+            disabled={locked} onClick={() => void returnToList()}>
+            ← К списку произведений
+          </button>
+        ) : null}
         {children(selectedId)}
       </div>
     </div>

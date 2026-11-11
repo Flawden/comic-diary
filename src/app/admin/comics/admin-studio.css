@@ -526,3 +526,64 @@ textarea.admin-studio-input { resize: vertical; }
 @media (max-width: 760px) and (max-height: 500px) {
   .admin-studio-create-footer { position: static; }
 }
+
+
+/* Admin A3.4 — mobile catalog/editor separation and compact control bars.
+   Editing is never deleted: its forms stay mounted, with existing unsaved guards. */
+.admin-studio-return-to-list { display: none; }
+@media (max-width: 760px) {
+  .admin-studio-layout:not(.is-mobile-editing) > .admin-studio-editor {
+    display: none;
+  }
+  .admin-studio-layout.is-mobile-editing > .admin-studio-navigator {
+    display: none;
+  }
+  .admin-studio-navigator,
+  .admin-studio-editor { scroll-margin-top: 16px; }
+  .admin-studio-return-to-list {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-bottom: 16px;
+    padding: 9px 13px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .admin-studio-return-to-list:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+  /* No three-storey save bar: save / undo on one row, page link below. */
+  .admin-studio-save-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(100px, max-content);
+    gap: 8px;
+    padding: 10px;
+  }
+  .admin-studio-save-actions > button {
+    min-width: 0;
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  .admin-studio-save-actions > .admin-studio-dirty-indicator,
+  .admin-studio-save-actions > a {
+    grid-column: 1 / -1;
+    flex-basis: auto;
+  }
+  .admin-studio-save-actions > a { font-size: 12px; }
+  /* The step numbers were squeezed into thin vertical capsules. */
+  .admin-studio-create-steps span {
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    flex: none;
+    line-height: 1;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
