@@ -327,23 +327,58 @@ try {
   // WD-LINK-02: no direct link must lead to the explicitly labeled general
   // work source, not to a later chapter. Then no URLs means no phantom link,
   // while marking a released chapter as read still remains possible.
-  await pool.query("UPDATE chapters SET source_url=NULL WHERE comic_id=$1 AND title='УРГА'", [comic]);
-  await page.goto(url+"#chapters");
+  const updatedChapter = await pool.query("UPDATE chapters SET source_url=NULL WHERE comic_id=$1 AND title='УРГА' RETURNING id,source_url", [comic]);
+  assert.equal(updatedChapter.rowCount, 1, "WD-LINK-02: expected to update exactly one chapter URL");
+  assert.equal(updatedChapter.rows[0].source_url, null);
+  // The browser can already be at this exact #chapters URL. A same-URL goto
+  // is not a reliable refresh of server-rendered data after an external SQL write.
+  await page.reload();
   const fallbackPanel = page.getByRole("tabpanel", {name:/Главы/});
-  // Later fixture inserts numbered volumes; URGA stays in the collapsed ungrouped volume.
-  await fallbackPanel.locator(".wd-volume").filter({hasText:"Главы без тома"}).locator("summary").click();
+  const fallbackGroup = fallbackPanel.locator(".wd-volume").filter({hasText:"Главы без тома"});
+  await fallbackGroup.locator("summary").waitFor();
+  if (!(await fallbackGroup.evaluate(node => node.open))) await fallbackGroup.locator("summary").click();
   const fallbackRow = fallbackPanel.locator("li.wd-row").filter({hasText:"УРГА"});
   const fallbackSource = fallbackRow.getByRole("link", {name:"УРГА — открыть общий источник произведения в новой вкладке"});
-  await fallbackSource.waitFor();
+  try {
+    await fallbackSource.waitFor({timeout:6000});
+  } catch (error) {
+    // The test uses synthetic example.com URLs; never print cookies or tokens.
+    console.error("WD_LINK_02_FALLBACK_DIAGNOSTICS=" + JSON.stringify({
+      panelHidden: await fallbackPanel.getAttribute("hidden"),
+      groupOpen: await fallbackGroup.evaluate(node => node.open),
+      rows: (await fallbackRow.allTextContents()).map(text => text.trim().slice(0,180)),
+      links: await fallbackRow.locator("a").evaluateAll(nodes => nodes.map(node => ({
+        label: node.getAttribute("aria-label"), href: node.getAttribute("href"),
+      }))),
+      commonSourceCount: await fallbackPanel.getByText("Общий источник произведения", {exact:true}).count(),
+    }));
+    throw error;
+  }
   assert.equal(await fallbackSource.getAttribute("href"), "https://example.com/book");
   assert.equal(await fallbackRow.getByRole("link", {name:"УРГА — открыть главу в новой вкладке"}).count(), 0);
-  await pool.query("UPDATE comics SET source_url=NULL WHERE id=$1", [comic]);
+  const updatedWork = await pool.query("UPDATE comics SET source_url=NULL WHERE id=$1 RETURNING source_url", [comic]);
+  assert.equal(updatedWork.rowCount, 1, "WD-LINK-02: expected to update exactly one work URL");
+  assert.equal(updatedWork.rows[0].source_url, null);
   await page.reload();
   const noSourcePanel = page.getByRole("tabpanel", {name:/Главы/});
-  // Reload closes the native details element again; open it before testing visibility.
-  await noSourcePanel.locator(".wd-volume").filter({hasText:"Главы без тома"}).locator("summary").click();
+  const noSourceGroup = noSourcePanel.locator(".wd-volume").filter({hasText:"Главы без тома"});
+  await noSourceGroup.locator("summary").waitFor();
+  if (!(await noSourceGroup.evaluate(node => node.open))) await noSourceGroup.locator("summary").click();
   const noSourceRow = noSourcePanel.locator("li.wd-row").filter({hasText:"УРГА"});
-  await noSourceRow.getByText("Ссылка на чтение пока не добавлена. Главу можно найти самостоятельно.").waitFor();
+  try {
+    await noSourceRow.getByText("Ссылка на чтение пока не добавлена. Главу можно найти самостоятельно.").waitFor({timeout:6000});
+  } catch (error) {
+    console.error("WD_LINK_02_MISSING_DIAGNOSTICS=" + JSON.stringify({
+      panelHidden: await noSourcePanel.getAttribute("hidden"),
+      groupOpen: await noSourceGroup.evaluate(node => node.open),
+      rows: (await noSourceRow.allTextContents()).map(text => text.trim().slice(0,180)),
+      links: await noSourceRow.locator("a").evaluateAll(nodes => nodes.map(node => ({
+        label: node.getAttribute("aria-label"), href: node.getAttribute("href"),
+      }))),
+      commonSourceCount: await noSourcePanel.getByText("Общий источник произведения", {exact:true}).count(),
+    }));
+    throw error;
+  }
   assert.equal(await noSourceRow.locator("a").count(), 0);
   assert.equal(await noSourcePanel.getByText("Общий источник произведения", {exact:true}).count(), 0);
   assert.equal(await noSourceRow.getByRole("button", {name:"Снять отметку: УРГА"}).count(), 1);
