@@ -30,13 +30,26 @@
 .admin-shell-brand svg { color: #cbd9a6; }
 .admin-shell-brand > span { font: 500 21px/1.2 var(--cd-font-display); white-space: nowrap; }
 .admin-shell-brand small { color: #c7d5bb; font-size: 10px; }
-.admin-shell-nav { display: flex; flex-direction: column; gap: 5px; }
+.admin-shell-nav { display: flex; flex-direction: column; gap: 13px; }
+.admin-shell-nav-section { display: flex; flex-direction: column; gap: 4px; }
+.admin-shell-nav-heading {
+  padding: 4px 11px 3px;
+  color: #b9cba9;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .11em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
 .admin-shell-link { min-height: 44px; display: flex; align-items: center; gap: 11px; border: 1px solid transparent; border-radius: 9px; padding: 9px 11px; font-size: 13px; font-weight: 600; color: #e2e9d8; text-decoration: none; transition: background-color .15s ease, border-color .15s ease; }
 .admin-shell-link svg { flex: none; color: #c6d2b1; }
 .admin-shell-link:hover { background: rgba(181, 206, 157, .14); }
 .admin-shell-link.is-active { background: rgba(180, 210, 145, .28); border-color: rgba(200, 221, 171, .28); color: #fff1d8; }
 .admin-shell-link:focus-visible, .admin-shell-brand:focus-visible, .admin-shell-account:focus-visible { outline: 2px solid #c4d79c; outline-offset: 2px; }
-.admin-shell-account { display: flex; align-items: center; gap: 10px; min-height: 50px; margin-top: auto; border: 1px solid rgba(221, 238, 203, .18); border-radius: 11px; padding: 8px; background: rgba(15, 43, 32, .52); font-size: 12px; color: #f1ebd9; }
+.admin-shell-footer { display: flex; flex-direction: column; gap: 10px; margin-top: auto; padding-top: 18px; }
+.admin-shell-public-link { color: #f0ebcf; border-color: rgba(221, 238, 203, .16); }
+.admin-shell-external-mark { margin-left: auto; color: #c6d2b1; font-size: 16px; }
+.admin-shell-account { display: flex; align-items: center; gap: 10px; min-height: 50px; margin-top: 0; text-decoration: none; border: 1px solid rgba(221, 238, 203, .18); border-radius: 11px; padding: 8px; background: rgba(15, 43, 32, .52); font-size: 12px; color: #f1ebd9; }
 .admin-shell-account-icon { width: 32px; height: 32px; border: 1px solid rgba(221, 238, 203, .25); border-radius: 50%; display: grid; place-items: center; }
 .admin-shell-account > span:nth-child(2) { min-width: 0; flex: 1; }
 .admin-shell-account small { display: block; color: #c5d3c0; font-size: 10px; }
