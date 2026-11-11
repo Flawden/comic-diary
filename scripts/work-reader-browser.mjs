@@ -239,13 +239,25 @@ try {
       viewportHeight:window.innerHeight,
       heroHeight:Math.round(document.querySelector('.wd-hero')?.getBoundingClientRect().height||0),
     }));
-    let desktopContext, mobileContext;
+    let desktopContext, mobileContext, controlContext;
     try {
+      // Control: navigate without taking any screenshots. If React still warns
+      // about hydration here, the issue is independent of screenshot capture.
+      controlContext=await browser.newContext({viewport:{width:1440,height:900}});
+      await controlContext.addCookies([{name:"comic_diary_session",value:token,url:origin}]);
+      const controlPage=await controlContext.newPage();
+      recordEvents(controlPage,"no-screenshot-control");
+      await controlPage.goto(url+"#chapters");
+      await controlPage.locator(".wd-hero-progress").getByText("Прочитано: 0 из 2").waitFor();
+      await controlPage.waitForLoadState("load");
+      await controlPage.waitForTimeout(700);
+      await controlContext.close();
+      controlContext=null;
       // First reproduce the original 0/2 case with event listeners attached
       // BEFORE navigation, so hydration warnings/errors are not missed.
       recordEvents(page,"original-mobile");
       await page.evaluate(() => document.fonts.ready);
-      await page.screenshot({path:join(screenshots,"01-mobile-360.png"),fullPage:true,animations:"disabled"});
+      await page.screenshot({path:join(screenshots,"01-mobile-360.png"),fullPage:true,animations:"disabled",caret:"initial"});
       desktopContext=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1});
       await desktopContext.addCookies([{name:"comic_diary_session",value:token,url:origin}]);
       const desktopPage=await desktopContext.newPage();
@@ -253,7 +265,7 @@ try {
       await desktopPage.goto(url+"#chapters");
       await desktopPage.locator(".wd-hero-progress").getByText("Прочитано: 0 из 2").waitFor();
       await desktopPage.evaluate(() => document.fonts.ready);
-      await desktopPage.screenshot({path:join(screenshots,"02-desktop-1440.png"),fullPage:true,animations:"disabled"});
+      await desktopPage.screenshot({path:join(screenshots,"02-desktop-1440.png"),fullPage:true,animations:"disabled",caret:"initial"});
       diagnostics.devOverlay.beforeClick=redactObject(await inspectOverlay(desktopPage));
       const issueTrigger=desktopPage.locator("nextjs-portal").getByText(/\b\d+ Issues?\b/i).first();
       if (await issueTrigger.count()) {
@@ -261,7 +273,7 @@ try {
           await issueTrigger.click({timeout:2500});
           diagnostics.devOverlay.clickedIssue=true;
           diagnostics.devOverlay.afterClick=redactObject(await inspectOverlay(desktopPage));
-          await desktopPage.screenshot({path:join(screenshots,"04-next-dev-issue.png"),animations:"disabled"});
+          await desktopPage.screenshot({path:join(screenshots,"04-next-dev-issue.png"),animations:"disabled",caret:"initial"});
         } catch (error) {
           diagnostics.devOverlay.clickError=stripSecrets(error.message);
         }
@@ -272,7 +284,7 @@ try {
       await desktopPage.reload();
       await desktopPage.locator(".wd-hero-progress").getByText("Прочитано: 0 из 2").waitFor();
       await desktopPage.evaluate(() => document.fonts.ready);
-      await desktopPage.screenshot({path:join(screenshots,"03-tablet-768.png"),fullPage:true,animations:"disabled"});
+      await desktopPage.screenshot({path:join(screenshots,"03-tablet-768.png"),fullPage:true,animations:"disabled",caret:"initial"});
       diagnostics.viewportChecks.tablet=await layout(desktopPage);
       if(diagnostics.viewportChecks.tablet.scrollWidth > 769)
         diagnostics.violations.push("tablet horizontal overflow");
@@ -317,25 +329,25 @@ try {
           const img=document.querySelector('.wd-cover img');
           return !!img && img.complete && img.naturalWidth>0;
         },null,{timeout:12000});
-        await mobilePage.screenshot({path:join(screenshots,"05-mobile-long-cover.png"),fullPage:true,animations:"disabled"});
+        await mobilePage.screenshot({path:join(screenshots,"05-mobile-long-cover.png"),fullPage:true,animations:"disabled",caret:"initial"});
         const summary=mobilePage.locator('.wd-hero-summary .story-excerpt > summary');
         await summary.focus();
         await mobilePage.keyboard.press('Enter');
         assert.equal(await mobilePage.locator('.wd-hero-summary details').evaluate(el=>el.open),true,
           "expanded description must work from keyboard");
-        await mobilePage.screenshot({path:join(screenshots,"06-mobile-expanded.png"),fullPage:true,animations:"disabled"});
+        await mobilePage.screenshot({path:join(screenshots,"06-mobile-expanded.png"),fullPage:true,animations:"disabled",caret:"initial"});
         diagnostics.viewportChecks.mobileExpanded=await layout(mobilePage);
         if(diagnostics.viewportChecks.mobileExpanded.scrollWidth>361)
           diagnostics.violations.push('expanded long description causes mobile horizontal overflow');
         await mobilePage.setViewportSize({width:320,height:740});
-        await mobilePage.screenshot({path:join(screenshots,"09-mobile-expanded-320.png"),fullPage:true,animations:"disabled"});
+        await mobilePage.screenshot({path:join(screenshots,"09-mobile-expanded-320.png"),fullPage:true,animations:"disabled",caret:"initial"});
         diagnostics.viewportChecks.mobile320=await layout(mobilePage);
         if(diagnostics.viewportChecks.mobile320.scrollWidth>321)
           diagnostics.violations.push('320px long description causes horizontal overflow');
         await desktopPage.setViewportSize({width:1440,height:900});
         await desktopPage.reload();
         await desktopPage.locator('.wd-hero-summary .story-excerpt > summary').waitFor();
-        await desktopPage.screenshot({path:join(screenshots,"07-desktop-long-cover.png"),fullPage:true,animations:"disabled"});
+        await desktopPage.screenshot({path:join(screenshots,"07-desktop-long-cover.png"),fullPage:true,animations:"disabled",caret:"initial"});
         diagnostics.viewportChecks.desktopLong=await layout(desktopPage);
         if(diagnostics.viewportChecks.desktopLong.scrollWidth>1441)
           diagnostics.violations.push('long description causes desktop horizontal overflow');
@@ -356,8 +368,12 @@ try {
       // of a production defect. Genuine JavaScript exceptions fail CI.
       for (const [label,events] of Object.entries(diagnostics.browserEvents)) {
         if(events.pageErrors.length) diagnostics.violations.push(`${label}: ${events.pageErrors.length} page error(s)`);
+        const hydrationWarnings=events.consoleErrors.filter(message =>
+          /a tree hydrated but some attributes|hydration failed|text content does not match server-rendered html/i.test(message));
+        if(hydrationWarnings.length) diagnostics.violations.push(`${label}: ${hydrationWarnings.length} hydration warning(s)`);
       }
     } finally {
+      if(controlContext) await controlContext.close();
       if(mobileContext) await mobileContext.close();
       if(desktopContext) await desktopContext.close();
       await writeFile(join(screenshots,"wd-hero-02b-diagnostics.json"),
