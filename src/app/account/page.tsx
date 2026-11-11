@@ -75,7 +75,7 @@ export default async function AccountPage() {
           <p className="account-email">{user.email}</p>
           <p className="reader-eyebrow">{roleLabel(user.role)}</p>
           <details className="account-edit-name"><summary>Изменить имя</summary><AccountProfileForm initialDisplayName={user.displayName} /></details>
-          {hasPermission(user.role, "EDIT_SHARED_CATALOG") ? <Link href="/admin" className="tea-outline">Панель управления →</Link> : null}
+          {(["EDIT_SHARED_CATALOG", "ADMIN_USERS", "RUN_BULK_IMPORT", "ADMIN_SECURITY"] as const).some(permission => hasPermission(user.role, permission)) ? <Link href="/admin" className="tea-outline">Панель управления →</Link> : null}
           <LogoutButton />
         </aside>
         <div className="account-content">
