@@ -69,3 +69,14 @@ WD-LINK-01 was applied locally on 2026-11-11 to `feature/wd-link-01-optional-wor
 - This checkpoint is being committed and pushed for full CI; CI outcome is **pending** until independently checked. No migration, server changes, PR merge, or deployment performed by the commit script.
 - Prior backup restore tests on an isolated copy were confirmed by the user; further backup reconnaissance is out of scope of the UI work.
 - Next product stage after CI: WD-HERO-01 — hero description and one client-owned reading progress widget, retaining per-volume progress and unique About content.
+
+
+## WD-HERO-01 · Live progress and editorial hero · local apply checkpoint (2026-11-11)
+
+- Audit source: Windows ZIP snapshot of the remote `feature/wd-link-02-reading-destinations` at `52f78565efc439c33d6cfb275fed9c25c347a6da` (user confirmed CI green). This stage must be a new branch stacked on WD-LINK-02, not a modification to the Windows `feature/catalog-redesign` checkout.
+- Desktop hero uses three columns: cover, identity/actions/one live reading progress, and collapsible description. Responsive two-column then single-column layout preserves the existing background; the WD-EDGE-00 border fix remains a separate branch.
+- A shared client `WorkChapterProgressProvider` owns React `useOptimistic` read IDs; chapter controls update it inside their existing transition, and hero reads the same state. `router.refresh()` reconciles with the server after success/failure.
+- Only released MAIN chapters are counted in the hero. Scheduled, archival, and specials are excluded; per-volume counters and legacy manual progress form remain in their existing places. Guests and non-library users never see personal hero progress.
+- About tab retains translator notes, author/translator metadata, work format, declared chapter count and private-title controls. Its duplicate story description is removed; full description remains expandable in the hero.
+- Browser regression checks are updated for the new description placement and lack of duplicate chapter/diary progress. Full CI, visual and mobile QA remain gates before PR/merge/deploy.
+- No DB migration, production changes, history rewriting, or deployment belongs to WD-HERO-01 apply.

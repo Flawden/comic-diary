@@ -7,17 +7,18 @@ import { PreviousChaptersPrompt } from "./PreviousChaptersPrompt";
 import { unreadEarlierMainChapters } from "@/modules/library/chapter-reading-model";
 import { usePromptPreference, writeReading } from "./WorkControls";
 import { useRouter } from "next/navigation";
-import { useOptimistic, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Button } from "@/shared/components/ui";
 import type { ComicChapter } from "@/modules/comics/queries/get-comic-chapters";
 import { formatExpectedRelease } from "@/modules/catalog/chapter-release-dates";
 import { groupChaptersByVolume, volumeHeading, volumeProgress } from "@/modules/catalog/chapter-volumes";
 import { getChapterReadingSource, readingSource } from "@/modules/library/reading-target";
+import { useWorkChapterProgress } from "./WorkChapterProgress";
 
 type Chapter = Omit<ComicChapter, "releasedAt">;
-type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; readIds: number[]; canMark: boolean; workSourceUrl: string | null; volumeTitles?: Record<number, string> };
+type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; canMark: boolean; workSourceUrl: string | null; volumeTitles?: Record<number, string> };
 
-export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, ratings, canMark, workSourceUrl, volumeTitles = {} }: Props) {
+export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canMark, workSourceUrl, volumeTitles = {} }: Props) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("MAIN");
   const [limit, setLimit] = useState(30);
@@ -26,7 +27,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, rati
   const router=useRouter();
   const [pending,start]=useTransition();
   const lock=useRef(false);
-  const [ids,show]=useOptimistic(readIds, (_prev:number[], next:number[])=>next);
+  const {readIds: ids, showReadIds: show}=useWorkChapterProgress();
   const read=new Set(ids);
   const [sheet,setSheet]=useState<Chapter|null>(null);
   const [failure,setFailure]=useState<{chapter:Chapter;action:"read"|"unread"|"read-through"}|null>(null);
@@ -105,8 +106,6 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, rati
         <div><p className="font-semibold">Общий источник произведения</p><p className="text-xs text-[var(--text-secondary)]">Переход ведёт к произведению целиком, не к отдельной главе.</p></div>
         <a className="inline-flex min-h-11 items-center rounded-lg border border-[var(--border)] px-3 text-sm font-semibold text-[var(--text-accent)]" href={sharedSource.href} target="_blank" rel="noopener noreferrer">{sharedSource.label} ↗</a>
       </div> : null}
-      {canMark && main.length>0 && <div className="wd-progress"><span>Прочитано: {main.filter(c=>read.has(c.id)).length} из {main.length}</span><progress max={main.length} value={main.filter(c=>read.has(c.id)).length}/></div>}
-      {canMark && main.length > 0 && main.every(c => read.has(c.id)) ? <p className="text-sm text-[var(--text-secondary)]">Все вышедшие основные главы прочитаны.</p> : null}
       {scheduledCount > 0 && <label className="wd-planned-toggle">
         <span>Скрыть запланированные <small>Ещё не вышли: {scheduledCount}</small></span>
         <input type="checkbox" checked={hideScheduled} onChange={(e) => { setHideScheduled(e.target.checked); setLimit(30); }}/>

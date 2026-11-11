@@ -180,14 +180,18 @@ try {
   await diary.waitFor();
   await diary.locator("textarea").fill("Моя заметка");
   await page.getByRole("tab",{name:"Об истории"}).click();
-  await page.getByText("Описание истории",{exact:true}).waitFor();
+  await page.locator(".wd-hero-summary").getByText("Описание истории",{exact:true}).waitFor();
+  assert.equal(await page.getByRole("tabpanel",{name:"Об истории"}).getByText("Описание истории",{exact:true}).count(),0);
   await page.getByRole("tab",{name:/Главы/}).click();
   const chapters=page.getByRole("tabpanel",{name:/Главы/});
   const planned=chapters.locator(".wd-row--scheduled");
   await planned.getByText("3 · Просыпание").waitFor();
   await planned.getByText("Ожидается: ноябрь 2026 г.").waitFor();
   assert.equal(await planned.locator("a, button").count(), 0);
-  assert.equal(await chapters.getByText("Прочитано: 0 из 2").count(), 1);
+  const heroProgress=page.locator(".wd-hero-progress");
+  await heroProgress.getByText("Прочитано: 0 из 2").waitFor();
+  assert.equal(await chapters.locator(".wd-progress").count(),0, "WD-HERO-01: no duplicate overall progress in chapters");
+  assert.equal(await page.getByRole("tabpanel",{name:"Мой дневник"}).locator(".wd-progress").count(),0, "WD-HERO-01: registered chapters have only hero progress");
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).check();
   assert.equal(await chapters.locator(".wd-row--scheduled").count(), 0);
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).uncheck();
@@ -206,7 +210,10 @@ try {
   // Rejection must roll the check back and leave an explicit retry.
   await page.route("**/api/library/reading-state",r=>r.fulfill({status:503,body:"retry"}),{times:1});
   await mark.click();
+  await heroProgress.getByText("Прочитано: 0 из 2").waitFor();
   await chapters.getByRole("button",{name:"Повторить"}).click();
+  await heroProgress.getByText("Прочитано: 1 из 2").waitFor();
+  assert.equal(await heroProgress.getByRole("progressbar",{name:"Прогресс чтения"}).getAttribute("value"),"1");
   const sheet=page.getByRole("dialog",{name:"Охота на быка"});
   await sheet.waitFor();
   // Layout coordinates ignore the hover scale transform applied to rating stars.
@@ -279,7 +286,8 @@ try {
   await page.getByRole("tab",{name:/Главы/}).click();
   await chapters.getByRole("button",{name:"Отметить прочитанной: УРГА"}).click();
   await chapters.getByRole("button",{name:"Снять отметку: УРГА",disabled:false}).waitFor();
-  await page.getByText("Все вышедшие основные главы прочитаны.").waitFor();
+  await heroProgress.getByText("Прочитано: 2 из 2").waitFor();
+  await heroProgress.getByText("Все вышедшие основные главы прочитаны.").waitFor();
   assert.equal(await page.locator("dialog[open]").count(),0);
   await chapters.getByRole("button",{name:"Оценить: УРГА"}).click();
   await page.getByRole("dialog",{name:"УРГА"}).waitFor();
