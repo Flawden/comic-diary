@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
 if (process.env.CI !== "true" || new URL(process.env.DATABASE_URL).pathname !== "/comic_diary_release")
@@ -194,26 +194,180 @@ try {
   await heroProgress.getByText("Прочитано: 0 из 2").waitFor();
   assert.equal(await chapters.locator(".wd-progress").count(),0, "WD-HERO-01: no duplicate overall progress in chapters");
   assert.equal(await page.getByRole("tabpanel",{name:"Мой дневник"}).locator(".wd-progress").count(),0, "WD-HERO-01: registered chapters have only hero progress");
-  // WD-HERO-02: only synthetic CI test data, never a real member account.
-  // Capture the actual rendered work page at three widths before mutating reads.
-  // The GitHub workflow uploads these PNG files for a human visual review.
+  // WD-HERO-02B: real-browser diagnostics and difficult reader states.
+  // All fixtures live in comic_diary_release and are removed/restored below.
+  // Capture only bounded, sanitized diagnostics; never cookies or session tokens.
   if (process.env.WD_VISUAL_OUTPUT) {
     const screenshots = process.env.WD_VISUAL_OUTPUT;
     await mkdir(screenshots, {recursive:true});
-    await page.evaluate(() => document.fonts.ready);
-    await page.screenshot({path:join(screenshots,"01-mobile-360.png"),fullPage:true,animations:"disabled"});
-    const desktopContext = await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1});
+    const stripSecrets = value => String(value ?? "")
+      .replaceAll(token, "[session-redacted]")
+      .replaceAll(prefix, "[fixture-redacted]")
+      .replace(/postgres(?:ql)?:\/\/\S+/gi, "[database-url-redacted]")
+      .slice(0, 1400);
+    const redactObject = object => JSON.parse(JSON.stringify(object, (_key,value) =>
+      typeof value === "string" ? stripSecrets(value) : value));
+    const diagnostics = {stage:"WD-HERO-02B",viewportChecks:{},browserEvents:{},devOverlay:{},violations:[]};
+    const recordEvents = (testPage, label) => {
+      const events={pageErrors:[],consoleErrors:[],failedRequests:[],httpErrors:[]};
+      const push=(list, item)=>{if(list.length<15) list.push(stripSecrets(item));};
+      testPage.on("pageerror", error => push(events.pageErrors,error?.message));
+      testPage.on("console", msg=>{if(msg.type()==="error")push(events.consoleErrors,msg.text());});
+      testPage.on("requestfailed", req => {
+        if(req.url().startsWith(origin))push(events.failedRequests,`${new URL(req.url()).pathname}: ${req.failure()?.errorText}`);
+      });
+      testPage.on("response", response => {
+        if(response.status()>=400 && response.url().startsWith(origin))
+          push(events.httpErrors,`${response.status()} ${new URL(response.url()).pathname}`);
+      });
+      diagnostics.browserEvents[label]=events;
+    };
+    const inspectOverlay = async testPage => testPage.evaluate(() => {
+      const host=document.querySelector("nextjs-portal");
+      const root=host?.shadowRoot;
+      if(!host) return {present:false};
+      if(!root) return {present:true,shadowAccessible:false};
+      const nodes=Array.from(root.querySelectorAll('[role="dialog"], [data-nextjs-dialog], [aria-live], button'));
+      return {present:true,shadowAccessible:true,
+        visibleNodes:nodes.filter(el=>el.getBoundingClientRect().width>0)
+          .slice(0,16).map(el=>({role:el.getAttribute('role'),label:el.getAttribute('aria-label'),
+            text:(el.innerText||el.textContent||'').trim().slice(0,600)}))};
+    });
+    const layout = async testPage => testPage.evaluate(() => ({
+      width:window.innerWidth,
+      scrollWidth:document.documentElement.scrollWidth,
+      viewportHeight:window.innerHeight,
+      heroHeight:Math.round(document.querySelector('.wd-hero')?.getBoundingClientRect().height||0),
+    }));
+    let desktopContext, mobileContext;
     try {
+      // First reproduce the original 0/2 case with event listeners attached
+      // BEFORE navigation, so hydration warnings/errors are not missed.
+      recordEvents(page,"original-mobile");
+      await page.evaluate(() => document.fonts.ready);
+      await page.screenshot({path:join(screenshots,"01-mobile-360.png"),fullPage:true,animations:"disabled"});
+      desktopContext=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1});
       await desktopContext.addCookies([{name:"comic_diary_session",value:token,url:origin}]);
-      const desktopPage = await desktopContext.newPage();
+      const desktopPage=await desktopContext.newPage();
+      recordEvents(desktopPage,"desktop-1440");
       await desktopPage.goto(url+"#chapters");
       await desktopPage.locator(".wd-hero-progress").getByText("Прочитано: 0 из 2").waitFor();
       await desktopPage.evaluate(() => document.fonts.ready);
       await desktopPage.screenshot({path:join(screenshots,"02-desktop-1440.png"),fullPage:true,animations:"disabled"});
+      diagnostics.devOverlay.beforeClick=redactObject(await inspectOverlay(desktopPage));
+      const issueTrigger=desktopPage.locator("nextjs-portal").getByText(/\b\d+ Issues?\b/i).first();
+      if (await issueTrigger.count()) {
+        try {
+          await issueTrigger.click({timeout:2500});
+          diagnostics.devOverlay.clickedIssue=true;
+          diagnostics.devOverlay.afterClick=redactObject(await inspectOverlay(desktopPage));
+          await desktopPage.screenshot({path:join(screenshots,"04-next-dev-issue.png"),animations:"disabled"});
+        } catch (error) {
+          diagnostics.devOverlay.clickError=stripSecrets(error.message);
+        }
+      }
       await desktopPage.setViewportSize({width:768,height:900});
+      // The Next.js issue overlay may have opened. Close it by navigating to
+      // the same isolated test page rather than hiding or muting its indicator.
+      await desktopPage.reload();
+      await desktopPage.locator(".wd-hero-progress").getByText("Прочитано: 0 из 2").waitFor();
+      await desktopPage.evaluate(() => document.fonts.ready);
       await desktopPage.screenshot({path:join(screenshots,"03-tablet-768.png"),fullPage:true,animations:"disabled"});
-    } finally { await desktopContext.close(); }
-    console.log("WD_HERO_02_VISUAL_SCREENSHOTS=3");
+      diagnostics.viewportChecks.tablet=await layout(desktopPage);
+      if(diagnostics.viewportChecks.tablet.scrollWidth > 769)
+        diagnostics.violations.push("tablet horizontal overflow");
+
+      mobileContext=await browser.newContext({viewport:{width:360,height:800},deviceScaleFactor:1});
+      await mobileContext.addCookies([{name:"comic_diary_session",value:token,url:origin}]);
+      const mobilePage=await mobileContext.newPage();
+      recordEvents(mobilePage,"mobile-fresh");
+      await mobilePage.goto(url+"#chapters");
+      await mobilePage.locator(".wd-hero-progress").getByText("Прочитано: 0 из 2").waitFor();
+      // Fixed navigation must not occlude the bottom chapter after a genuine
+      // scroll inside a 360x800 viewport (fullPage screenshots cannot prove it).
+      await mobilePage.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));
+      await mobilePage.waitForTimeout(100);
+      diagnostics.viewportChecks.mobileBottom=await mobilePage.evaluate(() => {
+        const nav=document.querySelector('.tea-navigation');
+        const row=Array.from(document.querySelectorAll('.wd-chapter-content .wd-row')).at(-1);
+        const nr=nav?.getBoundingClientRect(), rr=row?.getBoundingClientRect();
+        return {navFound:!!nr,lastRowFound:!!rr,
+          navTop:nr?Math.round(nr.top):null,lastRowBottom:rr?Math.round(rr.bottom):null,
+          scrollY:Math.round(window.scrollY),scrollWidth:document.documentElement.scrollWidth,
+          viewport:window.innerWidth};
+      });
+      const mb=diagnostics.viewportChecks.mobileBottom;
+      if(!mb.navFound || !mb.lastRowFound || mb.lastRowBottom>mb.navTop-4 || mb.scrollWidth>mb.viewport+1)
+        diagnostics.violations.push("mobile bottom navigation overlaps final chapter or horizontal overflow");
+
+      // Isolated SQL fixture: long multi-paragraph description, genuine image
+      // element with a local synthetic SVG cover, not an external URL.
+      const longDescription=[
+        "Туман поднимался над долиной. Герои искали тропу через густой лес, и каждый новый поворот раскрывал ещё одну часть древней истории. За старым мостом их ждало забытое поселение, о котором не говорили даже самые старые книги.",
+        "Второй абзац описывает путешествие гораздо подробнее. Важны отношения персонажей, маленькие решения и последствия каждого шага. Это проверка переносов строк, размера карточки и поведения длинного текста рядом с обложкой.",
+        "Третий абзац остаётся доступным после раскрытия. Проверяем длинное_слово_без_пробелов_для_безопасного_переноса_строк_в_узком_интерфейсе_комикса_и_проверки_переполнения.",
+      ].join("\n\n");
+      await pool.query("UPDATE comics SET description=$1,cover_url=$2 WHERE id=$3",
+        [longDescription,"/art/wd-hero-ci-cover.svg",comic]);
+      try {
+        await mobilePage.reload();
+        await mobilePage.locator('.wd-hero-summary .story-excerpt > summary').waitFor();
+        await mobilePage.locator('.wd-cover img').waitFor();
+        await mobilePage.waitForFunction(() => {
+          const img=document.querySelector('.wd-cover img');
+          return !!img && img.complete && img.naturalWidth>0;
+        },null,{timeout:12000});
+        await mobilePage.screenshot({path:join(screenshots,"05-mobile-long-cover.png"),fullPage:true,animations:"disabled"});
+        const summary=mobilePage.locator('.wd-hero-summary .story-excerpt > summary');
+        await summary.focus();
+        await mobilePage.keyboard.press('Enter');
+        assert.equal(await mobilePage.locator('.wd-hero-summary details').evaluate(el=>el.open),true,
+          "expanded description must work from keyboard");
+        await mobilePage.screenshot({path:join(screenshots,"06-mobile-expanded.png"),fullPage:true,animations:"disabled"});
+        diagnostics.viewportChecks.mobileExpanded=await layout(mobilePage);
+        if(diagnostics.viewportChecks.mobileExpanded.scrollWidth>361)
+          diagnostics.violations.push('expanded long description causes mobile horizontal overflow');
+        await mobilePage.setViewportSize({width:320,height:740});
+        await mobilePage.screenshot({path:join(screenshots,"09-mobile-expanded-320.png"),fullPage:true,animations:"disabled"});
+        diagnostics.viewportChecks.mobile320=await layout(mobilePage);
+        if(diagnostics.viewportChecks.mobile320.scrollWidth>321)
+          diagnostics.violations.push('320px long description causes horizontal overflow');
+        await desktopPage.setViewportSize({width:1440,height:900});
+        await desktopPage.reload();
+        await desktopPage.locator('.wd-hero-summary .story-excerpt > summary').waitFor();
+        await desktopPage.screenshot({path:join(screenshots,"07-desktop-long-cover.png"),fullPage:true,animations:"disabled"});
+        diagnostics.viewportChecks.desktopLong=await layout(desktopPage);
+        if(diagnostics.viewportChecks.desktopLong.scrollWidth>1441)
+          diagnostics.violations.push('long description causes desktop horizontal overflow');
+        // Data-state edges: both partial and complete reading must be truthful.
+        for(const [n,code] of [[1,1],[2,2]]) {
+          await pool.query(`INSERT INTO user_chapter_reads(user_id,chapter_id)
+            SELECT $1,id FROM chapters WHERE comic_id=$2 AND sort_order=$3 AND status='RELEASED'
+            ON CONFLICT DO NOTHING`,[user,comic,code]);
+          await desktopPage.reload();
+          await desktopPage.locator('.wd-hero-progress').getByText(`Прочитано: ${n} из 2`).waitFor();
+          await desktopPage.screenshot({path:join(screenshots,`08-desktop-read-${n}-of-2.png`),animations:"disabled"});
+        }
+      } finally {
+        await pool.query("DELETE FROM user_chapter_reads WHERE user_id=$1 AND chapter_id IN (SELECT id FROM chapters WHERE comic_id=$2)",[user,comic]);
+        await pool.query("UPDATE comics SET description='Описание истории',cover_url=NULL WHERE id=$1",[comic]);
+      }
+      // Record the dev issue without treating a mere dev indicator as proof
+      // of a production defect. Genuine JavaScript exceptions fail CI.
+      for (const [label,events] of Object.entries(diagnostics.browserEvents)) {
+        if(events.pageErrors.length) diagnostics.violations.push(`${label}: ${events.pageErrors.length} page error(s)`);
+      }
+    } finally {
+      if(mobileContext) await mobileContext.close();
+      if(desktopContext) await desktopContext.close();
+      await writeFile(join(screenshots,"wd-hero-02b-diagnostics.json"),
+        JSON.stringify(diagnostics,null,2)+"\n","utf8");
+      console.log("WD_HERO_02B_DIAGNOSTICS="+JSON.stringify({
+        violations:diagnostics.violations,devOverlay:diagnostics.devOverlay.beforeClick,
+        screenshotDirectory:screenshots}));
+    }
+    assert.deepEqual(diagnostics.violations,[],"WD-HERO-02B: viewport or browser failures; see uploaded diagnostic JSON");
+    console.log("WD_HERO_02B_VISUAL_QA=PASS");
   }
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).check();
   assert.equal(await chapters.locator(".wd-row--scheduled").count(), 0);

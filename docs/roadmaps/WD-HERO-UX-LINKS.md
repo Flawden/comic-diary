@@ -90,3 +90,13 @@ WD-LINK-01 was applied locally on 2026-11-11 to `feature/wd-link-01-optional-wor
 - These are review inputs, NOT a substitute for user visual inspection, accessibility or functional testing.
 - Browser tests must remain strict. No DB migration, PR merge or production deployment from this stage.
 - Product release freeze: `docs/roadmaps/COMIC-DIARY-PRODUCT.md` was pushed separately to `docs/product-roadmap-release-gates` at `7382a06`; do not merge that docs branch into `master` casually because master triggers release workflows.
+
+
+## WD-HERO-02B · Diagnostic and difficult-content gate (2026-11-11)
+
+- Starting point: `feature/wd-hero-02-visual-capture` commit `74379676f35f3263d35c367d82fe8438f1b1e8d1` (successful CI visual artifact supplied by user).
+- The developer-mode screenshots show a Next.js `1 Issue` indicator. Its cause is *unconfirmed*: CI now captures errors and a limited Next.js overlay summary, including an issue-detail screenshot when accessible, without hiding or disabling the indicator.
+- Reproducible CI checks: 360px scroll-to-bottom mobile navigation clearance, 768px and 1440px horizontal overflow, keyboard-expanded long description, a synthetic locally served cover, 0/2 + 1/2 + 2/2 reading progress. These use only the disposable CI PostgreSQL test comic.
+- The workflow saves screenshots plus bounded sanitized browser diagnostics as `wd-hero-02b-diagnostics-*`. Redacted browser observations should be treated as evidence, not automatically equated to production errors.
+- Any detected JavaScript page errors or mobile occlusion cause a CI failure **after** saving diagnostics. No CSS suppression, production DB changes, auth changes, or deploy are introduced.
+- Review uploaded artifacts before declaring WD-HERO-02 closed. PR merge and WD-HERO-03 release remain separate explicit gates.

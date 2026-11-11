@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400" role="img" aria-labelledby="title">
+<title id="title">Test cover: Moonlit Valley</title>
+<defs><linearGradient id="night" x2="0" y2="1"><stop stop-color="#172f3b"/><stop offset="1" stop-color="#163d31"/></linearGradient></defs>
+<rect width="300" height="400" fill="url(#night)"/><circle cx="233" cy="78" r="39" fill="#e6d49f"/>
+<path d="M0 240 75 105 146 225 214 145 300 245V400H0Z" fill="#355b50"/>
+<path d="M0 285 89 186 170 275 260 198 300 239V400H0Z" fill="#203c34"/>
+<path d="M0 335 110 288 185 333 300 288V400H0Z" fill="#142d27"/>
+<text x="150" y="54" font-family="Georgia,serif" font-size="27" fill="#f4e5c4" text-anchor="middle">MOONLIT</text>
+<text x="150" y="88" font-family="Georgia,serif" font-size="24" fill="#f4e5c4" text-anchor="middle">VALLEY</text>
+<text x="150" y="375" font-family="sans-serif" font-size="12" letter-spacing="4" fill="#eadfbe" text-anchor="middle">QA FIXTURE</text>
+</svg>
