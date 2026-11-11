@@ -27,12 +27,13 @@ const statusLabel: Record<Comic["publicationStatus"], string> = {
  * mounted in `children`: switching titles, search or pagination never loses
  * the editor's unsaved input.
  */
-export function AdminComicList({ comics, categories, locked, children, onSelectionChange }: {
+export function AdminComicList({ comics, categories, locked, children, onSelectionChange, onCreate }: {
   comics: Comic[];
   categories: { slug: string; name: string }[];
   locked: boolean;
   children: (selectedId: number | null) => ReactNode;
   onSelectionChange?: (currentId: number | null) => boolean | Promise<boolean>;
+  onCreate?: () => void;
 }) {
   const id = useId();
   const [selectedId, setSelectedId] = useState<number | null>(comics[0]?.id ?? null);
@@ -69,7 +70,7 @@ export function AdminComicList({ comics, categories, locked, children, onSelecti
             <h2>Произведения</h2>
             <p>Каталог · {comics.length}</p>
           </div>
-          <Button disabled={locked} onClick={() => choose(null)} className="admin-studio-add-button">
+          <Button disabled={locked} onClick={() => onCreate ? onCreate() : void choose(null)} className="admin-studio-add-button">
             + Добавить
           </Button>
         </div>
