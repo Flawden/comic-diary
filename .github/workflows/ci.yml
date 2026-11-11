@@ -43,6 +43,9 @@ jobs:
       - name: Canonical Origin and Host regression tests
         run: node --import tsx --test src/modules/auth/request-origin.test.ts
 
+      - name: Optional work source URL rules
+        run: node --import tsx --test src/catalog/validate-catalog.test.ts
+
       - name: Reading destination rules
         run: node --import tsx --test src/modules/comics/work-metadata.test.ts src/modules/library/reading-target.test.ts src/modules/library/list-navigation.test.ts src/modules/library/chapter-rating-summary.test.ts src/modules/library/chapter-reading-model.test.ts src/modules/catalog/chapter-release-dates.test.ts src/modules/catalog/chapter-volumes.test.ts src/modules/library/queries/reading-updates-model.test.ts
 
@@ -149,6 +152,19 @@ jobs:
         run: |
           node scripts/migrate-production.mjs
           node scripts/migrate-production.mjs
+
+      - name: Verify optional comic source URL migration
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import pg from 'pg';
+          const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+          try {
+            const { rows } = await pool.query("SELECT is_nullable FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'comics' AND column_name = 'source_url'");
+            assert.deepEqual(rows, [{ is_nullable: 'YES' }]);
+            console.log('OPTIONAL_COMIC_SOURCE_URL_SCHEMA=PASS');
+          } finally { await pool.end(); }
+          JS
 
       - name: Seed disposable database twice
         run: |

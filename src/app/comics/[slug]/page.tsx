@@ -262,7 +262,7 @@ export default async function ComicPage({
                       type="url"
                       name="sourceUrl"
                       maxLength={2048}
-                      defaultValue={comic.sourceUrl}
+                      defaultValue={comic.sourceUrl ?? ""}
                       className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
                     />
                   </label>

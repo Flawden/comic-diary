@@ -54,3 +54,14 @@ test("source labels recognize VK host boundaries and album URLs", () => {
   assert.equal(readingSource("https://example.com/chapter/1")?.label, "Открыть источник");
   assert.equal(readingSource("/relative/path"), null);
 });
+
+test("an unlinked middle chapter is never silently skipped", () => {
+  const chapters = [chapter(1), chapter(2), chapter(3, { sourceUrl: null }), chapter(4)];
+  const noSource = getReadingTarget(chapters, [1, 2], null);
+  assert.equal(noSource.chapter?.id, 3);
+  assert.equal(noSource.source, null);
+  assert.equal(noSource.direct, false);
+  const fallback = getReadingTarget(chapters, [1, 2], album);
+  assert.equal(fallback.chapter?.id, 3);
+  assert.equal(fallback.source?.href, album);
+});
