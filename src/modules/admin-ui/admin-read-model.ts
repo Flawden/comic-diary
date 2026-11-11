@@ -314,6 +314,7 @@ export async function listAdminUsers() {
 export async function getAdminDashboardCounts() {
   const [
     comicRows,
+    chapterRows,
     categoryRows,
     userRows,
   ] =
@@ -331,6 +332,16 @@ export async function getAdminDashboardCounts() {
             comics.visibility,
             "SHARED",
           ),
+        ),
+
+      // Counts all chapter records, including drafts and archived chapters.
+      db
+        .select({
+          id:
+            chapters.id,
+        })
+        .from(
+          chapters,
         ),
 
       db
@@ -355,6 +366,8 @@ export async function getAdminDashboardCounts() {
   return {
     comics:
       comicRows.length,
+    chapters:
+      chapterRows.length,
     categories:
       categoryRows.length,
     users:
