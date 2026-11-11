@@ -17,6 +17,12 @@ export function groupChaptersByVolume<T extends { volumeNumber: number | null }>
     .map(([number, items]) => ({ number, chapters: items }));
 }
 
+export function volumeHeading(number: number | null, title?: string | null): string {
+  if (number === null) return "Главы без тома";
+  const name = title?.trim();
+  return name ? `Том ${number} — ${name}` : `Том ${number}`;
+}
+
 export function volumeProgress(
   chapters: readonly { id: number; status: string }[],
   readIds: ReadonlySet<number>,

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { groupChaptersByVolume } from "@/modules/catalog/chapter-volumes";
+import { groupChaptersByVolume, volumeHeading } from "@/modules/catalog/chapter-volumes";
 import { CoverImage } from "@/shared/components/media";
 import { ChapterRating } from "./ChapterRating";
 import { PreviousChaptersPrompt } from "./PreviousChaptersPrompt";
@@ -157,7 +157,7 @@ function UpdatesVolume({ group, initiallyOpen, renderChapter }: {
   const [expanded, setExpanded] = useState(initiallyOpen);
   return <details className="updates-volume" open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)}>
     <summary>
-      <span>{group.number === null ? "Главы без тома" : `Том ${group.number}`}</span>
+      <span>{volumeHeading(group.number, group.chapters[0]?.volumeTitle)}</span>
       <small>Загружено: {chapterCountLabel(group.chapters.length)}</small>
     </summary>
     <ul className="divide-y divide-[var(--border)]">{group.chapters.map(renderChapter)}</ul>

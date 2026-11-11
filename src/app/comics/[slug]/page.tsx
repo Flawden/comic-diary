@@ -20,6 +20,7 @@ import { CoverImage } from "@/shared/components/media";
 
 import { getComicBySlug } from "@/modules/comics/queries/get-comic-by-slug";
 import { getComicChapters } from "@/modules/comics/queries/get-comic-chapters";
+import { getComicVolumeTitles } from "@/modules/comics/queries/get-comic-volume-titles";
 import { getCurrentUser } from "@/modules/auth/request-identity";
 import { getUserComicState } from "@/modules/library/queries/get-user-comic-state";
 
@@ -79,6 +80,8 @@ export default async function ComicPage({
         includeScheduled: true,
       },
     );
+
+  const volumeTitles = await getComicVolumeTitles(comic.id);
 
   const readingState =
     currentUser
@@ -160,6 +163,7 @@ export default async function ComicPage({
             ratings={readingState?.chapterReading.ratings ?? {}}
             readIds={readingState?.chapterReading.readIds ?? []}
             canMark={readingState?.inLibrary === true}
+            volumeTitles={volumeTitles}
           />
         </div>
       } about={<div className="wd-about wd-about-editorial">

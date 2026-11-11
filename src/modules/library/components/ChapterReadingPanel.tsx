@@ -11,10 +11,10 @@ import { useOptimistic, useRef, useState, useTransition } from "react";
 import { Button } from "@/shared/components/ui";
 import type { ComicChapter } from "@/modules/comics/queries/get-comic-chapters";
 import { formatExpectedRelease } from "@/modules/catalog/chapter-release-dates";
-import { groupChaptersByVolume, volumeProgress } from "@/modules/catalog/chapter-volumes";
+import { groupChaptersByVolume, volumeHeading, volumeProgress } from "@/modules/catalog/chapter-volumes";
 
 type Chapter = Omit<ComicChapter, "releasedAt">;
-type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; readIds: number[]; canMark: boolean };
+type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; readIds: number[]; canMark: boolean; volumeTitles?: Record<number, string> };
 
 function safeSource(value: string | null) {
   if (!value) return null;
@@ -22,7 +22,7 @@ function safeSource(value: string | null) {
   catch { return null; }
 }
 
-export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, ratings, canMark }: Props) {
+export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, ratings, canMark, volumeTitles = {} }: Props) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("MAIN");
   const [limit, setLimit] = useState(30);
@@ -149,7 +149,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, readIds, rati
           const allInVolume = allVolumeGroups.find(candidate => candidate.number === group.number)?.chapters ?? group.chapters;
           const progress = volumeProgress(allInVolume, read);
           const scheduled = allInVolume.filter(c => c.status === "SCHEDULED").length;
-          const title = group.number === null ? "Главы без тома" : `Том ${group.number}`;
+          const title = volumeHeading(group.number, group.number === null ? null : volumeTitles[group.number]);
           return <details key={group.number ?? "ungrouped"} className="wd-volume">
             <summary className="wd-volume-summary">
               <span className="wd-volume-heading">{title} <small>{allInVolume.length} глав</small></span>
