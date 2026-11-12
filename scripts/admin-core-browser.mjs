@@ -178,16 +178,46 @@ async function main() {
 
   stage = 'chapter creation through UI';
   await editor.locator('.admin-studio-tabs').getByRole('button', { name: 'Главы' }).click();
-  await editor.locator('input[name="chapterDisplayCode"]').fill('1');
-  await editor.locator('input[name="chapterTitle"]').fill('Глава тестового выпуска');
-  await editor.locator('select[name="chapterStatus"]').selectOption('RELEASED');
-  await editor.getByRole('button', { name: /Создать главу/ }).click();
+  await editor.getByRole('button', { name: '+ Добавить главы', exact: true }).click();
+  const chapterDialog = editor.getByRole('dialog', { name: 'Добавить главы' });
+  await chapterDialog.getByLabel('Название главы').fill('Глава тестового выпуска');
+  await chapterDialog.getByLabel('Ссылка на главу').fill('https://example.com/chapters/1');
+  await chapterDialog.locator('details').first().locator('summary').click();
+  await chapterDialog.getByLabel('Код главы').fill('1');
+  await chapterDialog.getByRole('button', { name: '+ Ещё глава' }).click();
+  await chapterDialog.getByLabel('Название главы').nth(1).fill('Вторая глава тестового выпуска');
+  await chapterDialog.getByLabel('Ссылка на главу').nth(1).fill('https://example.com/chapters/2');
+  await chapterDialog.locator('section').nth(1).locator('summary').click();
+  await chapterDialog.getByLabel('Код главы').nth(1).fill('2');
+  await chapterDialog.getByLabel('Статус добавляемых глав').selectOption('RELEASED');
+  await chapterDialog.getByRole('button', { name: 'Проверить главы' }).click();
+  await chapterDialog.getByRole('button', { name: 'Сохранить 2 глав' }).click();
+  await chapterDialog.waitFor({ state: 'hidden' });
   await eventually(
     `SELECT status, display_code AS code, title FROM chapters WHERE comic_id = $1 AND display_code = '1'`,
     [fixture.comicId], row => row?.status === 'RELEASED',
     'new released chapter did not persist',
   );
+  const chapterRows = await pool.query(
+    'SELECT display_code AS code, title, source_url AS url, sort_order AS position FROM chapters WHERE comic_id = $1 ORDER BY sort_order, id',
+    [fixture.comicId],
+  );
+  assert.deepEqual(chapterRows.rows.map(row => row.code), ['1', '2'], 'batch chapters were not stored in the entered order');
+  assert.equal(chapterRows.rows[1].url, 'https://example.com/chapters/2');
   console.log('ADMIN_CORE_CHAPTER_CREATE=PASS');
+  stage = 'edit chapter in modal';
+  await editor.getByRole('button', { name: 'Редактировать' }).first().click();
+  const editDialog = editor.getByRole('dialog', { name: /Редактирование главы:/ });
+  await editDialog.waitFor({ state: 'visible' });
+  await editDialog.getByLabel('Название главы').fill('Глава исправлена через модальное окно');
+  await editDialog.getByRole('button', { name: 'Сохранить главу' }).click();
+  await editDialog.waitFor({ state: 'hidden' });
+  await eventually(
+    `SELECT title FROM chapters WHERE comic_id = $1 AND display_code = '1'`,
+    [fixture.comicId], row => row?.title === 'Глава исправлена через модальное окно',
+    'editing chapter from modal did not persist',
+  );
+  console.log('ADMIN_CORE_CHAPTER_EDIT_MODAL=PASS');
 
   stage = 'publish from admin UI';
   await editor.locator('.admin-studio-tabs').getByRole('button', { name: 'Публикация' }).click();
@@ -219,7 +249,7 @@ async function main() {
 
   stage = 'complete';
   await writeFile(join(output, 'admin-core-result.json'), JSON.stringify({
-    pass: true, stages: ['draft', 'cover', 'edit/reload', 'chapter', 'publication', 'reader authorization'],
+    pass: true, stages: ['draft', 'cover', 'edit/reload', 'chapter', 'chapter edit', 'publication', 'reader authorization'],
   }, null, 2));
   console.log('ADMIN_CORE_01=PASS');
 }

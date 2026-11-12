@@ -18,6 +18,7 @@ import { CoverImage } from "@/shared/components/media/CoverImage";
 
 import {
   type FormEvent,
+  type ReactNode,
   useId,
   useEffect,
   useRef,
@@ -729,6 +730,27 @@ function ExpectedMonthYearPicker({
       </p>
     </div>
   );
+}
+
+/** The chapter editor lives in the browser top layer instead of stretching a list row. */
+function ChapterEditDialog({ children, titleId, busy, onClose }: {
+  children: ReactNode;
+  titleId: string;
+  busy: boolean;
+  onClose: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    dialog.showModal();
+    return () => { if (dialog.open) dialog.close(); };
+  }, []);
+  return <dialog ref={dialogRef} aria-labelledby={titleId}
+    onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}
+    className="w-[min(760px,calc(100vw-24px))] max-h-[90dvh] overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--text-primary)] shadow-2xl backdrop:bg-black/70 sm:p-6">
+    {children}
+  </dialog>;
 }
 
 export function AdminComicManager({
@@ -2137,9 +2159,12 @@ export function AdminComicManager({
                                 {editingChapterId ===
                                 chapter.id &&
                                 chapterEditValues ? (
-                                  <section
-                                    aria-labelledby={`chapter-editor-title-${chapter.id}`}
-                                    className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--background)] p-4"
+                                  <ChapterEditDialog
+                                    titleId={`chapter-editor-title-${chapter.id}`}
+                                    busy={busyKey !== null}
+                                    onClose={() => { setEditingChapterId(null); setChapterEditValues(null); setChapterEditFeedback(null); }}
+                                  >
+                                  <section className="space-y-4"
                                     onKeyDown={(event) => {
                                       if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
                                         // Prevent Enter in the chapter editor from submitting the outer comic form.
@@ -2167,6 +2192,34 @@ export function AdminComicManager({
                                     </div>
 
                                     <div className="grid gap-4 md:grid-cols-2">
+
+
+                                      <label className="block text-sm font-medium">
+                                        <span className="block">Ссылка на источник (необязательно)</span>
+                                        <input
+                                          type="url"
+                                          value={chapterEditValues.sourceUrl}
+                                          onChange={(event) => setChapterEditValues({ ...chapterEditValues, sourceUrl: event.target.value })}
+                                          placeholder="https://..."
+                                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                                        />
+                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Адрес, куда читатель перейдёт для чтения.</span>
+                                      </label>                                      <label className="block text-sm font-medium">
+                                        <span className="block">Название главы</span>
+                                        <input
+                                          value={chapterEditValues.title}
+                                          onChange={(event) => setChapterEditValues({ ...chapterEditValues, title: event.target.value })}
+                                          placeholder="Например, УРГА"
+                                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                                        />
+                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Можно оставить пустым, если указан код главы.</span>
+                                      </label>
+
+
+                                    </div>
+                                    <details className="rounded-xl border border-[var(--border)] p-3">
+                                      <summary className="min-h-11 cursor-pointer text-sm font-semibold">Дополнительные настройки</summary>
+                                      <div className="mt-3 grid gap-4 md:grid-cols-2">
                                       <label className="block text-sm font-medium">
                                         <span className="block">Тип главы</span>
                                         <select
@@ -2189,29 +2242,6 @@ export function AdminComicManager({
                                           className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
                                         />
                                         <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Номер или обозначение из первоисточника.</span>
-                                      </label>
-
-                                      <label className="block text-sm font-medium">
-                                        <span className="block">Название главы</span>
-                                        <input
-                                          value={chapterEditValues.title}
-                                          onChange={(event) => setChapterEditValues({ ...chapterEditValues, title: event.target.value })}
-                                          placeholder="Например, УРГА"
-                                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                                        />
-                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Можно оставить пустым, если указан код главы.</span>
-                                      </label>
-
-                                      <label className="block text-sm font-medium">
-                                        <span className="block">Ссылка на источник (необязательно)</span>
-                                        <input
-                                          type="url"
-                                          value={chapterEditValues.sourceUrl}
-                                          onChange={(event) => setChapterEditValues({ ...chapterEditValues, sourceUrl: event.target.value })}
-                                          placeholder="https://..."
-                                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                                        />
-                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Адрес, куда читатель перейдёт для чтения.</span>
                                       </label>
 
                                       <label className="block text-sm font-medium md:col-span-2">
@@ -2273,7 +2303,8 @@ export function AdminComicManager({
                                         </div>
                                       )}
                                       <p className="text-xs text-[var(--text-secondary)] md:col-span-2">Добавлена в Чайную: {formatReleasedAt(chapter.createdAt)} · дата записи неизменяема</p>
-                                    </div>
+                                      </div>
+                                    </details>
 
                                     {chapterEditFeedback?.chapterId === chapter.id && chapterEditFeedback.kind === "error" ? (
                                       <p role="alert" className="rounded-lg border border-[var(--danger)] p-3 text-sm text-[var(--danger)]">{chapterEditFeedback.message}</p>
@@ -2302,6 +2333,7 @@ export function AdminComicManager({
                                       </button>
                                     </div>
                                   </section>
+                                  </ChapterEditDialog>
                                 ) : (
                                   <>
                                     <div className="font-medium">
@@ -2314,7 +2346,9 @@ export function AdminComicManager({
                                     <div className="mt-1 text-sm text-[var(--muted)]">
                                       {chapter.volumeNumber !== null ? `Том ${chapter.volumeNumber} · ` : ""}{chapter.status === "RELEASED" ? `Опубликована${chapter.releasedAt ? ` · Вышла ${formatReleasedAt(chapter.releasedAt)}` : " · Дата выхода не указана"}`
                                         : chapter.status === "SCHEDULED" ? `Запланирована${chapter.expectedRelease ? ` · Ожидается ${formatExpectedRelease(chapter.expectedRelease)}` : ""}`
-                                        : "В архиве"} · Порядок: {chapter.sortOrder}
+                                        : "В архиве"}{chapter.status !== "ARCHIVED"
+                                          ? ` · Позиция в списке: ${comic.chapters.filter(c => c.status !== "ARCHIVED").sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id).findIndex(c => c.id === chapter.id) + 1}`
+                                          : ""}
                                     </div>
                                     {chapterEditFeedback?.chapterId === chapter.id && chapterEditFeedback.kind === "success" ? (
                                       <p role="status" className="mt-2 text-sm text-[var(--primary)]">{chapterEditFeedback.message}</p>
@@ -2443,10 +2477,10 @@ export function AdminComicManager({
                       <ChapterBatchEditor comicId={comic.id} disabled={busyKey !== null}
                         onBusyChange={busy => setBusyKey(busy ? `chapter-batch:${comic.id}` : null)} />
 
-                      <div className="mt-5 border-t border-black/10 pt-4">
-                        <h5 className="text-sm font-semibold">
-                          Добавить главу или выпустить новую редакцию
-                        </h5>
+                      <details className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+                        <summary className="min-h-11 cursor-pointer text-sm font-semibold">Расширенное создание: том, дата, точный порядок или новая редакция</summary>
+                        <div className="mt-4">
+                          <h5 className="text-sm font-semibold">Добавить главу или выпустить новую редакцию</h5>
 
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
                           <label className="block">
@@ -2635,7 +2669,8 @@ export function AdminComicManager({
                           role={chapterFeedback.kind === "error" ? "alert" : "status"}
                           className={`mt-3 rounded-xl border p-3 text-sm ${chapterFeedback.kind === "error" ? "border-[var(--danger)] text-[var(--danger)]" : "border-[var(--border)] text-[var(--text-primary)]"}`}
                         >{chapterFeedback.message}</p> : null}
-                      </div>
+                        </div>
+                      </details>
                     </section>
 
                     <div hidden={studioTab === "chapters"} className="admin-studio-save-actions">
