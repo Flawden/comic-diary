@@ -1,0 +1,46 @@
+/* Public header profile icon: same footprint for readers and administrators. */
+.root {
+  position: relative;
+  margin-left: auto;
+  width: 44px;
+  flex: 0 0 44px;
+}
+
+.root > .trigger {
+  margin-left: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 100;
+  min-width: 216px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-raised, var(--surface));
+  color: var(--text-primary);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.22);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.item:hover { background: var(--surface); color: var(--primary); }
+.item:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }

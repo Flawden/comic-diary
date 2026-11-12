@@ -41,11 +41,11 @@ export function HeaderCatalogSearch() {
 
   return (
     <div className={styles.root} ref={rootRef}>
-      <button ref={triggerRef} type="button" className={`tea-account ${styles.trigger}`}
+      <button ref={triggerRef} type="button" className={`tea-nav-link ${styles.trigger}`}
         aria-label="Поиск по каталогу" title="Поиск по каталогу"
         aria-expanded={open} aria-controls="header-catalog-search"
         onClick={() => setOpen(value => !value)}>
-        <SearchIcon />
+        <SearchIcon /><span className="tea-nav-label">Поиск</span>
       </button>
       {open && (
         <form id="header-catalog-search" role="search" aria-label="Поиск произведений"
