@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getReadingTarget, readingSource } from "./reading-target";
+import { getChapterReadingSource, getReadingTarget, readingSource } from "./reading-target";
 
 const chapter = (id: number, overrides = {}) => ({ id, displayCode: `1.${id}а`, title: `Глава ${id}`, kind: "MAIN", status: "RELEASED", sortOrder: id, supersedesChapterId: null, sourceUrl: `https://vk.com/photo-1_${id}`, ...overrides });
 const album = "https://vk.com/album-1_2";
@@ -53,4 +53,46 @@ test("source labels recognize VK host boundaries and album URLs", () => {
   assert.equal(readingSource("https://vk.com.evil.example/album-12_34")?.label, "Открыть источник");
   assert.equal(readingSource("https://example.com/chapter/1")?.label, "Открыть источник");
   assert.equal(readingSource("/relative/path"), null);
+});
+
+test("an unlinked middle chapter is never silently skipped", () => {
+  const chapters = [chapter(1), chapter(2), chapter(3, { sourceUrl: null }), chapter(4)];
+  const noSource = getReadingTarget(chapters, [1, 2], null);
+  assert.equal(noSource.chapter?.id, 3);
+  assert.equal(noSource.source, null);
+  assert.equal(noSource.direct, false);
+  const fallback = getReadingTarget(chapters, [1, 2], album);
+  assert.equal(fallback.chapter?.id, 3);
+  assert.equal(fallback.source?.href, album);
+});
+
+
+test("WD-LINK-02: direct chapter URLs take precedence over a general work URL", () => {
+  const result = getChapterReadingSource("https://example.com/chapter/2", album, "RELEASED");
+  assert.equal(result.kind, "direct");
+  assert.equal(result.source?.href, "https://example.com/chapter/2");
+});
+
+test("WD-LINK-02: an unlinked released chapter uses an explicitly labeled general source", () => {
+  const result = getChapterReadingSource(null, album, "RELEASED");
+  assert.equal(result.kind, "general");
+  assert.equal(result.source?.label, "Открыть альбом в VK");
+  assert.equal(result.source?.href, album);
+});
+
+test("WD-LINK-02: missing or unsafe URLs never produce phantom links", () => {
+  for (const chapterUrl of [null, "", "javascript:alert(1)", "https://user:secret@example.com"]) {
+    const result = getChapterReadingSource(chapterUrl, null, "RELEASED");
+    assert.equal(result.kind, "missing");
+    assert.equal(result.source, null);
+  }
+  assert.equal(getChapterReadingSource(null, "data:text/html,bad", "RELEASED").kind, "missing");
+});
+
+test("WD-LINK-02: scheduled and archived chapters cannot be opened from the list", () => {
+  for (const status of ["SCHEDULED", "ARCHIVED", "DRAFT"]) {
+    const result = getChapterReadingSource("https://example.com/chapter/1", album, status);
+    assert.equal(result.kind, "unavailable");
+    assert.equal(result.source, null);
+  }
 });

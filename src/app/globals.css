@@ -4128,3 +4128,91 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   }
 }
 /* CD-PUBLIC-THEME-3I-END */
+
+/* WD-BORDER-FIX-01: banner art must not peek out under its translucent 1px frame. */
+.wd-work .wd-hero--banner {
+  background-clip: padding-box;
+}
+.wd-work .wd-hero--banner::before {
+  inset: -1px;
+}
+
+/* WD-HERO-01 · One reader-owned optimistic progress, descriptive three-column hero.
+   Keeps the existing fantasy theme and preserves volume/legacy counters. */
+.wd-work .wd-hero {
+  grid-template-columns: minmax(136px, 210px) minmax(0, 1.1fr) minmax(230px, .95fr);
+  gap: clamp(20px, 2.8vw, 38px);
+  min-height: clamp(320px, 32vw, 435px);
+}
+.wd-work .wd-hero > .wd-hero-summary { position: relative; z-index: 1; min-width: 0; }
+.wd-work .wd-identity h1 { font-size: clamp(2rem, 3.8vw, 4.35rem); }
+.wd-work .wd-hero-progress {
+  width: min(100%, 390px);
+  padding: 13px 15px;
+  border: 1px solid rgba(218, 191, 142, .5);
+  border-radius: 15px;
+  background: rgba(9, 29, 23, .76);
+  color: #fff5e6;
+  text-shadow: none;
+}
+.wd-work .wd-hero-progress-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 5px 14px;
+  font-size: .85rem;
+}
+.wd-work .wd-hero-progress-heading strong { font-size: 1rem; color: #f5d8a5; }
+.wd-work .wd-hero-progress progress {
+  display: block;
+  width: 100%;
+  height: 9px;
+  margin: 11px 0 9px;
+  accent-color: #d8b77f;
+  background: rgba(255, 255, 255, .18);
+}
+.wd-work .wd-hero-progress progress::-webkit-progress-bar { background: rgba(255, 255, 255, .18); }
+.wd-work .wd-hero-progress progress::-webkit-progress-value { background: #d8b77f; }
+.wd-work .wd-hero-progress progress::-moz-progress-bar { background: #d8b77f; }
+.wd-work .wd-hero-progress p { margin: 0; font-size: .78rem; line-height: 1.5; color: #e4e7d7; }
+.wd-work .wd-hero-summary .wd-story-block,
+.wd-work .wd-hero-summary-empty {
+  border: 1px solid rgba(218, 191, 142, .24);
+  border-radius: 17px;
+  padding: clamp(18px, 2.2vw, 27px);
+  background: rgba(11, 32, 26, .76);
+  box-shadow: 0 13px 30px rgba(0, 0, 0, .12);
+  color: #f4ecdc;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .35);
+  overflow-wrap: anywhere;
+}
+.wd-work .wd-hero-summary :is(.wd-story-block h2, .wd-hero-summary-empty h2) {
+  margin: 0 0 12px;
+  color: #f6dcb0;
+  font-family: var(--cd-font-display), Georgia, serif;
+  font-size: clamp(1.2rem, 1.7vw, 1.55rem);
+  font-weight: 600;
+}
+.wd-work .wd-hero-summary :is(.wd-story-block .wd-story-text, .wd-story-block .story-excerpt > summary, .wd-hero-summary-empty p) {
+  margin: 0;
+  color: #f4ecdc;
+  font-size: .94rem;
+  line-height: 1.68;
+}
+.wd-work .wd-hero-summary .story-excerpt > summary { cursor: pointer; }
+.wd-work .wd-hero-summary .story-excerpt > summary b { color: #f2d4a2; }
+.wd-work .wd-hero-summary .story-excerpt > summary:focus-visible { outline: 2px solid #f2d4a2; outline-offset: 4px; }
+.wd-work .wd-hero-summary .story-excerpt[open] > summary { border-bottom-color: rgba(242, 212, 162, .3); }
+@media (max-width: 1050px) {
+  .wd-work .wd-hero {
+    grid-template-columns: minmax(135px, 220px) minmax(0, 1fr);
+    min-height: 0;
+  }
+  .wd-work .wd-hero-summary { grid-column: 1 / -1; }
+}
+@media (max-width: 540px) {
+  .wd-work .wd-hero { grid-template-columns: minmax(0, 1fr); }
+  .wd-work .wd-hero-summary { grid-column: auto; }
+  .wd-work .wd-hero-progress { width: 100%; }
+}

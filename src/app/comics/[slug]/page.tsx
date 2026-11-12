@@ -1,17 +1,17 @@
 import { listReturn } from "@/modules/library/list-navigation";
-import { getReadingTarget } from "@/modules/library/reading-target";
 import { WorkTabs, WorkPreferences, PromptSwitch, ShelfAction, DiaryForm } from "@/modules/library/components/WorkControls";
 import Link from "next/link";
 import { DiaryRatingFields } from "@/modules/library/components/DiaryRatingFields";
 import { workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
 import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
-import { seriesStatusLabels, caughtUpLabel } from "@/modules/comics/series-status";
+import { seriesStatusLabels } from "@/modules/comics/series-status";
 import { TrackingControl } from "@/modules/library/components/TrackingControl";
 import { ReadingStatusForm } from "@/modules/library/components/ReadingStatusForm";
 import { completionSnapshot } from "@/modules/library/completion-model";
 import { calculateAverageRating } from "@/modules/library/ratings/calculate-average-rating";
 import { chapterRatingSummary } from "@/modules/library/chapter-rating-summary";
 import { ChapterReadingPanel } from "@/modules/library/components/ChapterReadingPanel";
+import { WorkChapterProgressProvider, WorkHeroProgress } from "@/modules/library/components/WorkChapterProgress";
 import { Button } from "@/shared/components/ui";
 import { notFound } from "next/navigation";
 
@@ -24,13 +24,13 @@ import { getComicVolumeTitles } from "@/modules/comics/queries/get-comic-volume-
 import { getCurrentUser } from "@/modules/auth/request-identity";
 import { getUserComicState } from "@/modules/library/queries/get-user-comic-state";
 
-function StoryExcerpt({ heading, text }: { heading: string; text: string | null }) {
+function StoryExcerpt({ heading, text, previewChars = 125 }: { heading: string; text: string | null; previewChars?: number }) {
   if (!text?.trim()) return null;
   const full = text.trim();
   const chars = Array.from(full);
-  const intro = chars.slice(0, 125).join("").replace(/\s+/g, " ").trimEnd();
+  const intro = chars.slice(0, previewChars).join("").replace(/\s+/g, " ").trimEnd();
   return <section className="wd-story-block"><h2>{heading}</h2>
-    {chars.length <= 125 ? <p className="wd-story-text whitespace-pre-wrap">{full}</p> :
+    {chars.length <= previewChars ? <p className="wd-story-text whitespace-pre-wrap">{full}</p> :
       <details className="story-excerpt">
         <summary><span className="excerpt-short">{intro}… <b>Ещё</b></span><b className="excerpt-close">Свернуть</b></summary>
         <p className="wd-story-text whitespace-pre-wrap">{full}</p>
@@ -100,17 +100,15 @@ export default async function ComicPage({
 
   const registry=readingState?.chapterReading.registry ?? chapters;
   const readIds=readingState?.chapterReading.readIds ?? [];
-  const target=getReadingTarget(registry,readIds,comic.sourceUrl);
+  const mainChapterIds=registry.filter(c=>c.status==="RELEASED" && c.kind==="MAIN").map(c=>c.id);
   const total=chapters.filter(c=>c.status==="RELEASED" && c.kind==="MAIN").length;
-  const continuing=(readingState?.chapterReading.currentChapter ?? 0)>0;
   const savedRating = readingState ? calculateAverageRating(readingState) : null;
-  const c=target.chapter;
-  const caption=target.direct && c ? (continuing?"Продолжить":"Читать")+(c.displayCode?" · глава "+c.displayCode:"") : target.source?.label;
   const visibleChapters = registry.filter(
     (chapter) => chapter.status === "RELEASED" || chapter.status === "SCHEDULED" ||
       (chapter.status === "ARCHIVED" && readIds.includes(chapter.id)),
   );
   return <WorkPreferences key={comic.id} comicId={comic.id} initial={readingState?.promptChapterRating ?? true}>
+    <WorkChapterProgressProvider key={comic.id} readIds={readIds}>
     <article className="wd-work">
       <Link href={back.href} className="reader-back">← {back.label}</Link>
       <header className={`wd-hero${comic.bannerUrl ? " wd-hero--banner" : ""}`}
@@ -129,14 +127,17 @@ export default async function ComicPage({
               <small>{comic.publicationStatus === "HIDDEN" ? "Скрыт из публичного каталога" : "Архивный комикс"}</small>
             ) : null}
           </div>
+          {readingState?.inLibrary && readingState.chapterReading.registered && mainChapterIds.length > 0 ?
+            <WorkHeroProgress mainChapterIds={mainChapterIds} /> : null}
           <div className="wd-hero-actions">
-            {target.source ? <a className="wd-read" href={target.source.href} target="_blank" rel="noopener noreferrer"><strong>{caption} ↗</strong>{c && target.direct && c.title && <span>{c.title}</span>}</a>:<a href="#chapters" className="wd-read">К главам ↓</a>}
             <div className="wd-shelf"><ShelfAction comicId={comic.id} member={!!readingState?.inLibrary} hasDiary={readingState !== null} login={currentUser?null:`/login?next=${encodeURIComponent("/comics/"+comic.slug)}`}/></div>
           </div>
         </div>
+        <aside className="wd-hero-summary" aria-label="Описание произведения">
+          {comic.description?.trim() ? <StoryExcerpt heading="Об истории" text={comic.description} previewChars={245} /> :
+            <div className="wd-hero-summary-empty"><h2>Об истории</h2><p>Описание пока не добавлено.</p></div>}
+        </aside>
       </header>
-      {c && !target.direct && <p className="wd-hint">Прямой ссылки на главу пока нет.{target.source?" Откроется общий источник истории.":""}</p>}
-      {target.state==="CAUGHT_UP" && <p className="wd-hint">Все вышедшие основные главы прочитаны.</p>}
       <WorkTabs count={total} chapters={
         <div className={`wd-chapter-content${visibleChapters.length === 0 ? " wd-chapter-content--empty" : ""}`}>
           {visibleChapters.length === 0 ? (
@@ -161,8 +162,8 @@ export default async function ComicPage({
             readerId={currentUser?.id ?? null}
             chapters={visibleChapters.map((chapter) => ({ id: chapter.id, displayCode: chapter.displayCode, title: chapter.title, sourceUrl: chapter.status === "RELEASED" ? chapter.sourceUrl : null, sortOrder: chapter.sortOrder, volumeNumber: chapter.volumeNumber, status: chapter.status, kind: chapter.kind, supersedesChapterId: chapter.supersedesChapterId, expectedRelease: chapter.expectedRelease }))}
             ratings={readingState?.chapterReading.ratings ?? {}}
-            readIds={readingState?.chapterReading.readIds ?? []}
             canMark={readingState?.inLibrary === true}
+            workSourceUrl={comic.sourceUrl}
             volumeTitles={volumeTitles}
           />
         </div>
@@ -170,9 +171,8 @@ export default async function ComicPage({
         <header className="wd-section-intro">
           <p className="wd-section-kicker">ЛЕТОПИСЬ ПРОИЗВЕДЕНИЯ</p>
           <h2>История и её создатели</h2>
-          <p>Описание, заметки переводчика и сведения о произведении.</p>
+          <p>Примечания переводчика и сведения о произведении. Описание — в карточке выше.</p>
         </header>
-        <StoryExcerpt heading="Описание" text={comic.description}/>
         <StoryExcerpt heading="Примечание переводчика" text={comic.translatorNote}/>
             {comic.authorName || comic.translatorName ? (
               <details className="work-credit-details"><summary>Автор и перевод</summary><dl className="work-credits">
@@ -207,7 +207,7 @@ export default async function ComicPage({
             {comic.totalChapters !== null && <div><dt>Заявлено глав</dt><dd>{comic.totalChapters}</dd></div>}
           </dl>
         )}
-        {!comic.description && !comic.translatorNote && !comic.authorName && !comic.translatorName && <p className="wd-about-placeholder">Подробности об истории пока не добавлены.</p>}
+        {!comic.translatorNote && !comic.authorName && !comic.translatorName && comic.workFormat === "UNKNOWN" && comic.totalChapters === null && <p className="wd-about-placeholder">Дополнительные сведения пока не добавлены.</p>}
             {comic.visibility ===
               "PRIVATE" &&
             currentUser?.id ===
@@ -262,7 +262,7 @@ export default async function ComicPage({
                       type="url"
                       name="sourceUrl"
                       maxLength={2048}
-                      defaultValue={comic.sourceUrl}
+                      defaultValue={comic.sourceUrl ?? ""}
                       className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
                     />
                   </label>
@@ -372,12 +372,12 @@ export default async function ComicPage({
                     snapshot={completionSnapshot(readingState.chapterReading.registry, comic.totalChapters, comic.seriesStatus)} /></details>
 
                   <div className="reading-progress-v5">
-                    <div className="wd-progress"><span>Прочитано: {readingState.currentChapter}{progressCeiling===null?"":" из "+progressCeiling}</span>
-                      {progressCeiling!==null && progressCeiling>0 && <progress aria-label="Мой прогресс" max={progressCeiling} value={readingState.currentChapter}/>}</div>
+                    {!readingState.chapterReading.registered ? <div className="wd-progress"><span>Прочитано: {readingState.currentChapter}{progressCeiling===null?"":" из "+progressCeiling}</span>
+                      {progressCeiling!==null && progressCeiling>0 && <progress aria-label="Мой прогресс" max={progressCeiling} value={readingState.currentChapter}/>}</div> : null}
                     {readingState.unresolvedLegacyProgress ? <p className="mt-2 text-sm text-[var(--text-secondary)]">Ранее сохранён общий счётчик: {readingState.unresolvedLegacyProgress}. Появился список глав — выберите «Прочитано до», чтобы связать чтение с конкретными главами.</p> : null}
                     {readingState.chapterReading.registered ? (
                       <div className="mt-2 text-sm text-[var(--text-secondary)]">
-                        <p>{readingState.chapterReading.caughtUp ? caughtUpLabel(comic.seriesStatus) : `Непрочитанных основных глав: ${readingState.chapterReading.unreadChapters}`}</p>
+                        <p>{mainChapterIds.length > 0 ? "Основной прогресс отображается в баннере и обновляется при отметке глав." : "Вышедших основных глав пока нет; отметки появятся после публикации."}</p>
                         <details className="reading-help-v5">
                           <summary>Подробнее о прогрессе{readingState.chapterReading.updatedChapters ? ` · Новых редакций: ${readingState.chapterReading.updatedChapters}` : ""}</summary>
                           <div className="space-y-2">
@@ -466,5 +466,6 @@ export default async function ComicPage({
 
       }/>
     </article>
+    </WorkChapterProgressProvider>
   </WorkPreferences>;
 }

@@ -66,7 +66,7 @@ export type DatabaseComic = {
   translatorName: string | null;
   translatorNote: string | null;
   coverUrl: string | null;
-  sourceUrl: string;
+  sourceUrl: string | null;
   totalChapters: number | null;
   publicationStatus:
     CatalogComic["publicationStatus"];

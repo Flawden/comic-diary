@@ -10,6 +10,7 @@ import {
 
 import {
   appendSharedChapterBatch,
+  appendSharedChapterStructuredBatch,
   archiveSharedCatalogChapter,
   createSharedCatalogChapter,
   reorderSharedCatalogChapter,
@@ -25,7 +26,7 @@ export const dynamic =
   "force-dynamic";
 
 const MAX_REQUEST_BYTES =
-  32 * 1024;
+  80 * 1024;
 
 type RouteContext = {
   params: Promise<{
@@ -483,6 +484,22 @@ export async function POST(
         userId: access.currentUser.id, role: access.currentUser.role,
       }, parsed.body.intent === "batch-create" ? snapshot as string : undefined);
       return jsonResponse({ ok: true, ...result }, parsed.body.intent === "batch-create" ? 201 : 200);
+    } catch (error) {
+      return mutationErrorResponse(error);
+    }
+  }
+
+  if (parsed.body.intent === "batch-structured-preview" || parsed.body.intent === "batch-structured-create") {
+    const { rows, snapshot } = parsed.body;
+    const create = parsed.body.intent === "batch-structured-create";
+    if (!Array.isArray(rows) || (create && (typeof snapshot !== "string" || !/^[a-f0-9]{64}$/.test(snapshot)))) {
+      return errorResponse("invalid-chapter-request", 400);
+    }
+    try {
+      const result = await appendSharedChapterStructuredBatch(comicId, rows, {
+        userId: access.currentUser.id, role: access.currentUser.role,
+      }, create ? snapshot as string : undefined);
+      return jsonResponse({ ok: true, ...result }, create ? 201 : 200);
     } catch (error) {
       return mutationErrorResponse(error);
     }

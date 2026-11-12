@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 import { parseChapterBatch } from "./chapter-batch-input";
+import { parseStructuredChapterBatch } from "./chapter-structured-batch";
+import { planVolumeChapterPlacement } from "./chapter-placement";
 import { isValidExpectedRelease } from "./chapter-release-dates";
 import {
   and,
@@ -1130,6 +1132,125 @@ export async function appendSharedChapterBatch(
 }
 
 
+/** Advanced multi-row create/revision: one authorization, one lock, one transaction.
+ * Existing reading records remain attached to their historical chapter IDs.
+ */
+export async function appendSharedChapterStructuredBatch(
+  comicId: number,
+  input: unknown,
+  actor: SharedChapterAuditActor,
+  expectedSnapshot?: string,
+) {
+  requirePositiveId(comicId);
+  const rawRows = parseStructuredChapterBatch(input);
+  const rows = rawRows.map(row => ({
+    ...row,
+    metadata: normalizeMetadata({
+      kind: row.kind, displayCode: row.displayCode, title: row.title,
+      sourceUrl: row.sourceUrl, status: row.status,
+      releasedAt: row.releasedAt ? new Date(row.releasedAt) : null,
+      expectedRelease: row.expectedRelease, volumeNumber: row.volumeNumber,
+    }),
+  }));
+  try {
+    return await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${SHARED_CATALOG_ADVISORY_LOCK})`);
+      const [comic] = await tx.select({ id: comics.id, slug: comics.slug }).from(comics)
+        .where(and(eq(comics.id, comicId), eq(comics.visibility, "SHARED")));
+      if (!comic) throw new SharedChapterMutationError("comic-not-found");
+      const registry = await tx.select().from(chapters).where(eq(chapters.comicId, comicId));
+      registry.sort((a, b) => a.id - b.id);
+      const snapshot = createHash("sha256").update(JSON.stringify({
+        comicId, rows: rawRows, registry: registry.map(chapterSnapshot),
+      })).digest("hex");
+      if (expectedSnapshot !== undefined && expectedSnapshot !== snapshot)
+        throw new SharedChapterMutationError("chapter-batch-stale");
+      const active = registry.filter(row => row.status !== "ARCHIVED");
+      const used = new Map(active.filter(row => row.displayCode).map(row => [row.displayCode, row.id]));
+      const prepared = rows.map(row => {
+        const old = row.supersedesChapterId === null ? null
+          : registry.find(chapter => chapter.id === row.supersedesChapterId);
+        if (row.supersedesChapterId !== null &&
+            (!old || old.status !== "RELEASED" || row.status !== "RELEASED" || old.kind !== row.kind))
+          throw new SharedChapterMutationError("invalid-chapter");
+        const ownerId = used.get(row.displayCode);
+        if (row.displayCode && ownerId !== undefined && ownerId !== old?.id)
+          throw new SharedChapterMutationError("chapter-display-code-conflict");
+        return {
+          metadata: { ...row.metadata, volumeNumber: row.volumeNumber },
+          supersedesChapterId: row.supersedesChapterId, old,
+          placementMode: row.placementMode, anchorChapterId: row.anchorChapterId,
+        };
+      });
+      // Plan against the complete active registry while the catalog lock is held.
+      // Reading IDs are untouched; archive replacements before inserting new rows.
+      let placement: ReturnType<typeof planVolumeChapterPlacement>;
+      try {
+        placement = planVolumeChapterPlacement(active.map(chapter => ({
+          id: chapter.id, volumeNumber: chapter.volumeNumber, sortOrder: chapter.sortOrder,
+        })), prepared.map(row => ({
+          volumeNumber: row.metadata.volumeNumber ?? null,
+          supersedesChapterId: row.supersedesChapterId,
+          placementMode: row.placementMode,
+          anchorChapterId: row.anchorChapterId,
+        })));
+      } catch {
+        throw new SharedChapterMutationError("invalid-chapter");
+      }
+      const ordered = prepared.map((row, index) => ({ ...row, sortOrder: placement.newSortOrders[index] }));
+      const previewRows = ordered.map(row => ({
+        ...row.metadata, releasedAt: row.metadata.releasedAt?.toISOString() ?? null,
+        sortOrder: row.sortOrder, supersedesChapterId: row.supersedesChapterId,
+      }));
+      if (expectedSnapshot === undefined) return { snapshot, rows: previewRows, createdCount: 0 };
+      // All validations completed before mutations. A failure below rolls back the entire batch.
+      const now = new Date();
+      for (const change of placement.existingChanges) {
+        const before = active.find(chapter => chapter.id === change.id)!;
+        const [after] = await tx.update(chapters).set({ sortOrder: change.sortOrder, updatedAt: now })
+          .where(eq(chapters.id, before.id)).returning();
+        await tx.insert(administrativeAuditEvents).values({
+          actorUserId: actor.userId, actorRole: actor.role, action: "CHAPTER_REORDER",
+          targetType: "CHAPTER", targetId: before.id,
+          targetKey: chapterTargetKey(comic.slug, before.id),
+          details: { channel: "structured-batch-placement", before: chapterSnapshot(before), after: chapterSnapshot(after) },
+        });
+      }
+      const created = [] as ChapterRow[];
+      for (const row of ordered) {
+        if (row.old) {
+          await tx.update(chapters).set({ status: "ARCHIVED", updatedAt: new Date() })
+            .where(eq(chapters.id, row.old.id));
+          await tx.insert(administrativeAuditEvents).values({
+            actorUserId: actor.userId, actorRole: actor.role, action: "CHAPTER_ARCHIVE",
+            targetType: "CHAPTER", targetId: row.old.id,
+            targetKey: chapterTargetKey(comic.slug, row.old.id),
+            details: { channel: "structured-batch-revision", before: chapterSnapshot(row.old) },
+          });
+        }
+        const [chapter] = await tx.insert(chapters).values({
+          ...row.metadata, comicId, sortOrder: row.sortOrder,
+          supersedesChapterId: row.supersedesChapterId,
+        }).returning();
+        if (!chapter) throw new Error("Chapter insert returned no row");
+        created.push(chapter);
+        await tx.insert(administrativeAuditEvents).values({
+          actorUserId: actor.userId, actorRole: actor.role, action: "CHAPTER_CREATE",
+          targetType: "CHAPTER", targetId: chapter.id,
+          targetKey: chapterTargetKey(comic.slug, chapter.id),
+          details: { channel: "structured-batch", comicId, comicSlug: comic.slug,
+            replaces: row.old ? chapterSnapshot(row.old) : null, after: chapterSnapshot(chapter) },
+        });
+      }
+      return { snapshot, rows: previewRows, createdCount: created.length };
+    });
+  } catch (error) {
+    if (isUniqueViolation(error))
+      throw new SharedChapterMutationError("chapter-display-code-conflict");
+    throw error;
+  }
+}
+
 /** Move within the complete active registry; IDs and reading history remain unchanged. */
 export async function moveSharedCatalogChapter(
   comicId: number, chapterId: number, direction: "up" | "down",
@@ -1147,7 +1268,8 @@ export async function moveSharedCatalogChapter(
     const current = registry.find(c => c.id === chapterId);
     if (!current) throw new SharedChapterMutationError("chapter-not-found");
     if (current.status === "ARCHIVED") throw new SharedChapterMutationError("chapter-archived");
-    const active = registry.filter(c => c.status !== "ARCHIVED").sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+    const active = registry.filter(c => c.status !== "ARCHIVED" && c.volumeNumber === current.volumeNumber)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
     const index = active.findIndex(c => c.id === chapterId);
     const neighborIndex = index + (direction === "up" ? -1 : 1);
     const neighbor = active[neighborIndex];
@@ -1156,7 +1278,7 @@ export async function moveSharedCatalogChapter(
     [active[index], active[neighborIndex]] = [active[neighborIndex], active[index]];
     // Unique ascending values make a move deterministic even when old values tie.
     // Preserve existing slots when strictly increasing; otherwise normalize active slots.
-    const slots = registry.filter(c => c.status !== "ARCHIVED").map(c => c.sortOrder).sort((a, b) => a - b);
+    const slots = active.map(c => c.sortOrder).sort((a, b) => a - b);
     const unique = slots.every((value, i) => i === 0 || value > slots[i - 1]);
     const now = new Date();
     for (const [i, before] of active.entries()) {
