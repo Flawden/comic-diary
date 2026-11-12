@@ -118,7 +118,16 @@ export function ChapterBatchEditor({ comicId, chapters, disabled, onBusyChange }
       expectedPrecision: "NONE", expectedRelease: "",
     } : { supersedesChapterId: "", revisionConfirmed: false });
   }
-  function close() { if (!busy) setOpen(false); }
+  function close() {
+    if (busy) return;
+    // Cancel means discard: do not reopen with unsaved rows from a previous batch.
+    setRows([blankRow(nextKey.current++, "SCHEDULED")]);
+    setPasteMode(false);
+    setPasteText("");
+    setStatus("SCHEDULED");
+    resetPreview();
+    setOpen(false);
+  }
   function addRow() {
     if (rows.length >= CHAPTER_BATCH_LIMIT) return;
     setRows(previous => [...previous, blankRow(nextKey.current++, status)]);

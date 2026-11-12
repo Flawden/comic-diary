@@ -297,6 +297,11 @@ async function main() {
   await pool.query('INSERT INTO user_chapter_reads(user_id, chapter_id) VALUES ($1, $2)', [fixture.readerId, oldId]);
   await editor.getByRole('button', { name: '+ Добавить главы', exact: true }).click();
   const advanced = editor.getByRole('dialog', { name: 'Добавить главы' });
+  assert.equal(await advanced.locator('section').count(), 1,
+    'Cancel must discard all 15 unsaved rows before opening a fresh batch');
+  assert.equal(await advanced.getByLabel('Статус добавляемых глав').inputValue(), 'SCHEDULED',
+    'Cancel must restore the default chapter status');
+  console.log('ADMIN_CORE_CHAPTER_CANCEL_RESETS_DRAFT=PASS');
   assert.equal(await editor.getByText('Расширенное создание: том, дата, точный порядок или новая редакция').count(), 0,
     'obsolete advanced inline editor must be absent from DOM');
   const first = advanced.locator('section').first();
