@@ -218,6 +218,56 @@ async function main() {
     'editing chapter from modal did not persist',
   );
   console.log('ADMIN_CORE_CHAPTER_EDIT_MODAL=PASS');
+  stage = 'advanced atomic batch and chapter revision';
+  const oldChapter = await pool.query(
+    `SELECT id FROM chapters WHERE comic_id = $1 AND display_code = '1' AND status = 'RELEASED'`, [fixture.comicId],
+  );
+  const oldId = oldChapter.rows[0]?.id;
+  assert.ok(oldId, 'original chapter must exist before replacement');
+  await pool.query('INSERT INTO user_chapter_reads(user_id, chapter_id) VALUES ($1, $2)', [fixture.readerId, oldId]);
+  await editor.getByRole('button', { name: '+ Добавить главы', exact: true }).click();
+  const advanced = editor.getByRole('dialog', { name: 'Добавить главы' });
+  assert.equal(await editor.getByText('Расширенное создание: том, дата, точный порядок или новая редакция').count(), 0,
+    'obsolete advanced inline editor must be absent from DOM');
+  const first = advanced.locator('section').first();
+  await first.locator('summary').click();
+  await first.getByLabel('Новая редакция вместо существующей главы').selectOption(String(oldId));
+  await first.getByLabel('Название главы').fill('Полностью обновлённая редакция');
+  await first.getByRole('checkbox', { name: /Подтверждаю замену/ }).check();
+  await advanced.getByRole('button', { name: '+ Ещё глава' }).click();
+  const second = advanced.locator('section').nth(1);
+  await second.getByLabel('Название главы').fill('Запланированная глава второго тома');
+  await second.getByLabel('Ссылка на главу').fill('https://example.com/chapters/3');
+  await second.locator('summary').click();
+  await second.getByLabel('Код главы').fill('3');
+  await second.getByLabel('Том (необязательно)').fill('2');
+  await second.getByLabel('Точный порядок (необязательно)').fill('45');
+  await second.getByLabel('Точность ожидаемой даты').selectOption('MONTH');
+  await second.getByLabel('Ожидаемый выход').fill('2027-04');
+  await advanced.getByRole('button', { name: 'Проверить главы' }).click();
+  await advanced.getByRole('button', { name: 'Сохранить 2 глав' }).click();
+  await advanced.waitFor({ state: 'hidden' });
+  await eventually(
+    'SELECT status FROM chapters WHERE id = $1', [oldId],
+    row => row?.status === 'ARCHIVED', 'old version was not archived',
+  );
+  const revision = await pool.query(
+    `SELECT id, status, supersedes_chapter_id AS old_id FROM chapters
+     WHERE comic_id = $1 AND display_code = '1' AND id <> $2`, [fixture.comicId, oldId],
+  );
+  assert.equal(revision.rows.length, 1);
+  assert.equal(revision.rows[0].status, 'RELEASED');
+  assert.equal(revision.rows[0].old_id, oldId);
+  const readHistory = await pool.query(
+    'SELECT chapter_id FROM user_chapter_reads WHERE user_id = $1 AND chapter_id = $2', [fixture.readerId, oldId],
+  );
+  assert.equal(readHistory.rows.length, 1, 'old chapter reading history must remain attached to old ID');
+  const future = await pool.query(
+    `SELECT status, volume_number AS volume, sort_order AS position, expected_release AS expected
+     FROM chapters WHERE comic_id = $1 AND display_code = '3'`, [fixture.comicId],
+  );
+  assert.deepEqual(future.rows, [{ status: 'SCHEDULED', volume: 2, position: 45, expected: '2027-04' }]);
+  console.log('ADMIN_CORE_ADVANCED_ATOMIC_BATCH_AND_REVISION=PASS');
 
   stage = 'publish from admin UI';
   await editor.locator('.admin-studio-tabs').getByRole('button', { name: 'Публикация' }).click();
@@ -249,7 +299,7 @@ async function main() {
 
   stage = 'complete';
   await writeFile(join(output, 'admin-core-result.json'), JSON.stringify({
-    pass: true, stages: ['draft', 'cover', 'edit/reload', 'chapter', 'chapter edit', 'publication', 'reader authorization'],
+    pass: true, stages: ['draft', 'cover', 'edit/reload', 'chapter', 'chapter edit', 'advanced atomic revision', 'publication', 'reader authorization'],
   }, null, 2));
   console.log('ADMIN_CORE_01=PASS');
 }
@@ -272,6 +322,8 @@ try {
       await pool.query('DELETE FROM administrative_audit_events WHERE actor_user_id = ANY($1::int[])',
         [[fixture.adminId, fixture.readerId].filter(Boolean)]);
     }
+    // Reading marks are intentionally retained during revision; remove only this test reader's fixture marks before deleting the fixture comic.
+    if (fixture.readerId) await pool.query('DELETE FROM user_chapter_reads WHERE user_id = $1', [fixture.readerId]);
     if (fixture.comicId) await pool.query('DELETE FROM comics WHERE id = $1', [fixture.comicId]);
     else await pool.query('DELETE FROM comics WHERE slug = $1', [stamp]);
     if (fixture.categoryId) await pool.query('DELETE FROM categories WHERE id = $1', [fixture.categoryId]);

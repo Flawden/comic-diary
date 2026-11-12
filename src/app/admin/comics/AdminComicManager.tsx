@@ -3,7 +3,6 @@
 import { expectedReleasePrecision, formatExpectedRelease, formatReleasedAt, isValidExpectedRelease, type ExpectedReleasePrecision } from "@/modules/catalog/chapter-release-dates";
 import { AdminComicList } from "@/modules/catalog/components/AdminComicList";
 import { AdminVolumeTitles } from "./AdminVolumeTitles";
-import { ChapterRevisionSelector } from "@/modules/catalog/components/ChapterRevisionSelector";
 import { AdminChapterList } from "@/modules/catalog/components/AdminChapterList";
 import { ChapterBatchEditor } from "@/modules/catalog/components/ChapterBatchEditor";
 import type { WorkType, WorkFormat } from "@/modules/comics/work-metadata";
@@ -39,10 +38,6 @@ type PublicationStatus =
   | "PUBLISHED"
   | "HIDDEN"
   | "ARCHIVED";
-
-type ChapterCreateStatus =
-  | "SCHEDULED"
-  | "RELEASED";
 
 type ChapterEditStatus =
   | "SCHEDULED"
@@ -111,14 +106,6 @@ const publicationStatusLabels: Record<
   PUBLISHED: "Опубликован",
   HIDDEN: "Скрыт",
   ARCHIVED: "Архив",
-};
-
-const chapterCreateStatusLabels: Record<
-  ChapterCreateStatus,
-  string
-> = {
-  SCHEDULED: "Запланирована",
-  RELEASED: "Опубликована",
 };
 
 function nullableText(
@@ -205,26 +192,6 @@ function chapterErrorMessage(
     default:
       return "Не удалось сохранить главу.";
   }
-}
-
-function nextChapterSortOrder(
-  comic: AdminComic,
-): number {
-  if (
-    comic.chapters.length ===
-    0
-  ) {
-    return 1;
-  }
-
-  return (
-    Math.max(
-      ...comic.chapters.map(
-        (chapter) =>
-          chapter.sortOrder,
-      ),
-    ) + 1
-  );
 }
 
 function setFormControlValue(
@@ -799,7 +766,6 @@ export function AdminComicManager({
     }
   }
 
-  const [chapterFeedback, setChapterFeedback] = useState<{ comicId: number; kind: "error" | "success"; message: string } | null>(null);
   const [chapterEditFeedback, setChapterEditFeedback] = useState<{ chapterId: number; kind: "error" | "success"; message: string } | null>(null);
   const [coverUploads, setCoverUploads] = useState<Record<string, boolean>>({});
   const [createFormRevision, setCreateFormRevision] = useState(0);
@@ -827,10 +793,6 @@ export function AdminComicManager({
   const promptReturnFocusRef = useRef<HTMLElement | null>(null);
   const stayButtonRef = useRef<HTMLButtonElement | null>(null);
   const leaveButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [creationVersions, setCreationVersions] = useState<Record<number, number>>({});
-  const [creationStatus, setCreationStatus] = useState<Record<number, ChapterCreateStatus>>({});
-  const [creationPrecision, setCreationPrecision] = useState<Record<number, ExpectedReleasePrecision>>({});
-  const [creationExpectedRelease, setCreationExpectedRelease] = useState<Record<number, string>>({});
   const [
     busyKey,
     setBusyKey,
@@ -1751,264 +1713,6 @@ export function AdminComicManager({
     }
   }
 
-  async function createChapter(
-    comic: AdminComic,
-    form: HTMLFormElement,
-  ) {
-    const key =
-      `chapter-create:${comic.id}`;
-
-    if (busyKey) {
-      return;
-    }
-
-    setBusyKey(
-      key,
-    );
-    setMessage(null);
-    setError(null);
-    setChapterFeedback(null);
-    function fail(message: string) {
-      setError(message);
-      setChapterFeedback({ comicId: comic.id, kind: "error", message });
-    }
-
-    const data =
-      new FormData(
-        form,
-      );
-
-    const displayCode =
-      textValue(
-        data,
-        "chapterDisplayCode",
-      );
-
-    const title =
-      nullableText(
-        data.get(
-          "chapterTitle",
-        ),
-      );
-
-    const sourceUrl =
-      nullableText(
-        data.get(
-          "chapterSourceUrl",
-        ),
-      );
-
-    const rawSortOrder =
-      textValue(
-        data,
-        "chapterSortOrder",
-      );
-
-    const statusRaw =
-      textValue(
-        data,
-        "chapterStatus",
-      );
-
-    const sortOrder =
-      Number(
-        rawSortOrder,
-      );
-
-    const status:
-      ChapterCreateStatus | null =
-      statusRaw ===
-        "SCHEDULED" ||
-      statusRaw ===
-        "RELEASED"
-        ? statusRaw
-        : null;
-
-    if (!displayCode && !title) {
-      fail(
-        "Укажите название или код главы.",
-      );
-      setBusyKey(null);
-      return;
-    }
-
-    if (
-      !Number.isSafeInteger(
-        sortOrder,
-      ) ||
-      sortOrder < 0
-    ) {
-      fail(
-        "Порядок главы должен быть целым неотрицательным числом.",
-      );
-      setBusyKey(null);
-      return;
-    }
-
-    if (!status) {
-      fail(
-        "Выберите корректный статус главы.",
-      );
-      setBusyKey(null);
-      return;
-    }
-
-    if (textValue(data, "chapterRevisionInvalid") === "yes") {
-      fail("Выбранная редакция больше недоступна. Выберите актуальную главу или отмените замену.");
-      setBusyKey(null);
-      return;
-    }
-    const rawReplacement = textValue(data, "chapterSupersedesId");
-    if (rawReplacement && textValue(data, "chapterRevisionConfirmed") !== "yes") {
-      fail("Подтвердите замену старой редакции или отмените её выбор.");
-      setBusyKey(null);
-      return;
-    }
-    const previous = rawReplacement ? comic.chapters.find(c => c.id === Number(rawReplacement)) : null;
-    if (rawReplacement && (!previous || previous.status !== "RELEASED" || status !== "RELEASED" || textValue(data, "chapterKind") !== previous.kind)) {
-      fail("Новая редакция должна быть опубликована и иметь тот же тип, что и заменяемая глава.");
-      setBusyKey(null);
-      return;
-    }
-
-    const expectedRelease = status === "SCHEDULED" ? textValue(data, "chapterExpectedValue") || null : null;
-    const releasedDate = status === "RELEASED" ? textValue(data, "chapterReleasedDate") : "";
-    const precision = creationPrecision[comic.id] ?? "NONE";
-    if (status === "SCHEDULED" && precision !== "NONE" &&
-        (!expectedRelease || !isValidExpectedRelease(expectedRelease) ||
-         expectedReleasePrecision(expectedRelease) !== precision)) {
-      fail("Укажите ожидаемую дату полностью. Для месяца и года выберите месяц и введите четыре цифры года.");
-      setBusyKey(null);
-      return;
-    }
-
-    const payload = {
-      kind: textValue(data, "chapterKind") || "MAIN",
-      volumeNumber: textValue(data, "chapterVolumeNumber") ? Number(textValue(data, "chapterVolumeNumber")) : previous?.volumeNumber ?? null,
-      supersedesChapterId: rawReplacement ? Number(rawReplacement) : null,
-      displayCode,
-      title,
-      sourceUrl,
-      sortOrder,
-      status,
-
-      releasedAt: releasedDate ? `${releasedDate}T12:00:00.000Z` : null,
-      expectedRelease,
-    };
-
-    try {
-      const response =
-        await fetch(
-          `/api/admin/catalog/comics/${comic.id}/chapters`,
-          {
-            method:
-              "POST",
-
-            credentials:
-              "same-origin",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify(
-                payload,
-              ),
-          },
-        );
-
-      const body =
-        await response
-          .json()
-          .catch(
-            () =>
-              ({}) as ApiEnvelope,
-          ) as ApiEnvelope;
-
-      if (
-        response.status ===
-        401
-      ) {
-        router.replace(
-          "/login?next=%2Fadmin%2Fcomics",
-        );
-        router.refresh();
-        return;
-      }
-
-      if (!response.ok) {
-        fail(
-          chapterErrorMessage(
-            apiErrorKind(
-              body,
-            ),
-          ),
-        );
-        setBusyKey(null);
-        return;
-      }
-
-      setFormControlValue(
-        form,
-        "chapterDisplayCode",
-        "",
-      );
-
-      setFormControlValue(
-        form,
-        "chapterTitle",
-        "",
-      );
-
-      setFormControlValue(
-        form,
-        "chapterSourceUrl",
-        "",
-      );
-
-      setFormControlValue(
-        form,
-        "chapterSortOrder",
-        String(
-          Math.max(
-            nextChapterSortOrder(
-              comic,
-            ),
-            sortOrder + 1,
-          ),
-        ),
-      );
-
-      setFormControlValue(
-        form,
-        "chapterStatus",
-        "SCHEDULED",
-      );
-
-      setCreationVersions(versions => ({ ...versions, [comic.id]: (versions[comic.id] ?? 0) + 1 }));
-      setCreationStatus(statuses => ({ ...statuses, [comic.id]: "SCHEDULED" }));
-      setCreationPrecision(precisions => ({ ...precisions, [comic.id]: "NONE" }));
-      setCreationExpectedRelease(values => ({ ...values, [comic.id]: "" }));
-      setFormControlValue(form, "chapterKind", "MAIN");
-      setFormControlValue(form, "chapterVolumeNumber", "");
-
-      const successMessage = previous
-        ? `Новая редакция ${displayCode} опубликована. Предыдущая редакция ${previous.displayCode} (ID ${previous.id}) перемещена в архив; её история чтения сохранена.`
-        : `Глава ${displayCode || title} добавлена в ${comic.title}.`;
-      setMessage(successMessage);
-      setChapterFeedback({ comicId: comic.id, kind: "success", message: successMessage });
-
-      setBusyKey(null);
-      router.refresh();
-    } catch {
-      fail(
-        "Не удалось связаться с сервером.",
-      );
-      setBusyKey(null);
-    }
-  }
 
   return (
     <div className="admin-studio-root">
@@ -2474,203 +2178,8 @@ export function AdminComicManager({
                         </p>
                       )}
 
-                      <ChapterBatchEditor comicId={comic.id} disabled={busyKey !== null}
+                      <ChapterBatchEditor comicId={comic.id} chapters={comic.chapters} disabled={busyKey !== null}
                         onBusyChange={busy => setBusyKey(busy ? `chapter-batch:${comic.id}` : null)} />
-
-                      <details className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
-                        <summary className="min-h-11 cursor-pointer text-sm font-semibold">Расширенное создание: том, дата, точный порядок или новая редакция</summary>
-                        <div className="mt-4">
-                          <h5 className="text-sm font-semibold">Добавить главу или выпустить новую редакцию</h5>
-
-                        <div className="mt-3 grid gap-3 md:grid-cols-2">
-                          <label className="block">
-                            <span className="mb-1 block text-xs font-medium">Тип главы</span>
-                            <select name="chapterKind" className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm">
-                              <option value="MAIN">Основная</option>
-                              <option value="SPECIAL">Спешиал / бонус</option>
-                            </select>
-                          </label>
-                          <ChapterRevisionSelector key={creationVersions[comic.id] ?? 0} chapters={comic.chapters} disabled={busyKey !== null}
-                            onChapterStatusChange={status => setCreationStatus(previous => ({ ...previous, [comic.id]: status }))} />
-
-                          <label className="block">
-                            <span className="mb-1 block text-xs font-medium">
-                              Код главы (необязательно)
-                            </span>
-
-                            <input
-                              name="chapterDisplayCode"
-                              placeholder="1, 1.01а, Extra…"
-                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
-                            />
-                          </label>
-
-                          <label className="block">
-                            <span className="mb-1 block text-xs font-medium">
-                              Название
-                            </span>
-
-                            <input
-                              name="chapterTitle"
-                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
-                            />
-                          </label>
-
-                          <label className="block">
-                            <span className="mb-1 block text-xs font-medium">
-                              Source URL
-                            </span>
-
-                            <input
-                              type="url"
-                              name="chapterSourceUrl"
-                              placeholder="Необязательно"
-                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
-                            />
-                          </label>
-
-                          <label className="block">
-                            <span className="mb-1 block text-xs font-medium">
-                              Порядок
-                            </span>
-
-                            <input
-                              type="number"
-                              name="chapterSortOrder"
-                              min={0}
-                              step={1}
-                              defaultValue={
-                                nextChapterSortOrder(
-                                  comic,
-                                )
-                              }
-                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
-                            />
-                          </label>
-
-                          <label className="block">
-                            <span className="mb-1 block text-xs font-medium">Том (необязательно)</span>
-                            <input type="number" name="chapterVolumeNumber" min={1} max={99} step={1}
-                              placeholder="Без тома" className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm" />
-                            <span className="mt-1 block text-xs text-[var(--text-secondary)]">Например, 1 или 2. Пустое поле оставляет главу без тома.</span>
-                          </label>
-                          <label className="block">
-                            <span className="mb-1 block text-xs font-medium">
-                              Статус
-                            </span>
-
-                            <select
-                              name="chapterStatus"
-                              value={creationStatus[comic.id] ?? "SCHEDULED"}
-                              onChange={event => setCreationStatus(previous => ({ ...previous, [comic.id]: event.target.value as ChapterCreateStatus }))}
-                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 text-sm"
-                            >
-                              {(
-                                Object.entries(
-                                  chapterCreateStatusLabels,
-                                ) as [
-                                  ChapterCreateStatus,
-                                  string,
-                                ][]
-                              ).map(
-                                ([
-                                  value,
-                                  label,
-                                ]) => (
-                                  <option
-                                    key={value}
-                                    value={value}
-                                  >
-                                    {label}
-                                  </option>
-                                ),
-                              )}
-                            </select>
-                          </label>
-                          {(creationStatus[comic.id] ?? "SCHEDULED") === "RELEASED" ? (
-                            <label className="block text-sm font-medium md:col-span-2">Фактическая дата выхода у первоисточника
-                              <input type="date" name="chapterReleasedDate"
-                                className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2" />
-                              <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Необязательно. Пустая дата не заменяется сегодняшней.</span>
-                            </label>
-                          ) : (
-                            <div className="space-y-2 md:col-span-2">
-                              <label className="block text-sm font-medium">Точность ожидаемой даты
-                                <select name="chapterExpectedPrecision" value={creationPrecision[comic.id] ?? "NONE"}
-                                  onChange={event => {
-                                    setCreationPrecision(previous => ({ ...previous, [comic.id]: event.target.value as ExpectedReleasePrecision }));
-                                    setCreationExpectedRelease(previous => ({ ...previous, [comic.id]: "" }));
-                                  }}
-                                  className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
-                                  <option value="NONE">Дата пока неизвестна</option>
-                                  <option value="YEAR">Только год</option>
-                                  <option value="MONTH">Месяц и год</option>
-                                  <option value="DAY">Точный день</option>
-                                </select>
-                              </label>
-                              {(creationPrecision[comic.id] ?? "NONE") === "MONTH" ? (
-                                <>
-                                  <ExpectedMonthYearPicker
-                                    value={creationExpectedRelease[comic.id] ?? ""}
-                                    onChange={value => setCreationExpectedRelease(previous => ({ ...previous, [comic.id]: value }))}
-                                  />
-                                  <input type="hidden" name="chapterExpectedValue" value={creationExpectedRelease[comic.id] ?? ""} />
-                                </>
-                              ) : (creationPrecision[comic.id] ?? "NONE") !== "NONE" ? (
-                                <label className="block text-sm font-medium">Ожидаемый выход
-                                  <input key={`${comic.id}-${creationPrecision[comic.id]}`} name="chapterExpectedValue"
-                                    type={creationPrecision[comic.id] === "YEAR" ? "text" : "date"}
-                                    inputMode={creationPrecision[comic.id] === "YEAR" ? "numeric" : undefined}
-                                    maxLength={creationPrecision[comic.id] === "YEAR" ? 4 : undefined}
-                                    placeholder={creationPrecision[comic.id] === "YEAR" ? "Например, 2027" : undefined}
-                                    className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2" />
-                                </label>
-                              ) : null}
-                              <p className="text-xs text-[var(--text-secondary)]">Это ориентир, а не автоматическая публикация.</p>
-                            </div>
-                          )}
-                        </div>
-
-                        <button
-                          type="button"
-                          disabled={
-                            busyKey !==
-                            null
-                          }
-                          onClick={(
-                            event,
-                          ) => {
-                            const form =
-                              event
-                                .currentTarget
-                                .form;
-
-                            if (!form) {
-                              setError(
-                                "Не удалось определить форму комикса.",
-                              );
-                              return;
-                            }
-
-                            void createChapter(
-                              comic,
-                              form,
-                            );
-                          }}
-                          className="mt-4 rounded-xl border border-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary)] disabled:cursor-wait disabled:opacity-60"
-                        >
-                          {busyKey ===
-                          `chapter-create:${comic.id}`
-                            ? "Добавляем…"
-                            : "Создать главу / редакцию"}
-                        </button>
-                        {chapterFeedback?.comicId === comic.id ? <p
-                          data-chapter-feedback
-                          role={chapterFeedback.kind === "error" ? "alert" : "status"}
-                          className={`mt-3 rounded-xl border p-3 text-sm ${chapterFeedback.kind === "error" ? "border-[var(--danger)] text-[var(--danger)]" : "border-[var(--border)] text-[var(--text-primary)]"}`}
-                        >{chapterFeedback.message}</p> : null}
-                        </div>
-                      </details>
                     </section>
 
                     <div hidden={studioTab === "chapters"} className="admin-studio-save-actions">

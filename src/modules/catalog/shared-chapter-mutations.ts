@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { parseChapterBatch } from "./chapter-batch-input";
+import { parseStructuredChapterBatch } from "./chapter-structured-batch";
 import { isValidExpectedRelease } from "./chapter-release-dates";
 import {
   and,
@@ -1129,6 +1130,100 @@ export async function appendSharedChapterBatch(
   });
 }
 
+
+/** Advanced multi-row create/revision: one authorization, one lock, one transaction.
+ * Existing reading records remain attached to their historical chapter IDs.
+ */
+export async function appendSharedChapterStructuredBatch(
+  comicId: number,
+  input: unknown,
+  actor: SharedChapterAuditActor,
+  expectedSnapshot?: string,
+) {
+  requirePositiveId(comicId);
+  const rawRows = parseStructuredChapterBatch(input);
+  const rows = rawRows.map(row => ({
+    ...row,
+    metadata: normalizeMetadata({
+      kind: row.kind, displayCode: row.displayCode, title: row.title,
+      sourceUrl: row.sourceUrl, status: row.status,
+      releasedAt: row.releasedAt ? new Date(row.releasedAt) : null,
+      expectedRelease: row.expectedRelease, volumeNumber: row.volumeNumber,
+    }),
+  }));
+  try {
+    return await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${SHARED_CATALOG_ADVISORY_LOCK})`);
+      const [comic] = await tx.select({ id: comics.id, slug: comics.slug }).from(comics)
+        .where(and(eq(comics.id, comicId), eq(comics.visibility, "SHARED")));
+      if (!comic) throw new SharedChapterMutationError("comic-not-found");
+      const registry = await tx.select().from(chapters).where(eq(chapters.comicId, comicId));
+      registry.sort((a, b) => a.id - b.id);
+      const snapshot = createHash("sha256").update(JSON.stringify({
+        comicId, rows: rawRows, registry: registry.map(chapterSnapshot),
+      })).digest("hex");
+      if (expectedSnapshot !== undefined && expectedSnapshot !== snapshot)
+        throw new SharedChapterMutationError("chapter-batch-stale");
+      const active = registry.filter(row => row.status !== "ARCHIVED");
+      const used = new Map(active.filter(row => row.displayCode).map(row => [row.displayCode, row.id]));
+      const lastOrder = registry.reduce((max, row) => Math.max(max, row.sortOrder), 0);
+      const prepared = rows.map((row, index) => {
+        const old = row.supersedesChapterId === null ? null
+          : registry.find(chapter => chapter.id === row.supersedesChapterId);
+        if (row.supersedesChapterId !== null &&
+            (!old || old.status !== "RELEASED" || row.status !== "RELEASED" || old.kind !== row.kind))
+          throw new SharedChapterMutationError("invalid-chapter");
+        const ownerId = used.get(row.displayCode);
+        if (row.displayCode && ownerId !== undefined && ownerId !== old?.id)
+          throw new SharedChapterMutationError("chapter-display-code-conflict");
+        const sortOrder = row.sortOrder ?? (lastOrder + (index + 1) * 10);
+        if (!Number.isSafeInteger(sortOrder) || sortOrder < 0 || sortOrder > 2147483647)
+          throw new SharedChapterMutationError("invalid-chapter");
+        return {
+          metadata: { ...row.metadata, volumeNumber: row.volumeNumber ?? old?.volumeNumber ?? null },
+          sortOrder, supersedesChapterId: row.supersedesChapterId, old,
+        };
+      });
+      const previewRows = prepared.map(row => ({
+        ...row.metadata, releasedAt: row.metadata.releasedAt?.toISOString() ?? null,
+        sortOrder: row.sortOrder, supersedesChapterId: row.supersedesChapterId,
+      }));
+      if (expectedSnapshot === undefined) return { snapshot, rows: previewRows, createdCount: 0 };
+      // All validations completed before mutations. A failure below rolls back the entire batch.
+      const created = [] as ChapterRow[];
+      for (const row of prepared) {
+        if (row.old) {
+          await tx.update(chapters).set({ status: "ARCHIVED", updatedAt: new Date() })
+            .where(eq(chapters.id, row.old.id));
+          await tx.insert(administrativeAuditEvents).values({
+            actorUserId: actor.userId, actorRole: actor.role, action: "CHAPTER_ARCHIVE",
+            targetType: "CHAPTER", targetId: row.old.id,
+            targetKey: chapterTargetKey(comic.slug, row.old.id),
+            details: { channel: "structured-batch-revision", before: chapterSnapshot(row.old) },
+          });
+        }
+        const [chapter] = await tx.insert(chapters).values({
+          ...row.metadata, comicId, sortOrder: row.sortOrder,
+          supersedesChapterId: row.supersedesChapterId,
+        }).returning();
+        if (!chapter) throw new Error("Chapter insert returned no row");
+        created.push(chapter);
+        await tx.insert(administrativeAuditEvents).values({
+          actorUserId: actor.userId, actorRole: actor.role, action: "CHAPTER_CREATE",
+          targetType: "CHAPTER", targetId: chapter.id,
+          targetKey: chapterTargetKey(comic.slug, chapter.id),
+          details: { channel: "structured-batch", comicId, comicSlug: comic.slug,
+            replaces: row.old ? chapterSnapshot(row.old) : null, after: chapterSnapshot(chapter) },
+        });
+      }
+      return { snapshot, rows: previewRows, createdCount: created.length };
+    });
+  } catch (error) {
+    if (isUniqueViolation(error))
+      throw new SharedChapterMutationError("chapter-display-code-conflict");
+    throw error;
+  }
+}
 
 /** Move within the complete active registry; IDs and reading history remain unchanged. */
 export async function moveSharedCatalogChapter(
