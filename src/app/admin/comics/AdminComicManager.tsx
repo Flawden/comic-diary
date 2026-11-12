@@ -16,6 +16,7 @@ import {
 import { CoverImage } from "@/shared/components/media/CoverImage";
 
 import {
+  Fragment,
   type FormEvent,
   type ReactNode,
   useId,
@@ -715,7 +716,7 @@ function ChapterEditDialog({ children, titleId, busy, onClose }: {
   }, []);
   return <dialog ref={dialogRef} aria-labelledby={titleId}
     onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}
-    className="w-[min(760px,calc(100vw-24px))] max-h-[90dvh] overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--text-primary)] shadow-2xl backdrop:bg-black/70 sm:p-6">
+    className="fixed inset-0 m-auto w-[min(760px,calc(100vw-16px))] max-h-[calc(100dvh-16px)] overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--text-primary)] shadow-2xl backdrop:bg-black/70 sm:max-h-[90dvh] sm:p-6">
     {children}
   </dialog>;
 }
@@ -1856,9 +1857,18 @@ export function AdminComicManager({
                         <AdminChapterList chapters={comic.chapters} locked={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null}>
                           {(visibleChapters, canMove) => <ul className="space-y-2">
                           {visibleChapters.map(
-                            (chapter) => (
+                            (chapter, index) => (
+                              <Fragment key={chapter.id}>
+                              {index === 0 || visibleChapters[index - 1].volumeNumber !== chapter.volumeNumber ? (
+                                <li data-chapter-group-heading={chapter.volumeNumber === null ? "none" : String(chapter.volumeNumber)}
+                                  className="flex flex-wrap items-center justify-between gap-2 px-1 pt-4 first:pt-0">
+                                  <h5 className="text-sm font-semibold text-[var(--text-primary)]">
+                                    {chapter.volumeNumber === null ? "Без тома" : `Том ${chapter.volumeNumber}`}
+                                  </h5>
+                                  <span className="text-xs text-[var(--text-secondary)]">Порядок внутри тома</span>
+                                </li>
+                              ) : null}
                               <li
-                                key={chapter.id}
                                 className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
                               >
                                 {editingChapterId ===
@@ -2169,6 +2179,7 @@ export function AdminComicManager({
                                   </>
                                 )}
                               </li>
+                              </Fragment>
                             ),
                           )}
                         </ul>}

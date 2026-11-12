@@ -171,14 +171,15 @@ export function ChapterBatchEditor({ comicId, chapters, disabled, onBusyChange }
     <dialog ref={dialogRef} aria-labelledby={`${id}-title`}
       onCancel={event => { event.preventDefault(); close(); }}
       onKeyDown={event => { if (event.key === "Enter" && event.target instanceof HTMLInputElement) event.preventDefault(); }}
-      className="w-[min(760px,calc(100vw-24px))] max-h-[90dvh] overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--text-primary)] shadow-2xl backdrop:bg-black/70 sm:p-6">
-      <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] pb-4">
+      className="fixed inset-0 m-auto w-[min(760px,calc(100vw-16px))] max-h-[calc(100dvh-16px)] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-0 text-[var(--text-primary)] shadow-2xl backdrop:bg-black/70 sm:max-h-[90dvh]">
+      <div className="flex max-h-[calc(100dvh-16px)] flex-col sm:max-h-[90dvh]">
+      <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--border)] px-4 py-3 sm:px-6 sm:py-4">
         <div><h4 id={`${id}-title`} className="text-lg font-semibold">Добавить главы</h4>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">Одна глава или до {CHAPTER_BATCH_LIMIT} за один раз. Дополнительные настройки находятся внутри каждой строки.</p></div>
         <button type="button" aria-label="Закрыть добавление глав" disabled={busy} onClick={close}
           className="min-h-11 shrink-0 rounded-lg border border-[var(--border)] px-3 text-lg">×</button>
       </div>
-      <div className="mt-4 space-y-4">
+      <div data-chapter-dialog-scroll className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
         <label className="block text-sm font-medium">Статус добавляемых глав
           <select value={status} disabled={busy} onChange={event => {
             const next = event.target.value as ChapterStatus;
@@ -309,7 +310,8 @@ export function ChapterBatchEditor({ comicId, chapters, disabled, onBusyChange }
             </li>)}
           </ol>
         </section> : null}
-        <div className="sticky bottom-0 flex flex-wrap justify-end gap-2 border-t border-[var(--border)] bg-[var(--surface)] pt-4">
+      </div>
+        <div data-chapter-dialog-footer className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 sm:px-6 sm:py-4">
           <button type="button" disabled={busy} onClick={close} className="min-h-11 rounded-xl border border-[var(--border)] px-4 py-2 text-sm">Отмена</button>
           {preview ? <button type="button" disabled={busy || disabled} onClick={() => void send(true)}
             className="min-h-11 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)] disabled:opacity-50">

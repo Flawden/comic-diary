@@ -37,6 +37,34 @@ async function adminPreview(filename) {
   });
 }
 
+// Top-layer dialogs must remain centered and completely usable on desktop and mobile.
+async function assertCenteredChapterDialog(dialog, label, { longBatch = false } = {}) {
+  const rect = await dialog.boundingBox();
+  assert.ok(rect, `${label}: dialog is not visible`);
+  const geometry = await adminPage.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+  assert.ok(Math.abs(rect.x - (geometry.width - rect.width) / 2) <= 3,
+    `${label}: dialog is not horizontally centered: ${JSON.stringify(rect)}`);
+  assert.ok(rect.x >= -1 && rect.x + rect.width <= geometry.width + 1,
+    `${label}: dialog exceeds the viewport horizontally`);
+  assert.ok(rect.y >= -1 && rect.y + rect.height <= geometry.height + 1,
+    `${label}: dialog exceeds the viewport vertically`);
+  const scroller = dialog.locator('[data-chapter-dialog-scroll]');
+  if (await scroller.count()) {
+    const sizes = await scroller.evaluate(node => ({
+      clientWidth: node.clientWidth, scrollWidth: node.scrollWidth,
+      clientHeight: node.clientHeight, scrollHeight: node.scrollHeight,
+    }));
+    assert.ok(sizes.scrollWidth <= sizes.clientWidth + 2,
+      `${label}: chapter form has horizontal overflow: ${JSON.stringify(sizes)}`);
+    if (longBatch) assert.ok(sizes.scrollHeight > sizes.clientHeight + 100,
+      `${label}: long batch should scroll inside dialog: ${JSON.stringify(sizes)}`);
+    await scroller.evaluate(node => { node.scrollTop = node.scrollHeight; });
+    const footer = await dialog.locator('[data-chapter-dialog-footer]').boundingBox();
+    assert.ok(footer && footer.y >= rect.y - 1 && footer.y + footer.height <= geometry.height + 1,
+      `${label}: actions must remain visible while chapters scroll`);
+  }
+}
+
 async function eventually(query, params, check, message, ms = 20000) {
   const until = Date.now() + ms;
   let observed;
@@ -201,7 +229,13 @@ async function main() {
   await chapterDialog.locator('section').nth(1).locator('summary').click();
   await chapterDialog.getByLabel('Код главы').nth(1).fill('2');
   await chapterDialog.getByLabel('Статус добавляемых глав').selectOption('RELEASED');
+  await assertCenteredChapterDialog(chapterDialog, 'desktop two chapters');
   await adminPreview('01-add-two-chapters.png');
+  stage = 'mobile chapter batch dialog (two rows)';
+  await adminPage.setViewportSize({ width: 360, height: 740 });
+  await assertCenteredChapterDialog(chapterDialog, 'mobile two chapters');
+  await adminPreview('06-mobile-two-chapters.png');
+  await adminPage.setViewportSize({ width: 1440, height: 900 });
   await chapterDialog.getByRole('button', { name: 'Проверить главы' }).click();
   await chapterDialog.getByRole('button', { name: 'Сохранить 2 глав' }).click();
   await chapterDialog.waitFor({ state: 'hidden' });
@@ -217,11 +251,34 @@ async function main() {
   assert.deepEqual(chapterRows.rows.map(row => row.code), ['1', '2'], 'batch chapters were not stored in the entered order');
   assert.equal(chapterRows.rows[1].url, 'https://example.com/chapters/2');
   console.log('ADMIN_CORE_CHAPTER_CREATE=PASS');
+
+  stage = 'mobile long batch scroll (15 chapters, no save)';
+  await editor.getByRole('button', { name: '+ Добавить главы', exact: true }).click();
+  const longBatch = editor.getByRole('dialog', { name: 'Добавить главы' });
+  for (let index = 1; index < 15; index++) {
+    await longBatch.getByRole('button', { name: '+ Ещё глава' }).click();
+  }
+  await adminPage.setViewportSize({ width: 360, height: 740 });
+  await assertCenteredChapterDialog(longBatch, 'mobile 15 chapter batch', { longBatch: true });
+  await adminPreview('07-mobile-long-batch-360.png');
+  await adminPage.setViewportSize({ width: 320, height: 640 });
+  await assertCenteredChapterDialog(longBatch, 'small mobile 15 chapter batch', { longBatch: true });
+  await adminPreview('08-mobile-long-batch-320.png');
+  await longBatch.getByRole('button', { name: 'Отмена', exact: true }).click();
+  await longBatch.waitFor({ state: 'hidden' });
+  await adminPage.setViewportSize({ width: 1440, height: 900 });
+  console.log('ADMIN_CORE_MOBILE_LONG_BATCH=PASS');
+
   stage = 'edit chapter in modal';
   await editor.getByRole('button', { name: 'Редактировать' }).first().click();
   const editDialog = editor.getByRole('dialog', { name: /Редактирование главы:/ });
   await editDialog.waitFor({ state: 'visible' });
+  await assertCenteredChapterDialog(editDialog, 'desktop edit');
   await adminPreview('02-edit-prefilled-chapter.png');
+  await adminPage.setViewportSize({ width: 360, height: 740 });
+  await assertCenteredChapterDialog(editDialog, 'mobile edit');
+  await adminPreview('09-mobile-edit.png');
+  await adminPage.setViewportSize({ width: 1440, height: 900 });
   await editDialog.getByLabel('Название главы').fill('Глава исправлена через модальное окно');
   await editDialog.getByRole('button', { name: 'Сохранить главу' }).click();
   await editDialog.waitFor({ state: 'hidden' });
@@ -308,7 +365,10 @@ async function main() {
   assert.deepEqual(volumeTwo.rows.map(row => row.code), ['2.5', '3']);
   assert.ok(volumeTwo.rows[0].position < volumeTwo.rows[1].position);
   console.log('ADMIN_CORE_VOLUME_RELATIVE_PLACEMENT=PASS');
+  await editor.locator('[data-chapter-group-heading="2"]').waitFor({ state: 'visible' });
+  await editor.locator('[data-chapter-group-heading="none"]').waitFor({ state: 'visible' });
   await adminPreview('05-admin-chapter-list.png');
+  console.log('ADMIN_CORE_VOLUME_GROUP_HEADERS=PASS');
 
   stage = 'publish from admin UI';
   await editor.locator('.admin-studio-tabs').getByRole('button', { name: 'Публикация' }).click();
