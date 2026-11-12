@@ -38,7 +38,7 @@ export function parseStructuredChapterBatch(value: unknown): StructuredChapterRo
     if (!raw || typeof raw !== "object" || Array.isArray(raw) ||
         Object.keys(raw).some(key => !allowed.has(key as keyof StructuredChapterRow))) bad("неизвестные поля.");
     const item = raw as Record<string, unknown>;
-    if (typeof item.displayCode !== "string" || item.displayCode.length > 160 || /[\u0000-\u001f\u007f]/u.test(item.displayCode)) bad("неправильный код.");
+    if (typeof item.displayCode !== "string" || item.displayCode.length > 160 || /[\u0000-\u001f\u007f]/u.test(item.displayCode)) return bad("неправильный код.");
     const displayCode = item.displayCode.trim();
     const title = nullable(item.title, 255);
     const sourceUrl = nullable(item.sourceUrl, 2048);
