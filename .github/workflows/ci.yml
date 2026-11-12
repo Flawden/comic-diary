@@ -229,6 +229,9 @@ jobs:
           export WD_VISUAL_OUTPUT="$RUNNER_TEMP/wd-visual"
           mkdir -p "$WD_VISUAL_OUTPUT"
           node scripts/work-reader-browser.mjs || { tail -60 "$RUNNER_TEMP/wd-next.log"; exit 1; }
+          export ADMIN_CORE_OUTPUT="$RUNNER_TEMP/admin-core-01"
+          mkdir -p "$ADMIN_CORE_OUTPUT"
+          node scripts/admin-core-browser.mjs || { tail -60 "$RUNNER_TEMP/wd-next.log"; exit 1; }
 
       - name: Upload WD-HERO-02B visual QA and sanitized browser diagnostics
         if: always()
@@ -239,6 +242,17 @@ jobs:
             ${{ runner.temp }}/wd-visual/*.png
             ${{ runner.temp }}/wd-visual/*.json
           if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload ADMIN-CORE-01 admin journey diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-core-01-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/admin-core-01/*.json
+            ${{ runner.temp }}/admin-core-01/*.png
+          if-no-files-found: ignore
           retention-days: 7
 
   publish:
