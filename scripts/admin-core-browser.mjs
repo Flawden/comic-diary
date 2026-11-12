@@ -444,24 +444,43 @@ async function main() {
   await guest.getByText(updatedTitle, { exact: true }).first().waitFor();
   console.log('ADMIN_CORE_PUBLISH_PUBLIC=PASS');
 
-  stage = 'UX05 mobile header search routes into filtered catalog';
+  stage = 'UX051 mobile primary navigation search and header profile';
   await guest.setViewportSize({ width: 360, height: 740 });
-  await guest.goto(`${origin}/`, { waitUntil: 'load' });
-  const headerSearchButton = guest.getByRole('button', { name: 'Поиск по каталогу' });
-  await headerSearchButton.click();
-  const headerSearchForm = guest.getByRole('search', { name: 'Поиск произведений' });
-  await headerSearchForm.getByRole('searchbox', { name: 'Название произведения' }).fill(updatedTitle);
-  const searchRect = await headerSearchForm.boundingBox();
+  await guest.goto(`${origin}/`, { waitUntil: 'domcontentloaded' });
+  const mobileNav = guest.locator('nav').filter({ has: guest.getByRole('button', { name: 'Поиск по каталогу' }) });
+  await mobileNav.getByRole('button', { name: 'Поиск по каталогу' }).waitFor({ state: 'visible' });
+  assert.equal(await mobileNav.getByRole('link', { name: 'Профиль', exact: true }).count(), 0);
+  assert.equal(await guest.getByRole('link', { name: 'Профиль и оформление' }).count(), 1);
+  await mobileNav.getByRole('button', { name: 'Поиск по каталогу' }).click();
+  const mobileForm = guest.getByRole('search', { name: 'Поиск произведений' });
+  await mobileForm.getByRole('searchbox', { name: 'Название произведения' }).fill(updatedTitle);
+  const searchRect = await mobileForm.boundingBox();
   assert.ok(searchRect && searchRect.x >= -1 && searchRect.x + searchRect.width <= 361,
-    'header search must fit mobile viewport');
-  if (process.env.ADMIN_CHAPTER_VISUAL_CAPTURE === '1') await guest.screenshot({ path: join(output, '13-ux05-header-search-mobile.png'), animations: 'disabled' });
-  await headerSearchForm.getByRole('searchbox', { name: 'Название произведения' }).press('Enter');
+    'navigation search must fit mobile viewport');
+  if (process.env.ADMIN_CHAPTER_VISUAL_CAPTURE === '1') await guest.screenshot({ path: join(output, '13-ux051-mobile-nav-search.png'), animations: 'disabled' });
+  await mobileForm.getByRole('searchbox', { name: 'Название произведения' }).press('Enter');
   await guest.waitForURL(url => url.pathname === '/' && url.searchParams.get('q') === updatedTitle);
-  assert.equal(await guest.locator('.catalog-search-field input[name="q"]').inputValue(), updatedTitle,
-    'catalog search must be populated from the header search');
+  assert.equal(await guest.locator('.catalog-search-field input[name="q"]').inputValue(), updatedTitle);
   await guest.getByText(updatedTitle, { exact: true }).first().waitFor({ state: 'visible' });
-  if (process.env.ADMIN_CHAPTER_VISUAL_CAPTURE === '1') await guest.screenshot({ path: join(output, '14-ux05-catalog-filtered.png'), animations: 'disabled' });
-  console.log('ADMIN_CORE_UX05_HEADER_SEARCH=PASS');
+  if (process.env.ADMIN_CHAPTER_VISUAL_CAPTURE === '1') await guest.screenshot({ path: join(output, '14-ux051-catalog-filtered.png'), animations: 'disabled' });
+  console.log('ADMIN_CORE_UX051_MOBILE_SEARCH=PASS');
+
+  stage = 'UX051 desktop navigation and admin profile menu';
+  await adminPage.setViewportSize({ width: 1440, height: 900 });
+  await adminPage.goto(`${origin}/`, { waitUntil: 'domcontentloaded' });
+  const desktopSearch = adminPage.getByRole('button', { name: 'Поиск по каталогу' });
+  await desktopSearch.waitFor({ state: 'visible' });
+  await desktopSearch.click();
+  await adminPage.getByRole('search', { name: 'Поиск произведений' }).waitFor({ state: 'visible' });
+  assert.equal(await adminPage.getByRole('link', { name: 'Профиль', exact: true }).count(), 0);
+  const profileMenu = adminPage.getByRole('button', { name: 'Меню профиля и управления' });
+  await profileMenu.waitFor({ state: 'visible' });
+  await profileMenu.click();
+  const actions = adminPage.getByRole('navigation', { name: 'Действия профиля' });
+  await actions.getByRole('link', { name: 'Панель управления' }).waitFor();
+  await actions.getByRole('link', { name: 'Личный профиль' }).waitFor();
+  if (process.env.ADMIN_CHAPTER_VISUAL_CAPTURE === '1') await adminPreview('15-ux051-desktop-profile-menu.png');
+  console.log('ADMIN_CORE_UX051_DESKTOP_PROFILE=PASS');
 
   stage = 'reader forbidden from admin UI/API';
   const readerContext = await browser.newContext();
