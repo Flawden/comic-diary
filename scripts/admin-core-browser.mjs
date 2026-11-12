@@ -451,7 +451,25 @@ async function main() {
   await mobileNav.getByRole('button', { name: 'Поиск по каталогу' }).waitFor({ state: 'visible' });
   assert.equal(await mobileNav.getByRole('link', { name: 'Профиль', exact: true }).count(), 0);
   assert.equal(await guest.getByRole('link', { name: 'Профиль и оформление' }).count(), 1);
-  await mobileNav.getByRole('button', { name: 'Поиск по каталогу' }).click();
+  const mobileTrigger = mobileNav.getByRole('button', { name: 'Поиск по каталогу' });
+  // SSR can expose a clickable-looking button before React hydration finishes.
+  // Retry only when aria-expanded stays false; never hide a genuine UI failure.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await mobileTrigger.click();
+    try {
+      await guest.waitForFunction(() =>
+        document.querySelector('button[aria-label="Поиск по каталогу"]')?.getAttribute('aria-expanded') === 'true',
+        null, { timeout: 2500 });
+      break;
+    } catch (error) {
+      if (attempt === 3) {
+        if (process.env.ADMIN_CHAPTER_VISUAL_CAPTURE === '1')
+          await guest.screenshot({ path: join(output, 'ux051-mobile-search-failure.png'), animations: 'disabled' });
+        throw new Error(`Mobile search did not expand after 4 clicks: ${error.message}`);
+      }
+      await guest.waitForTimeout(700);
+    }
+  }
   const mobileForm = guest.getByRole('search', { name: 'Поиск произведений' });
   await mobileForm.getByRole('searchbox', { name: 'Название произведения' }).fill(updatedTitle);
   const searchRect = await mobileForm.boundingBox();
@@ -470,7 +488,18 @@ async function main() {
   await adminPage.goto(`${origin}/`, { waitUntil: 'domcontentloaded' });
   const desktopSearch = adminPage.getByRole('button', { name: 'Поиск по каталогу' });
   await desktopSearch.waitFor({ state: 'visible' });
-  await desktopSearch.click();
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await desktopSearch.click();
+    try {
+      await adminPage.waitForFunction(() =>
+        document.querySelector('button[aria-label="Поиск по каталогу"]')?.getAttribute('aria-expanded') === 'true',
+        null, { timeout: 2500 });
+      break;
+    } catch (error) {
+      if (attempt === 3) throw new Error(`Desktop search did not expand after 4 clicks: ${error.message}`);
+      await adminPage.waitForTimeout(700);
+    }
+  }
   await adminPage.getByRole('search', { name: 'Поиск произведений' }).waitFor({ state: 'visible' });
   assert.equal(await adminPage.getByRole('link', { name: 'Профиль', exact: true }).count(), 0);
   const profileMenu = adminPage.getByRole('button', { name: 'Меню профиля и управления' });
