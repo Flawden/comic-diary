@@ -444,6 +444,65 @@ async function main() {
   await guest.getByText(updatedTitle, { exact: true }).first().waitFor();
   console.log('ADMIN_CORE_PUBLISH_PUBLIC=PASS');
 
+  // UX-05.2: measure the actual navigation geometry at responsive breakpoints.
+  // The existing UX-05.1 checks below still exercise search and profile interactions.
+  stage = 'UX052 responsive navigation geometry';
+  for (const width of [320, 390, 768, 900, 1440]) {
+    await guest.setViewportSize({ width, height: 800 });
+    await guest.goto(`${origin}/`, { waitUntil: 'load' });
+    const nav = guest.getByRole('navigation', { name: 'Основная навигация' });
+    const search = nav.getByRole('button', { name: 'Поиск по каталогу' });
+    await search.waitFor({ state: 'visible' });
+    const catalog = nav.getByRole('link', { name: 'Каталог' });
+    const updates = nav.getByRole('link', { name: 'Обновления' });
+    const profile = guest.getByRole('link', { name: 'Профиль и оформление' });
+    const [searchBox, catalogBox, updatesBox, profileBox] = await Promise.all([
+      search.boundingBox(), catalog.boundingBox(), updates.boundingBox(), profile.boundingBox(),
+    ]);
+    assert.ok(searchBox && catalogBox && updatesBox && profileBox,
+      `UX052 ${width}px: navigation element is not visible`);
+    const metrics = await guest.evaluate(() => {
+      const header = document.querySelector('.tea-header');
+      const navItems = document.querySelector('.tea-navigation-items');
+      const catalogIcon = document.querySelector('nav a[href="/"] svg path');
+      return {
+        headerScrollWidth: header?.scrollWidth,
+        headerClientWidth: header?.clientWidth,
+        navDisplay: navItems && getComputedStyle(navItems).display,
+        navColumns: navItems && getComputedStyle(navItems).gridTemplateColumns,
+        catalogPath: catalogIcon?.getAttribute('d'),
+      };
+    });
+    assert.ok(metrics.headerScrollWidth <= metrics.headerClientWidth + 2,
+      `UX052 ${width}px: header horizontal overflow ${JSON.stringify(metrics)}`);
+    for (const [name, rect] of [['catalog', catalogBox], ['updates', updatesBox],
+      ['search', searchBox], ['profile', profileBox]]) {
+      assert.ok(rect.x >= -2 && rect.x + rect.width <= width + 2,
+        `UX052 ${width}px: ${name} outside viewport: ${JSON.stringify(rect)}`);
+    }
+    assert.equal(metrics.catalogPath,
+      'M3 4h7v16H3z M10 4h7v16h-7z M17 7h4v13h-4z M5 8h3 M12 8h3 M19 11v5',
+      `UX052 ${width}px: catalog icon unexpectedly changed`);
+    if (width < 768) {
+      assert.equal(metrics.navDisplay, 'grid', `UX052 ${width}px: mobile navigation must be grid`);
+      assert.ok(Math.abs(searchBox.y - catalogBox.y) <= 3,
+        `UX052 ${width}px: mobile navigation not in one row`);
+    } else {
+      assert.equal(metrics.navDisplay, 'flex', `UX052 ${width}px: desktop navigation must be flex`);
+      assert.ok(searchBox.x >= updatesBox.x + updatesBox.width - 2,
+        `UX052 ${width}px: search is not after main links`);
+      assert.ok(searchBox.x + searchBox.width <= profileBox.x + 2,
+        `UX052 ${width}px: search overlaps profile`);
+    }
+    if (process.env.ADMIN_CHAPTER_VISUAL_CAPTURE === '1') {
+      await guest.screenshot({
+        path: join(output, `16-ux052-navigation-${width}.png`),
+        fullPage: false, animations: 'disabled', caret: 'initial',
+      });
+    }
+    console.log(`ADMIN_CORE_UX052_NAV_${width}=PASS`);
+  }
+
   stage = 'UX051 mobile primary navigation search and header profile';
   await guest.setViewportSize({ width: 360, height: 740 });
   await guest.goto(`${origin}/`, { waitUntil: 'domcontentloaded' });
