@@ -23,7 +23,7 @@ const title = `ADMIN CORE fixture ${stamp}`;
 const updatedTitle = `ADMIN CORE updated ${stamp}`;
 const categorySlug = `category-${stamp}`;
 const output = process.env.ADMIN_CORE_OUTPUT ?? '/tmp/admin-core-01';
-const fixture = { adminId: null, readerId: null, categoryId: null, comicId: null };
+const fixture = { adminId: null, readerId: null, categoryId: null, extraCategoryId: null, comicId: null };
 let browser, adminPage, stage = 'setup';
 
 // Screenshots are visual-only. All data is a synthetic disposable CI fixture.
@@ -145,6 +145,60 @@ async function main() {
   await adminPage.goto(`${origin}/admin/comics`, { waitUntil: 'load' });
   assert.equal(new URL(adminPage.url()).pathname, '/admin/comics', 'admin unexpectedly redirected');
   await adminPage.getByRole('heading', { name: 'Управление комиксами' }).waitFor();
+
+  stage = 'UX05 admin navigation and category modal create/edit';
+  assert.equal(await adminPage.locator('.admin-shell-nav').getByRole('link', { name: 'Главы', exact: true }).count(), 0,
+    'the redundant chapters sidebar link must be absent');
+  assert.equal(await adminPage.locator('.admin-shell-nav').getByRole('link', { name: 'Произведения' }).count(), 1);
+  await adminPage.goto(`${origin}/admin/categories`, { waitUntil: 'load' });
+  assert.equal(await adminPage.getByRole('heading', { name: 'Новая категория' }).count(), 0,
+    'the obsolete inline creation form must be absent');
+  const categoryTrigger = adminPage.getByRole('button', { name: 'Добавить категорию' });
+  await categoryTrigger.click();
+  let categoryDialog = adminPage.getByRole('dialog', { name: 'Добавить категорию' });
+  await categoryDialog.waitFor({ state: 'visible' });
+  await categoryDialog.getByLabel('Адрес категории (slug)').fill('temporary-unsaved');
+  await categoryDialog.getByRole('button', { name: 'Отмена' }).click();
+  await categoryDialog.waitFor({ state: 'hidden' });
+  await categoryTrigger.click();
+  categoryDialog = adminPage.getByRole('dialog', { name: 'Добавить категорию' });
+  assert.equal(await categoryDialog.getByLabel('Адрес категории (slug)').inputValue(), '',
+    'cancel must discard an unsaved category draft');
+  const wizardCategorySlug = `ux05-${stamp}`;
+  await categoryDialog.getByLabel('Адрес категории (slug)').fill(wizardCategorySlug);
+  await categoryDialog.getByLabel('Название', { exact: true }).fill('UX05 категория');
+  await categoryDialog.getByLabel('Описание').fill('Категория для проверки модального редактора');
+  await adminPreview('10-ux05-category-create.png');
+  await categoryDialog.getByRole('button', { name: 'Создать категорию' }).click();
+  await categoryDialog.waitFor({ state: 'hidden' });
+  const categoryRow = await eventually('SELECT id, name FROM categories WHERE slug = $1', [wizardCategorySlug],
+    row => row?.name === 'UX05 категория', 'category wizard must create via API');
+  fixture.extraCategoryId = categoryRow.id;
+  const categoryItem = adminPage.locator(`[data-category-slug="${wizardCategorySlug}"]`);
+  await categoryItem.waitFor({ state: 'visible' });
+  await categoryItem.getByRole('button', { name: 'Изменить категорию' }).click();
+  categoryDialog = adminPage.getByRole('dialog', { name: 'Изменить категорию' });
+  await categoryDialog.waitFor({ state: 'visible' });
+  assert.equal(await categoryDialog.getByLabel('Адрес категории (slug)').isEditable(), false,
+    'existing category slug must remain immutable');
+  await categoryDialog.getByLabel('Название', { exact: true }).fill('UX05 категория изменена');
+  await adminPage.setViewportSize({ width: 320, height: 740 });
+  const modalRect = await categoryDialog.boundingBox();
+  assert.ok(modalRect && modalRect.x >= -1 && modalRect.x + modalRect.width <= 321,
+    'category modal must fit a 320px viewport');
+  await adminPreview('11-ux05-category-edit-mobile.png');
+  await categoryDialog.getByRole('button', { name: 'Сохранить изменения' }).click();
+  await categoryDialog.waitFor({ state: 'hidden' });
+  await eventually('SELECT name FROM categories WHERE slug = $1', [wizardCategorySlug],
+    row => row?.name === 'UX05 категория изменена', 'category wizard must update metadata');
+  await adminPreview('12-ux05-category-list-mobile.png');
+  await adminPage.setViewportSize({ width: 1440, height: 900 });
+  await adminPage.goto(`${origin}/account`, { waitUntil: 'load' });
+  assert.equal(await adminPage.getByRole('link', { name: /Панель управления/ }).count(), 1,
+    'staff access to admin must remain available from Profile');
+  await adminPage.goto(`${origin}/admin/comics`, { waitUntil: 'load' });
+  await adminPage.getByRole('heading', { name: 'Управление комиксами' }).waitFor();
+  console.log('ADMIN_CORE_UX05_CATEGORIES_AND_NAV=PASS');
 
   stage = 'create wizard opens';
   await adminPage.locator('.admin-studio-add-button').click();
@@ -390,6 +444,25 @@ async function main() {
   await guest.getByText(updatedTitle, { exact: true }).first().waitFor();
   console.log('ADMIN_CORE_PUBLISH_PUBLIC=PASS');
 
+  stage = 'UX05 mobile header search routes into filtered catalog';
+  await guest.setViewportSize({ width: 360, height: 740 });
+  await guest.goto(`${origin}/`, { waitUntil: 'load' });
+  const headerSearchButton = guest.getByRole('button', { name: 'Поиск по каталогу' });
+  await headerSearchButton.click();
+  const headerSearchForm = guest.getByRole('search', { name: 'Поиск произведений' });
+  await headerSearchForm.getByRole('searchbox', { name: 'Название произведения' }).fill(updatedTitle);
+  const searchRect = await headerSearchForm.boundingBox();
+  assert.ok(searchRect && searchRect.x >= -1 && searchRect.x + searchRect.width <= 361,
+    'header search must fit mobile viewport');
+  if (process.env.ADMIN_CHAPTER_VISUAL_CAPTURE === '1') await guest.screenshot({ path: join(output, '13-ux05-header-search-mobile.png'), animations: 'disabled' });
+  await headerSearchForm.getByRole('searchbox', { name: 'Название произведения' }).press('Enter');
+  await guest.waitForURL(url => url.pathname === '/' && url.searchParams.get('q') === updatedTitle);
+  assert.equal(await guest.locator('.catalog-search-field input[name="q"]').inputValue(), updatedTitle,
+    'catalog search must be populated from the header search');
+  await guest.getByText(updatedTitle, { exact: true }).first().waitFor({ state: 'visible' });
+  if (process.env.ADMIN_CHAPTER_VISUAL_CAPTURE === '1') await guest.screenshot({ path: join(output, '14-ux05-catalog-filtered.png'), animations: 'disabled' });
+  console.log('ADMIN_CORE_UX05_HEADER_SEARCH=PASS');
+
   stage = 'reader forbidden from admin UI/API';
   const readerContext = await browser.newContext();
   await readerContext.addCookies([{ name: 'comic_diary_session', value: readerToken, url: origin }]);
@@ -432,6 +505,7 @@ try {
     if (fixture.readerId) await pool.query('DELETE FROM user_chapter_reads WHERE user_id = $1', [fixture.readerId]);
     if (fixture.comicId) await pool.query('DELETE FROM comics WHERE id = $1', [fixture.comicId]);
     else await pool.query('DELETE FROM comics WHERE slug = $1', [stamp]);
+    if (fixture.extraCategoryId) await pool.query('DELETE FROM categories WHERE id = $1', [fixture.extraCategoryId]);
     if (fixture.categoryId) await pool.query('DELETE FROM categories WHERE id = $1', [fixture.categoryId]);
     if (fixture.adminId || fixture.readerId) await pool.query('DELETE FROM users WHERE id = ANY($1::int[])',
       [[fixture.adminId, fixture.readerId].filter(Boolean)]);
