@@ -46,8 +46,8 @@ jobs:
       - name: Optional work source URL rules
         run: node --import tsx --test src/catalog/validate-catalog.test.ts
 
-      - name: Advanced chapter batch input validation
-        run: node --import tsx --test src/modules/catalog/chapter-structured-batch.test.ts
+      - name: Advanced chapter batch input validation and volume placement
+        run: node --import tsx --test src/modules/catalog/chapter-structured-batch.test.ts src/modules/catalog/chapter-placement.test.ts
 
       - name: Reading destination rules
         run: node --import tsx --test src/modules/comics/work-metadata.test.ts src/modules/library/reading-target.test.ts src/modules/library/list-navigation.test.ts src/modules/library/chapter-rating-summary.test.ts src/modules/library/chapter-reading-model.test.ts src/modules/catalog/chapter-release-dates.test.ts src/modules/catalog/chapter-volumes.test.ts src/modules/library/queries/reading-updates-model.test.ts

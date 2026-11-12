@@ -26,7 +26,8 @@ type DraftRow = {
   kind: ChapterKind;
   status: ChapterStatus;
   volumeNumber: string;
-  sortOrder: string;
+  placementMode: "AUTO" | "BEFORE" | "AFTER";
+  anchorChapterId: string;
   releasedDate: string;
   expectedPrecision: ExpectedReleasePrecision;
   expectedRelease: string;
@@ -39,7 +40,7 @@ type Preview = {
 };
 const blankRow = (key: number, status: ChapterStatus): DraftRow => ({
   key, title: "", sourceUrl: "", displayCode: "", kind: "MAIN", status,
-  volumeNumber: "", sortOrder: "", releasedDate: "", expectedPrecision: "NONE",
+  volumeNumber: "", placementMode: "AUTO", anchorChapterId: "", releasedDate: "", expectedPrecision: "NONE",
   expectedRelease: "", supersedesChapterId: "", revisionConfirmed: false,
 });
 const errors: Record<string, string> = {
@@ -65,7 +66,8 @@ function normalizeRow(row: DraftRow): StructuredChapterRow {
     displayCode: row.displayCode, title: row.title.trim() || null,
     sourceUrl: row.sourceUrl.trim() || null, kind: row.kind, status: row.status,
     volumeNumber: toInteger(row.volumeNumber, "Том"),
-    sortOrder: toInteger(row.sortOrder, "Порядок"),
+    placementMode: row.placementMode,
+    anchorChapterId: toInteger(row.anchorChapterId, "Соседняя глава"),
     releasedAt: row.status === "RELEASED" && row.releasedDate ? `${row.releasedDate}T12:00:00.000Z` : null,
     expectedRelease: row.status === "SCHEDULED" ? row.expectedRelease.trim() || null : null,
     supersedesChapterId: toInteger(row.supersedesChapterId, "Заменяемая глава"),
@@ -111,7 +113,7 @@ export function ChapterBatchEditor({ comicId, chapters, disabled, onBusyChange }
       supersedesChapterId: previousId, revisionConfirmed: false,
       status: "RELEASED", kind: previous.kind as ChapterKind,
       displayCode: previous.displayCode, title: previous.title ?? "",
-      sourceUrl: previous.sourceUrl ?? "", sortOrder: String(previous.sortOrder),
+      sourceUrl: previous.sourceUrl ?? "", placementMode: "AUTO", anchorChapterId: "",
       volumeNumber: previous.volumeNumber ? String(previous.volumeNumber) : "",
       expectedPrecision: "NONE", expectedRelease: "",
     } : { supersedesChapterId: "", revisionConfirmed: false });
@@ -218,12 +220,29 @@ export function ChapterBatchEditor({ comicId, chapters, disabled, onBusyChange }
                 </label>
                 <label className="block text-sm">Том (необязательно)
                   <input type="number" min={1} max={99} step={1} value={row.volumeNumber} disabled={busy} placeholder="Без тома"
-                    onChange={event => updateRow(row.key, { volumeNumber: event.target.value })} className={field} />
+                    onChange={event => updateRow(row.key, { volumeNumber: event.target.value, placementMode: "AUTO", anchorChapterId: "" })} className={field} />
                 </label>
-                <label className="block text-sm">Точный порядок (необязательно)
-                  <input type="number" min={0} max={2147483647} step={1} value={row.sortOrder} disabled={busy} placeholder="Автоматически"
-                    onChange={event => updateRow(row.key, { sortOrder: event.target.value })} className={field} />
+                <label className="block text-sm">Расположение в томе
+                  <select value={row.placementMode} disabled={busy} onChange={event => updateRow(row.key, {
+                    placementMode: event.target.value as DraftRow["placementMode"], anchorChapterId: "",
+                  })} className={field}>
+                    <option value="AUTO">{row.supersedesChapterId ? "На месте старой редакции" : "В конец тома"}</option>
+                    <option value="BEFORE">Перед выбранной главой</option>
+                    <option value="AFTER">После выбранной главы</option>
+                  </select>
                 </label>
+                {row.placementMode !== "AUTO" ? <label className="block text-sm">Соседняя глава в том же томе
+                  <select value={row.anchorChapterId} disabled={busy} onChange={event => updateRow(row.key, { anchorChapterId: event.target.value })} className={field}>
+                    <option value="">Выберите главу</option>
+                    {chapters.filter(chapter => chapter.status !== "ARCHIVED" &&
+                      (chapter.volumeNumber === (row.volumeNumber.trim() ? Number(row.volumeNumber) : null)) &&
+                      String(chapter.id) !== row.supersedesChapterId)
+                      .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+                      .map(chapter => <option key={chapter.id} value={chapter.id}>
+                        {chapter.displayCode || chapter.title || `ID ${chapter.id}`}{chapter.displayCode && chapter.title ? ` — ${chapter.title}` : ""}
+                      </option>)}
+                  </select>
+                </label> : null}
                 <label className="block text-sm">Статус этой главы
                   <select value={row.status} disabled={busy} onChange={event => updateRow(row.key, { status: event.target.value as ChapterStatus, releasedDate: "", expectedRelease: "", expectedPrecision: "NONE" })} className={field}>
                     <option value="SCHEDULED">Запланирована</option><option value="RELEASED">Опубликована</option>
@@ -273,7 +292,7 @@ export function ChapterBatchEditor({ comicId, chapters, disabled, onBusyChange }
           <textarea id={`${id}-paste`} rows={7} maxLength={20000} disabled={busy} value={pasteText}
             onChange={event => { setPasteText(event.target.value); resetPreview(); }} placeholder={"1\tПервая глава\tMAIN\thttps://example.com/1\n2\tВторая глава"}
             className={`${field} resize-y`} />
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">Столбцы через Tab: код, название, MAIN/SPECIAL, ссылка. Для дат, томов и замен редакций используйте обычные строки выше.</p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">Столбцы через Tab: код, название, MAIN/SPECIAL, ссылка. Для размещения внутри тома, дат и замен редакций используйте обычные строки выше.</p>
         </div>}
         <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
           <input type="checkbox" checked={pasteMode} disabled={busy}
@@ -286,7 +305,7 @@ export function ChapterBatchEditor({ comicId, chapters, disabled, onBusyChange }
           <p className="text-xs text-[var(--text-secondary)]">Всё сохраняется одной транзакцией. При замене редакции старая архивируется, а история чтения остаётся.</p>
           <ol className="max-h-52 space-y-2 overflow-y-auto">
             {preview.rows.map((row, index) => <li key={index} className="text-sm">{index + 1}. <strong>{row.displayCode || row.title}</strong>{row.displayCode && row.title ? ` — ${row.title}` : ""}
-              <span className="block text-xs text-[var(--text-secondary)]">{row.kind === "SPECIAL" ? "Спешиал" : "Основная"} · порядок {row.sortOrder}{row.supersedesChapterId ? " · новая редакция" : ""}</span>
+              <span className="block text-xs text-[var(--text-secondary)]">{row.kind === "SPECIAL" ? "Спешиал" : "Основная"} · позиция в томе рассчитана автоматически{row.supersedesChapterId ? " · новая редакция" : ""}</span>
             </li>)}
           </ol>
         </section> : null}

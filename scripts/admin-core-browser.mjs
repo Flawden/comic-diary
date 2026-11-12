@@ -241,7 +241,8 @@ async function main() {
   await second.locator('summary').click();
   await second.getByLabel('Код главы').fill('3');
   await second.getByLabel('Том (необязательно)').fill('2');
-  await second.getByLabel('Точный порядок (необязательно)').fill('45');
+  assert.equal(await second.getByLabel('Расположение в томе').inputValue(), 'AUTO');
+  assert.equal(await advanced.getByText('Точный порядок (необязательно)').count(), 0);
   await second.getByLabel('Точность ожидаемой даты').selectOption('MONTH');
   await second.getByLabel('Ожидаемый выход').fill('2027-04');
   await advanced.getByRole('button', { name: 'Проверить главы' }).click();
@@ -266,8 +267,32 @@ async function main() {
     `SELECT status, volume_number AS volume, sort_order AS position, expected_release AS expected
      FROM chapters WHERE comic_id = $1 AND display_code = '3'`, [fixture.comicId],
   );
-  assert.deepEqual(future.rows, [{ status: 'SCHEDULED', volume: 2, position: 45, expected: '2027-04' }]);
+  assert.equal(future.rows.length, 1);
+  assert.deepEqual({ status: future.rows[0].status, volume: future.rows[0].volume,
+    expected: future.rows[0].expected }, { status: 'SCHEDULED', volume: 2, expected: '2027-04' });
+  assert.ok(Number.isInteger(future.rows[0].position) && future.rows[0].position > 0);
   console.log('ADMIN_CORE_ADVANCED_ATOMIC_BATCH_AND_REVISION=PASS');
+  stage = 'relative chapter insertion in the same volume';
+  await editor.getByRole('button', { name: '+ Добавить главы', exact: true }).click();
+  const placed = editor.getByRole('dialog', { name: 'Добавить главы' });
+  const placedRow = placed.locator('section').first();
+  await placedRow.getByLabel('Название главы').fill('Глава перед запланированной');
+  await placedRow.locator('summary').click();
+  await placedRow.getByLabel('Код главы').fill('2.5');
+  await placedRow.getByLabel('Том (необязательно)').fill('2');
+  await placedRow.getByLabel('Расположение в томе').selectOption('BEFORE');
+  const futureChapter = await pool.query('SELECT id FROM chapters WHERE comic_id = $1 AND display_code = $2', [fixture.comicId, '3']);
+  const anchorChoice = placedRow.getByLabel('Соседняя глава в том же томе');
+  await anchorChoice.locator(`option[value="${futureChapter.rows[0].id}"]`).waitFor({ state: 'attached', timeout: 30000 });
+  await anchorChoice.selectOption(String(futureChapter.rows[0].id));
+  await placed.getByRole('button', { name: 'Проверить главы' }).click();
+  await placed.getByRole('button', { name: 'Сохранить главу' }).click();
+  await placed.waitFor({ state: 'hidden' });
+  const volumeTwo = await pool.query(`SELECT display_code AS code, sort_order AS position FROM chapters
+    WHERE comic_id = $1 AND volume_number = 2 AND status <> 'ARCHIVED' ORDER BY sort_order, id`, [fixture.comicId]);
+  assert.deepEqual(volumeTwo.rows.map(row => row.code), ['2.5', '3']);
+  assert.ok(volumeTwo.rows[0].position < volumeTwo.rows[1].position);
+  console.log('ADMIN_CORE_VOLUME_RELATIVE_PLACEMENT=PASS');
 
   stage = 'publish from admin UI';
   await editor.locator('.admin-studio-tabs').getByRole('button', { name: 'Публикация' }).click();

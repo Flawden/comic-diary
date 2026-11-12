@@ -1498,7 +1498,8 @@ export function AdminComicManager({
       return;
     }
 
-    const active = comic.chapters.filter(c => c.status !== "ARCHIVED").sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+    const active = comic.chapters.filter(c => c.status !== "ARCHIVED" && c.volumeNumber === chapter.volumeNumber)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
     const index = active.findIndex(c => c.id === chapter.id);
     const neighbor = active[index + (direction === "up" ? -1 : 1)];
     if (!neighbor) return;
@@ -2051,7 +2052,7 @@ export function AdminComicManager({
                                       {chapter.volumeNumber !== null ? `Том ${chapter.volumeNumber} · ` : ""}{chapter.status === "RELEASED" ? `Опубликована${chapter.releasedAt ? ` · Вышла ${formatReleasedAt(chapter.releasedAt)}` : " · Дата выхода не указана"}`
                                         : chapter.status === "SCHEDULED" ? `Запланирована${chapter.expectedRelease ? ` · Ожидается ${formatExpectedRelease(chapter.expectedRelease)}` : ""}`
                                         : "В архиве"}{chapter.status !== "ARCHIVED"
-                                          ? ` · Позиция в списке: ${comic.chapters.filter(c => c.status !== "ARCHIVED").sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id).findIndex(c => c.id === chapter.id) + 1}`
+                                          ? ` · Позиция в ${chapter.volumeNumber === null ? "списке без тома" : "томе"}: ${comic.chapters.filter(c => c.status !== "ARCHIVED" && c.volumeNumber === chapter.volumeNumber).sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id).findIndex(c => c.id === chapter.id) + 1}`
                                           : ""}
                                     </div>
                                     {chapterEditFeedback?.chapterId === chapter.id && chapterEditFeedback.kind === "success" ? (
@@ -2064,7 +2065,7 @@ export function AdminComicManager({
                                       <button
                                         type="button"
                                         disabled={
-                                          busyKey !== null || !canMove || editingChapterId !== null || archiveConfirmChapterId !== null || chapter.id === comic.chapters.filter(c => c.status !== "ARCHIVED").sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)[0]?.id
+                                          busyKey !== null || !canMove || editingChapterId !== null || archiveConfirmChapterId !== null || chapter.id === comic.chapters.filter(c => c.status !== "ARCHIVED" && c.volumeNumber === chapter.volumeNumber).sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)[0]?.id
                                         }
                                         onClick={() =>
                                           void moveChapter(
@@ -2081,7 +2082,7 @@ export function AdminComicManager({
                                       <button
                                         type="button"
                                         disabled={
-                                          busyKey !== null || !canMove || editingChapterId !== null || archiveConfirmChapterId !== null || chapter.id === comic.chapters.filter(c => c.status !== "ARCHIVED").sort((a, b) => b.sortOrder - a.sortOrder || b.id - a.id)[0]?.id
+                                          busyKey !== null || !canMove || editingChapterId !== null || archiveConfirmChapterId !== null || chapter.id === comic.chapters.filter(c => c.status !== "ARCHIVED" && c.volumeNumber === chapter.volumeNumber).sort((a, b) => b.sortOrder - a.sortOrder || b.id - a.id)[0]?.id
                                         }
                                         onClick={() =>
                                           void moveChapter(

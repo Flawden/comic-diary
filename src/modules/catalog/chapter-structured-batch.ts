@@ -9,7 +9,8 @@ export type StructuredChapterRow = {
   kind: "MAIN" | "SPECIAL";
   status: "SCHEDULED" | "RELEASED";
   volumeNumber: number | null;
-  sortOrder: number | null;
+  placementMode: "AUTO" | "BEFORE" | "AFTER";
+  anchorChapterId: number | null;
   releasedAt: string | null;
   expectedRelease: string | null;
   supersedesChapterId: number | null;
@@ -18,7 +19,7 @@ export type StructuredChapterRow = {
 
 const allowed = new Set<keyof StructuredChapterRow>([
   "displayCode", "title", "sourceUrl", "kind", "status", "volumeNumber",
-  "sortOrder", "releasedAt", "expectedRelease", "supersedesChapterId", "revisionConfirmed",
+  "placementMode", "anchorChapterId", "releasedAt", "expectedRelease", "supersedesChapterId", "revisionConfirmed",
 ]);
 const nullable = (value: unknown, max: number): string | null => {
   if (value === null) return null;
@@ -56,8 +57,11 @@ export function parseStructuredChapterBatch(value: unknown): StructuredChapterRo
     }
     const volume = item.volumeNumber;
     if (volume !== null && (!Number.isSafeInteger(volume) || Number(volume) < 1 || Number(volume) > 99)) bad("том должен быть от 1 до 99.");
-    const order = item.sortOrder;
-    if (order !== null && (!Number.isSafeInteger(order) || Number(order) < 0 || Number(order) > 2147483647)) bad("неверный порядок.");
+    const placementMode = item.placementMode;
+    if (placementMode !== "AUTO" && placementMode !== "BEFORE" && placementMode !== "AFTER") bad("неверный способ размещения.");
+    const anchor = item.anchorChapterId;
+    if (anchor !== null && (!Number.isSafeInteger(anchor) || Number(anchor) <= 0)) bad("неверная соседняя глава.");
+    if ((placementMode === "AUTO") !== (anchor === null)) bad("укажите главу для размещения перед или после неё.");
     const supersedes = item.supersedesChapterId;
     if (supersedes !== null && (!Number.isSafeInteger(supersedes) || Number(supersedes) < 1)) bad("неверная редакция для замены.");
     if (typeof item.revisionConfirmed !== "boolean") bad("неверное подтверждение редакции.");
@@ -79,7 +83,8 @@ export function parseStructuredChapterBatch(value: unknown): StructuredChapterRo
       kind: item.kind as "MAIN" | "SPECIAL",
       status: item.status as "SCHEDULED" | "RELEASED",
       volumeNumber: volume as number | null,
-      sortOrder: order as number | null,
+      placementMode: placementMode as "AUTO" | "BEFORE" | "AFTER",
+      anchorChapterId: anchor as number | null,
       releasedAt, expectedRelease,
       supersedesChapterId: supersedes as number | null,
       revisionConfirmed: item.revisionConfirmed as boolean,

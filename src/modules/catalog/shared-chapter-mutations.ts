@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { parseChapterBatch } from "./chapter-batch-input";
 import { parseStructuredChapterBatch } from "./chapter-structured-batch";
+import { planVolumeChapterPlacement } from "./chapter-placement";
 import { isValidExpectedRelease } from "./chapter-release-dates";
 import {
   and,
@@ -1166,8 +1167,7 @@ export async function appendSharedChapterStructuredBatch(
         throw new SharedChapterMutationError("chapter-batch-stale");
       const active = registry.filter(row => row.status !== "ARCHIVED");
       const used = new Map(active.filter(row => row.displayCode).map(row => [row.displayCode, row.id]));
-      const lastOrder = registry.reduce((max, row) => Math.max(max, row.sortOrder), 0);
-      const prepared = rows.map((row, index) => {
+      const prepared = rows.map(row => {
         const old = row.supersedesChapterId === null ? null
           : registry.find(chapter => chapter.id === row.supersedesChapterId);
         if (row.supersedesChapterId !== null &&
@@ -1176,22 +1176,48 @@ export async function appendSharedChapterStructuredBatch(
         const ownerId = used.get(row.displayCode);
         if (row.displayCode && ownerId !== undefined && ownerId !== old?.id)
           throw new SharedChapterMutationError("chapter-display-code-conflict");
-        const sortOrder = row.sortOrder ?? (lastOrder + (index + 1) * 10);
-        if (!Number.isSafeInteger(sortOrder) || sortOrder < 0 || sortOrder > 2147483647)
-          throw new SharedChapterMutationError("invalid-chapter");
         return {
-          metadata: { ...row.metadata, volumeNumber: row.volumeNumber ?? old?.volumeNumber ?? null },
-          sortOrder, supersedesChapterId: row.supersedesChapterId, old,
+          metadata: { ...row.metadata, volumeNumber: row.volumeNumber },
+          supersedesChapterId: row.supersedesChapterId, old,
+          placementMode: row.placementMode, anchorChapterId: row.anchorChapterId,
         };
       });
-      const previewRows = prepared.map(row => ({
+      // Plan against the complete active registry while the catalog lock is held.
+      // Reading IDs are untouched; archive replacements before inserting new rows.
+      let placement: ReturnType<typeof planVolumeChapterPlacement>;
+      try {
+        placement = planVolumeChapterPlacement(active.map(chapter => ({
+          id: chapter.id, volumeNumber: chapter.volumeNumber, sortOrder: chapter.sortOrder,
+        })), prepared.map(row => ({
+          volumeNumber: row.metadata.volumeNumber ?? null,
+          supersedesChapterId: row.supersedesChapterId,
+          placementMode: row.placementMode,
+          anchorChapterId: row.anchorChapterId,
+        })));
+      } catch {
+        throw new SharedChapterMutationError("invalid-chapter");
+      }
+      const ordered = prepared.map((row, index) => ({ ...row, sortOrder: placement.newSortOrders[index] }));
+      const previewRows = ordered.map(row => ({
         ...row.metadata, releasedAt: row.metadata.releasedAt?.toISOString() ?? null,
         sortOrder: row.sortOrder, supersedesChapterId: row.supersedesChapterId,
       }));
       if (expectedSnapshot === undefined) return { snapshot, rows: previewRows, createdCount: 0 };
       // All validations completed before mutations. A failure below rolls back the entire batch.
+      const now = new Date();
+      for (const change of placement.existingChanges) {
+        const before = active.find(chapter => chapter.id === change.id)!;
+        const [after] = await tx.update(chapters).set({ sortOrder: change.sortOrder, updatedAt: now })
+          .where(eq(chapters.id, before.id)).returning();
+        await tx.insert(administrativeAuditEvents).values({
+          actorUserId: actor.userId, actorRole: actor.role, action: "CHAPTER_REORDER",
+          targetType: "CHAPTER", targetId: before.id,
+          targetKey: chapterTargetKey(comic.slug, before.id),
+          details: { channel: "structured-batch-placement", before: chapterSnapshot(before), after: chapterSnapshot(after) },
+        });
+      }
       const created = [] as ChapterRow[];
-      for (const row of prepared) {
+      for (const row of ordered) {
         if (row.old) {
           await tx.update(chapters).set({ status: "ARCHIVED", updatedAt: new Date() })
             .where(eq(chapters.id, row.old.id));
@@ -1242,7 +1268,8 @@ export async function moveSharedCatalogChapter(
     const current = registry.find(c => c.id === chapterId);
     if (!current) throw new SharedChapterMutationError("chapter-not-found");
     if (current.status === "ARCHIVED") throw new SharedChapterMutationError("chapter-archived");
-    const active = registry.filter(c => c.status !== "ARCHIVED").sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+    const active = registry.filter(c => c.status !== "ARCHIVED" && c.volumeNumber === current.volumeNumber)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
     const index = active.findIndex(c => c.id === chapterId);
     const neighborIndex = index + (direction === "up" ? -1 : 1);
     const neighbor = active[neighborIndex];
@@ -1251,7 +1278,7 @@ export async function moveSharedCatalogChapter(
     [active[index], active[neighborIndex]] = [active[neighborIndex], active[index]];
     // Unique ascending values make a move deterministic even when old values tie.
     // Preserve existing slots when strictly increasing; otherwise normalize active slots.
-    const slots = registry.filter(c => c.status !== "ARCHIVED").map(c => c.sortOrder).sort((a, b) => a - b);
+    const slots = active.map(c => c.sortOrder).sort((a, b) => a - b);
     const unique = slots.every((value, i) => i === 0 || value > slots[i - 1]);
     const now = new Date();
     for (const [i, before] of active.entries()) {

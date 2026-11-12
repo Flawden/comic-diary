@@ -10,6 +10,7 @@ type Chapter = {
   kind: string;
   status: "SCHEDULED" | "RELEASED" | "ARCHIVED";
   sortOrder: number;
+  volumeNumber: number | null;
 };
 type StatusFilter = "ACTIVE" | "ALL" | Chapter["status"];
 const PAGE_SIZE = 40;
@@ -29,7 +30,9 @@ export function AdminChapterList<T extends Chapter>({ chapters, locked, children
     (status === "ALL" || (status === "ACTIVE" ? chapter.status !== "ARCHIVED" : chapter.status === status)) &&
     (kind === "ALL" || chapter.kind === kind) &&
     (!query || `${chapter.displayCode} ${chapter.title ?? ""}`.toLocaleLowerCase("ru").includes(query))
-  ).sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+  ).sort((a, b) =>
+    (a.volumeNumber === null ? 100 : a.volumeNumber) - (b.volumeNumber === null ? 100 : b.volumeNumber) ||
+    a.sortOrder - b.sortOrder || a.id - b.id);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pages);
   const start = (currentPage - 1) * PAGE_SIZE;
@@ -65,7 +68,7 @@ export function AdminChapterList<T extends Chapter>({ chapters, locked, children
       <p role="status">Найдено: {filtered.length}{filtered.length ? ` · Показаны ${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)}` : ""}</p>
       <Button variant="ghost" disabled={locked} onClick={reset}>Сбросить фильтры</Button>
     </div>
-    <p className="text-xs text-[var(--text-secondary)]">Перемещение доступно без поиска и фильтров, в списке «Без архива». Соседняя глава может находиться на другой странице.</p>
+    <p className="text-xs text-[var(--text-secondary)]">Перемещение доступно без поиска и фильтров, в списке «Без архива», только в пределах одного тома. Соседняя глава может находиться на другой странице.</p>
     {locked ? <p className="text-xs text-[var(--text-secondary)]">Закончите редактирование или подтверждение действия, чтобы изменить фильтры и страницу.</p> : null}
     {filtered.length ? children(filtered.slice(start, start + PAGE_SIZE), !query && status === "ACTIVE" && kind === "ALL") :
       <p className="rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--text-secondary)]">По этим условиям глав нет. Измените поиск или сбросьте фильтры.</p>}
