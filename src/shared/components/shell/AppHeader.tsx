@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AppNavigation } from "./AppNavigation";
-import { HeaderCatalogSearch } from "./HeaderCatalogSearch";
+import { ProfileEntryMenu } from "./ProfileEntryMenu";
 
 export function AppHeader() {
   return (
@@ -20,7 +20,7 @@ export function AppHeader() {
           </span>
         </Link>
         <AppNavigation />
-        <HeaderCatalogSearch />
+        <ProfileEntryMenu />
       </div>
     </header>
   );
