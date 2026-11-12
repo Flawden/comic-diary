@@ -1,13 +1,8 @@
 "use client";
 
-import {
-  type FormEvent,
-  useState,
-} from "react";
-
-import {
-  useRouter,
-} from "next/navigation";
+import { type FormEvent, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import "./admin-category-manager.css";
 
 type AdminCategory = {
   id: number;
@@ -17,473 +12,217 @@ type AdminCategory = {
   updatedAt: string;
 };
 
-type Props = {
-  initialCategories: AdminCategory[];
-};
+type Props = { initialCategories: AdminCategory[] };
+type DialogState = { mode: "create" } | { mode: "update"; category: AdminCategory };
+type ApiEnvelope = { ok?: unknown; error?: { kind?: unknown } };
 
-type ApiEnvelope = {
-  ok?: unknown;
-  error?: {
-    kind?: unknown;
-  };
-};
-
-function nullableText(
-  value: FormDataEntryValue | null,
-): string | null {
-  if (
-    typeof value !==
-    "string"
-  ) {
-    return null;
-  }
-
-  const trimmed =
-    value.trim();
-
-  return trimmed === ""
-    ? null
-    : trimmed;
-}
-
-function textValue(
-  form: FormData,
-  name: string,
-): string {
-  const value =
-    form.get(
-      name,
-    );
-
-  return typeof value ===
-    "string"
-    ? value.trim()
-    : "";
-}
-
-function apiErrorKind(
-  body: ApiEnvelope,
-): string | null {
-  return typeof body.error?.kind ===
-    "string"
-    ? body.error.kind
-    : null;
-}
-
-function errorMessage(
-  kind: string | null,
-): string {
+function errorMessage(kind: unknown): string {
   switch (kind) {
-    case "category-already-exists":
-      return "Категория с таким slug уже существует.";
-
-    case "category-not-found":
-      return "Категория больше не найдена. Обновите страницу.";
-
+    case "category-already-exists": return "Категория с таким адресом уже существует.";
+    case "category-not-found": return "Категория больше не найдена. Обновите страницу.";
     case "invalid-catalog":
-    case "invalid-category-request":
-      return "Проверьте slug, название и описание категории.";
-
-    case "origin-not-allowed":
-      return "Запрос отклонён политикой same-origin.";
-
-    case "forbidden":
-      return "Недостаточно прав для изменения общего каталога.";
-
-    case "unauthorized":
-      return "Сессия закончилась. Войдите снова.";
-
-    default:
-      return "Не удалось сохранить категорию.";
+    case "invalid-category-request": return "Проверьте адрес, название и описание категории.";
+    case "origin-not-allowed": return "Запрос отклонён политикой same-origin.";
+    case "forbidden": return "Недостаточно прав для изменения каталога.";
+    case "unauthorized": return "Сессия закончилась. Войдите снова.";
+    default: return "Не удалось сохранить категорию.";
   }
 }
 
-function categoryPayload(
-  form: FormData,
-  immutableSlug?: string,
-) {
-  return {
-    slug:
-      immutableSlug ??
-      textValue(
-        form,
-        "slug",
-      ),
-
-    name:
-      textValue(
-        form,
-        "name",
-      ),
-
-    description:
-      nullableText(
-        form.get(
-          "description",
-        ),
-      ),
-  };
-}
-
-function CategoryFields({
-  category,
-  create,
+function CategoryDialog({
+  state, busy, error, onDismiss, onSave,
 }: {
-  category?: AdminCategory;
-  create: boolean;
+  state: DialogState;
+  busy: boolean;
+  error: string | null;
+  onDismiss: () => void;
+  onSave: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const existing = state.mode === "update" ? state.category : null;
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    dialog.showModal();
+    const firstField = dialog.querySelector<HTMLInputElement>(existing ? 'input[name="name"]' : 'input[name="slug"]');
+    firstField?.focus();
+    return () => { if (dialog.open) dialog.close(); };
+    // The dialog is remounted for every new create/edit operation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <>
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">
-            Slug
-          </span>
-
-          <input
-            name="slug"
-            required
-            readOnly={!create}
-            defaultValue={
-              category?.slug ??
-              ""
-            }
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 read-only:bg-[var(--surface)]"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">
-            Название
-          </span>
-
-          <input
-            name="name"
-            required
-            defaultValue={
-              category?.name ??
-              ""
-            }
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
-          />
-        </label>
+    <dialog
+      ref={dialogRef}
+      className="admin-category-dialog"
+      aria-labelledby="admin-category-dialog-heading"
+      onCancel={event => {
+        event.preventDefault();
+        if (!busy) onDismiss();
+      }}
+      onClick={event => {
+        if (event.target === event.currentTarget && !busy) onDismiss();
+      }}
+    >
+      <div className="admin-category-dialog-heading">
+        <div>
+          <p className="admin-category-eyebrow">Каталог · Категории</p>
+          <h2 id="admin-category-dialog-heading">
+            {existing ? "Изменить категорию" : "Добавить категорию"}
+          </h2>
+        </div>
+        <button type="button" onClick={onDismiss} disabled={busy}
+          className="admin-category-dialog-close" aria-label="Закрыть окно">×</button>
       </div>
 
-      <label className="mt-4 block">
-        <span className="mb-1 block text-sm font-medium">
-          Описание
-        </span>
-
-        <textarea
-          name="description"
-          rows={4}
-          defaultValue={
-            category?.description ??
-            ""
-          }
-          className="w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2"
-        />
-      </label>
-    </>
+      <form onSubmit={onSave} className="admin-category-dialog-form">
+        <div className="admin-category-dialog-body">
+          <p className="admin-category-help">
+            {existing
+              ? "Название и описание можно изменить. Адрес категории сохраняется, чтобы ссылки продолжали работать."
+              : "Добавьте категорию для произведений. Адрес (slug) после создания изменить нельзя."}
+          </p>
+          <div className="admin-category-fields">
+            <label>
+              <span>Адрес категории (slug)</span>
+              <input name="slug" required readOnly={!!existing} maxLength={160}
+                pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                title="Используйте латинские строчные буквы, цифры и дефисы"
+                defaultValue={existing?.slug ?? ""} placeholder="например, tea-stories" />
+            </label>
+            <label>
+              <span>Название</span>
+              <input name="name" required maxLength={200}
+                defaultValue={existing?.name ?? ""} placeholder="Например, Чайная территория" />
+            </label>
+            <label>
+              <span>Описание <small>необязательно</small></span>
+              <textarea name="description" rows={4} defaultValue={existing?.description ?? ""}
+                placeholder="О чём эта категория" />
+            </label>
+          </div>
+          {error && <p role="alert" className="admin-category-error">{error}</p>}
+        </div>
+        <div className="admin-category-dialog-actions">
+          <button type="button" className="admin-category-secondary" disabled={busy} onClick={onDismiss}>Отмена</button>
+          <button type="submit" className="admin-category-primary" disabled={busy}>
+            {busy ? "Сохранение…" : existing ? "Сохранить изменения" : "Создать категорию"}
+          </button>
+        </div>
+      </form>
+    </dialog>
   );
 }
 
-export function AdminCategoryManager({
-  initialCategories,
-}: Props) {
-  const router =
-    useRouter();
+export function AdminCategoryManager({ initialCategories }: Props) {
+  const router = useRouter();
+  const [activeDialog, setActiveDialog] = useState<DialogState | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const [
-    busyKey,
-    setBusyKey,
-  ] = useState<
-    string | null
-  >(null);
-
-  const [
-    message,
-    setMessage,
-  ] = useState<
-    string | null
-  >(null);
-
-  const [
-    error,
-    setError,
-  ] = useState<
-    string | null
-  >(null);
-
-  async function saveCategory(
-    event:
-      FormEvent<HTMLFormElement>,
-    mode:
-      | "create"
-      | "update",
-    immutableSlug?: string,
-  ) {
-    event.preventDefault();
-
-    const key =
-      mode === "create"
-        ? "create"
-        : `update:${immutableSlug}`;
-
-    if (busyKey) {
-      return;
-    }
-
-    setBusyKey(
-      key,
-    );
-    setMessage(null);
+  function openDialog(state: DialogState) {
+    if (busy) return;
     setError(null);
+    setMessage(null);
+    setActiveDialog(state);
+  }
 
-    const form =
-      event.currentTarget;
+  function dismiss() {
+    if (!busy) {
+      setActiveDialog(null);
+      setError(null);
+    }
+  }
 
-    const payload =
-      categoryPayload(
-        new FormData(
-          form,
-        ),
-        immutableSlug,
-      );
-
-    if (
-      !payload.slug ||
-      !payload.name
-    ) {
-      setError(
-        "Slug и название обязательны.",
-      );
-      setBusyKey(null);
+  async function saveCategory(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy || !activeDialog) return;
+    const form = new FormData(event.currentTarget);
+    const text = (name: string) => {
+      const value = form.get(name);
+      return typeof value === "string" ? value.trim() : "";
+    };
+    const existing = activeDialog.mode === "update" ? activeDialog.category : null;
+    const payload = {
+      slug: existing?.slug ?? text("slug"),
+      name: text("name"),
+      description: text("description") || null,
+    };
+    if (!payload.slug || !payload.name) {
+      setError("Адрес и название обязательны.");
       return;
     }
 
+    setBusy(true);
+    setError(null);
     try {
-      const response =
-        await fetch(
-          "/api/admin/catalog/categories",
-          {
-            method:
-              mode ===
-                "create"
-                ? "POST"
-                : "PATCH",
-
-            credentials:
-              "same-origin",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify(
-                payload,
-              ),
-          },
-        );
-
-      const body =
-        await response
-          .json()
-          .catch(
-            () =>
-              ({}) as ApiEnvelope,
-          ) as ApiEnvelope;
-
-      if (
-        response.status ===
-        401
-      ) {
-        router.replace(
-          "/login?next=%2Fadmin%2Fcategories",
-        );
+      const response = await fetch("/api/admin/catalog/categories", {
+        method: existing ? "PATCH" : "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await response.json().catch(() => ({})) as ApiEnvelope;
+      if (response.status === 401) {
+        router.replace("/login?next=%2Fadmin%2Fcategories");
         router.refresh();
         return;
       }
-
       if (!response.ok) {
-        setError(
-          errorMessage(
-            apiErrorKind(
-              body,
-            ),
-          ),
-        );
-        setBusyKey(null);
+        setError(errorMessage(body.error?.kind));
         return;
       }
-
-      if (
-        mode ===
-        "create"
-      ) {
-        form.reset();
-        setMessage(
-          `Категория ${payload.slug} создана.`,
-        );
-      } else {
-        setMessage(
-          `Категория ${payload.slug} обновлена.`,
-        );
-      }
-
-      setBusyKey(null);
+      setActiveDialog(null);
+      setMessage(existing ? `Категория «${payload.name}» обновлена.` : `Категория «${payload.name}» создана.`);
       router.refresh();
     } catch {
-      setError(
-        "Не удалось связаться с сервером.",
-      );
-      setBusyKey(null);
+      setError("Не удалось связаться с сервером.");
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
-    <div className="mt-8 space-y-8">
-      {error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800"
-        >
-          {error}
-        </p>
-      ) : null}
-
-      {message ? (
-        <p
-          role="status"
-          className="rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-800"
-        >
-          {message}
-        </p>
-      ) : null}
-
-      <section className="rounded-2xl bg-[var(--surface)] p-6 shadow-sm">
-        <h2 className="text-xl font-semibold">
-          Новая категория
-        </h2>
-
-        <form
-          onSubmit={(
-            event,
-          ) =>
-            saveCategory(
-              event,
-              "create",
-            )
-          }
-          className="mt-6"
-        >
-          <CategoryFields
-            create
-          />
-
-          <button
-            type="submit"
-            disabled={
-              busyKey !==
-                null
-            }
-            className="mt-5 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)] disabled:cursor-wait disabled:opacity-60"
-          >
-            Создать категорию
-          </button>
-        </form>
-      </section>
-
-      <section>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="text-xl font-semibold">
-            Категории
-          </h2>
-
-          <p className="text-sm text-[var(--muted)]">
-            Всего: {initialCategories.length}
-          </p>
-        </div>
-
-        {initialCategories.length ===
-        0 ? (
-          <p className="mt-4 text-[var(--muted)]">
-            Категорий пока нет.
-          </p>
-        ) : (
-          <div className="mt-4 space-y-5">
-            {initialCategories.map(
-              (category) => (
-                <details
-                  key={
-                    category.id
-                  }
-                  className="rounded-2xl border border-black/5 bg-[var(--surface)] p-5 shadow-sm"
-                >
-                  <summary className="cursor-pointer list-none">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-semibold">
-                          {category.name}
-                        </h3>
-
-                        <p className="mt-1 text-xs text-[var(--muted)]">
-                          {category.slug}
-                        </p>
-                      </div>
-
-                      <span className="rounded-full bg-[var(--background)] px-3 py-1 text-xs font-semibold">
-                        slug неизменяемый
-                      </span>
-                    </div>
-                  </summary>
-
-                  <form
-                    onSubmit={(
-                      event,
-                    ) =>
-                      saveCategory(
-                        event,
-                        "update",
-                        category.slug,
-                      )
-                    }
-                    className="mt-6 border-t border-black/10 pt-6"
-                  >
-                    <CategoryFields
-                      category={
-                        category
-                      }
-                      create={
-                        false
-                      }
-                    />
-
-                    <div className="mt-5 flex flex-wrap items-center gap-4">
-                      <button
-                        type="submit"
-                        disabled={
-                          busyKey !==
-                            null
-                        }
-                        className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)] disabled:cursor-wait disabled:opacity-60"
-                      >
-                        Сохранить изменения
-                      </button>
-
-                      <span className="text-xs text-[var(--muted)]">
-                        Удаление категорий пока недоступно.
-                      </span>
-                    </div>
-                  </form>
-                </details>
-              ),
-            )}
+    <div className="admin-category-manager">
+      {message && <p role="status" className="admin-category-success">{message}</p>}
+      <section aria-label="Список категорий">
+        <div className="admin-category-list-heading">
+          <div>
+            <h2>Категории</h2>
+            <p>Всего: {initialCategories.length}</p>
           </div>
+          <button type="button" className="admin-category-primary" onClick={() => openDialog({ mode: "create" })}>
+            + Добавить категорию
+          </button>
+        </div>
+        {initialCategories.length === 0 ? (
+          <p className="admin-category-empty">Категорий пока нет. Создайте первую категорию.</p>
+        ) : (
+          <ul className="admin-category-list">
+            {initialCategories.map(category => (
+              <li key={category.id} data-category-slug={category.slug} className="admin-category-item">
+                <div className="admin-category-item-content">
+                  <h3>{category.name}</h3>
+                  <p className="admin-category-slug">{category.slug}</p>
+                  {category.description && <p className="admin-category-description">{category.description}</p>}
+                </div>
+                <button type="button" className="admin-category-secondary"
+                  onClick={() => openDialog({ mode: "update", category })}>
+                  Изменить категорию
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
+      {activeDialog && (
+        <CategoryDialog
+          key={activeDialog.mode === "create" ? "create" : `edit-${activeDialog.category.id}`}
+          state={activeDialog} busy={busy} error={error} onDismiss={dismiss} onSave={saveCategory}
+        />
+      )}
     </div>
   );
 }

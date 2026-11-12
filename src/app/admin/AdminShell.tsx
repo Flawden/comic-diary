@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { useLocationHash } from "@/shared/hooks/useLocationHash";
 
 type Permissions = {
   editCatalog: boolean;
@@ -22,7 +21,6 @@ const icons = {
   home: "M3 10.5 12 3l9 7.5V21h-7v-7H10v7H3Z",
   grid: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
   books: "M4 3h5v18H4z M10 3h5v18h-5z M16 5l4-1 2 16-4 1z",
-  layers: "m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5 M3 16l9 5 9-5",
   users: "M16 19v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 9a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M20 19v-2a4 4 0 0 0-3-3.87 M16 1.13a4 4 0 0 1 0 7.75",
   import: "M12 3v12m0 0-5-5m5 5 5-5 M4 17v4h16v-4",
   audit: "M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8l-5-5h-3 M8 12h8 M8 16h8",
@@ -46,7 +44,6 @@ function Icon({ name }: { name: IconName }) {
 export function AdminShell({ children, role, permissions }: AdminShellProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const hash = useLocationHash();
 
   useEffect(() => {
     if (!open) return;
@@ -58,7 +55,6 @@ export function AdminShell({ children, role, permissions }: AdminShellProps) {
   }, [open]);
 
   const inComics = pathname === "/admin/comics" || pathname.startsWith("/admin/comics/");
-  const isChapterTab = inComics && hash === "#chapters";
   // Navigation is organized by tasks, not by implementation routes.
   // Permission gates and existing destinations intentionally remain unchanged.
   const sections: AdminNavSection[] = [
@@ -74,8 +70,7 @@ export function AdminShell({ children, role, permissions }: AdminShellProps) {
       label: "Каталог",
       items: [
         ...(permissions.editCatalog ? [
-          { href: "/admin/comics#metadata", label: "Произведения", icon: "books" as const, active: inComics && !isChapterTab },
-          { href: "/admin/comics#chapters", label: "Главы", icon: "layers" as const, active: isChapterTab },
+          { href: "/admin/comics#metadata", label: "Произведения", icon: "books" as const, active: inComics },
           { href: "/admin/categories", label: "Категории", icon: "grid" as const, active: pathname.startsWith("/admin/categories") },
         ] : []),
         ...(permissions.runImport ? [
