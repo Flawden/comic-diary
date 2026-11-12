@@ -45,7 +45,7 @@ export function HeaderCatalogSearch() {
         aria-label="Поиск по каталогу" title="Поиск по каталогу"
         aria-expanded={open} aria-controls="header-catalog-search"
         onClick={() => setOpen(value => !value)}>
-        <SearchIcon /><span className="tea-nav-label">Поиск</span>
+        <SearchIcon /><span className={`tea-nav-label ${styles.triggerLabel}`}>Поиск</span>
       </button>
       {open && (
         <form id="header-catalog-search" role="search" aria-label="Поиск произведений"

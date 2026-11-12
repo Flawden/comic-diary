@@ -1,0 +1,92 @@
+/* UX-06.1: the hero remains compact; long text lives in the browser top layer. */
+.preview { white-space: normal; }
+.more {
+  display: inline;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #f2d4a2;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 750;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.more:hover { color: #fff1d7; }
+.more:focus-visible { outline: 2px solid #f2d4a2; outline-offset: 3px; }
+.dialog {
+  position: fixed;
+  inset: 0;
+  width: min(640px, calc(100vw - 28px));
+  max-width: none;
+  max-height: min(78dvh, 720px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--cd-border);
+  border-radius: 19px;
+  background: var(--cd-surface);
+  color: var(--cd-text-primary);
+  box-shadow: 0 30px 100px rgb(0 0 0 / .55);
+  overflow: hidden;
+  text-align: left;
+  text-shadow: none;
+  overscroll-behavior: contain;
+}
+.dialog[open] { display: flex; flex-direction: column; }
+.dialog::backdrop { background: rgb(7 10 11 / .78); backdrop-filter: blur(4px); }
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: clamp(17px, 3vw, 26px) clamp(18px, 3.8vw, 32px) 15px;
+  border-bottom: 1px solid var(--cd-border);
+  flex-shrink: 0;
+}
+.eyebrow {
+  margin: 0 0 5px;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--cd-text-accent);
+}
+/* The hero has high-specificity h2 rules; keep the dialog heading theme-aware. */
+:global(.wd-work) :global(.wd-hero-summary) :global(.wd-story-block) .dialog .header h2 {
+  margin: 0;
+  color: var(--cd-text-primary);
+  font-family: var(--cd-font-display), Georgia, serif;
+  font-size: clamp(1.4rem, 3.5vw, 1.95rem);
+  line-height: 1.25;
+}
+.close {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border: 1px solid var(--cd-border);
+  border-radius: 12px;
+  background: var(--cd-surface-raised);
+  color: var(--cd-text-primary);
+  cursor: pointer;
+}
+.close:hover { filter: brightness(1.12); }
+.dialog :is(button):focus-visible { outline: 2px solid var(--cd-primary); outline-offset: 3px; }
+.scroll { overflow: auto; min-height: 0; padding: 18px clamp(18px, 3.8vw, 32px) clamp(22px, 3.8vw, 32px); overscroll-behavior: contain; }
+.fullText {
+  margin: 0;
+  color: var(--cd-text-primary);
+  font-size: clamp(.94rem, 1.3vw, 1.045rem);
+  line-height: 1.84;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 540px) {
+  .dialog { width: calc(100vw - 18px); max-height: min(84dvh, 740px); border-radius: 15px; }
+  .header { padding-inline: 18px; }
+  .scroll { padding-inline: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .dialog::backdrop { backdrop-filter: none; } }
