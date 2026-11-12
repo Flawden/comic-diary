@@ -2437,6 +2437,11 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 .tea-brand:hover .tea-brand-copy strong { color: #fff5df; }
 .tea-header .tea-navigation { align-self: stretch; min-width: 0; }
 .tea-header .tea-navigation-items { align-items: stretch; gap: clamp(8px, 1.7vw, 23px); }
+/* UX-05.2: reserve flexible desktop space for search at the right edge. */
+@media (min-width: 768px) {
+  .tea-header .tea-navigation { flex: 1 1 auto; }
+  .tea-header .tea-navigation-items { width: 100%; }
+}
 .tea-header .tea-nav-link {
   position: relative;
   min-height: 66px;
