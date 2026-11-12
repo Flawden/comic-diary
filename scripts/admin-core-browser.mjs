@@ -26,6 +26,17 @@ const output = process.env.ADMIN_CORE_OUTPUT ?? '/tmp/admin-core-01';
 const fixture = { adminId: null, readerId: null, categoryId: null, comicId: null };
 let browser, adminPage, stage = 'setup';
 
+// Screenshots are visual-only. All data is a synthetic disposable CI fixture.
+async function adminPreview(filename) {
+  if (process.env.ADMIN_CHAPTER_VISUAL_CAPTURE !== '1') return;
+  await adminPage.screenshot({
+    path: join(output, filename),
+    fullPage: false,
+    caret: 'initial',
+    animations: 'disabled',
+  });
+}
+
 async function eventually(query, params, check, message, ms = 20000) {
   const until = Date.now() + ms;
   let observed;
@@ -190,6 +201,7 @@ async function main() {
   await chapterDialog.locator('section').nth(1).locator('summary').click();
   await chapterDialog.getByLabel('Код главы').nth(1).fill('2');
   await chapterDialog.getByLabel('Статус добавляемых глав').selectOption('RELEASED');
+  await adminPreview('01-add-two-chapters.png');
   await chapterDialog.getByRole('button', { name: 'Проверить главы' }).click();
   await chapterDialog.getByRole('button', { name: 'Сохранить 2 глав' }).click();
   await chapterDialog.waitFor({ state: 'hidden' });
@@ -209,6 +221,7 @@ async function main() {
   await editor.getByRole('button', { name: 'Редактировать' }).first().click();
   const editDialog = editor.getByRole('dialog', { name: /Редактирование главы:/ });
   await editDialog.waitFor({ state: 'visible' });
+  await adminPreview('02-edit-prefilled-chapter.png');
   await editDialog.getByLabel('Название главы').fill('Глава исправлена через модальное окно');
   await editDialog.getByRole('button', { name: 'Сохранить главу' }).click();
   await editDialog.waitFor({ state: 'hidden' });
@@ -245,6 +258,7 @@ async function main() {
   assert.equal(await advanced.getByText('Точный порядок (необязательно)').count(), 0);
   await second.getByLabel('Точность ожидаемой даты').selectOption('MONTH');
   await second.getByLabel('Ожидаемый выход').fill('2027-04');
+  await adminPreview('03-advanced-revision-and-volume.png');
   await advanced.getByRole('button', { name: 'Проверить главы' }).click();
   await advanced.getByRole('button', { name: 'Сохранить 2 глав' }).click();
   await advanced.waitFor({ state: 'hidden' });
@@ -285,6 +299,7 @@ async function main() {
   const anchorChoice = placedRow.getByLabel('Соседняя глава в том же томе');
   await anchorChoice.locator(`option[value="${futureChapter.rows[0].id}"]`).waitFor({ state: 'attached', timeout: 30000 });
   await anchorChoice.selectOption(String(futureChapter.rows[0].id));
+  await adminPreview('04-place-before-neighbor.png');
   await placed.getByRole('button', { name: 'Проверить главы' }).click();
   await placed.getByRole('button', { name: 'Сохранить главу' }).click();
   await placed.waitFor({ state: 'hidden' });
@@ -293,6 +308,7 @@ async function main() {
   assert.deepEqual(volumeTwo.rows.map(row => row.code), ['2.5', '3']);
   assert.ok(volumeTwo.rows[0].position < volumeTwo.rows[1].position);
   console.log('ADMIN_CORE_VOLUME_RELATIVE_PLACEMENT=PASS');
+  await adminPreview('05-admin-chapter-list.png');
 
   stage = 'publish from admin UI';
   await editor.locator('.admin-studio-tabs').getByRole('button', { name: 'Публикация' }).click();

@@ -233,6 +233,7 @@ jobs:
           mkdir -p "$WD_VISUAL_OUTPUT"
           node scripts/work-reader-browser.mjs || { tail -60 "$RUNNER_TEMP/wd-next.log"; exit 1; }
           export ADMIN_CORE_OUTPUT="$RUNNER_TEMP/admin-core-01"
+          export ADMIN_CHAPTER_VISUAL_CAPTURE=1
           mkdir -p "$ADMIN_CORE_OUTPUT"
           node scripts/admin-core-browser.mjs || { tail -60 "$RUNNER_TEMP/wd-next.log"; exit 1; }
 
