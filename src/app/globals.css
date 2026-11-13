@@ -4473,3 +4473,239 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 :is([data-theme="paper"], [data-theme="night"]) .fantasy-account :is(a, button, summary, input):focus-visible {
   outline-color: var(--fe-action);
 }
+
+/* CD-UX08-CHAPTER-TOC-STAGE1-BEGIN */
+/* Editorial table of contents, timeline and theme-aware FALLBACK artwork.
+   No per-chapter images, uploads or schema changes in Stage 1. */
+.wd-work .chapter-panel--ux08 {
+  --ux08-accent: var(--text-accent);
+  --ux08-timeline: color-mix(in srgb, var(--ux08-accent) 48%, transparent);
+  --ux08-halo: color-mix(in srgb, var(--ux08-accent) 13%, transparent);
+  --ux08-card: var(--surface);
+  --ux08-muted: var(--text-secondary);
+  --ux08-art-opacity: .24;
+}
+[data-theme="paper"] .wd-work .chapter-panel--ux08 {
+  --ux08-art-opacity: .16;
+  --ux08-halo: rgba(172, 115, 45, .13);
+}
+[data-theme="tea"] .wd-work .chapter-panel--ux08 {
+  --ux08-art-opacity: .20;
+  --ux08-halo: rgba(157, 180, 116, .13);
+}
+[data-theme="night"] .wd-work .chapter-panel--ux08 {
+  --ux08-art-opacity: .30;
+  --ux08-halo: rgba(189, 156, 105, .13);
+}
+.wd-work .chapter-panel--ux08 .wd08-intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px 20px;
+  padding: clamp(16px, 3vw, 24px);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: radial-gradient(ellipse at 85% 10%, var(--ux08-halo), transparent 62%), var(--surface);
+}
+.wd-work .chapter-panel--ux08 .wd08-kicker {
+  margin: 0 0 3px;
+  color: var(--ux08-accent);
+  font-size: .69rem;
+  font-weight: 750;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.wd-work .chapter-panel--ux08 .wd08-intro h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font: 500 clamp(1.7rem, 4vw, 2.3rem)/1.15 var(--cd-font-display), Georgia, serif;
+}
+.wd-work .chapter-panel--ux08 .wd08-intro p:not(.wd08-kicker) {
+  max-width: 30rem;
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: .82rem;
+  line-height: 1.5;
+}
+.wd-work .chapter-panel--ux08 .wd08-count {color:var(--text-secondary);font-size:.8rem;white-space:nowrap}
+.wd-work .chapter-panel--ux08 .wd-volumes {gap:16px}
+.wd-work .chapter-panel--ux08 .wd-volume {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  background: var(--surface);
+}
+.wd-work .chapter-panel--ux08 .wd-volume-summary {
+  min-height: 76px;
+  padding: 16px 18px;
+  background:
+    linear-gradient(90deg, var(--surface-raised), color-mix(in srgb, var(--surface-raised) 75%, transparent)),
+    url('/art/reader-hills.svg') right center / auto 150% no-repeat;
+}
+.wd-work .chapter-panel--ux08 .wd-volume-heading {
+  color: var(--text-primary);
+  font: 600 clamp(1rem, 2.6vw, 1.2rem)/1.35 var(--cd-font-display), Georgia, serif;
+}
+.wd-work .chapter-panel--ux08 .wd-volume-heading::before {content:'❧'; font-size:1.1em; transform:none; margin-right:10px;}
+.wd-work .chapter-panel--ux08 .wd-volume[open] .wd-volume-heading::before {transform:none}
+.wd-work .chapter-panel--ux08 .wd-volume-heading small {font-family:var(--cd-font-ui),sans-serif;font-size:.76rem}
+.wd-work .chapter-panel--ux08 .wd-volume .wd-chapters,
+.wd-work .chapter-panel--ux08 > .wd-chapters {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 12px 16px 37px;
+  list-style: none;
+}
+.wd-work .chapter-panel--ux08 .wd-chapters::before {
+  content: '';
+  position: absolute;
+  left: 22px;
+  top: 20px;
+  bottom: 22px;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--ux08-timeline) 10% 90%, transparent);
+}
+.wd-work .chapter-panel--ux08 .wd08-row {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 40px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 92px;
+  padding: 12px 12px 12px 15px;
+  overflow: visible;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--ux08-card);
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+.wd-work .chapter-panel--ux08 .wd08-row:hover {border-color:var(--ux08-accent);background:var(--surface-raised)}
+.wd-work .chapter-panel--ux08 .wd08-row--next {
+  border-color: var(--ux08-accent);
+  box-shadow: 0 0 0 1px var(--ux08-accent), 0 5px 20px var(--ux08-halo);
+}
+.wd-work .chapter-panel--ux08 .wd08-row--scheduled {border-style:solid;opacity:.78}
+.wd-work .chapter-panel--ux08 .wd08-timeline-marker {
+  position: absolute;
+  z-index: 3;
+  top: calc(50% - 10px);
+  left: -26px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--ux08-accent);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font: 700 .65rem/1 sans-serif;
+}
+.wd-work .chapter-panel--ux08 .wd08-row--read .wd08-timeline-marker {background:var(--ux08-accent);color:var(--background)}
+.wd-work .chapter-panel--ux08 .wd08-row--next .wd08-timeline-marker {box-shadow:0 0 0 4px var(--ux08-halo)}
+.wd-work .chapter-panel--ux08 .wd08-row--scheduled .wd08-timeline-marker {border-style:dotted;opacity:.7}
+.wd-work .chapter-panel--ux08 .wd08-art {
+  position: absolute;
+  z-index: 0;
+  inset: 0 0 0 auto;
+  width: 52%;
+  overflow: hidden;
+  border-radius: inherit;
+  opacity: var(--ux08-art-opacity);
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 78%);
+  mask-image: linear-gradient(to right, transparent 0%, black 78%);
+}
+.wd-work .chapter-panel--ux08 .wd08-row[data-ux08-art="0"] .wd08-art {
+  background-image: linear-gradient(135deg, #a28a55aa, transparent), url('/art/reader-hills.svg');
+  background-position: center, center right;
+}
+.wd-work .chapter-panel--ux08 .wd08-row[data-ux08-art="1"] .wd08-art {
+  background-image: linear-gradient(135deg, #586c74aa, transparent), url('/images/fantasy-editorial/catalog/catalog-library-background.webp');
+  background-position: center, left center;
+}
+.wd-work .chapter-panel--ux08 .wd08-row[data-ux08-art="2"] .wd08-art {
+  background-image: linear-gradient(135deg, #77503faa, transparent), url('/images/fantasy-editorial/catalog/catalog-fireplace-dragon.webp');
+  background-position: center, right center;
+}
+.wd-work .chapter-panel--ux08 .wd08-row[data-ux08-art="3"] .wd08-art {
+  background-image: linear-gradient(135deg, #61715aaa, transparent), url('/art/reader-hills.svg');
+  background-position: center, left bottom;
+}
+.wd-work .chapter-panel--ux08 .wd08-index {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 48px;
+  border: 1px solid color-mix(in srgb, var(--ux08-accent) 30%, var(--border));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+  color: var(--ux08-accent);
+  position: relative;
+  z-index: 1;
+  font: 1.25rem/1 Georgia,serif;
+}
+.wd-work .chapter-panel--ux08 .wd08-main {min-width:0;position:relative;z-index:1}
+.wd-work .chapter-panel--ux08 .wd08-code {display:block;margin-bottom:2px;color:var(--ux08-accent);font-size:.68rem;font-weight:750;letter-spacing:.04em}
+.wd-work .chapter-panel--ux08 .wd08-heading,
+.wd-work .chapter-panel--ux08 .wd08-main .wd-row-title > a {
+  display:inline-block;
+  padding:0;
+  margin:0;
+  color:var(--text-primary);
+  font: 600 clamp(.98rem,1.5vw,1.16rem)/1.3 var(--cd-font-display),Georgia,serif;
+  overflow-wrap:anywhere;
+}
+.wd-work .chapter-panel--ux08 .wd08-main .wd-row-title > a:hover {color:var(--ux08-accent);text-decoration:underline}
+.wd-work .chapter-panel--ux08 .wd08-external {font-family:sans-serif;font-size:.76em}
+.wd-work .chapter-panel--ux08 .wd08-state-line {display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;margin-top:7px}
+.wd-work .chapter-panel--ux08 .wd08-publication,
+.wd-work .chapter-panel--ux08 .wd08-read-state,
+.wd-work .chapter-panel--ux08 .wd08-next-state,
+.wd-work .chapter-panel--ux08 .wd08-date {
+  display:inline-flex;align-items:center;gap:4px;
+  color:var(--text-secondary);font-size:.7rem;font-weight:600;
+}
+.wd-work .chapter-panel--ux08 .wd08-publication {
+  padding:2px 8px;
+  border:1px solid color-mix(in srgb,var(--ux08-accent) 42%,var(--border));
+  border-radius:99px;
+  color:var(--ux08-accent);
+  background:color-mix(in srgb,var(--surface) 90%,var(--ux08-accent));
+}
+.wd-work .chapter-panel--ux08 .wd08-publication--planned {border-color:var(--border);color:var(--text-secondary);background:var(--surface-raised)}
+.wd-work .chapter-panel--ux08 .wd08-read-state {color:var(--text-secondary)}
+.wd-work .chapter-panel--ux08 .wd08-next-state {color:var(--ux08-accent);font-weight:750}
+.wd-work .chapter-panel--ux08 .wd08-source-link {
+  display:block!important;
+  padding:3px 0!important;
+  margin-top:5px!important;
+  color:var(--ux08-accent)!important;
+  font:600 .76rem/1.4 var(--cd-font-ui),sans-serif!important;
+}
+.wd-work .chapter-panel--ux08 .wd08-source-note {display:block;margin-top:5px;color:var(--text-secondary);font-size:.73rem}
+.wd-work .chapter-panel--ux08 .wd08-actions {z-index:1;display:flex;gap:3px;align-items:center}
+.wd-work .chapter-panel--ux08 .wd08-actions .wd-score,
+.wd-work .chapter-panel--ux08 .wd08-actions .wd-mark {min-width:44px;min-height:44px}
+.wd-work .chapter-panel--ux08 .wd08-actions .wd-mark span {width:23px;height:23px}
+.wd-work .chapter-panel--ux08 .wd08-actions button:focus-visible,
+.wd-work .chapter-panel--ux08 .wd08-main a:focus-visible {outline:2px solid var(--ux08-accent);outline-offset:3px;border-radius:4px}
+@media(max-width:600px) {
+  .wd-work .chapter-panel--ux08 .wd-volume .wd-chapters,
+  .wd-work .chapter-panel--ux08 > .wd-chapters {padding:10px 10px 12px 30px;gap:9px}
+  .wd-work .chapter-panel--ux08 .wd-chapters::before {left:17px}
+  .wd-work .chapter-panel--ux08 .wd08-row {grid-template-columns: minmax(0,1fr) auto;gap:6px;padding:11px 9px 10px 12px;min-height:90px}
+  .wd-work .chapter-panel--ux08 .wd08-timeline-marker {left:-23px}
+  .wd-work .chapter-panel--ux08 .wd08-index {display:none}
+  .wd-work .chapter-panel--ux08 .wd08-art {width:58%;opacity:calc(var(--ux08-art-opacity) * .65)}
+  .wd-work .chapter-panel--ux08 .wd08-main .wd-row-title > a,
+  .wd-work .chapter-panel--ux08 .wd08-heading {font-size:.98rem}
+  .wd-work .chapter-panel--ux08 .wd-volume-heading small {display:block;margin-left:29px}
+}
+@media(prefers-reduced-motion:reduce){.wd-work .chapter-panel--ux08 .wd08-row {transition:none}}
+/* CD-UX08-CHAPTER-TOC-STAGE1-END */
