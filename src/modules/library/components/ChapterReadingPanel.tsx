@@ -23,6 +23,8 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
   const [kind, setKind] = useState("MAIN");
   const [limit, setLimit] = useState(30);
   const [hideScheduled, setHideScheduled] = useState(false);
+  // A reader's explicit expand/collapse choice overrides automatic next-chapter focus.
+  const [manualVolumeOpen, setManualVolumeOpen] = useState<Record<string, boolean>>({});
   const sharedSource = readingSource(workSourceUrl);
   const router=useRouter();
   const [pending,start]=useTransition();
@@ -80,28 +82,87 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
   const allVolumeGroups = groupChaptersByVolume(chapters.filter(c =>
     (c.status === "RELEASED" || (!hideScheduled && c.status === "SCHEDULED")) && c.kind === kind));
   const hasVolumes = groups.some(group => group.number !== null);
+  const nextChapterId = main.find(chapter => !read.has(chapter.id))?.id ?? null;
 
   function renderChapter(c: Chapter) {
     const isScheduled = c.status === "SCHEDULED";
     const destination = getChapterReadingSource(c.sourceUrl, workSourceUrl, c.status);
     const direct = destination.kind === "direct" ? destination.source : null;
     const isRead = read.has(c.id);
-    const label=[c.displayCode,c.title].filter(Boolean).join(" · ")||"Глава";
-    return <li key={c.id} className={isScheduled ? "wd-row wd-row--scheduled" : "wd-row"}><div className="wd-row-title">
-        {direct?<a href={direct.href} target="_blank" rel="noopener noreferrer" aria-label={label+" — открыть главу в новой вкладке"}>{label} <span aria-hidden="true">↗</span></a>:<span className="block py-2 font-semibold">{label}</span>}
-        {destination.kind === "general" && destination.source ? <a className="!inline-flex !py-1 text-sm text-[var(--text-accent)]" href={destination.source.href} target="_blank" rel="noopener noreferrer" aria-label={label+" — открыть общий источник произведения в новой вкладке"}>Прямой ссылки нет · открыть общий источник ↗</a> : null}
-        {destination.kind === "missing" ? <small className="block text-xs text-[var(--text-secondary)]">Ссылка на чтение пока не добавлена. Главу можно найти самостоятельно.</small> : null}
-        {isScheduled ? <small className="wd-planned-date">{c.expectedRelease ? `Ожидается: ${formatExpectedRelease(c.expectedRelease)}` : "Запланирована · дата неизвестна"}</small> : null}
-        {!isScheduled && c.supersedesChapterId ? <details className="chapter-revision"><summary>Новая редакция</summary><p>Отметка прежней версии хранится в архиве.</p></details>:null}
-      </div>
-      {isScheduled ? <span className="wd-planned-indicator" aria-label="Глава ещё не вышла" title="Глава ещё не вышла">◷</span> : null}
-      {canMark && !isScheduled && isRead && <button className="wd-score" disabled={pending} aria-label={"Оценить: "+label} onClick={()=>setSheet(c)}>{ratings[c.id] ? "★ "+ratings[c.id] : "☆"}</button>}
-      {canMark && !isScheduled && <button className="wd-mark" aria-pressed={isRead} aria-label={(isRead?"Снять отметку: ":"Отметить прочитанной: ")+label} disabled={pending} onClick={()=>mark(c,isRead?"unread":"read")}><span>{isRead?"✓":""}</span></button>}
-    </li>;
+    const isNext = canMark && c.id === nextChapterId && !isRead && !isScheduled;
+    const label = [c.displayCode, c.title].filter(Boolean).join(" · ") || "Глава";
+    const heading = c.title?.trim() || c.displayCode?.trim() || "Глава без названия";
+    const code = c.displayCode?.trim() || (c.kind === "SPECIAL" ? "Спецвыпуск" : "Глава");
+    const art = (comicId + c.id) % 4;
+    return (
+      <li key={c.id}
+        className={`wd-row wd08-row${isScheduled ? " wd-row--scheduled wd08-row--scheduled" : ""}${isRead ? " wd08-row--read" : ""}${isNext ? " wd08-row--next" : ""}`}
+        data-ux08-art={art}>
+        <span className="wd08-timeline-marker" aria-hidden="true">{isRead ? "✓" : ""}</span>
+        <span className="wd08-art" aria-hidden="true" />
+        <div className="wd08-index" aria-hidden="true"><span>✦</span></div>
+        <div className="wd08-main">
+          <span className="wd08-code">{code}</span>
+          <div className="wd-row-title">
+            {direct ? (
+              <a href={direct.href} target="_blank" rel="noopener noreferrer"
+                aria-label={label + " — открыть главу в новой вкладке"}>
+                {heading} <span className="wd08-external" aria-hidden="true">↗</span>
+              </a>
+            ) : <span className="wd08-heading">{heading}</span>}
+            {destination.kind === "general" && destination.source ? (
+              <a className="wd08-source-link" href={destination.source.href}
+                target="_blank" rel="noopener noreferrer"
+                aria-label={label + " — открыть общий источник произведения в новой вкладке"}>
+                Прямой ссылки нет · общий источник ↗
+              </a>
+            ) : null}
+            {destination.kind === "missing" ? (
+              <small className="wd08-source-note">Ссылка на чтение пока не добавлена.</small>
+            ) : null}
+            {!isScheduled && c.supersedesChapterId ? (
+              <details className="chapter-revision"><summary>Новая редакция</summary>
+                <p>Отметка прежней версии хранится в архиве.</p></details>
+            ) : null}
+          </div>
+          <div className="wd08-state-line">
+            <span className={`wd08-publication${isScheduled ? " wd08-publication--planned" : ""}`}>
+              {isScheduled ? "◷ Ожидается" : "✓ Вышла"}
+            </span>
+            {isRead && !isScheduled ? <span className="wd08-read-state">✓ Прочитано</span> : null}
+            {isNext ? <span className="wd08-next-state">Продолжить чтение</span> : null}
+            {isScheduled && c.expectedRelease ? (
+              <span className="wd08-date">Выход: {formatExpectedRelease(c.expectedRelease)}</span>
+            ) : null}
+          </div>
+        </div>
+        <div className="wd08-actions">
+          {canMark && !isScheduled && isRead ? (
+            <button type="button" className="wd-score" disabled={pending}
+              aria-label={"Оценить: " + label} onClick={() => setSheet(c)}>
+              {ratings[c.id] ? "★ " + ratings[c.id] : "☆"}
+            </button>
+          ) : null}
+          {canMark && !isScheduled ? (
+            <button type="button" className="wd-mark" aria-pressed={isRead}
+              aria-label={(isRead ? "Снять отметку: " : "Отметить прочитанной: ") + label}
+              disabled={pending} onClick={() => mark(c, isRead ? "unread" : "read")}>
+              <span>{isRead ? "✓" : ""}</span>
+            </button>
+          ) : null}
+        </div>
+      </li>
+    );
   }
 
   return (
-    <section className="chapter-panel" aria-label="Главы и история чтения">
+    <section className="chapter-panel chapter-panel--ux08" aria-label="Главы и история чтения">
+      <header className="wd08-intro">
+        <div><p className="wd08-kicker">Оглавление</p><h2>Главы истории</h2>
+          <p>Прочитанные страницы, доступные истории и главы, которые ещё ждут своего часа.</p>
+        </div>
+        <span className="wd08-count">{main.length} вышло{scheduledCount ? ` · ${scheduledCount} ожидается` : ""}</span>
+      </header>
       {sharedSource ? <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
         <div><p className="font-semibold">Общий источник произведения</p><p className="text-xs text-[var(--text-secondary)]">Переход ведёт к произведению целиком, не к отдельной главе.</p></div>
         <a className="inline-flex min-h-11 items-center rounded-lg border border-[var(--border)] px-3 text-sm font-semibold text-[var(--text-accent)]" href={sharedSource.href} target="_blank" rel="noopener noreferrer">{sharedSource.label} ↗</a>
@@ -153,8 +214,21 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
           const progress = volumeProgress(allInVolume, read);
           const scheduled = allInVolume.filter(c => c.status === "SCHEDULED").length;
           const title = volumeHeading(group.number, group.number === null ? null : volumeTitles[group.number]);
-          return <details key={group.number ?? "ungrouped"} className="wd-volume">
-            <summary className="wd-volume-summary">
+          const volumeKey = group.number === null ? "ungrouped" : `volume-${group.number}`;
+          const autoOpen = nextChapterId !== null
+            ? group.chapters.some(c => c.id === nextChapterId)
+            : group.number === groups[0]?.number;
+          const expanded = manualVolumeOpen[volumeKey] ?? autoOpen;
+          return <details key={volumeKey} className="wd-volume" open={expanded}>
+            <summary className="wd-volume-summary" onClick={(event) => {
+              // Let React control this toggle; native toggling would race with the
+              // next-chapter auto-open value and could erase user intent.
+              event.preventDefault();
+              setManualVolumeOpen(current => ({
+                ...current,
+                [volumeKey]: !(current[volumeKey] ?? autoOpen),
+              }));
+            }}>
               <span className="wd-volume-heading">{title} <small>{allInVolume.length} глав</small></span>
               <span className="wd-volume-stats">
                 {canMark && progress.total > 0 ? `Прочитано ${progress.read} из ${progress.total}` : `${progress.total} вышло`}

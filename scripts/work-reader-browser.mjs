@@ -187,8 +187,8 @@ try {
   await page.getByRole("tab",{name:/Главы/}).click();
   const chapters=page.getByRole("tabpanel",{name:/Главы/});
   const planned=chapters.locator(".wd-row--scheduled");
-  await planned.getByText("3 · Просыпание").waitFor();
-  await planned.getByText("Ожидается: ноябрь 2026 г.").waitFor();
+  await planned.getByText("Просыпание", { exact: true }).waitFor();
+  await planned.getByText("Выход: ноябрь 2026 г.").waitFor();
   assert.equal(await planned.locator("a, button").count(), 0);
   const heroProgress=page.locator(".wd-hero-progress");
   await heroProgress.getByText("Прочитано: 0 из 2").waitFor();
@@ -417,13 +417,13 @@ try {
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).check();
   assert.equal(await chapters.locator(".wd-row--scheduled").count(), 0);
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).uncheck();
-  await planned.getByText("3 · Просыпание").waitFor();
+  await planned.getByText("Просыпание", { exact: true }).waitFor();
   // Public visitor also sees the announcement, but no reading link or controls.
   const guest=await browser.newContext({viewport:{width:360,height:800}});
   const guestPage=await guest.newPage();
   await guestPage.goto(url+"#chapters");
   const guestPlanned=guestPage.locator(".wd-row--scheduled");
-  await guestPlanned.getByText("3 · Просыпание").waitFor();
+  await guestPlanned.getByText("Просыпание", { exact: true }).waitFor();
   assert.equal(await guestPlanned.locator("a, button").count(), 0);
   assert.equal((await guestPage.request.get(origin+"/api/comics/"+comic+"/chapters").then(r=>r.json())).chapters.find(c=>c.status==="SCHEDULED").sourceUrl,null);
   await guest.close();
@@ -520,7 +520,11 @@ try {
   await pool.query("INSERT INTO chapters(comic_id,display_code,title,sort_order,status,volume_number) VALUES ($1,'4','Долина',4,'RELEASED',1),($1,'5','Река',5,'RELEASED',2),($1,'6','Лес',6,'RELEASED',2)",[comic]);
   await page.reload();
   const latest = page.getByRole("tabpanel",{name:/Главы/});
-  await latest.locator(".wd-volume").filter({hasText:"Том 2"}).locator("summary").click();
+  const volumeBeforeBulk = latest.locator(".wd-volume").filter({hasText:"Том 2"});
+  if (!(await volumeBeforeBulk.evaluate(node => node.open))) {
+    await volumeBeforeBulk.locator("summary").click();
+  }
+  assert.equal(await volumeBeforeBulk.evaluate(node => node.open), true, "Tom 2 must be expanded before marking chapter 6");
   await latest.getByRole("button",{name:"Отметить прочитанной: 6 · Лес"}).click();
   const bulk = page.locator("dialog.wd-bulk-sheet[open]");
   await bulk.getByRole("heading",{name:"Отметить предыдущие главы?"}).waitFor();
@@ -544,7 +548,11 @@ try {
   await pool.query("INSERT INTO chapters(comic_id,display_code,title,sort_order,status,volume_number) VALUES ($1,'7','Пещера',7,'RELEASED',2),($1,'8','Гроза',8,'RELEASED',2)",[comic]);
   await page.reload();
   const after=page.getByRole("tabpanel",{name:/Главы/});
-  await after.locator(".wd-volume").filter({hasText:"Том 2"}).locator("summary").click();
+  const volumeBeforeUndo = after.locator(".wd-volume").filter({hasText:"Том 2"});
+  if (!(await volumeBeforeUndo.evaluate(node => node.open))) {
+    await volumeBeforeUndo.locator("summary").click();
+  }
+  assert.equal(await volumeBeforeUndo.evaluate(node => node.open), true, "Tom 2 must be expanded before marking chapter 8");
   await after.getByRole("button",{name:"Отметить прочитанной: 8 · Гроза"}).click();
   const undoDialog=page.locator("dialog.wd-bulk-sheet[open]");
   await undoDialog.getByRole("heading",{name:"Отметить предыдущие главы?"}).waitFor();
@@ -596,7 +604,7 @@ try {
   if (!(await noSourceGroup.evaluate(node => node.open))) await noSourceGroup.locator("summary").click();
   const noSourceRow = noSourcePanel.locator("li.wd-row").filter({hasText:"УРГА"});
   try {
-    await noSourceRow.getByText("Ссылка на чтение пока не добавлена. Главу можно найти самостоятельно.").waitFor({timeout:6000});
+    await noSourceRow.getByText("Ссылка на чтение пока не добавлена.", { exact: true }).waitFor({timeout:6000});
   } catch (error) {
     console.error("WD_LINK_02_MISSING_DIAGNOSTICS=" + JSON.stringify({
       panelHidden: await noSourcePanel.getAttribute("hidden"),
@@ -612,6 +620,158 @@ try {
   assert.equal(await noSourceRow.locator("a").count(), 0);
   assert.equal(await noSourcePanel.getByText("Общий источник произведения", {exact:true}).count(), 0);
   assert.equal(await noSourceRow.getByRole("button", {name:"Снять отметку: УРГА"}).count(), 1);
+  // UX-08: focused visual and native <details> behavior QA.
+  // This remains INSIDE the existing CI-only disposable DB guard and fixture.
+  // No clicks on outgoing source links and no reading-state mutations.
+  const ux08Output = process.env.WD_VISUAL_OUTPUT;
+  assert.ok(ux08Output, "UX08 QA requires WD_VISUAL_OUTPUT");
+  await mkdir(ux08Output, {recursive:true});
+  const ux08Report = [];
+  for (const theme of ["tea", "paper", "night"]) {
+    for (const view of [
+      {name:"phone320", width:320, height:740},
+      {name:"phone360", width:360, height:800},
+      {name:"tablet768", width:768, height:900},
+      {name:"desktop1440", width:1440, height:900},
+    ]) {
+      const ux08Context = await browser.newContext({
+        viewport:{width:view.width, height:view.height},
+        reducedMotion:"reduce", locale:"ru-RU",
+      });
+      try {
+        await ux08Context.addCookies([
+          {name:"comic_diary_session", value:token, url:origin},
+          {name:"comic-diary-theme", value:theme, url:origin},
+        ]);
+        const ux08Page = await ux08Context.newPage();
+        ux08Page.setDefaultTimeout(25000);
+        const ux08PageErrors = [];
+        ux08Page.on("pageerror", error => ux08PageErrors.push(error.message.slice(0, 180)));
+        const response = await ux08Page.goto(url+"#chapters", {waitUntil:"load"});
+        assert.equal(response?.status(), 200, `UX08 ${theme}/${view.name}: page response`);
+        const ux08Panel = ux08Page.getByRole("tabpanel", {name:/Главы/});
+        await ux08Panel.locator(".wd08-intro").waitFor({state:"visible"});
+        await ux08Page.evaluate(() => document.fonts.ready);
+        const ux08Metrics = await ux08Page.evaluate(() => ({
+          theme:document.documentElement.getAttribute("data-theme"),
+          width:document.documentElement.clientWidth,
+          scrollWidth:document.documentElement.scrollWidth,
+          nextCount:document.querySelectorAll(".wd08-row--next").length,
+          scheduledCount:document.querySelectorAll(".wd08-row--scheduled").length,
+          volumeCount:document.querySelectorAll(".wd-volume").length,
+        }));
+        assert.equal(ux08Metrics.theme, theme, `UX08 ${theme}/${view.name}: wrong theme`);
+        assert.ok(ux08Metrics.scrollWidth <= view.width + 2,
+          `UX08 ${theme}/${view.name}: horizontal overflow ${ux08Metrics.scrollWidth} > ${view.width}`);
+        assert.ok(ux08Metrics.volumeCount >= 2, `UX08 ${theme}/${view.name}: missing volumes`);
+        assert.equal(ux08Metrics.scheduledCount, 1, `UX08 ${theme}/${view.name}: scheduled chapter`);
+        assert.equal(ux08PageErrors.length, 0, `UX08 ${theme}/${view.name}: browser errors: ${ux08PageErrors.join(" | ")}`);
+
+        const ux08Volume = ux08Panel.locator(".wd-volume").filter({hasText:"Том 1"});
+        assert.equal(await ux08Volume.count(), 1, `UX08 ${theme}/${view.name}: Tom 1 selector`);
+        const ux08Summary = ux08Volume.locator("summary").first();
+        const originallyOpen = await ux08Volume.evaluate(node => node.open);
+        await ux08Summary.click();
+        assert.equal(await ux08Volume.evaluate(node => node.open), !originallyOpen,
+          `UX08 ${theme}/${view.name}: first volume toggle`);
+        const ux08Toggle = ux08Panel.getByRole("checkbox", {name:/Скрыть запланированные/});
+        await ux08Toggle.check();
+        assert.equal(await ux08Panel.locator(".wd-row--scheduled").count(), 0,
+          `UX08 ${theme}/${view.name}: scheduled filter did not hide chapter`);
+        assert.equal(await ux08Volume.evaluate(node => node.open), !originallyOpen,
+          `UX08 ${theme}/${view.name}: manual volume state lost on rerender`);
+        await ux08Toggle.uncheck();
+        assert.equal(await ux08Panel.locator(".wd-row--scheduled").count(), 1,
+          `UX08 ${theme}/${view.name}: scheduled filter did not restore chapter`);
+        assert.equal(await ux08Volume.evaluate(node => node.open), !originallyOpen,
+          `UX08 ${theme}/${view.name}: manual volume state lost after restore`);
+        // Restore default TOC view and show the two available volume states.
+        await ux08Summary.click();
+        assert.equal(await ux08Volume.evaluate(node => node.open), originallyOpen,
+          `UX08 ${theme}/${view.name}: restoring volume state`);
+        const file = `ux08-${theme}-${view.name}-chapters.png`;
+        await ux08Panel.screenshot({path:join(ux08Output,file),animations:"disabled"});
+        // Also capture every volume expanded to make planned and read states visible.
+        for (const group of await ux08Panel.locator(".wd-volume").all()) {
+          if (!(await group.evaluate(node => node.open))) await group.locator("summary").first().click();
+        }
+        const plannedRow = ux08Panel.locator(".wd-row--scheduled");
+        await plannedRow.getByText("Просыпание", {exact:true}).waitFor({state:"visible"});
+        assert.equal(await plannedRow.locator("a,button").count(), 0,
+          `UX08 ${theme}/${view.name}: planned chapter has an interactive action`);
+        const expandedFile = `ux08-${theme}-${view.name}-all-volumes.png`;
+        await ux08Panel.screenshot({path:join(ux08Output,expandedFile),animations:"disabled"});
+        ux08Report.push({theme,viewport:view.name,file,expandedFile,metrics:ux08Metrics,
+          manuallyToggled:true,preservedDuringFilter:true,restored:true,
+          browserErrors:ux08PageErrors});
+        console.log(`UX08_VISUAL_QA_PASS ${theme}/${view.name}: ${file}, ${expandedFile}`);
+      } finally {
+        await ux08Context.close();
+      }
+    }
+  }
+  await writeFile(join(ux08Output,"ux08-chapter-visual-report.json"),
+    JSON.stringify({stage:"UX08-CHAPTER-VISUAL",results:ux08Report},null,2));
+  assert.equal(ux08Report.length, 12, "UX08: expected 12 screenshots");
+  console.log("PASS: UX08 chapter TOC themes, 320/360/768/1440 widths, toggles, filter rerenders and screenshots");
+  // UX-08: manually chosen volume state must survive an actual reading-progress
+  // change, even when automatic next-chapter focus moves between volumes.
+  // This uses ONLY the disposable-CI reader fixture and makes a real UI mutation.
+  const ux08ProgressContext = await browser.newContext({viewport:{width:360,height:800}});
+  try {
+    await ux08ProgressContext.addCookies([{name:"comic_diary_session",value:token,url:origin}]);
+    const ux08ProgressPage = await ux08ProgressContext.newPage();
+    ux08ProgressPage.setDefaultTimeout(25000);
+    await ux08ProgressPage.goto(url+"#chapters", {waitUntil:"load"});
+    const progressPanel = ux08ProgressPage.getByRole("tabpanel", {name:/Главы/});
+    await progressPanel.locator(".wd08-intro").waitFor({state:"visible"});
+    // Prove React hydration by exercising a stateful filter before toggling.
+    const scheduledToggle = progressPanel.getByRole("checkbox", {name:/Скрыть запланированные/});
+    await scheduledToggle.check();
+    assert.equal(await progressPanel.locator(".wd-row--scheduled").count(), 0);
+    await scheduledToggle.uncheck();
+    assert.equal(await progressPanel.locator(".wd-row--scheduled").count(), 1);
+
+    const progressVolume1 = progressPanel.locator(".wd-volume").filter({hasText:"Том 1"});
+    const progressVolume2 = progressPanel.locator(".wd-volume").filter({hasText:"Том 2"});
+    assert.equal(await progressVolume1.count(), 1);
+    assert.equal(await progressVolume2.count(), 1);
+    assert.equal(await progressVolume1.evaluate(node => node.open), false, "UX08: Tom 1 initially collapsed");
+    assert.equal(await progressVolume2.evaluate(node => node.open), true, "UX08: Tom 2 initially expanded");
+    // Explicitly choose the current states by toggling in both directions.
+    // Without an override, React would reverse them after the last unread main chapter is marked.
+    const progressSummary1 = progressVolume1.locator("summary").first();
+    const progressSummary2 = progressVolume2.locator("summary").first();
+    await progressSummary1.click();
+    assert.equal(await progressVolume1.evaluate(node => node.open), true);
+    await progressSummary1.click();
+    assert.equal(await progressVolume1.evaluate(node => node.open), false);
+    await progressSummary2.click();
+    assert.equal(await progressVolume2.evaluate(node => node.open), false);
+    await progressSummary2.click();
+    assert.equal(await progressVolume2.evaluate(node => node.open), true);
+
+    await Promise.all([
+      ux08ProgressPage.waitForResponse(r =>
+        r.url().includes("/api/library/reading-state") &&
+        r.request().method() === "POST" && r.status() === 200),
+      progressPanel.getByRole("button", {name:"Отметить прочитанной: 7 · Пещера"}).click(),
+    ]);
+    await ux08ProgressPage.waitForFunction(() =>
+      document.querySelectorAll(".wd08-row--next").length === 0 &&
+      [...document.querySelectorAll("button[aria-label]")].some(b =>
+        b.getAttribute("aria-label") === "Снять отметку: 7 · Пещера"));
+    // Next.js router.refresh() is asynchronous; give it a chance to reconcile
+    // before checking the manually selected native <details> state.
+    await ux08ProgressPage.waitForTimeout(350);
+    assert.equal(await progressVolume1.evaluate(node => node.open), false,
+      "UX08: manually collapsed Tom 1 reopened when reading progress changed");
+    assert.equal(await progressVolume2.evaluate(node => node.open), true,
+      "UX08: manually expanded Tom 2 closed when reading progress changed");
+    console.log("UX08_PROGRESS_QA_PASS: explicit volume states survive chapter reading update");
+  } finally {
+    await ux08ProgressContext.close();
+  }
   console.log("PASS: WD-LINK-02 direct links, persistent general source, fallback, and missing-link read controls");
   console.log("PASS: WD18.2 smart prompt, one-request bulk marks, optional batch ratings, retry and undo");
   console.log("PASS: WD12-WD16 and WD21.3 planned chapters, guest visibility, read/rating guards, toggle, persistence and mobile sheet");
