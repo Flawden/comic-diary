@@ -270,6 +270,136 @@ async function checkThemeSelector(fixture) {
   }
 }
 
+
+// UX-07 final coverage: first visit without a cookie and the admin workspace.
+// This code inherits the same strict disposable-CI guard and localhost-only browser boundary.
+async function ux07CaptureAdmin(viewport, theme, fixture) {
+  const ctx = await makeContext(viewport, theme, fixture.token, true);
+  const page = await ctx.newPage();
+  page.setDefaultTimeout(30000);
+  const file = `${theme}-${viewport.id}-admin-ux07.png`;
+  const evidence = { theme, viewport: viewport.id, route: 'admin-ux07', file: null };
+  try {
+    const response = await page.goto(`${ORIGIN}/admin`, { waitUntil: 'load', timeout: 35000 });
+    assert.equal(response?.status(), 200, 'Admin UX-07: expected 200');
+    assert.equal(new URL(page.url()).pathname, '/admin', 'Admin UX-07: unexpected redirect');
+    await page.locator('.admin-shell-sidebar').waitFor({ state: 'attached' });
+    await page.locator('.admin-dashboard-hero h1').waitFor({ state: 'visible' });
+    await page.evaluate(() => document.fonts.ready);
+    const metrics = await page.evaluate(() => ({
+      theme: document.documentElement.getAttribute('data-theme'),
+      pageWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+      sidebarBackground: getComputedStyle(document.querySelector('.admin-shell-sidebar')).backgroundColor,
+      heroBackground: getComputedStyle(document.querySelector('.admin-dashboard-hero')).backgroundColor,
+    }));
+    assert.equal(metrics.theme, theme, `Admin UX-07: theme mismatch for ${file}`);
+    assert.ok(metrics.sidebarBackground, `Admin UX-07: sidebar color unavailable for ${file}`);
+    assert.ok(metrics.heroBackground, `Admin UX-07: hero color unavailable for ${file}`);
+    if (metrics.pageWidth > metrics.viewportWidth + 8) {
+      recordIssue(`Admin UX-07 ${file}: horizontal overflow ${metrics.pageWidth - metrics.viewportWidth}px`);
+    }
+    evidence.metrics = metrics;
+    await page.screenshot({ path: join(OUTPUT, file), fullPage: true, animations: 'disabled' });
+    evidence.file = file;
+    console.log(`UX07_ADMIN_CAPTURED: ${file}`);
+    if (viewport.id === 'mobile') {
+      const toggle = page.locator('.admin-shell-mobile-toggle');
+      await toggle.waitFor({ state: 'visible' });
+      await toggle.click();
+      await page.locator('.admin-shell-sidebar.is-open').waitFor({ state: 'visible' });
+      assert.equal(await toggle.getAttribute('aria-expanded'), 'true', 'Admin UX-07: mobile menu failed to open');
+      const menuFile = `${theme}-mobile-admin-open-menu-ux07.png`;
+      await page.screenshot({ path: join(OUTPUT, menuFile), fullPage: true, animations: 'disabled' });
+      log.push({ theme, viewport: 'mobile', route: 'admin-open-menu-ux07', file: menuFile });
+      await page.keyboard.press('Escape');
+      await page.locator('.admin-shell-sidebar.is-open').waitFor({ state: 'detached' });
+      assert.equal(await toggle.getAttribute('aria-expanded'), 'false', 'Admin UX-07: Escape failed to close mobile menu');
+      console.log(`UX07_ADMIN_MENU_CAPTURED: ${menuFile}`);
+    } else {
+      assert.equal(await page.locator('.admin-shell-sidebar').isVisible(), true,
+        `Admin UX-07: sidebar must be visible on ${viewport.id}`);
+    }
+  } catch (err) {
+    recordIssue(`Admin UX-07 ${file}: ${err instanceof Error ? err.message : String(err)}`);
+    try {
+      const failed = `${theme}-${viewport.id}-admin-ux07-FAILED.png`;
+      await page.screenshot({ path: join(OUTPUT, failed), fullPage: true, timeout: 10000 });
+      evidence.file = failed;
+    } catch { /* preserve original failure */ }
+  } finally {
+    log.push(evidence);
+    await ctx.close();
+  }
+}
+
+async function ux07CheckFirstVisit(viewport) {
+  // A fresh browser context, deliberately NO theme cookie and NO session.
+  const ctx = await browser.newContext({
+    viewport: { width: viewport.width, height: viewport.height },
+    deviceScaleFactor: 1, reducedMotion: 'reduce', locale: 'ru-RU',
+  });
+  await ctx.route('**/*', route => {
+    const request = route.request();
+    if (!request.url().startsWith(`${ORIGIN}/`)) return route.abort();
+    if (request.url().includes('/api/') && !['GET', 'HEAD'].includes(request.method())) {
+      recordIssue('UX07_FIRST_VISIT: blocked unexpected API mutation');
+      return route.abort();
+    }
+    return route.continue();
+  });
+  const file = `no-cookie-${viewport.id}-login-ux07.png`;
+  const evidence = { theme: 'tea', viewport: viewport.id, route: 'no-cookie-first-visit-ux07', file: null };
+  const page = await ctx.newPage();
+  try {
+    assert.equal((await ctx.cookies(ORIGIN)).length, 0, 'UX-07 first visit: browser context must be cookie-free');
+    const response = await page.goto(`${ORIGIN}/login`, { waitUntil: 'load', timeout: 35000 });
+    assert.equal(response?.status(), 200, 'UX-07 first visit: login failed');
+    const html = await response.text();
+    assert.match(html, /<html\b[^>]*\bdata-theme=["']tea["']/, 'UX-07 first visit: initial server HTML must be tea');
+    await page.locator('.fantasy-auth-page').waitFor({ state: 'visible' });
+    await page.evaluate(() => document.fonts.ready);
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'tea', 'UX-07 first visit: hydrated theme must be tea');
+    assert.equal((await ctx.cookies(ORIGIN)).some(cookie => cookie.name === 'comic-diary-theme'), false,
+      'UX-07 first visit: should not need to write a theme cookie to get tea');
+    evidence.metrics = { serverTheme: 'tea', clientTheme: 'tea', initialThemeCookie: 'absent' };
+    await page.screenshot({ path: join(OUTPUT, file), fullPage: true, animations: 'disabled' });
+    evidence.file = file;
+    console.log(`UX07_FIRST_VISIT_OK: ${file}; server=tea; client=tea; no cookie`);
+  } catch (err) {
+    recordIssue(`UX-07 first visit ${file}: ${err instanceof Error ? err.message : String(err)}`);
+    try {
+      const failed = `no-cookie-${viewport.id}-login-ux07-FAILED.png`;
+      await page.screenshot({ path: join(OUTPUT, failed), fullPage: true, timeout: 10000 });
+      evidence.file = failed;
+    } catch { /* preserve original failure */ }
+  } finally {
+    log.push(evidence);
+    await ctx.close();
+  }
+}
+
+async function ux07CheckAdminAndFirstVisit(fixture) {
+  // Elevate ONLY the synthetic user of this run, in the disposable CI database.
+  // Restore its role even if screenshots fail.
+  const result = await pool.query('SELECT role FROM users WHERE id=$1', [userId]);
+  assert.equal(result.rows.length, 1, 'UX-07 admin fixture: synthetic user not found');
+  const previousRole = result.rows[0].role;
+  await pool.query('UPDATE users SET role=$1 WHERE id=$2', ['ADMIN', userId]);
+  try {
+    for (const theme of THEMES) {
+      for (const viewport of VIEWPORTS) {
+        await ux07CaptureAdmin(viewport, theme, fixture);
+      }
+    }
+  } finally {
+    await pool.query('UPDATE users SET role=$1 WHERE id=$2', [previousRole, userId]);
+  }
+  for (const viewport of [VIEWPORTS[0], VIEWPORTS[2]]) {
+    await ux07CheckFirstVisit(viewport);
+  }
+}
+
 try {
   const fixture = await createFixture();
   browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -289,6 +419,11 @@ try {
     await checkThemeSelector(fixture);
   } catch (err) {
     recordIssue(`Theme selector: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  try {
+    await ux07CheckAdminAndFirstVisit(fixture);
+  } catch (err) {
+    recordIssue(`UX-07 admin/first visit: ${err instanceof Error ? err.message : String(err)}`);
   }
   for (const comicId of comicIds) {
     const rows = (await pool.query('SELECT in_library FROM user_comics WHERE user_id=$1 AND comic_id=$2', [userId, comicId])).rows;
@@ -315,7 +450,9 @@ if (catalogColors.every(Boolean) && new Set(catalogColors).size !== THEMES.lengt
   recordIssue('Not all three themes have distinct --cd-background values');
 }
 
-const expected = THEMES.length * VIEWPORTS.length * (ROUTES.length + 1); // +1 remove confirmation per viewport/theme
+const expected = THEMES.length * VIEWPORTS.length * (ROUTES.length + 1) +
+  THEMES.length * VIEWPORTS.length + THEMES.length + 2;
+// Existing 72 + nine admin pages + three opened mobile menus + two cookie-free first visits.
 const captured = log.filter(item => item.file).length;
 if (captured !== expected) recordIssue(`Expected ${expected} screenshots, captured ${captured}`);
 if (problems.length) {

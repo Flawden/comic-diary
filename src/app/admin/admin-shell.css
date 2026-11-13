@@ -410,3 +410,73 @@
   .admin-dashboard-action { transition: none; }
   .admin-dashboard-action:hover { transform: none; }
 }
+
+
+/* UX-07 stage 1: admin navigation and dashboard hero theme treatments. */
+[data-theme="night"] .admin-shell-sidebar {
+  border-right-color: var(--cd-border);
+  background-color: #171923;
+  background-image:
+    linear-gradient(180deg, rgba(13, 15, 24, .91), rgba(22, 24, 35, .75) 48%, rgba(13, 15, 24, .94)),
+    url('/admin/admin-forest.webp');
+}
+[data-theme="paper"] .admin-shell-sidebar {
+  color: var(--cd-text-primary);
+  border-right-color: var(--cd-border);
+  background-color: #f0e5d1;
+  background-image:
+    linear-gradient(180deg, rgba(247, 239, 224, .96), rgba(244, 232, 211, .91) 52%, rgba(247, 239, 224, .97)),
+    url('/admin/admin-forest.webp');
+}
+[data-theme="paper"] .admin-shell-sidebar :is(.admin-shell-brand, .admin-shell-brand small, .admin-shell-brand svg, .admin-shell-nav-heading, .admin-shell-link, .admin-shell-link svg, .admin-shell-external-mark, .admin-shell-account, .admin-shell-account small) { color: var(--cd-text-primary); }
+[data-theme="paper"] .admin-shell-link:hover { background: rgba(154, 70, 8, .09); }
+[data-theme="paper"] .admin-shell-link.is-active { background: rgba(180, 83, 9, .14); border-color: var(--cd-border); }
+[data-theme="paper"] .admin-shell-account { background: var(--cd-surface); border-color: var(--cd-border); }
+[data-theme="night"] .admin-shell-link.is-active { background: rgba(183, 160, 255, .16); border-color: var(--cd-border); }
+[data-theme="night"] .admin-shell-account { background: rgba(25, 27, 38, .82); border-color: var(--cd-border); }
+[data-theme="night"] .admin-dashboard-hero {
+  background-color: #171923;
+  background-image:
+    linear-gradient(90deg, rgba(13, 15, 24, .99) 0%, rgba(13, 15, 24, .94) 30%, rgba(20, 22, 33, .7) 55%, rgba(20, 22, 33, .12) 86%),
+    url('/images/fantasy-editorial/catalog/catalog-fireplace-dragon.webp');
+}
+[data-theme="paper"] .admin-dashboard-hero {
+  background-color: #f0e5d1;
+  background-image:
+    linear-gradient(90deg, rgba(246, 235, 214, .98) 0%, rgba(246, 235, 214, .92) 30%, rgba(246, 235, 214, .63) 55%, rgba(246, 235, 214, .12) 86%),
+    url('/images/fantasy-editorial/catalog/catalog-fireplace-dragon.webp');
+}
+[data-theme="paper"] .admin-dashboard-hero :is(h1, .admin-dashboard-kicker, .admin-dashboard-eyebrow, .admin-dashboard-ornament) { color: var(--cd-text-primary); text-shadow: none; }
+
+
+/* UX-07 stage 2: admin hero legibility and theme-aware actions. */
+[data-theme="paper"] .admin-dashboard-hero .admin-dashboard-intro {
+  color: var(--fe-muted);
+}
+[data-theme="paper"] .admin-dashboard-hero :is(.admin-dashboard-kicker, .admin-dashboard-eyebrow, .admin-dashboard-ornament) {
+  color: var(--fe-accent);
+}
+:is([data-theme="paper"], [data-theme="night"]) .admin-dashboard-hero .admin-dashboard-hero-button {
+  background: var(--fe-action);
+  border-color: var(--fe-border);
+  color: var(--fe-on-action);
+}
+:is([data-theme="paper"], [data-theme="night"]) .admin-dashboard-hero .admin-dashboard-hero-button:hover {
+  background: var(--cd-primary);
+  color: var(--cd-primary-foreground);
+}
+:is([data-theme="paper"], [data-theme="night"]) .admin-dashboard-hero .admin-dashboard-hero-ghost {
+  border-color: var(--fe-border);
+  color: var(--fe-ink);
+  background: var(--fe-panel);
+}
+:is([data-theme="paper"], [data-theme="night"]) .admin-dashboard-hero .admin-dashboard-hero-ghost:hover {
+  background: var(--fe-raised);
+}
+[data-theme="night"] .admin-shell-sidebar .admin-shell-link:hover {
+  background: rgb(183 160 255 / .10);
+}
+[data-theme="paper"] .admin-shell-sidebar :is(.admin-shell-brand, .admin-shell-link, .admin-shell-account):focus-visible,
+[data-theme="night"] .admin-shell-sidebar :is(.admin-shell-brand, .admin-shell-link, .admin-shell-account):focus-visible {
+  outline-color: var(--cd-primary);
+}
