@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isCoverFilename } from "@/modules/media/cover-storage";
 import { parseChapterBatch } from "./chapter-batch-input";
 import { parseStructuredChapterBatch } from "./chapter-structured-batch";
 import { planVolumeChapterPlacement } from "./chapter-placement";
@@ -48,6 +49,7 @@ export type SharedChapterMetadataInput = {
   displayCode: string;
   title: string | null;
   sourceUrl: string | null;
+  coverUrl?: string | null;
   status:
     | "SCHEDULED"
     | "RELEASED";
@@ -167,6 +169,17 @@ function normalizeSourceUrl(
   return normalized;
 }
 
+function normalizeChapterCoverUrl(value: string | null | undefined) {
+  if (value === undefined) return undefined; // Legacy updates preserve the artwork.
+  if (value === null || value.trim() === "") return null;
+  const candidate = value.trim();
+  const matched = /^\/media\/covers\/([^/]+)$/.exec(candidate);
+  if (!matched || !isCoverFilename(matched[1])) {
+    throw new SharedChapterMutationError("invalid-chapter");
+  }
+  return candidate;
+}
+
 function normalizeReleasedAt(
   value: Date | null,
 ) {
@@ -263,6 +276,10 @@ function normalizeMetadata(
         input.sourceUrl,
       ),
 
+    ...(input.coverUrl === undefined ? {} : {
+      coverUrl: normalizeChapterCoverUrl(input.coverUrl),
+    }),
+
     status:
       input.status,
 
@@ -307,6 +324,8 @@ function chapterSnapshot(
 
     sourceUrl:
       chapter.sourceUrl,
+
+    coverUrl: chapter.coverUrl,
 
     sortOrder:
       chapter.sortOrder,

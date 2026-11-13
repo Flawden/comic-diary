@@ -1,5 +1,6 @@
 "use client";
 
+import { CoverImage } from "@/shared/components/media/CoverImage";
 import { ChapterRating } from "./ChapterRating";
 import { UnreadChapterConfirmation } from "./UnreadChapterConfirmation";
 import { needsUnreadConfirmation } from "../needs-unread-confirmation";
@@ -99,7 +100,11 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
         className={`wd-row wd08-row${isScheduled ? " wd-row--scheduled wd08-row--scheduled" : ""}${isRead ? " wd08-row--read" : ""}${isNext ? " wd08-row--next" : ""}`}
         data-ux08-art={art}>
         <span className="wd08-timeline-marker" aria-hidden="true">{isRead ? "✓" : ""}</span>
-        <span className="wd08-art" aria-hidden="true" />
+        {c.coverUrl ? (
+          <CoverImage src={c.coverUrl} alt="" className="wd08-cover-art" imageClassName="wd08-cover-art-image" />
+        ) : (
+          <span className="wd08-art" aria-hidden="true" />
+        )}
         <div className="wd08-index" aria-hidden="true"><span>✦</span></div>
         <div className="wd08-main">
           <span className="wd08-code">{code}</span>

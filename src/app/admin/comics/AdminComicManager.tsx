@@ -52,6 +52,7 @@ type AdminChapter = {
   displayCode: string;
   title: string | null;
   sourceUrl: string | null;
+  coverUrl: string | null;
   sortOrder: number;
   volumeNumber: number | null;
   status:
@@ -769,6 +770,7 @@ export function AdminComicManager({
 
   const [chapterEditFeedback, setChapterEditFeedback] = useState<{ chapterId: number; kind: "error" | "success"; message: string } | null>(null);
   const [coverUploads, setCoverUploads] = useState<Record<string, boolean>>({});
+  const [chapterCoverUploading, setChapterCoverUploading] = useState(false);
   const [createFormRevision, setCreateFormRevision] = useState(0);
   const [createStep, setCreateStep] = useState<CreateWizardStep>("information");
   const [createDirty, setCreateDirty] = useState(false);
@@ -817,6 +819,7 @@ export function AdminComicManager({
     displayCode: string;
     title: string;
     sourceUrl: string;
+    coverUrl: string;
     status: ChapterEditStatus;
     releasedDate: string;
     expectedRelease: string;
@@ -1578,7 +1581,7 @@ export function AdminComicManager({
     comic: AdminComic,
     chapter: AdminChapter,
   ) {
-    if (!chapterEditValues || chapter.status === "ARCHIVED") {
+    if (!chapterEditValues || chapter.status === "ARCHIVED" || chapterCoverUploading) {
       return;
     }
 
@@ -1657,6 +1660,8 @@ export function AdminComicManager({
                 sourceUrl:
                   chapterEditValues.sourceUrl ||
                   null,
+
+                coverUrl: chapterEditValues.coverUrl || null,
 
                 status:
                   chapterEditValues.status,
@@ -1871,24 +1876,24 @@ export function AdminComicManager({
                                 </li>
                               ) : null}
                               <li
-                                className={`admin-chapter-card admin-chapter-card--${chapter.status.toLowerCase()}`}
+                                className={`admin-chapter-card admin-chapter-card--${chapter.status.toLowerCase()}${chapter.coverUrl ? " admin-chapter-card--with-cover" : ""}`}
                               >
                                 {editingChapterId ===
                                 chapter.id &&
                                 chapterEditValues ? (
                                   <ChapterEditDialog
                                     titleId={`chapter-editor-title-${chapter.id}`}
-                                    busy={busyKey !== null}
-                                    onClose={() => { setEditingChapterId(null); setChapterEditValues(null); setChapterEditFeedback(null); }}
+                                    busy={busyKey !== null || chapterCoverUploading}
+                                    onClose={() => { if (chapterCoverUploading) return; setEditingChapterId(null); setChapterEditValues(null); setChapterEditFeedback(null); }}
                                   >
                                   <section className="admin-chapter-edit-content space-y-4"
                                     onKeyDown={(event) => {
-                                      if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+                                      if (event.key === "Enter" && event.target instanceof HTMLInputElement && event.target.type !== "file") {
                                         // Prevent Enter in the chapter editor from submitting the outer comic form.
                                         event.preventDefault();
-                                        if (busyKey === null) void updateChapter(comic, chapter);
+                                        if (busyKey === null && !chapterCoverUploading) void updateChapter(comic, chapter);
                                       }
-                                      if (event.key === "Escape" && busyKey === null) {
+                                      if (event.key === "Escape" && busyKey === null && !chapterCoverUploading) {
                                         event.preventDefault();
                                         setEditingChapterId(null);
                                         setChapterEditValues(null);
@@ -1904,7 +1909,7 @@ export function AdminComicManager({
                                       <p className="text-sm text-[var(--text-secondary)]">
                                         {comic.title} · {chapter.kind === "SPECIAL" ? "Спешиал / бонус" : "Основная глава"} · ID {chapter.id}
                                       </p>
-                                      <p className="text-xs text-[var(--text-secondary)]">
+                                      <p className="admin-chapter-edit-guidance text-xs text-[var(--text-secondary)]">
                                         Здесь исправляются данные текущей главы. Если изменилось содержание, создайте новую редакцию ниже — история чтения старой сохранится.
                                       </p>
                                     </div>
@@ -1912,6 +1917,16 @@ export function AdminComicManager({
                                     <div className="admin-chapter-edit-primary grid gap-4 md:grid-cols-2">
 
 
+                                      <label className="block text-sm font-medium">
+                                        <span className="block">Название главы</span>
+                                        <input
+                                          value={chapterEditValues.title}
+                                          onChange={(event) => setChapterEditValues({ ...chapterEditValues, title: event.target.value })}
+                                          placeholder="Например, УРГА"
+                                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                                        />
+                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Можно оставить пустым, если указан код главы.</span>
+                                      </label>
                                       <label className="block text-sm font-medium">
                                         <span className="block">Ссылка на источник (необязательно)</span>
                                         <input
@@ -1922,18 +1937,26 @@ export function AdminComicManager({
                                           className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
                                         />
                                         <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Адрес, куда читатель перейдёт для чтения.</span>
-                                      </label>                                      <label className="block text-sm font-medium">
-                                        <span className="block">Название главы</span>
-                                        <input
-                                          value={chapterEditValues.title}
-                                          onChange={(event) => setChapterEditValues({ ...chapterEditValues, title: event.target.value })}
-                                          placeholder="Например, УРГА"
-                                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                                        />
-                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Можно оставить пустым, если указан код главы.</span>
                                       </label>
-
-
+                                    </div>
+                                    <div className="admin-chapter-artwork-editor">
+                                      <div className="admin-chapter-artwork-heading">
+                                        <span aria-hidden="true">✦</span>
+                                        <div><strong>Иллюстрация главы</strong><p>Своя обложка вместо декоративного фона. Без неё оформление останется прежним.</p></div>
+                                      </div>
+                                      <CoverUploadField
+                                        key={`chapter-art-${chapter.id}`}
+                                        fieldName="chapterCoverUrl"
+                                        uploadingFieldName="chapterCoverUploading"
+                                        value={chapterEditValues.coverUrl}
+                                        onValueChange={url => setChapterEditValues(current => current ? { ...current, coverUrl: url } : current)}
+                                        uploadSuccessMessage="Изображение загружено. Нажмите «Сохранить главу», чтобы закрепить его за главой."
+                                        label="Обложка главы"
+                                        canClear
+                                        allowExternalUrl={false}
+                                        disabled={busyKey !== null}
+                                        onUploadingChange={setChapterCoverUploading}
+                                      />
                                     </div>
                                     <details className="admin-chapter-edit-advanced rounded-xl border border-[var(--border)] p-3">
                                       <summary className="min-h-11 cursor-pointer text-sm font-semibold">Дополнительные настройки</summary>
@@ -2032,7 +2055,7 @@ export function AdminComicManager({
                                       <button
                                         type="button"
                                         onClick={() => void updateChapter(comic, chapter)}
-                                        disabled={busyKey !== null}
+                                        disabled={busyKey !== null || chapterCoverUploading}
                                         className="min-h-11 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)] disabled:opacity-60"
                                       >
                                         {busyKey === `chapter-update:${chapter.id}` ? "Сохраняем…" : "Сохранить главу"}
@@ -2044,7 +2067,7 @@ export function AdminComicManager({
                                           setChapterEditValues(null);
                                           setChapterEditFeedback(null);
                                         }}
-                                        disabled={busyKey !== null}
+                                        disabled={busyKey !== null || chapterCoverUploading}
                                         className="min-h-11 rounded-xl border border-[var(--border)] px-4 py-2 text-sm"
                                       >
                                         Отмена
@@ -2054,6 +2077,11 @@ export function AdminComicManager({
                                   </ChapterEditDialog>
                                 ) : (
                                   <>
+                                    {chapter.coverUrl ? <CoverImage
+                                      src={chapter.coverUrl}
+                                      alt=""
+                                      className="admin-chapter-cover-thumb"
+                                    /> : null}
                                     <div className="admin-chapter-card-name font-medium">
                                       {chapter.displayCode}{chapter.kind === "SPECIAL" ? " · Спешиал" : ""}{chapter.supersedesChapterId ? " · Новая редакция" : ""}
                                       {chapter.title
@@ -2115,6 +2143,7 @@ export function AdminComicManager({
                                         onClick={() => {
                                           selectStudioTab("chapters");
                                           setChapterEditFeedback(null);
+                                          setChapterCoverUploading(false);
                                           setEditingChapterId(
                                             chapter.id,
                                           );
@@ -2132,6 +2161,7 @@ export function AdminComicManager({
                                             sourceUrl:
                                               chapter.sourceUrl ??
                                               "",
+                                            coverUrl: chapter.coverUrl ?? "",
 
                                             status: chapter.status,
                                             releasedDate: chapter.releasedAt?.slice(0, 10) ?? "",

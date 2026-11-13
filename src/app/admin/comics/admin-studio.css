@@ -845,3 +845,36 @@ textarea.admin-studio-input { resize: vertical; }
   .admin-chapter-card,
   .admin-chapter-card-actions > button { transition: none; }
 }
+
+/* UX-09 Stage 2 — optional chapter artwork and a tighter mobile chapter editor. */
+.admin-chapter-artwork-editor {
+  padding: clamp(13px,2vw,19px);
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: linear-gradient(130deg, color-mix(in srgb,var(--primary) 6%,var(--surface-raised)), var(--surface));
+}
+.admin-chapter-artwork-heading {display:flex;align-items:center;gap:12px;margin-bottom:13px;}
+.admin-chapter-artwork-heading > span {color:var(--text-accent);font:30px/1 var(--cd-font-display);}
+.admin-chapter-artwork-heading strong {display:block;font:500 21px/1.2 var(--cd-font-display);color:var(--text-primary)}
+.admin-chapter-artwork-heading p {margin-top:5px;color:var(--text-secondary);font-size:12px;line-height:1.5}
+.admin-chapter-artwork-editor .cover-fallback {background:var(--surface-raised)}
+.admin-chapter-card--with-cover::before {display:none;}
+.admin-chapter-cover-thumb {
+  position:absolute;
+  z-index:0;
+  top:17px;
+  left:17px;
+  width:60px;
+  height:78px;
+  border-radius:11px;
+  border:1px solid var(--border);
+  box-shadow:0 2px 7px rgb(0 0 0 /.16);
+}
+@media(max-width:760px) {
+  .admin-chapter-cover-thumb {top:15px;left:12px;width:45px;height:61px;}
+  .admin-chapter-edit-header {padding:13px 14px;}
+  .admin-chapter-edit-header h5 {font-size:clamp(20px,5vw,27px);line-height:1.17;}
+  .admin-chapter-edit-guidance {font-size:11px;line-height:1.4;}
+  .admin-chapter-artwork-editor {padding:13px;}
+}
+@media(max-width:380px){.admin-chapter-cover-thumb{left:8px;width:39px;height:52px;}}

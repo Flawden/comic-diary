@@ -18,8 +18,8 @@ type CoverUploadFieldProps = {
   value?: string;
   onValueChange?: (value: string) => void;
   uploadSuccessMessage?: string;
-  fieldName?: "coverUrl" | "bannerUrl";
-  uploadingFieldName?: "coverUploading" | "bannerUploading";
+  fieldName?: "coverUrl" | "bannerUrl" | "chapterCoverUrl";
+  uploadingFieldName?: "coverUploading" | "bannerUploading" | "chapterCoverUploading";
   label?: string;
   widePreview?: boolean;
   allowExternalUrl?: boolean;

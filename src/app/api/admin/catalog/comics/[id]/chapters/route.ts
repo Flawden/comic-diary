@@ -339,6 +339,8 @@ function parseMetadata(
       body.sourceUrl,
     );
 
+  const coverUrl = parseNullableString(body.coverUrl);
+
   const releasedAt =
     parseReleasedAt(
       body.releasedAt,
@@ -349,6 +351,7 @@ function parseMetadata(
   if (
     title === undefined ||
     sourceUrl === undefined ||
+    (body.coverUrl !== undefined && coverUrl === undefined) ||
     releasedAt === undefined ||
     (expectedRelease !== undefined && expectedRelease !== null && typeof expectedRelease !== "string") ||
     (volumeNumber !== undefined && volumeNumber !== null &&
@@ -374,6 +377,7 @@ function parseMetadata(
     title,
 
     sourceUrl,
+    ...(coverUrl === undefined ? {} : { coverUrl }),
 
     status:
       body.status,
