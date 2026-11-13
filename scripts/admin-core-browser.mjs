@@ -429,6 +429,92 @@ async function main() {
   await adminPreview('05-admin-chapter-list.png');
   console.log('ADMIN_CORE_VOLUME_GROUP_HEADERS=PASS');
 
+  // UX-09 focused visual QA. These are NEW isolated browser contexts against the
+  // test's already existing disposable-CI admin fixture; no writes or saving.
+  stage = 'UX09 chapter studio themes and responsive visual QA';
+  const ux09Visual = [];
+  for (const theme of ['tea', 'paper', 'night']) {
+    for (const view of [
+      {name:'phone320',width:320,height:740},
+      {name:'phone360',width:360,height:800},
+      {name:'tablet768',width:768,height:900},
+      {name:'desktop1440',width:1440,height:900},
+    ]) {
+      const qaContext = await browser.newContext({
+        viewport:{width:view.width,height:view.height},
+        reducedMotion:'reduce',locale:'ru-RU',
+      });
+      try {
+        await qaContext.addCookies([
+          {name:'comic_diary_session',value:adminToken,url:origin},
+          {name:'comic-diary-theme',value:theme,url:origin},
+        ]);
+        const qaPage = await qaContext.newPage();
+        qaPage.setDefaultTimeout(25000);
+        const browserErrors = [];
+        qaPage.on('pageerror', e => browserErrors.push(e.message.slice(0,200)));
+        const nav = await qaPage.goto(`${origin}/admin/comics`,{waitUntil:'load'});
+        assert.equal(nav?.status(),200,`UX09 ${theme}/${view.name} admin response`);
+        await qaPage.getByRole('heading',{name:'Управление комиксами'}).waitFor();
+        await qaPage.locator('.admin-studio-filters input[type="search"]').fill(stamp);
+        await qaPage.locator('.admin-studio-item').filter({hasText:stamp}).click();
+        const qaEditor = qaPage.locator('article.admin-studio-comic-panel:not([hidden])');
+        await qaEditor.locator('.admin-studio-tabs').getByRole('button',{name:'Главы'}).click();
+        const qaChapters = qaEditor.locator('.admin-studio-chapters-panel');
+        await qaChapters.locator('.admin-chapter-registry').waitFor({state:'visible'});
+        await qaChapters.locator('.admin-chapter-card').first().waitFor({state:'visible'});
+        await qaPage.evaluate(() => document.fonts.ready);
+        const metrics = await qaPage.evaluate(() => ({
+          theme:document.documentElement.getAttribute('data-theme'),
+          width:document.documentElement.clientWidth,
+          scrollWidth:document.documentElement.scrollWidth,
+          chapterCards:document.querySelectorAll('.admin-chapter-card').length,
+        }));
+        assert.equal(metrics.theme,theme,`UX09 ${theme}/${view.name} theme cookie`);
+        assert.ok(metrics.scrollWidth <= view.width + 2,
+          `UX09 ${theme}/${view.name} page overflow: ${JSON.stringify(metrics)}`);
+        assert.ok(metrics.chapterCards >= 2,`UX09 ${theme}/${view.name} chapter cards`);
+        const listFile = `ux09-${theme}-${view.name}-list.png`;
+        await qaPage.screenshot({path:join(output,listFile),fullPage:true,animations:'disabled'});
+
+        await qaEditor.getByRole('button',{name:'Редактировать'}).first().click();
+        const qaDialog = qaEditor.locator('dialog.admin-chapter-edit-dialog[open]');
+        await qaDialog.waitFor({state:'visible'});
+        await qaDialog.getByRole('button',{name:'Сохранить главу'}).waitFor({state:'visible'});
+        const editRect = await qaDialog.boundingBox();
+        assert.ok(editRect && editRect.x >= -1 && editRect.x + editRect.width <= view.width + 1 &&
+          editRect.y >= -1 && editRect.y + editRect.height <= view.height + 1,
+          `UX09 ${theme}/${view.name} edit modal geometry: ${JSON.stringify(editRect)}`);
+        const editFile = `ux09-${theme}-${view.name}-edit.png`;
+        await qaDialog.screenshot({path:join(output,editFile),animations:'disabled'});
+        await qaDialog.getByRole('button',{name:'Отмена'}).click();
+        await qaDialog.waitFor({state:'hidden'});
+
+        await qaEditor.getByRole('button',{name:'+ Добавить главы',exact:true}).click();
+        const qaBatch = qaEditor.locator('dialog.admin-chapter-batch-dialog[open]');
+        await qaBatch.waitFor({state:'visible'});
+        const batchRect = await qaBatch.boundingBox();
+        assert.ok(batchRect && batchRect.x >= -1 && batchRect.x + batchRect.width <= view.width + 1 &&
+          batchRect.y >= -1 && batchRect.y + batchRect.height <= view.height + 1,
+          `UX09 ${theme}/${view.name} batch modal geometry: ${JSON.stringify(batchRect)}`);
+        const batchFile = `ux09-${theme}-${view.name}-batch.png`;
+        await qaBatch.screenshot({path:join(output,batchFile),animations:'disabled'});
+        await qaBatch.getByRole('button',{name:'Отмена',exact:true}).click();
+        await qaBatch.waitFor({state:'hidden'});
+        assert.deepEqual(browserErrors,[],`UX09 ${theme}/${view.name} browser errors`);
+        ux09Visual.push({theme,viewport:view.name,metrics,
+          listFile,editFile,batchFile,editRect,batchRect,browserErrors});
+        console.log(`UX09_VISUAL_QA_PASS ${theme}/${view.name}`);
+      } finally {
+        await qaContext.close();
+      }
+    }
+  }
+  assert.equal(ux09Visual.length,12,'UX09: expected 12 viewport-theme combinations');
+  await writeFile(join(output,'ux09-chapter-studio-visual-report.json'),
+    JSON.stringify({stage:'UX09-CHAPTER-STUDIO',results:ux09Visual},null,2));
+  console.log('PASS: UX09 chapter studio visual QA: 3 themes x 4 widths x 3 states');
+
   stage = 'publish from admin UI';
   await editor.locator('.admin-studio-tabs').getByRole('button', { name: 'Публикация' }).click();
   await editor.locator('select[name="publicationStatus"]').selectOption('PUBLISHED');
