@@ -716,7 +716,7 @@ function ChapterEditDialog({ children, titleId, busy, onClose }: {
   }, []);
   return <dialog ref={dialogRef} aria-labelledby={titleId}
     onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}
-    className="fixed inset-0 m-auto w-[min(760px,calc(100vw-16px))] max-h-[calc(100dvh-16px)] overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--text-primary)] shadow-2xl backdrop:bg-black/70 sm:max-h-[90dvh] sm:p-6">
+    className="admin-chapter-edit-dialog">
     {children}
   </dialog>;
 }
@@ -1839,9 +1839,11 @@ export function AdminComicManager({
                     ) : null}
 
                     <section hidden={studioTab !== "chapters"} className="admin-studio-chapters-panel mt-6 rounded-xl border border-[var(--border)] bg-[var(--background)] p-4">
-                      <h4 className="font-semibold">
-                        Главы
-                      </h4>
+                      <div className="admin-chapter-section-heading">
+                        <p className="admin-chapter-kicker">РЕДАКТОРСКАЯ МАСТЕРСКАЯ</p>
+                        <h4>Главы</h4>
+                        <p>Управление историями, редакциями и порядком публикации.</p>
+                      </div>
 
                       <AdminVolumeTitles
                         key={`${comic.id}:${volumeTitleRevision[comic.id] ?? 0}`}
@@ -1855,13 +1857,13 @@ export function AdminComicManager({
 
                       {comic.chapters.length > 0 ? (
                         <AdminChapterList chapters={comic.chapters} locked={busyKey !== null || editingChapterId !== null || archiveConfirmChapterId !== null}>
-                          {(visibleChapters, canMove) => <ul className="space-y-2">
+                          {(visibleChapters, canMove) => <ul className="admin-chapter-registry-list space-y-2">
                           {visibleChapters.map(
                             (chapter, index) => (
                               <Fragment key={chapter.id}>
                               {index === 0 || visibleChapters[index - 1].volumeNumber !== chapter.volumeNumber ? (
                                 <li data-chapter-group-heading={chapter.volumeNumber === null ? "none" : String(chapter.volumeNumber)}
-                                  className="flex flex-wrap items-center justify-between gap-2 px-1 pt-4 first:pt-0">
+                                  className="admin-chapter-group-heading flex flex-wrap items-center justify-between gap-2 px-1 pt-4 first:pt-0">
                                   <h5 className="text-sm font-semibold text-[var(--text-primary)]">
                                     {chapter.volumeNumber === null ? "Без тома" : `Том ${chapter.volumeNumber}`}
                                   </h5>
@@ -1869,7 +1871,7 @@ export function AdminComicManager({
                                 </li>
                               ) : null}
                               <li
-                                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
+                                className={`admin-chapter-card admin-chapter-card--${chapter.status.toLowerCase()}`}
                               >
                                 {editingChapterId ===
                                 chapter.id &&
@@ -1879,7 +1881,7 @@ export function AdminComicManager({
                                     busy={busyKey !== null}
                                     onClose={() => { setEditingChapterId(null); setChapterEditValues(null); setChapterEditFeedback(null); }}
                                   >
-                                  <section className="space-y-4"
+                                  <section className="admin-chapter-edit-content space-y-4"
                                     onKeyDown={(event) => {
                                       if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
                                         // Prevent Enter in the chapter editor from submitting the outer comic form.
@@ -1894,7 +1896,8 @@ export function AdminComicManager({
                                       }
                                     }}
                                   >
-                                    <div className="space-y-1 border-b border-[var(--border)] pb-3">
+                                    <div className="admin-chapter-edit-header space-y-1">
+                                      <p className="admin-chapter-edit-kicker">✦ РЕДАКТОРСКАЯ МАСТЕРСКАЯ</p>
                                       <h5 id={`chapter-editor-title-${chapter.id}`} className="text-base font-semibold">
                                         Редактирование главы: {chapter.displayCode || chapter.title || `#${chapter.id}`}{chapter.displayCode && chapter.title ? ` — ${chapter.title}` : ""}
                                       </h5>
@@ -1906,7 +1909,7 @@ export function AdminComicManager({
                                       </p>
                                     </div>
 
-                                    <div className="grid gap-4 md:grid-cols-2">
+                                    <div className="admin-chapter-edit-primary grid gap-4 md:grid-cols-2">
 
 
                                       <label className="block text-sm font-medium">
@@ -1932,7 +1935,7 @@ export function AdminComicManager({
 
 
                                     </div>
-                                    <details className="rounded-xl border border-[var(--border)] p-3">
+                                    <details className="admin-chapter-edit-advanced rounded-xl border border-[var(--border)] p-3">
                                       <summary className="min-h-11 cursor-pointer text-sm font-semibold">Дополнительные настройки</summary>
                                       <div className="mt-3 grid gap-4 md:grid-cols-2">
                                       <label className="block text-sm font-medium">
@@ -2025,7 +2028,7 @@ export function AdminComicManager({
                                       <p role="alert" className="rounded-lg border border-[var(--danger)] p-3 text-sm text-[var(--danger)]">{chapterEditFeedback.message}</p>
                                     ) : null}
 
-                                    <div className="flex flex-wrap gap-3 border-t border-[var(--border)] pt-3">
+                                    <div className="admin-chapter-edit-footer flex flex-wrap gap-3 border-t border-[var(--border)] pt-3">
                                       <button
                                         type="button"
                                         onClick={() => void updateChapter(comic, chapter)}
@@ -2051,14 +2054,14 @@ export function AdminComicManager({
                                   </ChapterEditDialog>
                                 ) : (
                                   <>
-                                    <div className="font-medium">
+                                    <div className="admin-chapter-card-name font-medium">
                                       {chapter.displayCode}{chapter.kind === "SPECIAL" ? " · Спешиал" : ""}{chapter.supersedesChapterId ? " · Новая редакция" : ""}
                                       {chapter.title
                                         ? `${chapter.displayCode ? " — " : ""}${chapter.title}`
                                         : ""}
                                     </div>
 
-                                    <div className="mt-1 text-sm text-[var(--muted)]">
+                                    <div className="admin-chapter-card-meta mt-1 text-sm text-[var(--muted)]">
                                       {chapter.volumeNumber !== null ? `Том ${chapter.volumeNumber} · ` : ""}{chapter.status === "RELEASED" ? `Опубликована${chapter.releasedAt ? ` · Вышла ${formatReleasedAt(chapter.releasedAt)}` : " · Дата выхода не указана"}`
                                         : chapter.status === "SCHEDULED" ? `Запланирована${chapter.expectedRelease ? ` · Ожидается ${formatExpectedRelease(chapter.expectedRelease)}` : ""}`
                                         : "В архиве"}{chapter.status !== "ARCHIVED"
@@ -2071,7 +2074,7 @@ export function AdminComicManager({
 
                                     {chapter.supersedesChapterId ? <p className="mt-1 text-xs text-[var(--text-secondary)]">Новая редакция · заменяет: {comic.chapters.find(c => c.id === chapter.supersedesChapterId)?.displayCode ?? `ID ${chapter.supersedesChapterId}`}</p> : null}
                                     {comic.chapters.filter(c => c.supersedesChapterId === chapter.id).map(c => <p key={c.id} className="mt-1 text-xs text-[var(--text-secondary)]">Старая редакция · заменена на: {c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""}. История чтения этой редакции сохранена.</p>)}
-                                    <div className="mt-2 flex flex-wrap gap-2">
+                                    <div className="admin-chapter-card-actions mt-2 flex flex-wrap gap-2">
                                       <button
                                         type="button"
                                         disabled={

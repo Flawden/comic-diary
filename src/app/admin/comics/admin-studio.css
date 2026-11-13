@@ -587,3 +587,261 @@ textarea.admin-studio-input { resize: vertical; }
     white-space: nowrap;
   }
 }
+
+
+/* UX-09 stage 1 — chapter editorial studio. Visual-only; all mutation contracts remain unchanged. */
+.admin-chapter-section-heading {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(19px, 3vw, 29px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(115deg, color-mix(in srgb, var(--surface-raised) 88%, var(--primary)), var(--surface));
+  margin-bottom: 20px;
+}
+.admin-chapter-section-heading::after {
+  content: "✦";
+  position: absolute;
+  right: 22px;
+  top: -24px;
+  font: 110px/1 var(--cd-font-display);
+  color: color-mix(in srgb, var(--text-accent) 12%, transparent);
+  pointer-events: none;
+}
+.admin-chapter-kicker, .admin-chapter-edit-kicker {
+  color: var(--text-accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+.admin-chapter-section-heading h4 {
+  margin-top: 5px;
+  color: var(--text-primary);
+  font: 500 clamp(27px, 3vw, 37px)/1.17 var(--cd-font-display);
+}
+.admin-chapter-section-heading > p:last-child {
+  margin-top: 7px;
+  max-width: 46ch;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.admin-chapter-registry-counter {
+  padding: 12px 15px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface));
+  line-height: 1.6;
+}
+.admin-chapter-registry-filters {
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: clamp(12px, 2vw, 17px);
+  background: var(--surface-raised);
+}
+.admin-chapter-group-heading {
+  margin-top: 17px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+.admin-chapter-group-heading h5 {
+  font: 500 23px/1.3 var(--cd-font-display);
+}
+.admin-chapter-registry-list { list-style: none; padding: 0; }
+.admin-chapter-card {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  padding: 17px 18px 16px 94px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--primary) 4%, var(--surface)), var(--surface));
+  box-shadow: 0 3px 13px rgb(0 0 0 / .055);
+  transition: border-color .17s ease, box-shadow .17s ease;
+}
+.admin-chapter-card:hover { border-color: color-mix(in srgb, var(--primary) 60%, var(--border)); }
+.admin-chapter-card::before {
+  content: "✦";
+  position: absolute;
+  top: 17px;
+  left: 17px;
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 78px;
+  border: 1px solid color-mix(in srgb, var(--text-accent) 48%, var(--border));
+  border-radius: 11px;
+  background: radial-gradient(circle at 70% 23%, color-mix(in srgb, var(--text-accent) 17%, transparent), transparent 65%),
+              linear-gradient(140deg, var(--surface-raised), var(--background));
+  color: var(--text-accent);
+  font: 33px/1 var(--cd-font-display);
+}
+.admin-chapter-card--scheduled::before { content: "◌"; }
+.admin-chapter-card--archived::before { content: "✧"; opacity: .55; }
+.admin-chapter-card-name {
+  margin-bottom: 5px;
+  color: var(--text-primary);
+  font: 500 clamp(19px, 2vw, 24px)/1.25 var(--cd-font-display);
+  overflow-wrap: anywhere;
+}
+.admin-chapter-card-meta {
+  color: var(--text-secondary);
+  line-height: 1.55;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.admin-chapter-card--archived { opacity: .82; }
+.admin-chapter-card-actions {
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid var(--border);
+}
+.admin-chapter-card-actions > button {
+  min-height: 40px;
+  border-radius: 10px;
+  transition: background .15s ease, border-color .15s ease;
+}
+.admin-chapter-card-actions > button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+}
+.admin-chapter-card-actions > button:focus-visible,
+.admin-chapter-edit-dialog button:focus-visible,
+.admin-chapter-batch-dialog button:focus-visible,
+.admin-chapter-edit-dialog summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+/* Native top-layer chapter editor with readable hierarchy and mobile-first footer. */
+.admin-chapter-edit-dialog {
+  position: fixed;
+  inset: 0;
+  width: min(820px, calc(100vw - 28px));
+  max-width: 820px;
+  max-height: min(91dvh, 950px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: 0 25px 90px rgb(0 0 0 / .5);
+}
+.admin-chapter-edit-dialog::backdrop,
+.admin-chapter-batch-dialog::backdrop {
+  background: rgb(0 0 0 / .73);
+  backdrop-filter: blur(4px);
+}
+.admin-chapter-edit-content { padding: clamp(16px, 3vw, 28px); }
+.admin-chapter-edit-header {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(17px, 3vw, 25px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--primary) 9%, var(--surface-raised)), var(--surface));
+}
+.admin-chapter-edit-header::before {
+  content: "✧";
+  position: absolute;
+  top: -25px;
+  right: 5px;
+  font: 135px/1 var(--cd-font-display);
+  color: color-mix(in srgb, var(--text-accent) 10%, transparent);
+  pointer-events: none;
+}
+.admin-chapter-edit-header h5 {
+  max-width: 680px;
+  margin-top: 10px;
+  font: 500 clamp(25px, 3vw, 35px)/1.2 var(--cd-font-display);
+  overflow-wrap: anywhere;
+}
+.admin-chapter-edit-header > p:not(.admin-chapter-edit-kicker) { max-width: 72ch; line-height: 1.55; }
+.admin-chapter-edit-primary {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--background);
+}
+.admin-chapter-edit-primary > label { min-width: 0; }
+.admin-chapter-edit-primary > label:first-child { order: 2; }
+.admin-chapter-edit-primary > label:nth-child(2) { order: 1; }
+.admin-chapter-edit-primary input,
+.admin-chapter-edit-advanced input,
+.admin-chapter-edit-advanced select { width: 100%; min-width: 0; color: var(--text-primary); }
+.admin-chapter-edit-advanced {
+  background: color-mix(in srgb, var(--surface-raised) 82%, var(--primary));
+}
+.admin-chapter-edit-advanced > summary { padding: 3px; list-style-position: inside; }
+.admin-chapter-edit-advanced[open] > summary { color: var(--text-accent); }
+.admin-chapter-edit-footer {
+  position: sticky;
+  bottom: -1px;
+  z-index: 2;
+  gap: 10px;
+  padding: 14px 0 0;
+  background: var(--surface);
+}
+.admin-chapter-edit-footer button:first-child { flex: 1 1 180px; }
+.admin-chapter-edit-footer button:nth-child(2) { flex: 0 1 auto; }
+/* Batch creation uses the same editorial language without changing its preview/commit flow. */
+.admin-chapter-batch-header {
+  background: linear-gradient(110deg, color-mix(in srgb, var(--primary) 9%, var(--surface-raised)), var(--surface));
+}
+.admin-chapter-batch-header h4 {
+  color: var(--text-primary);
+  font: 500 clamp(26px, 3vw, 35px)/1.2 var(--cd-font-display);
+}
+.admin-chapter-batch-row {
+  background: linear-gradient(120deg, var(--background), color-mix(in srgb, var(--surface-raised) 70%, var(--primary)));
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--text-accent) 43%, transparent);
+}
+.admin-chapter-batch-row h5 {
+  color: var(--text-accent);
+  font: 500 23px/1.2 var(--cd-font-display);
+}
+.admin-chapter-batch-dialog [data-chapter-dialog-footer] { box-shadow: 0 -5px 16px rgb(0 0 0 / .09); }
+@media (max-width: 760px) {
+  .admin-studio-chapters-panel { padding: 10px; }
+  .admin-chapter-section-heading { padding: 18px 15px; }
+  .admin-chapter-registry-filters { grid-template-columns: 1fr; }
+  .admin-chapter-card { padding: 14px 13px 14px 70px; }
+  .admin-chapter-card::before { top: 15px; left: 12px; width: 45px; height: 61px; font-size: 25px; }
+  .admin-chapter-card-name { font-size: 21px; }
+  .admin-chapter-card-actions { margin-left: -56px; }
+  .admin-chapter-card-actions > button { flex: 1 1 auto; }
+  .admin-chapter-edit-dialog,
+  .admin-chapter-batch-dialog {
+    inset: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+  }
+  .admin-chapter-edit-content { padding: max(13px, env(safe-area-inset-top)) 13px max(18px, env(safe-area-inset-bottom)); }
+  .admin-chapter-edit-primary { grid-template-columns: 1fr; padding: 13px; }
+  .admin-chapter-edit-primary > label:first-child { order: 1; }
+  .admin-chapter-edit-primary > label:nth-child(2) { order: 2; }
+  .admin-chapter-edit-footer {
+    bottom: max(-1px, env(safe-area-inset-bottom));
+    padding: 12px;
+    margin-inline: -5px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 -6px 20px rgb(0 0 0 / .2);
+  }
+  .admin-chapter-batch-layout { max-height: 100dvh; height: 100dvh; }
+}
+@media (max-width: 380px) {
+  .admin-chapter-card { padding-left: 58px; }
+  .admin-chapter-card::before { left: 8px; width: 39px; height: 52px; }
+  .admin-chapter-card-actions { margin-left: -44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-chapter-card,
+  .admin-chapter-card-actions > button { transition: none; }
+}
