@@ -212,7 +212,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
           const progress = volumeProgress(allInVolume, read);
           const scheduled = allInVolume.filter(c => c.status === "SCHEDULED").length;
           const title = volumeHeading(group.number, group.number === null ? null : volumeTitles[group.number]);
-          return <details key={group.number ?? "ungrouped"} className="wd-volume" defaultOpen={nextChapterId !== null ? group.chapters.some(c => c.id === nextChapterId) : group.number === groups[0]?.number}>
+          return <details key={group.number ?? "ungrouped"} className="wd-volume" open={nextChapterId !== null ? group.chapters.some(c => c.id === nextChapterId) : group.number === groups[0]?.number}>
             <summary className="wd-volume-summary">
               <span className="wd-volume-heading">{title} <small>{allInVolume.length} глав</small></span>
               <span className="wd-volume-stats">

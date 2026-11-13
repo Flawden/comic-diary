@@ -187,7 +187,7 @@ try {
   await page.getByRole("tab",{name:/Главы/}).click();
   const chapters=page.getByRole("tabpanel",{name:/Главы/});
   const planned=chapters.locator(".wd-row--scheduled");
-  await planned.getByText("3 · Просыпание").waitFor();
+  await planned.getByText("Просыпание", { exact: true }).waitFor();
   await planned.getByText("Ожидается: ноябрь 2026 г.").waitFor();
   assert.equal(await planned.locator("a, button").count(), 0);
   const heroProgress=page.locator(".wd-hero-progress");
@@ -417,13 +417,13 @@ try {
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).check();
   assert.equal(await chapters.locator(".wd-row--scheduled").count(), 0);
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).uncheck();
-  await planned.getByText("3 · Просыпание").waitFor();
+  await planned.getByText("Просыпание", { exact: true }).waitFor();
   // Public visitor also sees the announcement, but no reading link or controls.
   const guest=await browser.newContext({viewport:{width:360,height:800}});
   const guestPage=await guest.newPage();
   await guestPage.goto(url+"#chapters");
   const guestPlanned=guestPage.locator(".wd-row--scheduled");
-  await guestPlanned.getByText("3 · Просыпание").waitFor();
+  await guestPlanned.getByText("Просыпание", { exact: true }).waitFor();
   assert.equal(await guestPlanned.locator("a, button").count(), 0);
   assert.equal((await guestPage.request.get(origin+"/api/comics/"+comic+"/chapters").then(r=>r.json())).chapters.find(c=>c.status==="SCHEDULED").sourceUrl,null);
   await guest.close();
