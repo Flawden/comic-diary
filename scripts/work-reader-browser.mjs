@@ -342,18 +342,22 @@ try {
         [longDescription,"/art/wd-hero-ci-cover.svg",comic]);
       try {
         await mobilePage.reload();
-        await mobilePage.locator('.wd-hero-summary .story-excerpt > summary').waitFor();
+        await mobilePage.locator('.wd-hero-summary button[aria-haspopup="dialog"]').waitFor();
         await mobilePage.locator('.wd-cover img').waitFor();
         await mobilePage.waitForFunction(() => {
           const img=document.querySelector('.wd-cover img');
           return !!img && img.complete && img.naturalWidth>0;
         },null,{timeout:12000});
         await capture(mobilePage,"05-mobile-long-cover.png",{fullPage:true});
-        const summary=mobilePage.locator('.wd-hero-summary .story-excerpt > summary');
-        await summary.focus();
+        const descriptionTrigger=mobilePage.locator('.wd-hero-summary button[aria-haspopup="dialog"]');
+        await descriptionTrigger.focus();
         await mobilePage.keyboard.press('Enter');
-        assert.equal(await mobilePage.locator('.wd-hero-summary details').evaluate(el=>el.open),true,
-          "expanded description must work from keyboard");
+        const descriptionDialog=mobilePage.locator('.wd-hero-summary dialog');
+        await descriptionDialog.waitFor({state:'visible'});
+        assert.equal(await descriptionDialog.evaluate(el=>el.open),true,
+          "full description dialog must open from keyboard");
+        assert.equal((await descriptionDialog.innerText()).includes('Третий абзац'),true,
+          "full description dialog must contain the complete description");
         await capture(mobilePage,"06-mobile-expanded.png",{fullPage:true});
         diagnostics.viewportChecks.mobileExpanded=await layout(mobilePage);
         if(diagnostics.viewportChecks.mobileExpanded.scrollWidth>361)
@@ -363,10 +367,14 @@ try {
         diagnostics.viewportChecks.mobile320=await layout(mobilePage);
         if(diagnostics.viewportChecks.mobile320.scrollWidth>321)
           diagnostics.violations.push('320px long description causes horizontal overflow');
+        await mobilePage.keyboard.press('Escape');
+        await descriptionDialog.waitFor({state:'hidden'});
+        assert.equal(await descriptionTrigger.evaluate(el=>document.activeElement===el),true,
+          "closing dialog with Escape must restore focus to its trigger");
         setPhase(desktopPage,"desktop long-description viewport / reload");
         await desktopPage.setViewportSize({width:1440,height:900});
         await desktopPage.reload();
-        await desktopPage.locator('.wd-hero-summary .story-excerpt > summary').waitFor();
+        await desktopPage.locator('.wd-hero-summary button[aria-haspopup="dialog"]').waitFor();
         await capture(desktopPage,"07-desktop-long-cover.png",{fullPage:true});
         diagnostics.viewportChecks.desktopLong=await layout(desktopPage);
         if(diagnostics.viewportChecks.desktopLong.scrollWidth>1441)

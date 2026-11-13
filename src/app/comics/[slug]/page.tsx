@@ -1,4 +1,5 @@
 import { listReturn } from "@/modules/library/list-navigation";
+import { WorkDescriptionModal } from "@/modules/comics/components/WorkDescriptionModal";
 import { WorkTabs, WorkPreferences, PromptSwitch, ShelfAction, DiaryForm } from "@/modules/library/components/WorkControls";
 import Link from "next/link";
 import { DiaryRatingFields } from "@/modules/library/components/DiaryRatingFields";
@@ -134,7 +135,7 @@ export default async function ComicPage({
           </div>
         </div>
         <aside className="wd-hero-summary" aria-label="Описание произведения">
-          {comic.description?.trim() ? <StoryExcerpt heading="Об истории" text={comic.description} previewChars={245} /> :
+          {comic.description?.trim() ? <WorkDescriptionModal text={comic.description} previewChars={245} /> :
             <div className="wd-hero-summary-empty"><h2>Об истории</h2><p>Описание пока не добавлено.</p></div>}
         </aside>
       </header>
