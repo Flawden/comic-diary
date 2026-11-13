@@ -203,6 +203,8 @@ export async function getAdminComicChaptersByComicIds(
 
       sourceUrl:
         chapters.sourceUrl,
+      coverUrl:
+        chapters.coverUrl,
 
       sortOrder:
         chapters.sortOrder,

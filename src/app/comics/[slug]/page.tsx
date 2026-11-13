@@ -99,6 +99,11 @@ export default async function ComicPage({
 
 
 
+  // The reading-state registry contains progress/identity data, while the
+  // public chapter query carries current optional artwork. Join by chapter ID.
+  const chapterCoverUrls = new Map(
+    chapters.map((chapter) => [chapter.id, chapter.coverUrl] as const),
+  );
   const registry=readingState?.chapterReading.registry ?? chapters;
   const readIds=readingState?.chapterReading.readIds ?? [];
   const mainChapterIds=registry.filter(c=>c.status==="RELEASED" && c.kind==="MAIN").map(c=>c.id);
@@ -161,7 +166,7 @@ export default async function ComicPage({
           <ChapterReadingPanel
             comicId={comic.id}
             readerId={currentUser?.id ?? null}
-            chapters={visibleChapters.map((chapter) => ({ id: chapter.id, displayCode: chapter.displayCode, title: chapter.title, sourceUrl: chapter.status === "RELEASED" ? chapter.sourceUrl : null, sortOrder: chapter.sortOrder, volumeNumber: chapter.volumeNumber, status: chapter.status, kind: chapter.kind, supersedesChapterId: chapter.supersedesChapterId, expectedRelease: chapter.expectedRelease }))}
+            chapters={visibleChapters.map((chapter) => ({ id: chapter.id, displayCode: chapter.displayCode, title: chapter.title, coverUrl: chapterCoverUrls.get(chapter.id) ?? null, sourceUrl: chapter.status === "RELEASED" ? chapter.sourceUrl : null, sortOrder: chapter.sortOrder, volumeNumber: chapter.volumeNumber, status: chapter.status, kind: chapter.kind, supersedesChapterId: chapter.supersedesChapterId, expectedRelease: chapter.expectedRelease }))}
             ratings={readingState?.chapterReading.ratings ?? {}}
             canMark={readingState?.inLibrary === true}
             workSourceUrl={comic.sourceUrl}

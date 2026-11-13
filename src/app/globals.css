@@ -4709,3 +4709,24 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 }
 @media(prefers-reduced-motion:reduce){.wd-work .chapter-panel--ux08 .wd08-row {transition:none}}
 /* CD-UX08-CHAPTER-TOC-STAGE1-END */
+
+/* UX-09: user-provided chapter artwork, decorative behind reading controls. */
+.wd-work .chapter-panel--ux08 .wd08-cover-art {
+  position: absolute;
+  z-index: 0;
+  inset: 0 0 0 auto;
+  width: 52%;
+  height: 100%;
+  border-radius: inherit;
+  opacity: var(--ux08-art-opacity);
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 78%);
+  mask-image: linear-gradient(to right, transparent 0%, black 78%);
+}
+.wd-work .chapter-panel--ux08 .wd08-cover-art-image { object-position: center; }
+@media (max-width: 600px) {
+  .wd-work .chapter-panel--ux08 .wd08-cover-art {
+    width: 58%;
+    opacity: calc(var(--ux08-art-opacity) * .65);
+  }
+}

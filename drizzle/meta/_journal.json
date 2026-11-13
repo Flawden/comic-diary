@@ -211,6 +211,13 @@
       "when": 1794397200000,
       "tag": "0029_optional_comic_source_url",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794571200000,
+      "tag": "0030_chapter_cover",
+      "breakpoints": true
     }
   ]
 }

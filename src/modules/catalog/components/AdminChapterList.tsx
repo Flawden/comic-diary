@@ -39,11 +39,11 @@ export function AdminChapterList<T extends Chapter>({ chapters, locked, children
   function reset() { setSearch(""); setStatus("ACTIVE"); setKind("ALL"); setPage(1); }
   const fieldClass = "mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]";
 
-  return <div className="mt-3 space-y-4">
-    <p className="text-sm text-[var(--text-secondary)]">
+  return <div className="admin-chapter-registry mt-3 space-y-4">
+    <p className="admin-chapter-registry-counter text-sm text-[var(--text-secondary)]">
       Опубликовано: {chapters.filter(c => c.status === "RELEASED").length} · Запланировано: {chapters.filter(c => c.status === "SCHEDULED").length} · В архиве: {chapters.filter(c => c.status === "ARCHIVED").length}
     </p>
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="admin-chapter-registry-filters grid gap-3 sm:grid-cols-3">
       <label htmlFor={`${id}-search`} className="text-sm font-medium">Найти главу
         <input id={`${id}-search`} type="search" value={search} disabled={locked} maxLength={255}
           placeholder="Код или название" className={fieldClass}

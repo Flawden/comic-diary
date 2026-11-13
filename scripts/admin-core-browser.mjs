@@ -342,6 +342,72 @@ async function main() {
     'editing chapter from modal did not persist',
   );
   console.log('ADMIN_CORE_CHAPTER_EDIT_MODAL=PASS');
+
+  stage = 'UX09 chapter artwork: upload, save, reader API and validation';
+  await editor.getByRole('button', { name: 'Редактировать' }).first().click();
+  const artDialog = editor.locator('dialog.admin-chapter-edit-dialog[open]');
+  await artDialog.waitFor({state:'visible'});
+  assert.equal(await artDialog.locator('input[name="chapterCoverUrl"]').inputValue(), '',
+    'UX09: chapter starts without its own cover');
+  await artDialog.locator('input[type="file"]').setInputFiles({
+    name:'chapter-art.png', mimeType:'image/png', buffer:coverPng(),
+  });
+  await adminPage.waitForFunction(() => {
+    const field = document.querySelector('dialog.admin-chapter-edit-dialog[open] input[name="chapterCoverUrl"]');
+    return field instanceof HTMLInputElement && /^\/media\/covers\/.*\.png$/.test(field.value);
+  }, null, {timeout:30000});
+  const artUrl = await artDialog.locator('input[name="chapterCoverUrl"]').inputValue();
+  assert.match(artUrl, /^\/media\/covers\/[a-f0-9-]+\.png$/);
+  assert.equal(await artDialog.getByRole('button',{name:'Сохранить главу'}).isEnabled(),true);
+  await artDialog.getByRole('button',{name:'Сохранить главу'}).click();
+  await artDialog.waitFor({state:'hidden'});
+  const savedArt = await eventually(
+    `SELECT cover_url AS "coverUrl" FROM chapters WHERE comic_id=$1 AND display_code='1'`,
+    [fixture.comicId], row => row?.coverUrl === artUrl,
+    'UX09: uploaded artwork must persist on its chapter',
+  );
+  assert.equal(savedArt.coverUrl,artUrl);
+  const imageReply = await adminPage.request.get(`${origin}${artUrl}`);
+  assert.equal(imageReply.status(),200,'UX09: stored cover must be publicly readable');
+  assert.match(imageReply.headers()['content-type'] ?? '',/image\/png/);
+  const chapterIdForArt = (await pool.query(
+    `SELECT id FROM chapters WHERE comic_id=$1 AND display_code='1'`,[fixture.comicId])).rows[0]?.id;
+  const rejected = await adminPage.request.patch(
+    `${origin}/api/admin/catalog/comics/${fixture.comicId}/chapters`,{
+      headers:{Origin:origin,'Content-Type':'application/json'},
+      data:{intent:'update',chapterId:chapterIdForArt,displayCode:'1',title:'Глава исправлена через модальное окно',
+        sourceUrl:'https://example.com/chapters/1',status:'RELEASED',releasedAt:null,
+        coverUrl:'https://evil.example/test.png'},
+    });
+  assert.equal(rejected.status(),400,'UX09: external chapter artwork URL must be rejected');
+  const afterReject = await pool.query('SELECT cover_url AS "coverUrl" FROM chapters WHERE id=$1',[chapterIdForArt]);
+  assert.equal(afterReject.rows[0]?.coverUrl,artUrl,'UX09: rejected URL must not change saved artwork');
+  const legacyPatch = await adminPage.request.patch(
+    `${origin}/api/admin/catalog/comics/${fixture.comicId}/chapters`,{
+      headers:{Origin:origin,'Content-Type':'application/json'},
+      data:{intent:'update',chapterId:chapterIdForArt,displayCode:'1',title:'Глава исправлена через модальное окно',
+        sourceUrl:'https://example.com/chapters/1',status:'RELEASED',releasedAt:null},
+    });
+  assert.equal(legacyPatch.status(),200,'UX09: old client update without artwork must succeed');
+  const preserved = await pool.query('SELECT cover_url AS "coverUrl" FROM chapters WHERE id=$1',[chapterIdForArt]);
+  assert.equal(preserved.rows[0]?.coverUrl,artUrl,'UX09: legacy metadata update removed artwork');
+  const clearPatch = await adminPage.request.patch(
+    `${origin}/api/admin/catalog/comics/${fixture.comicId}/chapters`,{
+      headers:{Origin:origin,'Content-Type':'application/json'},
+      data:{intent:'update',chapterId:chapterIdForArt,displayCode:'1',title:'Глава исправлена через модальное окно',
+        sourceUrl:'https://example.com/chapters/1',status:'RELEASED',releasedAt:null,coverUrl:null},
+    });
+  assert.equal(clearPatch.status(),200,'UX09: clearing chapter art must succeed');
+  const cleared = await pool.query('SELECT cover_url AS "coverUrl" FROM chapters WHERE id=$1',[chapterIdForArt]);
+  assert.equal(cleared.rows[0]?.coverUrl,null,'UX09: clearing must restore decorative fallback');
+  const restorePatch = await adminPage.request.patch(
+    `${origin}/api/admin/catalog/comics/${fixture.comicId}/chapters`,{
+      headers:{Origin:origin,'Content-Type':'application/json'},
+      data:{intent:'update',chapterId:chapterIdForArt,displayCode:'1',title:'Глава исправлена через модальное окно',
+        sourceUrl:'https://example.com/chapters/1',status:'RELEASED',releasedAt:null,coverUrl:artUrl},
+    });
+  assert.equal(restorePatch.status(),200,'UX09: restore art for reader should succeed');
+  console.log('UX09_CHAPTER_COVER_UPLOAD=PASS');
   stage = 'advanced atomic batch and chapter revision';
   const oldChapter = await pool.query(
     `SELECT id FROM chapters WHERE comic_id = $1 AND display_code = '1' AND status = 'RELEASED'`, [fixture.comicId],
@@ -429,6 +495,92 @@ async function main() {
   await adminPreview('05-admin-chapter-list.png');
   console.log('ADMIN_CORE_VOLUME_GROUP_HEADERS=PASS');
 
+  // UX-09 focused visual QA. These are NEW isolated browser contexts against the
+  // test's already existing disposable-CI admin fixture; no writes or saving.
+  stage = 'UX09 chapter studio themes and responsive visual QA';
+  const ux09Visual = [];
+  for (const theme of ['tea', 'paper', 'night']) {
+    for (const view of [
+      {name:'phone320',width:320,height:740},
+      {name:'phone360',width:360,height:800},
+      {name:'tablet768',width:768,height:900},
+      {name:'desktop1440',width:1440,height:900},
+    ]) {
+      const qaContext = await browser.newContext({
+        viewport:{width:view.width,height:view.height},
+        reducedMotion:'reduce',locale:'ru-RU',
+      });
+      try {
+        await qaContext.addCookies([
+          {name:'comic_diary_session',value:adminToken,url:origin},
+          {name:'comic-diary-theme',value:theme,url:origin},
+        ]);
+        const qaPage = await qaContext.newPage();
+        qaPage.setDefaultTimeout(25000);
+        const browserErrors = [];
+        qaPage.on('pageerror', e => browserErrors.push(e.message.slice(0,200)));
+        const nav = await qaPage.goto(`${origin}/admin/comics`,{waitUntil:'load'});
+        assert.equal(nav?.status(),200,`UX09 ${theme}/${view.name} admin response`);
+        await qaPage.getByRole('heading',{name:'Управление комиксами'}).waitFor();
+        await qaPage.locator('.admin-studio-filters input[type="search"]').fill(stamp);
+        await qaPage.locator('.admin-studio-item').filter({hasText:stamp}).click();
+        const qaEditor = qaPage.locator('article.admin-studio-comic-panel:not([hidden])');
+        await qaEditor.locator('.admin-studio-tabs').getByRole('button',{name:'Главы'}).click();
+        const qaChapters = qaEditor.locator('.admin-studio-chapters-panel');
+        await qaChapters.locator('.admin-chapter-registry').waitFor({state:'visible'});
+        await qaChapters.locator('.admin-chapter-card').first().waitFor({state:'visible'});
+        await qaPage.evaluate(() => document.fonts.ready);
+        const metrics = await qaPage.evaluate(() => ({
+          theme:document.documentElement.getAttribute('data-theme'),
+          width:document.documentElement.clientWidth,
+          scrollWidth:document.documentElement.scrollWidth,
+          chapterCards:document.querySelectorAll('.admin-chapter-card').length,
+        }));
+        assert.equal(metrics.theme,theme,`UX09 ${theme}/${view.name} theme cookie`);
+        assert.ok(metrics.scrollWidth <= view.width + 2,
+          `UX09 ${theme}/${view.name} page overflow: ${JSON.stringify(metrics)}`);
+        assert.ok(metrics.chapterCards >= 2,`UX09 ${theme}/${view.name} chapter cards`);
+        const listFile = `ux09-${theme}-${view.name}-list.png`;
+        await qaPage.screenshot({path:join(output,listFile),fullPage:true,animations:'disabled'});
+
+        await qaEditor.getByRole('button',{name:'Редактировать'}).first().click();
+        const qaDialog = qaEditor.locator('dialog.admin-chapter-edit-dialog[open]');
+        await qaDialog.waitFor({state:'visible'});
+        await qaDialog.getByRole('button',{name:'Сохранить главу'}).waitFor({state:'visible'});
+        const editRect = await qaDialog.boundingBox();
+        assert.ok(editRect && editRect.x >= -1 && editRect.x + editRect.width <= view.width + 1 &&
+          editRect.y >= -1 && editRect.y + editRect.height <= view.height + 1,
+          `UX09 ${theme}/${view.name} edit modal geometry: ${JSON.stringify(editRect)}`);
+        const editFile = `ux09-${theme}-${view.name}-edit.png`;
+        await qaDialog.screenshot({path:join(output,editFile),animations:'disabled'});
+        await qaDialog.getByRole('button',{name:'Отмена'}).click();
+        await qaDialog.waitFor({state:'hidden'});
+
+        await qaEditor.getByRole('button',{name:'+ Добавить главы',exact:true}).click();
+        const qaBatch = qaEditor.locator('dialog.admin-chapter-batch-dialog[open]');
+        await qaBatch.waitFor({state:'visible'});
+        const batchRect = await qaBatch.boundingBox();
+        assert.ok(batchRect && batchRect.x >= -1 && batchRect.x + batchRect.width <= view.width + 1 &&
+          batchRect.y >= -1 && batchRect.y + batchRect.height <= view.height + 1,
+          `UX09 ${theme}/${view.name} batch modal geometry: ${JSON.stringify(batchRect)}`);
+        const batchFile = `ux09-${theme}-${view.name}-batch.png`;
+        await qaBatch.screenshot({path:join(output,batchFile),animations:'disabled'});
+        await qaBatch.getByRole('button',{name:'Отмена',exact:true}).click();
+        await qaBatch.waitFor({state:'hidden'});
+        assert.deepEqual(browserErrors,[],`UX09 ${theme}/${view.name} browser errors`);
+        ux09Visual.push({theme,viewport:view.name,metrics,
+          listFile,editFile,batchFile,editRect,batchRect,browserErrors});
+        console.log(`UX09_VISUAL_QA_PASS ${theme}/${view.name}`);
+      } finally {
+        await qaContext.close();
+      }
+    }
+  }
+  assert.equal(ux09Visual.length,12,'UX09: expected 12 viewport-theme combinations');
+  await writeFile(join(output,'ux09-chapter-studio-visual-report.json'),
+    JSON.stringify({stage:'UX09-CHAPTER-STUDIO',results:ux09Visual},null,2));
+  console.log('PASS: UX09 chapter studio visual QA: 3 themes x 4 widths x 3 states');
+
   stage = 'publish from admin UI';
   await editor.locator('.admin-studio-tabs').getByRole('button', { name: 'Публикация' }).click();
   await editor.locator('select[name="publicationStatus"]').selectOption('PUBLISHED');
@@ -436,12 +588,44 @@ async function main() {
   await eventually('SELECT publication_status AS status FROM comics WHERE id = $1', [fixture.comicId],
     row => row?.status === 'PUBLISHED', 'publishing through the UI did not persist');
 
+  stage = 'UX09 public chapter artwork rendering';
+  // Reuse the uploaded file on the still-released second chapter. The first
+  // chapter was superseded during the revision test and is now archived.
+  const chapter2Row = (await pool.query(
+    `SELECT id FROM chapters WHERE comic_id=$1 AND display_code='2' AND status='RELEASED'`,
+    [fixture.comicId])).rows[0];
+  assert.ok(chapter2Row?.id,'UX09: released second chapter must exist');
+  const assignToReaderChapter = await adminPage.request.patch(
+    `${origin}/api/admin/catalog/comics/${fixture.comicId}/chapters`,{
+      headers:{Origin:origin,'Content-Type':'application/json'},
+      data:{intent:'update',chapterId:chapter2Row.id,kind:'MAIN',volumeNumber:null,
+        displayCode:'2',title:'Вторая глава тестового выпуска',
+        sourceUrl:'https://example.com/chapters/2',status:'RELEASED',releasedAt:null,
+        coverUrl:artUrl},
+    });
+  assert.equal(assignToReaderChapter.status(),200,'UX09: reader chapter artwork update');
+
   stage = 'public reader view';
   const guestContext = await browser.newContext({ viewport: { width: 900, height: 800 } });
   const guest = await guestContext.newPage();
   const published = await guest.goto(`${origin}/comics/${stamp}`, { waitUntil: 'load' });
   assert.equal(published?.status(), 200, 'published work must be accessible to guests');
   await guest.getByText(updatedTitle, { exact: true }).first().waitFor();
+  const readerApi = await guest.request.get(`${origin}/api/comics/${fixture.comicId}/chapters`);
+  assert.equal(readerApi.status(),200,'UX09: public chapter API must remain available');
+  const readerPayload = await readerApi.json();
+  assert.equal(readerPayload.chapters?.find(c => c.id === chapter2Row.id)?.coverUrl,artUrl,
+    'UX09: public API does not expose saved artwork');
+  await guest.getByRole('tab',{name:/Главы/}).click();
+  const readerCover = guest.locator('.wd08-row').filter({hasText:'Вторая глава тестового выпуска'}).locator('.wd08-cover-art img');
+  await readerCover.waitFor({state:'visible'});
+  await readerCover.scrollIntoViewIfNeeded();
+  await guest.waitForFunction(source => {
+    const image = [...document.querySelectorAll('.wd08-cover-art img')].find(node =>
+      node.getAttribute('src') === source);
+    return image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0;
+  },artUrl,{timeout:15000});
+  console.log('UX09_CHAPTER_COVER_READER=PASS');
   console.log('ADMIN_CORE_PUBLISH_PUBLIC=PASS');
 
   // UX-05.2: measure the actual navigation geometry at responsive breakpoints.

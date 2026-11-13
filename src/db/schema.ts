@@ -283,6 +283,9 @@ export const chapters = pgTable(
       "source_url",
     ),
 
+    // Optional local chapter artwork; no impact on reading identity or ordering.
+    coverUrl: text("cover_url"),
+
     kind: varchar("kind", { length: 16 }).default("MAIN").notNull(),
     supersedesChapterId: integer("supersedes_chapter_id")
       .references((): AnyPgColumn => chapters.id, { onDelete: "restrict" }),

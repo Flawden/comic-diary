@@ -180,9 +180,9 @@ export function ChapterBatchEditor({ comicId, chapters, disabled, onBusyChange }
     <dialog ref={dialogRef} aria-labelledby={`${id}-title`}
       onCancel={event => { event.preventDefault(); close(); }}
       onKeyDown={event => { if (event.key === "Enter" && event.target instanceof HTMLInputElement) event.preventDefault(); }}
-      className="fixed inset-0 m-auto w-[min(760px,calc(100vw-16px))] max-h-[calc(100dvh-16px)] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-0 text-[var(--text-primary)] shadow-2xl backdrop:bg-black/70 sm:max-h-[90dvh]">
-      <div className="flex max-h-[calc(100dvh-16px)] flex-col sm:max-h-[90dvh]">
-      <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--border)] px-4 py-3 sm:px-6 sm:py-4">
+      className="admin-chapter-batch-dialog fixed inset-0 m-auto w-[min(760px,calc(100vw-16px))] max-h-[calc(100dvh-16px)] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-0 text-[var(--text-primary)] shadow-2xl backdrop:bg-black/70 sm:max-h-[90dvh]">
+      <div className="admin-chapter-batch-layout flex max-h-[calc(100dvh-16px)] flex-col sm:max-h-[90dvh]">
+      <div className="admin-chapter-batch-header flex shrink-0 items-start justify-between gap-4 border-b border-[var(--border)] px-4 py-3 sm:px-6 sm:py-4">
         <div><h4 id={`${id}-title`} className="text-lg font-semibold">Добавить главы</h4>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">Одна глава или до {CHAPTER_BATCH_LIMIT} за один раз. Дополнительные настройки находятся внутри каждой строки.</p></div>
         <button type="button" aria-label="Закрыть добавление глав" disabled={busy} onClick={close}
@@ -199,7 +199,7 @@ export function ChapterBatchEditor({ comicId, chapters, disabled, onBusyChange }
           </select>
         </label>
         {!pasteMode ? <div className="space-y-3">
-          {rows.map((row, index) => <section key={row.key} className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 sm:p-4">
+          {rows.map((row, index) => <section key={row.key} className="admin-chapter-batch-row rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h5 className="text-sm font-semibold">Глава {index + 1}</h5>
               {rows.length > 1 ? <button type="button" disabled={busy} className="text-sm text-[var(--danger)]"
