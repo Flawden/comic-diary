@@ -4241,8 +4241,7 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
   .catalog-page .catalog-hero,
   .fantasy-library .fantasy-library-hero,
   .fantasy-updates > .reader-heading,
-  .fantasy-account > .reader-heading,
-  .fantasy-auth-page
+  .fantasy-account > .reader-heading
 ) {
   background-color: var(--ux06-art-base);
   background-image:
