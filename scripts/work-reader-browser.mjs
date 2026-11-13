@@ -604,7 +604,7 @@ try {
   if (!(await noSourceGroup.evaluate(node => node.open))) await noSourceGroup.locator("summary").click();
   const noSourceRow = noSourcePanel.locator("li.wd-row").filter({hasText:"УРГА"});
   try {
-    await noSourceRow.getByText("Ссылка на чтение пока не добавлена. Главу можно найти самостоятельно.").waitFor({timeout:6000});
+    await noSourceRow.getByText("Ссылка на чтение пока не добавлена.", { exact: true }).waitFor({timeout:6000});
   } catch (error) {
     console.error("WD_LINK_02_MISSING_DIAGNOSTICS=" + JSON.stringify({
       panelHidden: await noSourcePanel.getAttribute("hidden"),
