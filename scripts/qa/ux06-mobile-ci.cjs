@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /*
  * UX-06: ephemeral, synthetic-browser QA. Run only in isolated GitHub Actions.
  * No production data, DB calls or credentials. Screenshots in artifacts/.
