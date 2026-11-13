@@ -188,7 +188,7 @@ try {
   const chapters=page.getByRole("tabpanel",{name:/Главы/});
   const planned=chapters.locator(".wd-row--scheduled");
   await planned.getByText("Просыпание", { exact: true }).waitFor();
-  await planned.getByText("Ожидается: ноябрь 2026 г.").waitFor();
+  await planned.getByText("Выход: ноябрь 2026 г.").waitFor();
   assert.equal(await planned.locator("a, button").count(), 0);
   const heroProgress=page.locator(".wd-hero-progress");
   await heroProgress.getByText("Прочитано: 0 из 2").waitFor();
