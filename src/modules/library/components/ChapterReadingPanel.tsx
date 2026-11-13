@@ -23,6 +23,8 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
   const [kind, setKind] = useState("MAIN");
   const [limit, setLimit] = useState(30);
   const [hideScheduled, setHideScheduled] = useState(false);
+  // A reader's explicit expand/collapse choice overrides automatic next-chapter focus.
+  const [manualVolumeOpen, setManualVolumeOpen] = useState<Record<string, boolean>>({});
   const sharedSource = readingSource(workSourceUrl);
   const router=useRouter();
   const [pending,start]=useTransition();
@@ -212,8 +214,21 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
           const progress = volumeProgress(allInVolume, read);
           const scheduled = allInVolume.filter(c => c.status === "SCHEDULED").length;
           const title = volumeHeading(group.number, group.number === null ? null : volumeTitles[group.number]);
-          return <details key={group.number ?? "ungrouped"} className="wd-volume" open={nextChapterId !== null ? group.chapters.some(c => c.id === nextChapterId) : group.number === groups[0]?.number}>
-            <summary className="wd-volume-summary">
+          const volumeKey = group.number === null ? "ungrouped" : `volume-${group.number}`;
+          const autoOpen = nextChapterId !== null
+            ? group.chapters.some(c => c.id === nextChapterId)
+            : group.number === groups[0]?.number;
+          const expanded = manualVolumeOpen[volumeKey] ?? autoOpen;
+          return <details key={volumeKey} className="wd-volume" open={expanded}>
+            <summary className="wd-volume-summary" onClick={(event) => {
+              // Let React control this toggle; native toggling would race with the
+              // next-chapter auto-open value and could erase user intent.
+              event.preventDefault();
+              setManualVolumeOpen(current => ({
+                ...current,
+                [volumeKey]: !(current[volumeKey] ?? autoOpen),
+              }));
+            }}>
               <span className="wd-volume-heading">{title} <small>{allInVolume.length} глав</small></span>
               <span className="wd-volume-stats">
                 {canMark && progress.total > 0 ? `Прочитано ${progress.read} из ${progress.total}` : `${progress.total} вышло`}

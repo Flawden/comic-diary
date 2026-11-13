@@ -714,6 +714,64 @@ try {
     JSON.stringify({stage:"UX08-CHAPTER-VISUAL",results:ux08Report},null,2));
   assert.equal(ux08Report.length, 12, "UX08: expected 12 screenshots");
   console.log("PASS: UX08 chapter TOC themes, 320/360/768/1440 widths, toggles, filter rerenders and screenshots");
+  // UX-08: manually chosen volume state must survive an actual reading-progress
+  // change, even when automatic next-chapter focus moves between volumes.
+  // This uses ONLY the disposable-CI reader fixture and makes a real UI mutation.
+  const ux08ProgressContext = await browser.newContext({viewport:{width:360,height:800}});
+  try {
+    await ux08ProgressContext.addCookies([{name:"comic_diary_session",value:token,url:origin}]);
+    const ux08ProgressPage = await ux08ProgressContext.newPage();
+    ux08ProgressPage.setDefaultTimeout(25000);
+    await ux08ProgressPage.goto(url+"#chapters", {waitUntil:"load"});
+    const progressPanel = ux08ProgressPage.getByRole("tabpanel", {name:/Главы/});
+    await progressPanel.locator(".wd08-intro").waitFor({state:"visible"});
+    // Prove React hydration by exercising a stateful filter before toggling.
+    const scheduledToggle = progressPanel.getByRole("checkbox", {name:/Скрыть запланированные/});
+    await scheduledToggle.check();
+    assert.equal(await progressPanel.locator(".wd-row--scheduled").count(), 0);
+    await scheduledToggle.uncheck();
+    assert.equal(await progressPanel.locator(".wd-row--scheduled").count(), 1);
+
+    const progressVolume1 = progressPanel.locator(".wd-volume").filter({hasText:"Том 1"});
+    const progressVolume2 = progressPanel.locator(".wd-volume").filter({hasText:"Том 2"});
+    assert.equal(await progressVolume1.count(), 1);
+    assert.equal(await progressVolume2.count(), 1);
+    assert.equal(await progressVolume1.evaluate(node => node.open), false, "UX08: Tom 1 initially collapsed");
+    assert.equal(await progressVolume2.evaluate(node => node.open), true, "UX08: Tom 2 initially expanded");
+    // Explicitly choose the current states by toggling in both directions.
+    // Without an override, React would reverse them after the last unread main chapter is marked.
+    const progressSummary1 = progressVolume1.locator("summary").first();
+    const progressSummary2 = progressVolume2.locator("summary").first();
+    await progressSummary1.click();
+    assert.equal(await progressVolume1.evaluate(node => node.open), true);
+    await progressSummary1.click();
+    assert.equal(await progressVolume1.evaluate(node => node.open), false);
+    await progressSummary2.click();
+    assert.equal(await progressVolume2.evaluate(node => node.open), false);
+    await progressSummary2.click();
+    assert.equal(await progressVolume2.evaluate(node => node.open), true);
+
+    await Promise.all([
+      ux08ProgressPage.waitForResponse(r =>
+        r.url().includes("/api/library/reading-state") &&
+        r.request().method() === "POST" && r.status() === 200),
+      progressPanel.getByRole("button", {name:"Отметить прочитанной: 7 · Пещера"}).click(),
+    ]);
+    await ux08ProgressPage.waitForFunction(() =>
+      document.querySelectorAll(".wd08-row--next").length === 0 &&
+      [...document.querySelectorAll("button[aria-label]")].some(b =>
+        b.getAttribute("aria-label") === "Снять отметку: 7 · Пещера"));
+    // Next.js router.refresh() is asynchronous; give it a chance to reconcile
+    // before checking the manually selected native <details> state.
+    await ux08ProgressPage.waitForTimeout(350);
+    assert.equal(await progressVolume1.evaluate(node => node.open), false,
+      "UX08: manually collapsed Tom 1 reopened when reading progress changed");
+    assert.equal(await progressVolume2.evaluate(node => node.open), true,
+      "UX08: manually expanded Tom 2 closed when reading progress changed");
+    console.log("UX08_PROGRESS_QA_PASS: explicit volume states survive chapter reading update");
+  } finally {
+    await ux08ProgressContext.close();
+  }
   console.log("PASS: WD-LINK-02 direct links, persistent general source, fallback, and missing-link read controls");
   console.log("PASS: WD18.2 smart prompt, one-request bulk marks, optional batch ratings, retry and undo");
   console.log("PASS: WD12-WD16 and WD21.3 planned chapters, guest visibility, read/rating guards, toggle, persistence and mobile sheet");
