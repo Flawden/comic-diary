@@ -4317,3 +4317,160 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
     background-position: center, center, center bottom;
   }
 }
+
+
+/* UX-07 stage 1: auth backdrop follows the selected theme. */
+[data-theme="night"] .fantasy-auth-page {
+  color-scheme: dark;
+  border-color: var(--cd-border);
+  background-color: var(--cd-background);
+  background-image:
+    linear-gradient(140deg, rgba(13, 15, 25, .94), rgba(22, 24, 37, .94) 65%, rgba(37, 34, 49, .84)),
+    url('/images/fantasy-editorial/catalog/catalog-library-background.webp');
+  box-shadow: inset 0 0 0 3px rgba(22, 24, 37, .56), 0 18px 55px rgba(0, 0, 0, .2);
+}
+[data-theme="paper"] .fantasy-auth-page {
+  color-scheme: light;
+  border-color: var(--cd-border);
+  background-color: var(--cd-background);
+  background-image:
+    linear-gradient(140deg, rgba(249, 241, 226, .94), rgba(247, 236, 216, .93) 65%, rgba(231, 215, 191, .84)),
+    url('/images/fantasy-editorial/catalog/catalog-library-background.webp');
+  box-shadow: inset 0 0 0 3px rgba(255, 250, 240, .65), 0 18px 55px rgba(36, 31, 26, .12);
+}
+[data-theme="paper"] .fantasy-auth-inner > h1,
+[data-theme="paper"] .fantasy-auth-inner > h1 + p,
+[data-theme="paper"] .fantasy-auth-links { color: var(--cd-text-primary); text-shadow: none; }
+[data-theme="paper"] .fantasy-auth-inner > p:first-of-type,
+[data-theme="paper"] .fantasy-auth-links a { color: var(--cd-text-accent); }
+[data-theme="night"] .fantasy-auth-inner > h1,
+[data-theme="night"] .fantasy-auth-inner > h1 + p,
+[data-theme="night"] .fantasy-auth-links { color: var(--cd-text-primary); }
+[data-theme="night"] .fantasy-auth-inner > p:first-of-type,
+[data-theme="night"] .fantasy-auth-links a { color: #e6bd80; }
+
+
+/* UX-07 stage 2: detail/profile theme consistency and auth contrast repair.
+   Preserve comic cover artwork and per-comic banner images. Only the translucent
+   overlay, foreground controls, and semantic foreground/surfaces change. */
+
+/* Stage 1 repair: the old QA-03B auth foreground selectors are more specific
+   than the first-stage paper overrides. Match that specificity explicitly. */
+[data-theme="paper"] .fantasy-auth-page .fantasy-auth-inner > :is(p:first-of-type, h1, h1 + p),
+[data-theme="paper"] .fantasy-auth-page .fantasy-auth-links {
+  color: var(--fe-ink);
+  text-shadow: none;
+}
+[data-theme="paper"] .fantasy-auth-page .fantasy-auth-inner > p:first-of-type,
+[data-theme="paper"] .fantasy-auth-page .fantasy-auth-links a {
+  color: var(--fe-accent);
+}
+[data-theme="night"] .fantasy-auth-page .fantasy-auth-inner > :is(p:first-of-type, h1, h1 + p),
+[data-theme="night"] .fantasy-auth-page .fantasy-auth-links { color: var(--fe-ink); }
+[data-theme="night"] .fantasy-auth-page .fantasy-auth-links a { color: var(--fe-accent); }
+
+/* Scoped hero palette: don't recolor book covers or swap the work's banner. */
+[data-theme="night"] .wd-work {
+  --ux07-hero-base: #1b1e23;
+  --ux07-hero-overlay-start: rgb(17 19 26 / .95);
+  --ux07-hero-overlay-end: rgb(26 29 38 / .20);
+  --ux07-hero-panel: rgb(22 24 32 / .85);
+  --ux07-hero-border: rgb(213 184 137 / .53);
+  --ux07-hero-action: #ba9868;
+  --ux07-hero-action-hover: #d1af7c;
+  --ux07-hero-action-text: #15191c;
+}
+[data-theme="paper"] .wd-work {
+  --ux07-hero-base: #45382e;
+  --ux07-hero-overlay-start: rgb(45 34 28 / .94);
+  --ux07-hero-overlay-end: rgb(70 52 40 / .16);
+  --ux07-hero-panel: rgb(48 37 30 / .85);
+  --ux07-hero-border: rgb(232 202 150 / .60);
+  --ux07-hero-action: #b58b5b;
+  --ux07-hero-action-hover: #cca06b;
+  --ux07-hero-action-text: #171b18;
+}
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero {
+  border-color: var(--ux07-hero-border);
+  background-color: var(--ux07-hero-base);
+  box-shadow: 0 18px 45px rgb(0 0 0 / .17);
+}
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero::before {
+  background: linear-gradient(90deg,
+    var(--ux07-hero-overlay-start) 0%,
+    var(--ux07-hero-overlay-start) 31%,
+    rgb(25 24 26 / .53) 66%,
+    var(--ux07-hero-overlay-end) 100%);
+}
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-identity .wd-hero-badges small,
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero-progress,
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero-summary .wd-story-block,
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero-summary-empty {
+  background: var(--ux07-hero-panel);
+  border-color: var(--ux07-hero-border);
+  color: #f6eee2;
+}
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero-progress p {
+  color: #eee7db;
+}
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero-progress-heading strong,
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero-summary :is(.wd-story-block h2, .wd-hero-summary-empty h2) {
+  color: #eed1a1;
+}
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero-actions .wd-read {
+  border-color: var(--ux07-hero-border);
+  background: var(--ux07-hero-action);
+  color: var(--ux07-hero-action-text);
+  text-shadow: none;
+}
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero-actions .wd-read span {
+  color: var(--ux07-hero-action-text);
+}
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero-actions .wd-read:hover {
+  background: var(--ux07-hero-action-hover);
+}
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero-actions .library-remove-confirm {
+  background: var(--fe-panel);
+  border-color: var(--fe-border);
+  color: var(--fe-ink);
+}
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero-actions .library-remove-confirm p,
+:is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero-actions .library-remove-error {
+  color: var(--fe-ink);
+}
+@media (max-width: 540px) {
+  :is([data-theme="paper"], [data-theme="night"]) .wd-work .wd-hero::before {
+    background: linear-gradient(180deg,
+      rgb(24 25 29 / .42) 0%,
+      var(--ux07-hero-overlay-start) 38%,
+      var(--ux07-hero-overlay-start) 100%);
+  }
+}
+
+/* Account banner stays photographic; action colors now follow the active mood. */
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-account > .reader-heading .tea-outline {
+  background: var(--fe-panel);
+  color: var(--fe-ink);
+  border-color: var(--fe-border);
+  text-shadow: none;
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-account > .reader-heading .tea-outline:hover {
+  background: var(--fe-raised);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-account .account-identity .tea-outline,
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-account .account-identity .space-y-3 > button {
+  background: var(--fe-raised);
+  border-color: var(--fe-border);
+  color: var(--fe-ink);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-account .account-identity .tea-outline:hover,
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-account .account-identity .space-y-3 > button:hover:not(:disabled) {
+  background: var(--fe-panel);
+  border-color: var(--fe-action);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-account .account-content form button[type='submit'] {
+  border-color: var(--fe-border);
+}
+:is([data-theme="paper"], [data-theme="night"]) .fantasy-account :is(a, button, summary, input):focus-visible {
+  outline-color: var(--fe-action);
+}
