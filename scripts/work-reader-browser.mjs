@@ -520,7 +520,11 @@ try {
   await pool.query("INSERT INTO chapters(comic_id,display_code,title,sort_order,status,volume_number) VALUES ($1,'4','Долина',4,'RELEASED',1),($1,'5','Река',5,'RELEASED',2),($1,'6','Лес',6,'RELEASED',2)",[comic]);
   await page.reload();
   const latest = page.getByRole("tabpanel",{name:/Главы/});
-  await latest.locator(".wd-volume").filter({hasText:"Том 2"}).locator("summary").click();
+  const volumeBeforeBulk = latest.locator(".wd-volume").filter({hasText:"Том 2"});
+  if (!(await volumeBeforeBulk.evaluate(node => node.open))) {
+    await volumeBeforeBulk.locator("summary").click();
+  }
+  assert.equal(await volumeBeforeBulk.evaluate(node => node.open), true, "Tom 2 must be expanded before marking chapter 6");
   await latest.getByRole("button",{name:"Отметить прочитанной: 6 · Лес"}).click();
   const bulk = page.locator("dialog.wd-bulk-sheet[open]");
   await bulk.getByRole("heading",{name:"Отметить предыдущие главы?"}).waitFor();
@@ -544,7 +548,11 @@ try {
   await pool.query("INSERT INTO chapters(comic_id,display_code,title,sort_order,status,volume_number) VALUES ($1,'7','Пещера',7,'RELEASED',2),($1,'8','Гроза',8,'RELEASED',2)",[comic]);
   await page.reload();
   const after=page.getByRole("tabpanel",{name:/Главы/});
-  await after.locator(".wd-volume").filter({hasText:"Том 2"}).locator("summary").click();
+  const volumeBeforeUndo = after.locator(".wd-volume").filter({hasText:"Том 2"});
+  if (!(await volumeBeforeUndo.evaluate(node => node.open))) {
+    await volumeBeforeUndo.locator("summary").click();
+  }
+  assert.equal(await volumeBeforeUndo.evaluate(node => node.open), true, "Tom 2 must be expanded before marking chapter 8");
   await after.getByRole("button",{name:"Отметить прочитанной: 8 · Гроза"}).click();
   const undoDialog=page.locator("dialog.wd-bulk-sheet[open]");
   await undoDialog.getByRole("heading",{name:"Отметить предыдущие главы?"}).waitFor();
