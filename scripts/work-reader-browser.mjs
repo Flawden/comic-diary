@@ -620,6 +620,100 @@ try {
   assert.equal(await noSourceRow.locator("a").count(), 0);
   assert.equal(await noSourcePanel.getByText("Общий источник произведения", {exact:true}).count(), 0);
   assert.equal(await noSourceRow.getByRole("button", {name:"Снять отметку: УРГА"}).count(), 1);
+  // UX-08: focused visual and native <details> behavior QA.
+  // This remains INSIDE the existing CI-only disposable DB guard and fixture.
+  // No clicks on outgoing source links and no reading-state mutations.
+  const ux08Output = process.env.WD_VISUAL_OUTPUT;
+  assert.ok(ux08Output, "UX08 QA requires WD_VISUAL_OUTPUT");
+  await mkdir(ux08Output, {recursive:true});
+  const ux08Report = [];
+  for (const theme of ["tea", "paper", "night"]) {
+    for (const view of [
+      {name:"phone320", width:320, height:740},
+      {name:"phone360", width:360, height:800},
+      {name:"tablet768", width:768, height:900},
+      {name:"desktop1440", width:1440, height:900},
+    ]) {
+      const ux08Context = await browser.newContext({
+        viewport:{width:view.width, height:view.height},
+        reducedMotion:"reduce", locale:"ru-RU",
+      });
+      try {
+        await ux08Context.addCookies([
+          {name:"comic_diary_session", value:token, url:origin},
+          {name:"comic-diary-theme", value:theme, url:origin},
+        ]);
+        const ux08Page = await ux08Context.newPage();
+        ux08Page.setDefaultTimeout(25000);
+        const ux08PageErrors = [];
+        ux08Page.on("pageerror", error => ux08PageErrors.push(error.message.slice(0, 180)));
+        const response = await ux08Page.goto(url+"#chapters", {waitUntil:"load"});
+        assert.equal(response?.status(), 200, `UX08 ${theme}/${view.name}: page response`);
+        const ux08Panel = ux08Page.getByRole("tabpanel", {name:/Главы/});
+        await ux08Panel.locator(".wd08-intro").waitFor({state:"visible"});
+        await ux08Page.evaluate(() => document.fonts.ready);
+        const ux08Metrics = await ux08Page.evaluate(() => ({
+          theme:document.documentElement.getAttribute("data-theme"),
+          width:document.documentElement.clientWidth,
+          scrollWidth:document.documentElement.scrollWidth,
+          nextCount:document.querySelectorAll(".wd08-row--next").length,
+          scheduledCount:document.querySelectorAll(".wd08-row--scheduled").length,
+          volumeCount:document.querySelectorAll(".wd-volume").length,
+        }));
+        assert.equal(ux08Metrics.theme, theme, `UX08 ${theme}/${view.name}: wrong theme`);
+        assert.ok(ux08Metrics.scrollWidth <= view.width + 2,
+          `UX08 ${theme}/${view.name}: horizontal overflow ${ux08Metrics.scrollWidth} > ${view.width}`);
+        assert.ok(ux08Metrics.volumeCount >= 2, `UX08 ${theme}/${view.name}: missing volumes`);
+        assert.equal(ux08Metrics.scheduledCount, 1, `UX08 ${theme}/${view.name}: scheduled chapter`);
+        assert.equal(ux08PageErrors.length, 0, `UX08 ${theme}/${view.name}: browser errors: ${ux08PageErrors.join(" | ")}`);
+
+        const ux08Volume = ux08Panel.locator(".wd-volume").filter({hasText:"Том 1"});
+        assert.equal(await ux08Volume.count(), 1, `UX08 ${theme}/${view.name}: Tom 1 selector`);
+        const ux08Summary = ux08Volume.locator("summary").first();
+        const originallyOpen = await ux08Volume.evaluate(node => node.open);
+        await ux08Summary.click();
+        assert.equal(await ux08Volume.evaluate(node => node.open), !originallyOpen,
+          `UX08 ${theme}/${view.name}: first volume toggle`);
+        const ux08Toggle = ux08Panel.getByRole("checkbox", {name:/Скрыть запланированные/});
+        await ux08Toggle.check();
+        assert.equal(await ux08Panel.locator(".wd-row--scheduled").count(), 0,
+          `UX08 ${theme}/${view.name}: scheduled filter did not hide chapter`);
+        assert.equal(await ux08Volume.evaluate(node => node.open), !originallyOpen,
+          `UX08 ${theme}/${view.name}: manual volume state lost on rerender`);
+        await ux08Toggle.uncheck();
+        assert.equal(await ux08Panel.locator(".wd-row--scheduled").count(), 1,
+          `UX08 ${theme}/${view.name}: scheduled filter did not restore chapter`);
+        assert.equal(await ux08Volume.evaluate(node => node.open), !originallyOpen,
+          `UX08 ${theme}/${view.name}: manual volume state lost after restore`);
+        // Restore default TOC view and show the two available volume states.
+        await ux08Summary.click();
+        assert.equal(await ux08Volume.evaluate(node => node.open), originallyOpen,
+          `UX08 ${theme}/${view.name}: restoring volume state`);
+        const file = `ux08-${theme}-${view.name}-chapters.png`;
+        await ux08Panel.screenshot({path:join(ux08Output,file),animations:"disabled"});
+        // Also capture every volume expanded to make planned and read states visible.
+        for (const group of await ux08Panel.locator(".wd-volume").all()) {
+          if (!(await group.evaluate(node => node.open))) await group.locator("summary").first().click();
+        }
+        const plannedRow = ux08Panel.locator(".wd-row--scheduled");
+        await plannedRow.getByText("Просыпание", {exact:true}).waitFor({state:"visible"});
+        assert.equal(await plannedRow.locator("a,button").count(), 0,
+          `UX08 ${theme}/${view.name}: planned chapter has an interactive action`);
+        const expandedFile = `ux08-${theme}-${view.name}-all-volumes.png`;
+        await ux08Panel.screenshot({path:join(ux08Output,expandedFile),animations:"disabled"});
+        ux08Report.push({theme,viewport:view.name,file,expandedFile,metrics:ux08Metrics,
+          manuallyToggled:true,preservedDuringFilter:true,restored:true,
+          browserErrors:ux08PageErrors});
+        console.log(`UX08_VISUAL_QA_PASS ${theme}/${view.name}: ${file}, ${expandedFile}`);
+      } finally {
+        await ux08Context.close();
+      }
+    }
+  }
+  await writeFile(join(ux08Output,"ux08-chapter-visual-report.json"),
+    JSON.stringify({stage:"UX08-CHAPTER-VISUAL",results:ux08Report},null,2));
+  assert.equal(ux08Report.length, 12, "UX08: expected 12 screenshots");
+  console.log("PASS: UX08 chapter TOC themes, 320/360/768/1440 widths, toggles, filter rerenders and screenshots");
   console.log("PASS: WD-LINK-02 direct links, persistent general source, fallback, and missing-link read controls");
   console.log("PASS: WD18.2 smart prompt, one-request bulk marks, optional batch ratings, retry and undo");
   console.log("PASS: WD12-WD16 and WD21.3 planned chapters, guest visibility, read/rating guards, toggle, persistence and mobile sheet");
