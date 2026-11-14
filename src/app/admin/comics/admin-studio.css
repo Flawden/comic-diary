@@ -920,3 +920,12 @@ textarea.admin-studio-input { resize: vertical; }
     padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
 }
+
+/* UX-09.1 Fix3 — compact edit label at 320px, 44px arrow targets preserved. */
+@media (max-width: 340px) {
+  .admin-chapter-card-actions > button:nth-child(3) {
+    font-size: 12px;
+    padding-inline: 2px;
+    letter-spacing: -0.1px;
+  }
+}
