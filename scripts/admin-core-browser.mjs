@@ -499,6 +499,7 @@ async function main() {
   // test's already existing disposable-CI admin fixture; no writes or saving.
   stage = 'UX09 chapter studio themes and responsive visual QA';
   const ux09Visual = [];
+  const ux091Interaction = [];
   for (const theme of ['tea', 'paper', 'night']) {
     for (const view of [
       {name:'phone320',width:320,height:740},
@@ -553,6 +554,93 @@ async function main() {
           `UX09 ${theme}/${view.name} edit modal geometry: ${JSON.stringify(editRect)}`);
         const editFile = `ux09-${theme}-${view.name}-edit.png`;
         await qaDialog.screenshot({path:join(output,editFile),animations:'disabled'});
+
+        // UX-09.1 mobile interaction QA: long titles and sticky footer (CI fixture only).
+        // No save calls: each case edits synthetic state and closes with Cancel.
+        if (view.width <= 360) {
+          const qaLabel = `UX091 ${theme}/${view.name}`;
+          const qaTitle = qaDialog.getByLabel('Название главы');
+          assert.equal(await qaTitle.evaluate(el => el.tagName), 'TEXTAREA',
+            `${qaLabel}: title must be a multi-line textarea`);
+          const originalTitle = await qaTitle.inputValue();
+          const beforeTitle = await qaTitle.evaluate(el => ({
+            height:el.getBoundingClientRect().height,
+            scrollHeight:el.scrollHeight,clientHeight:el.clientHeight,
+          }));
+          const longTitle = `${originalTitle} — ${'Длинное название главы для проверки мобильного редактора. '.repeat(14)}`;
+          await qaTitle.fill(longTitle);
+          assert.equal(await qaTitle.inputValue(),longTitle,
+            `${qaLabel}: title value lost or truncated`);
+          const titleMetrics = await qaTitle.evaluate(el => {
+            const rect = el.getBoundingClientRect();
+            return {
+              left:rect.left,right:rect.right,height:rect.height,
+              scrollHeight:el.scrollHeight,clientHeight:el.clientHeight,
+              scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,
+            };
+          });
+          assert.ok(titleMetrics.left >= -1 && titleMetrics.right <= view.width + 1,
+            `${qaLabel}: long title field outside viewport: ${JSON.stringify(titleMetrics)}`);
+          assert.ok(titleMetrics.height > beforeTitle.height + 8,
+            `${qaLabel}: textarea did not grow for long content: ${JSON.stringify({beforeTitle,titleMetrics})}`);
+          assert.ok(titleMetrics.scrollWidth <= titleMetrics.clientWidth + 2,
+            `${qaLabel}: horizontal title overflow: ${JSON.stringify(titleMetrics)}`);
+          if (titleMetrics.scrollHeight > titleMetrics.clientHeight + 2) {
+            const afterScroll = await qaTitle.evaluate(el => {
+              el.scrollTop = el.scrollHeight;
+              return el.scrollTop;
+            });
+            assert.ok(afterScroll > 0,`${qaLabel}: overflowing title cannot scroll`);
+          }
+          const titleFile = `ux091-${theme}-${view.name}-long-title.png`;
+          await qaDialog.screenshot({path:join(output,titleFile),animations:'disabled'});
+
+          const advanced = qaDialog.locator('details.admin-chapter-edit-advanced');
+          await advanced.locator('summary').click();
+          assert.ok(await advanced.evaluate(el => el.open),
+            `${qaLabel}: advanced settings did not expand`);
+          await qaDialog.evaluate(el => { el.scrollTop = el.scrollHeight; });
+          await qaPage.waitForTimeout(80);
+          const footerMetrics = await qaDialog.evaluate(el => {
+            const footer = el.querySelector('.admin-chapter-edit-footer');
+            const advanced = el.querySelector('.admin-chapter-edit-advanced');
+            if (!footer || !advanced) return null;
+            const fields = [...advanced.querySelectorAll('input, select, textarea')]
+              .filter(node => node.getClientRects().length > 0);
+            const lastField = fields.at(-1);
+            if (!lastField) return null;
+            const footerBox = footer.getBoundingClientRect();
+            const fieldBox = lastField.getBoundingClientRect();
+            const dialogBox = el.getBoundingClientRect();
+            const cx = fieldBox.left + fieldBox.width/2;
+            const cy = fieldBox.top + fieldBox.height/2;
+            const hit = document.elementFromPoint(cx,cy);
+            return {
+              scrollTop:el.scrollTop,scrollHeight:el.scrollHeight,clientHeight:el.clientHeight,
+              dialogBottom:dialogBox.bottom,footerTop:footerBox.top,footerBottom:footerBox.bottom,
+              fieldTop:fieldBox.top,fieldBottom:fieldBox.bottom,
+              fieldNotCovered:hit === lastField || lastField.contains(hit),
+            };
+          });
+          assert.ok(footerMetrics,`${qaLabel}: missing footer/last advanced field`);
+          assert.ok(footerMetrics.scrollHeight > footerMetrics.clientHeight + 20,
+            `${qaLabel}: dialog did not become vertically scrollable: ${JSON.stringify(footerMetrics)}`);
+          assert.ok(footerMetrics.scrollTop > 20,
+            `${qaLabel}: dialog cannot scroll to bottom: ${JSON.stringify(footerMetrics)}`);
+          assert.ok(footerMetrics.footerBottom <= footerMetrics.dialogBottom + 2,
+            `${qaLabel}: sticky footer outside dialog: ${JSON.stringify(footerMetrics)}`);
+          assert.ok(footerMetrics.fieldTop >= -1 &&
+            footerMetrics.fieldBottom <= footerMetrics.footerTop - 2 &&
+            footerMetrics.fieldNotCovered,
+            `${qaLabel}: last advanced field obscured by footer: ${JSON.stringify(footerMetrics)}`);
+          assert.equal(await qaTitle.inputValue(),longTitle,
+            `${qaLabel}: title changed after scrolling settings`);
+          const footerFile = `ux091-${theme}-${view.name}-footer-bottom.png`;
+          await qaDialog.screenshot({path:join(output,footerFile),animations:'disabled'});
+          ux091Interaction.push({theme,viewport:view.name,
+            beforeTitle,titleMetrics,footerMetrics,titleFile,footerFile});
+          console.log(`UX091_INTERACTION_QA_PASS ${theme}/${view.name}`);
+        }
         await qaDialog.getByRole('button',{name:'Отмена'}).click();
         await qaDialog.waitFor({state:'hidden'});
 
@@ -577,6 +665,10 @@ async function main() {
     }
   }
   assert.equal(ux09Visual.length,12,'UX09: expected 12 viewport-theme combinations');
+  assert.equal(ux091Interaction.length,6,'UX09.1: expected 6 mobile interaction cases');
+  await writeFile(join(output,'ux091-mobile-interaction-report.json'),
+    JSON.stringify({stage:'UX09.1-MOBILE-INTERACTION',results:ux091Interaction},null,2));
+  console.log('PASS: UX09.1 mobile interaction QA: 3 themes x 2 phone widths x 2 new screenshots');
   await writeFile(join(output,'ux09-chapter-studio-visual-report.json'),
     JSON.stringify({stage:'UX09-CHAPTER-STUDIO',results:ux09Visual},null,2));
   console.log('PASS: UX09 chapter studio visual QA: 3 themes x 4 widths x 3 states');

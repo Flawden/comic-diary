@@ -878,3 +878,54 @@ textarea.admin-studio-input { resize: vertical; }
   .admin-chapter-artwork-editor {padding:13px;}
 }
 @media(max-width:380px){.admin-chapter-cover-thumb{left:8px;width:39px;height:52px;}}
+
+/* UX-09.1 — mobile chapter editing polish; no data/API changes. */
+.admin-chapter-title-textarea {
+  display: block;
+  min-height: 76px;
+  max-height: 192px;
+  field-sizing: content;
+  resize: vertical;
+  overflow-y: auto;
+  line-height: 1.45;
+}
+@media (max-width: 760px) {
+  .admin-chapter-card-actions {
+    display: grid;
+    grid-template-columns: 44px 44px minmax(0, 1fr);
+    align-items: stretch;
+    gap: 8px;
+  }
+  .admin-chapter-card-actions > button {
+    min-width: 0;
+    width: 100%;
+    flex: none;
+    padding-inline: 8px;
+  }
+  .admin-chapter-card-actions > button:nth-child(-n+2) {
+    font-size: 21px;
+    line-height: 1;
+  }
+  .admin-chapter-card-actions > button:nth-child(n+4),
+  .admin-chapter-card-actions > div,
+  .admin-chapter-card-actions > span {
+    grid-column: 1 / -1;
+  }
+  .admin-chapter-edit-dialog { scroll-padding-bottom: 124px; }
+  .admin-chapter-edit-dialog :is(input, textarea, select, button, summary) {
+    scroll-margin-bottom: 124px;
+  }
+  .admin-chapter-edit-footer {
+    bottom: 0;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+/* UX-09.1 Fix3 — compact edit label at 320px, 44px arrow targets preserved. */
+@media (max-width: 340px) {
+  .admin-chapter-card-actions > button:nth-child(3) {
+    font-size: 12px;
+    padding-inline: 2px;
+    letter-spacing: -0.1px;
+  }
+}
