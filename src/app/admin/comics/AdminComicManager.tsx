@@ -1919,11 +1919,12 @@ export function AdminComicManager({
 
                                       <label className="block text-sm font-medium">
                                         <span className="block">Название главы</span>
-                                        <input
+                                        <textarea
+                                          rows={2}
                                           value={chapterEditValues.title}
                                           onChange={(event) => setChapterEditValues({ ...chapterEditValues, title: event.target.value })}
                                           placeholder="Например, УРГА"
-                                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                                          className="admin-chapter-title-textarea mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]"
                                         />
                                         <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Можно оставить пустым, если указан код главы.</span>
                                       </label>
@@ -2115,9 +2116,11 @@ export function AdminComicManager({
                                             "up",
                                           )
                                         }
+                                        aria-label="Переместить главу вверх"
+                                        title="Переместить главу вверх"
                                         className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-60"
                                       >
-                                        Вверх
+                                        ↑
                                       </button>
 
                                       <button
@@ -2132,9 +2135,11 @@ export function AdminComicManager({
                                             "down",
                                           )
                                         }
+                                        aria-label="Переместить главу вниз"
+                                        title="Переместить главу вниз"
                                         className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-60"
                                       >
-                                        Вниз
+                                        ↓
                                       </button>
 
                                       <button
