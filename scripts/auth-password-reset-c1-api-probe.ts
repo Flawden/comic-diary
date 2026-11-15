@@ -58,6 +58,10 @@ async function main(): Promise<void> {
     );
     userId = created.rows[0].id;
 
+    // CI explicitly simulates prior successful mailbox verification.
+    // Production must never set this without a real verification exchange.
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [userId]);
+
     const issued = await issuePasswordResetForUser(userId);
     assert.equal(issued.ok, true);
     if (!issued.ok) throw new Error("token issuance failed");

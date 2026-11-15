@@ -27,6 +27,7 @@ export type PasswordResetRedeemResult =
  * unique index allows only one unconsumed/unrevoked row per user, including
  * expired rows, so revocation is mandatory before inserting a new row.
  *
+ * A mailbox MUST be verified before any recovery token can be issued.
  * Never log or persist `token`. No public route may call this until the
  * unverified-mailbox policy, rate limits and mail transport are approved.
  */
@@ -39,14 +40,14 @@ export async function issuePasswordResetForUser(
 
   return db.transaction(async (tx): Promise<PasswordResetIssueResult> => {
     const accounts = await tx
-      .select({ id: users.id, passwordHash: users.passwordHash })
+      .select({ id: users.id, passwordHash: users.passwordHash, emailVerifiedAt: users.emailVerifiedAt })
       .from(users)
       .where(and(eq(users.id, userId), eq(users.isActive, true)))
       .limit(1)
       .for("update");
 
     const account = accounts[0];
-    if (!account?.passwordHash) {
+    if (!account?.passwordHash || account.emailVerifiedAt === null) {
       return { ok: false, kind: "account_unavailable" };
     }
 
@@ -92,6 +93,8 @@ export async function issuePasswordResetForUser(
  * acquiring the user and token locks. Concurrent issuance, own password
  * changes and parallel redemption therefore serialize on the user row.
  *
+ * Redemption rechecks the verified-mailbox gate after locking the user.
+ * A token from an older verification epoch is invalid if ownership changes.
  * Success changes the Argon2id password, consumes the token and revokes ALL
  * sessions in one transaction. No replacement session is issued: log in again.
  */
@@ -124,14 +127,14 @@ export async function redeemPasswordResetToken(
     }
 
     const accounts = await tx
-      .select({ id: users.id, passwordHash: users.passwordHash })
+      .select({ id: users.id, passwordHash: users.passwordHash, emailVerifiedAt: users.emailVerifiedAt })
       .from(users)
       .where(and(eq(users.id, candidate.userId), eq(users.isActive, true)))
       .limit(1)
       .for("update");
 
     const account = accounts[0];
-    if (!account?.passwordHash) {
+    if (!account?.passwordHash || account.emailVerifiedAt === null) {
       return { ok: false, kind: "invalid_token" };
     }
 
@@ -140,6 +143,7 @@ export async function redeemPasswordResetToken(
         id: passwordResetTokens.id,
         userId: passwordResetTokens.userId,
         expiresAt: passwordResetTokens.expiresAt,
+        createdAt: passwordResetTokens.createdAt,
         consumedAt: passwordResetTokens.consumedAt,
         revokedAt: passwordResetTokens.revokedAt,
       })
@@ -155,7 +159,8 @@ export async function redeemPasswordResetToken(
       reset.userId !== account.id ||
       reset.consumedAt !== null ||
       reset.revokedAt !== null ||
-      isPasswordResetTokenExpired(reset.expiresAt, now)
+      isPasswordResetTokenExpired(reset.expiresAt, now) ||
+      account.emailVerifiedAt.getTime() > reset.createdAt.getTime()
     ) {
       return { ok: false, kind: "invalid_token" };
     }

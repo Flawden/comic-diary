@@ -44,6 +44,7 @@ jobs:
           node --test scripts/auth-password-reset-b2-contract.test.mjs
           node --import tsx --test src/modules/auth/password-reset-http.test.ts
           node --test scripts/auth-password-reset-c1-contract.test.mjs
+          node --test scripts/auth-password-reset-c2a-contract.test.mjs
 
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts

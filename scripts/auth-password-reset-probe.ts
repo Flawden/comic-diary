@@ -45,6 +45,23 @@ async function main(): Promise<void> {
     );
     userId = created.rows[0].id;
 
+    // New and pre-existing email addresses must never be trusted implicitly.
+    const initiallyUnverified = await pool.query<{ email_verified_at: Date | null }>(
+      "SELECT email_verified_at FROM users WHERE id = $1", [userId],
+    );
+    assert.equal(initiallyUnverified.rows[0].email_verified_at, null);
+    assert.deepEqual(await issuePasswordResetForUser(userId), {
+      ok: false, kind: "account_unavailable",
+    });
+    const beforeVerified = await pool.query<{ n: number }>(
+      "SELECT count(*)::int AS n FROM password_reset_tokens WHERE user_id = $1", [userId],
+    );
+    assert.equal(beforeVerified.rows[0].n, 0);
+
+    // This is ONLY a disposable CI fixture marking the mailbox verified.
+    // Production must only set this field after actual mailbox verification.
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [userId]);
+
     const first = await issuePasswordResetForUser(userId);
     assert.equal(first.ok, true);
     if (!first.ok) throw new Error("first token issuance failed");
@@ -139,6 +156,25 @@ async function main(): Promise<void> {
       );
     }
 
+    const toUnverify = await issuePasswordResetForUser(userId);
+    assert.equal(toUnverify.ok, true);
+    if (!toUnverify.ok) throw new Error("unverification fixture issuance failed");
+    await pool.query("UPDATE users SET email_verified_at = NULL WHERE id = $1", [userId]);
+    assert.deepEqual(await issuePasswordResetForUser(userId), {
+      ok: false, kind: "account_unavailable",
+    });
+    assert.deepEqual(
+      await redeemPasswordResetToken(toUnverify.token, "Another-Good-Password-999!"),
+      { ok: false, kind: "invalid_token" },
+    );
+    // The old token must remain unusable even after verifying again.
+    // Wait long enough to make the verification epoch strictly newer than token issuance.
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [userId]);
+    assert.deepEqual(
+      await redeemPasswordResetToken(toUnverify.token, "Another-Good-Password-999!"),
+      { ok: false, kind: "invalid_token" },
+    );
     const toDisable = await issuePasswordResetForUser(userId);
     assert.equal(toDisable.ok, true);
     if (!toDisable.ok) throw new Error("deactivation test issuance failed");
@@ -151,6 +187,7 @@ async function main(): Promise<void> {
       { ok: false, kind: "invalid_token" },
     );
 
+    console.log("AUTH01C2A_MAILBOX_TRUST_GATE=PASS");
     console.log("AUTH01B2_POSTGRESQL_CONCURRENCY=PASS");
     console.log("AUTH01B2_PASSWORD_AND_SESSION_ATOMICITY=PASS");
     console.log("AUTH01B2_EXPIRED_AND_INACTIVE=PASS");

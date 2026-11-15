@@ -45,12 +45,12 @@ test("journal adds migration 0031 after 0030 without changing its history", () =
   assert.equal(journal.dialect, "postgresql");
   assert.equal(String(journal.version), "7");
   const entries = journal.entries;
-  assert.equal(entries.at(-2).idx, 30);
-  assert.equal(entries.at(-2).tag, "0030_chapter_cover");
-  assert.equal(entries.at(-1).idx, 31);
-  assert.equal(entries.at(-1).tag, "0031_auth_password_reset_tokens");
-  assert.ok(entries.at(-1).when > entries.at(-2).when);
-  assert.equal(entries.at(-1).breakpoints, true);
+  assert.equal(entries[30].idx, 30);
+  assert.equal(entries[30].tag, "0030_chapter_cover");
+  assert.equal(entries[31].idx, 31);
+  assert.equal(entries[31].tag, "0031_auth_password_reset_tokens");
+  assert.ok(entries[31].when > entries[30].when);
+  assert.equal(entries[31].breakpoints, true);
 });
 
 test("migration is additive, no existing table rewrite or data deletion", () => {

@@ -95,6 +95,10 @@ export const users = pgTable("users", {
     .notNull()
     .unique(),
 
+  // AUTH-01C2A: null means mailbox ownership has NOT been demonstrated.
+  // Historical accounts stay unverified until a secure verification flow runs.
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+
   displayName: varchar("display_name", { length: 120 }),
 
   /*
