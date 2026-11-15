@@ -42,6 +42,8 @@ jobs:
           node --import tsx --test src/modules/auth/password-reset-token.test.ts
           node --test scripts/auth-password-reset-schema-contract.test.mjs
           node --test scripts/auth-password-reset-b2-contract.test.mjs
+          node --import tsx --test src/modules/auth/password-reset-http.test.ts
+          node --test scripts/auth-password-reset-c1-contract.test.mjs
 
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
@@ -164,6 +166,9 @@ jobs:
 
       - name: AUTH-01B2 disposable PostgreSQL security and concurrency probe
         run: node --import tsx scripts/auth-password-reset-probe.ts
+
+      - name: AUTH-01C1 disposable PostgreSQL HTTP boundary probe
+        run: node --import tsx scripts/auth-password-reset-c1-api-probe.ts
 
       - name: Verify optional comic source URL migration
         run: |
