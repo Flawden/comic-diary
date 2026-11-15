@@ -218,6 +218,13 @@
       "when": 1794571200000,
       "tag": "0030_chapter_cover",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794740795188,
+      "tag": "0031_auth_password_reset_tokens",
+      "breakpoints": true
     }
   ]
 }

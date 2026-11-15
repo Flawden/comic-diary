@@ -595,6 +595,47 @@ export const userEntitlements = pgTable(
   ],
 );
 
+/**
+ * AUTH-01B1. Only hashed recovery tokens are persisted.
+ * Issuance and redemption policies are introduced in a separate, tested stage.
+ */
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    unique("password_reset_tokens_token_hash_unique").on(table.tokenHash),
+    index("password_reset_tokens_user_id_idx").on(table.userId),
+    index("password_reset_tokens_expires_at_idx").on(table.expiresAt),
+    uniqueIndex("password_reset_tokens_one_open_per_user_idx")
+      .on(table.userId)
+      .where(sql`${table.consumedAt} IS NULL AND ${table.revokedAt} IS NULL`),
+    check(
+      "password_reset_tokens_hash_sha256_check",
+      sql`${table.tokenHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+    check(
+      "password_reset_tokens_expiry_check",
+      sql`${table.expiresAt} > ${table.createdAt}`,
+    ),
+    check(
+      "password_reset_tokens_one_terminal_state_check",
+      sql`NOT (${table.consumedAt} IS NOT NULL AND ${table.revokedAt} IS NOT NULL)`,
+    ),
+  ],
+);
+
 export const sessions = pgTable(
   "sessions",
   {
