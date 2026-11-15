@@ -1,5 +1,15 @@
 # Comic Diary Roadmap
 
+## Current release checkpoint — 2026-11-15 (closed beta / AUTH-01)
+
+**Latest planning decision (15 November 2026):** [Closed beta, self-service password recovery, ratings, community and safe content removal](docs/roadmaps/BETA-AUTH-2026-11-15.md). It records the next agreed delivery order **AUTH-01 → RATE-01 → COMMUNITY-01 → CONTENT-01 → PROFILE-01 → GALLERY-01**, the **28 November 2026 closed-beta start**, and the **early-2027 public-release target**. This checkpoint supersedes *dated next-step ordering* in older sections below; it does **not** erase historical commitments or silently mark earlier WD/CD/R milestones complete. Existing specialized design and operations roadmaps remain authoritative for their detailed contracts until explicitly reconciled during feature audits.
+
+**Latest shipped UX evidence:** UX-09.1 PR [#26](https://github.com/Flawden/comic-diary/pull/26) merged as `08ea1819a26f691c363caf7abd85f4c4598e7136`; master GitHub Actions run [43617837618](https://github.com/Flawden/comic-diary/actions/runs/43617837618) passed `Verify`, `PostgreSQL release checks`, `Windows backup client`, `Publish immutable image` and `Deploy production`. Direct VPS `/opt/comic-diary/DEPLOYED` verification for this *new* SHA has not been shown. UX-09 PR #25 and the earlier UX-08 PR #24 are historical shipped milestones, not open work.
+
+**Next action:** Read-only **AUTH-01** audit of current `origin/master`: user/password/session models, auth routes, rate limiting, email transport, security logging and tests. Do not assume password reset already exists simply because R6 authentication was completed. No production DB changes, email sends or password resets during the audit.
+
+---
+
 ## Active roadmap — 2026-11-04
 
 **Next product queue (historical, refined by later addenda): WD16 → WD17 → WD18 → WD19.** Scope, acceptance criteria and dependencies are in the [White Dragon product roadmap](docs/design/white-dragon-roadmap.md#актуализация-4-ноября-2026--wd12wd19). This is the authoritative active product plan; older "next delivery" lines below are historical.
