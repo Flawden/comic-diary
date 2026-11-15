@@ -1,6 +1,7 @@
 import {
   and,
   eq,
+  isNull,
 } from "drizzle-orm";
 
 import {
@@ -8,6 +9,7 @@ import {
 } from "@/db";
 
 import {
+  passwordResetTokens,
   sessions,
   users,
 } from "@/db/schema";
@@ -227,6 +229,19 @@ export async function changeOwnPassword(
             id:
               sessions.id,
           });
+
+      // Any link issued before this password change becomes invalid.
+      // The user row lock serializes this with recovery issuance/redemption.
+      await tx
+        .update(passwordResetTokens)
+        .set({ revokedAt: now })
+        .where(
+          and(
+            eq(passwordResetTokens.userId, account.id),
+            isNull(passwordResetTokens.consumedAt),
+            isNull(passwordResetTokens.revokedAt),
+          ),
+        );
 
       const created =
         await tx

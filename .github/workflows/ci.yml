@@ -37,6 +37,12 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Password reset token and schema contract regressions
+        run: |
+          node --import tsx --test src/modules/auth/password-reset-token.test.ts
+          node --test scripts/auth-password-reset-schema-contract.test.mjs
+          node --test scripts/auth-password-reset-b2-contract.test.mjs
+
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
 
@@ -155,6 +161,9 @@ jobs:
         run: |
           node scripts/migrate-production.mjs
           node scripts/migrate-production.mjs
+
+      - name: AUTH-01B2 disposable PostgreSQL security and concurrency probe
+        run: node --import tsx scripts/auth-password-reset-probe.ts
 
       - name: Verify optional comic source URL migration
         run: |
