@@ -74,6 +74,11 @@ jobs:
           node --test scripts/auth-registration-c2b4d2b1-contract.test.mjs
           node --import tsx --test src/modules/auth/registration-activation-sender.test.ts
 
+      - name: AUTH-01C2B4D2B2A inert Resend candidate wire contract (no network)
+        run: |
+          node --test scripts/auth-registration-c2b4d2b2a-contract.test.mjs
+          node --import tsx --test src/modules/auth/registration-activation-resend-contract.test.ts
+
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
 
