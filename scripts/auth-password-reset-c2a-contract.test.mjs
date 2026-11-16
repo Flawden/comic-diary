@@ -20,8 +20,8 @@ test("emailVerifiedAt has an additive nullable PostgreSQL column", () => {
 test("migration journal preserves previous 32 stages and appends 0032", () => {
   assert.equal(journal.version, "7");
   assert.equal(journal.dialect, "postgresql");
-  assert.equal(journal.entries.length, 33);
-  assert.deepEqual(journal.entries.slice(-2).map((e) => [e.idx, e.tag]), [
+  assert.ok(journal.entries.length >= 33);
+  assert.deepEqual(journal.entries.slice(31, 33).map((e) => [e.idx, e.tag]), [
     [31, "0031_auth_password_reset_tokens"],
     [32, "0032_auth_email_verification_state"],
   ]);

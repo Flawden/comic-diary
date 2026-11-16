@@ -640,6 +640,49 @@ export const passwordResetTokens = pgTable(
   ],
 );
 
+/**
+ * AUTH-01C2B1. This table stores verification challenges only; it does not
+ * attest mailbox ownership until a future verified, atomic redeem service.
+ * `emailSnapshot` binds an issued challenge to the address at that moment.
+ */
+export const emailVerificationTokens = pgTable(
+  "email_verification_tokens",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    emailSnapshot: varchar("email_snapshot", { length: 320 }).notNull(),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    unique("email_verification_tokens_token_hash_unique").on(table.tokenHash),
+    index("email_verification_tokens_user_id_idx").on(table.userId),
+    index("email_verification_tokens_expires_at_idx").on(table.expiresAt),
+    uniqueIndex("email_verification_tokens_one_open_per_user_idx")
+      .on(table.userId)
+      .where(sql`${table.consumedAt} IS NULL AND ${table.revokedAt} IS NULL`),
+    check(
+      "email_verification_tokens_hash_sha256_check",
+      sql`${table.tokenHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+    check(
+      "email_verification_tokens_expiry_check",
+      sql`${table.expiresAt} > ${table.createdAt}`,
+    ),
+    check(
+      "email_verification_tokens_one_terminal_state_check",
+      sql`NOT (${table.consumedAt} IS NOT NULL AND ${table.revokedAt} IS NOT NULL)`,
+    ),
+  ],
+);
+
 export const sessions = pgTable(
   "sessions",
   {

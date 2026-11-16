@@ -232,6 +232,13 @@
       "when": 1794747000000,
       "tag": "0032_auth_email_verification_state",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794833400000,
+      "tag": "0033_auth_email_verification_tokens",
+      "breakpoints": true
     }
   ]
 }
