@@ -135,7 +135,7 @@ async function main(): Promise<void> {
     // Never create a mail job for an account without a secure pending marker.
     const legacy = await pool.query<{id:number}>(
       "INSERT INTO users (email,password_hash,role,is_active,verification_required_at) VALUES ($1,$2,'USER',true,NULL) RETURNING id",
-      [`auth-d2c3-legacy-${randomUUID()}@example.invalid","ci-inert-unusable-password-hash"],
+      [`auth-d2c3-legacy-${randomUUID()}@example.invalid`,"ci-inert-unusable-password-hash"],
     );
     const legacyId=legacy.rows[0]!.id;
     fixtures.push(legacyId);
