@@ -687,6 +687,61 @@ export const emailVerificationTokens = pgTable(
   ],
 );
 
+
+/**
+ * AUTH-01C2B4D2C1. INERT STORAGE DEFINITION ONLY: no enqueue, no mail, no DB write.
+ * `payloadCiphertext` is for a future AEAD-encrypted immutable envelope; a raw
+ * activation code or recipient MUST NEVER be written to this table. Encryption,
+ * decryption, AAD binding, lifecycle/claim transaction and key rotation are NOT
+ * implemented here. Do not enable delivery based on this schema alone.
+ */
+export const activationMailOutbox = pgTable(
+  "activation_mail_outbox",
+  {
+    id: serial("id").primaryKey(),
+    verificationTokenId: integer("verification_token_id")
+      .notNull()
+      .references(() => emailVerificationTokens.id, { onDelete: "cascade" }),
+    payloadCiphertext: text("payload_ciphertext").notNull(),
+    payloadNonce: varchar("payload_nonce", { length: 16 }).notNull(),
+    payloadKeyId: varchar("payload_key_id", { length: 64 }).notNull(),
+    payloadDigest: varchar("payload_digest", { length: 64 }).notNull(),
+    idempotencyKey: varchar("idempotency_key", { length: 64 }).notNull(),
+    state: varchar("state", { length: 16 }).default("ready").notNull(),
+    claimId: varchar("claim_id", { length: 64 }),
+    attemptCount: integer("attempt_count").default(0).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+    providerMessageId: varchar("provider_message_id", { length: 256 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("activation_mail_outbox_token_unique").on(table.verificationTokenId),
+    unique("activation_mail_outbox_idempotency_unique").on(table.idempotencyKey),
+    unique("activation_mail_outbox_claim_unique").on(table.claimId),
+    index("activation_mail_outbox_ready_expiry_idx")
+      .on(table.expiresAt)
+      .where(sql`${table.state} = 'ready'`),
+    index("activation_mail_outbox_state_updated_idx")
+      .on(table.state, table.updatedAt),
+    check("activation_mail_outbox_digest_check", sql`${table.payloadDigest} ~ '^[0-9a-f]{64}$'`),
+    check("activation_mail_outbox_nonce_check", sql`${table.payloadNonce} ~ '^[A-Za-z0-9_-]{16}$'`),
+    check("activation_mail_outbox_key_id_check", sql`${table.payloadKeyId} ~ '^[a-z0-9][a-z0-9_-]{0,63}$'`),
+    check("activation_mail_outbox_ciphertext_check", sql`length(${table.payloadCiphertext}) BETWEEN 32 AND 20000 AND ${table.payloadCiphertext} ~ '^[A-Za-z0-9_-]+$'`),
+    check("activation_mail_outbox_idempotency_check", sql`${table.idempotencyKey} ~ '^[A-Za-z0-9_-]{22,64}$'`),
+    check("activation_mail_outbox_claim_id_check", sql`${table.claimId} IS NULL OR ${table.claimId} ~ '^[A-Za-z0-9_-]{22,64}$'`),
+    check("activation_mail_outbox_time_check", sql`${table.expiresAt} > ${table.createdAt} AND ${table.updatedAt} >= ${table.createdAt} AND (${table.claimedAt} IS NULL OR ${table.claimedAt} < ${table.expiresAt}) AND (${table.finalizedAt} IS NULL OR ${table.finalizedAt} >= ${table.createdAt})`),
+    check("activation_mail_outbox_state_shape_check", sql`
+      (${table.state} = 'ready' AND ${table.attemptCount} = 0 AND ${table.claimId} IS NULL AND ${table.claimedAt} IS NULL AND ${table.finalizedAt} IS NULL AND ${table.providerMessageId} IS NULL)
+      OR (${table.state} = 'in_flight' AND ${table.attemptCount} = 1 AND ${table.claimId} IS NOT NULL AND ${table.claimedAt} IS NOT NULL AND ${table.finalizedAt} IS NULL AND ${table.providerMessageId} IS NULL)
+      OR (${table.state} IN ('accepted', 'rejected', 'uncertain') AND ${table.attemptCount} = 1 AND ${table.claimId} IS NOT NULL AND ${table.claimedAt} IS NOT NULL AND ${table.finalizedAt} IS NOT NULL)
+      OR (${table.state} = 'expired' AND ${table.attemptCount} = 0 AND ${table.claimId} IS NULL AND ${table.claimedAt} IS NULL AND ${table.finalizedAt} IS NOT NULL AND ${table.providerMessageId} IS NULL)
+    `),
+  ],
+);
+
 export const sessions = pgTable(
   "sessions",
   {

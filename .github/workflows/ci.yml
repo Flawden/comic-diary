@@ -84,6 +84,9 @@ jobs:
           node --test scripts/auth-registration-c2b4d2b2b-contract.test.mjs
           node --import tsx --test src/modules/auth/registration-activation-outbox-policy.test.ts
 
+      - name: AUTH-01C2B4D2C1 inert durable outbox schema contracts (no dispatcher)
+        run: node --test scripts/auth-registration-c2b4d2c1-contract.test.mjs
+
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
 
@@ -214,6 +217,9 @@ jobs:
 
       - name: AUTH-01C2B4C disposable PostgreSQL pending-account activation probe
         run: node --import tsx scripts/auth-registration-c2b4c-probe.ts
+
+      - name: AUTH-01C2B4D2C1 disposable PostgreSQL outbox constraints and claim race
+        run: node --import tsx scripts/auth-registration-c2b4d2c1-pg-probe.ts
 
       - name: Verify optional comic source URL migration
         run: |

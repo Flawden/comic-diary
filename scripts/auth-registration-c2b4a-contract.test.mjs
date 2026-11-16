@@ -25,8 +25,8 @@ test("migration adds nullable marker and default for only future rows", () => {
 test("0034 is an append-only migration after 0033 with stable history", () => {
   assert.equal(journal.version, "7");
   assert.equal(journal.dialect, "postgresql");
-  assert.equal(journal.entries.length, 35);
-  assert.deepEqual(journal.entries.slice(31).map(({idx,tag})=>[idx,tag]), [
+  assert.ok(journal.entries.length >= 35);
+  assert.deepEqual(journal.entries.slice(31, 35).map(({idx,tag})=>[idx,tag]), [
     [31,"0031_auth_password_reset_tokens"],
     [32,"0032_auth_email_verification_state"],
     [33,"0033_auth_email_verification_tokens"],
