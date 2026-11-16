@@ -5,14 +5,20 @@ import { createRequire } from "node:module";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
-if (process.env.CI !== "true" || new URL(process.env.DATABASE_URL).pathname !== "/comic_diary_release")
-  throw new Error("This probe requires the disposable CI database");
+const ciDbUrl = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL) : null;
+if (process.env.CI !== "true" || !ciDbUrl ||
+    !["postgres:", "postgresql:"].includes(ciDbUrl.protocol) ||
+    ciDbUrl.hostname !== "127.0.0.1" || ciDbUrl.port !== "5432" ||
+    ciDbUrl.pathname !== "/comic_diary_release" || ciDbUrl.username !== "comic_diary_ci")
+  throw new Error("This probe requires the local disposable CI database");
 const { chromium } = createRequire(process.env.WD_BROWSER_ROOT+"/package.json")("playwright-core");
 const pool = new pg.Pool({connectionString:process.env.DATABASE_URL});
 const prefix="reader-"+randomUUID(), origin="http://127.0.0.1:3102";
 let user,comic,browser;
 try {
-  user=(await pool.query("INSERT INTO users(email) VALUES ($1) RETURNING id",[prefix+"@test.invalid"])).rows[0].id;
+  // CI-only synthetic legacy account: 0034 defaults NEW users to pending.
+  // This fixture deliberately emulates a historical user; public registration must not do this.
+  user=(await pool.query("INSERT INTO users(email,verification_required_at) VALUES ($1,NULL) RETURNING id",[prefix+"@test.invalid"])).rows[0].id;
   const token=randomBytes(32).toString("base64url");
   await pool.query("INSERT INTO sessions(user_id,token_hash,expires_at) VALUES ($1,$2,now()+interval '1 hour')",[user,createHash("sha256").update(token).digest("hex")]);
   comic=(await pool.query("INSERT INTO comics(slug,title,source_url,description) VALUES ($1,'Мезолит',$2,'Описание истории') RETURNING id",[prefix,"https://example.com/book"])).rows[0].id;

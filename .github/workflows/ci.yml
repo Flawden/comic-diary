@@ -56,6 +56,9 @@ jobs:
           node --test scripts/auth-registration-c2b4a-contract.test.mjs scripts/auth-registration-c2b4b-contract.test.mjs scripts/auth-registration-c2b4c-contract.test.mjs
           node --import tsx --test src/modules/auth/registration-activation-policy.test.ts
 
+      - name: AUTH-01C2B4 browser fixture activation regression
+        run: node --test scripts/auth-registration-c2b4abc-browser-fixture-contract.test.mjs
+
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
 

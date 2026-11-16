@@ -72,7 +72,8 @@ function saveEvidence() {
 
 async function createFixture() {
   const prefix = `visual-${randomUUID()}`;
-  userId = (await pool.query('INSERT INTO users(email, display_name) VALUES ($1,$2) RETURNING id', [`${prefix}@test.invalid`, 'Читатель QA'])).rows[0].id;
+  // CI-only synthetic legacy reader. Production registrations must retain the pending default.
+  userId = (await pool.query('INSERT INTO users(email, display_name, verification_required_at) VALUES ($1,$2,NULL) RETURNING id', [`${prefix}@test.invalid`, 'Читатель QA'])).rows[0].id;
   const token = randomBytes(32).toString('base64url');
   await pool.query('INSERT INTO sessions(user_id,token_hash,expires_at) VALUES ($1,$2,now()+interval \'1 hour\')', [userId, createHash('sha256').update(token).digest('hex')]);
   for (const [index, title] of ['Мезолит · QA', 'Короткая история · QA'].entries()) {

@@ -126,9 +126,11 @@ function coverPng() {
 async function main() {
   stage = 'fixture';
   await mkdir(output, { recursive: true });
-  const admin = await pool.query('INSERT INTO users(email, role) VALUES ($1, $2) RETURNING id', [`${stamp}-admin@test.invalid`, 'ADMIN']);
+  // CI-only synthetic legacy actors: 0034 makes unspecified new accounts pending.
+  // Never use this override in a public or administrative account-creation path.
+  const admin = await pool.query('INSERT INTO users(email, role, verification_required_at) VALUES ($1, $2, NULL) RETURNING id', [`${stamp}-admin@test.invalid`, 'ADMIN']);
   fixture.adminId = admin.rows[0].id;
-  const reader = await pool.query('INSERT INTO users(email, role) VALUES ($1, $2) RETURNING id', [`${stamp}-reader@test.invalid`, 'USER']);
+  const reader = await pool.query('INSERT INTO users(email, role, verification_required_at) VALUES ($1, $2, NULL) RETURNING id', [`${stamp}-reader@test.invalid`, 'USER']);
   fixture.readerId = reader.rows[0].id;
   const category = await pool.query('INSERT INTO categories(slug, name) VALUES ($1, $2) RETURNING id', [categorySlug, 'ADMIN CORE testing']);
   fixture.categoryId = category.rows[0].id;
