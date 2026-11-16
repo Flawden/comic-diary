@@ -59,6 +59,16 @@ jobs:
       - name: AUTH-01C2B4 browser fixture activation regression
         run: node --test scripts/auth-registration-c2b4abc-browser-fixture-contract.test.mjs
 
+      - name: AUTH-01C2B4D1 disabled activation HTTP boundary and limits
+        run: |
+          node --test scripts/auth-registration-c2b4d1-contract.test.mjs
+          node --import tsx --test src/modules/auth/registration-activation-http.test.ts
+
+      - name: AUTH-01C2B4D2A safe activation mail contract (no sending)
+        run: |
+          node --test scripts/auth-registration-c2b4d2a-contract.test.mjs
+          node --import tsx --test src/modules/auth/registration-activation-mail.test.ts
+
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
 
