@@ -200,6 +200,9 @@ export async function registerPasswordUser(
 
           isActive:
             true,
+
+          // New registrations require ownership proof and password replacement.
+          verificationRequiredAt: new Date(),
         })
         .returning({
           id:
@@ -216,6 +219,9 @@ export async function registerPasswordUser(
 
           isActive:
             users.isActive,
+
+          emailVerifiedAt: users.emailVerifiedAt,
+          verificationRequiredAt: users.verificationRequiredAt,
         });
 
     const user =
@@ -225,7 +231,9 @@ export async function registerPasswordUser(
       !user ||
       user.role !==
         "USER" ||
-      !user.isActive
+      !user.isActive ||
+      user.emailVerifiedAt !== null ||
+      !user.verificationRequiredAt
     ) {
       throw new Error(
         "Registration user invariant failed",

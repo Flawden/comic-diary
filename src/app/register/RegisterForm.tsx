@@ -35,6 +35,8 @@ export function RegisterForm({
     string | null
   >(null);
 
+  const [pendingActivation, setPendingActivation] = useState(false);
+
   async function handleSubmit(
     event:
       FormEvent<HTMLFormElement>,
@@ -197,6 +199,12 @@ export function RegisterForm({
         return;
       }
 
+      if (response.status === 201 && (body as { activationRequired?: unknown }).activationRequired === true) {
+        setPendingActivation(true);
+        setSubmitting(false);
+        return;
+      }
+
       router.replace(
         nextPath,
       );
@@ -209,6 +217,15 @@ export function RegisterForm({
 
       setSubmitting(false);
     }
+  }
+
+  if (pendingActivation) {
+    return (
+      <p role="status" className="rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-4 text-sm leading-6 text-[var(--text-primary)]">
+        Аккаунт создан, но вход пока недоступен: потребуется подтвердить почту и установить новый пароль.
+        Отправка писем находится в разработке — письмо ещё не отправлено.
+      </p>
+    );
   }
 
   return (

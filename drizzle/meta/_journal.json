@@ -239,6 +239,13 @@
       "when": 1794833400000,
       "tag": "0033_auth_email_verification_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794872400000,
+      "tag": "0034_auth_registration_activation_marker",
+      "breakpoints": true
     }
   ]
 }

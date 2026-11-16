@@ -19,14 +19,6 @@ import {
   registerPasswordUser,
 } from "@/modules/auth/registration-service";
 
-import {
-  createUserSession,
-} from "@/modules/auth/session-service";
-
-import {
-  setSessionCookie,
-} from "@/modules/auth/session-cookie";
-
 export const dynamic =
   "force-dynamic";
 
@@ -302,49 +294,18 @@ export async function POST(
   }
 
   /*
-   * Registration immediately reuses the established R6
-   * login/session stack. No second cookie or identity
-   * mechanism is introduced.
+   * Registration creates a pending account, NOT a login session.
+   * No email has been sent yet: C2B4C/D will add secure activation
+   * and delivery before this flow can be released to production.
    */
-  const session =
-    await createUserSession(
-      registration.user.id,
-    );
-
-  const response =
-    NextResponse.json(
-      {
-        ok: true,
-
-        user: {
-          id:
-            registration.user.id,
-
-          email:
-            registration.user.email,
-
-          displayName:
-            registration.user.displayName,
-
-          role:
-            registration.user.role,
-        },
-      },
-      {
-        status: 201,
-
-        headers: {
-          "Cache-Control":
-            "no-store",
-        },
-      },
-    );
-
-  setSessionCookie(
-    response,
-    session.token,
-    session.expiresAt,
+  return NextResponse.json(
+    {
+      ok: true,
+      activationRequired: true,
+    },
+    {
+      status: 201,
+      headers: { "Cache-Control": "no-store" },
+    },
   );
-
-  return response;
 }

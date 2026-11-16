@@ -99,6 +99,10 @@ export const users = pgTable("users", {
   // Historical accounts stay unverified until a secure verification flow runs.
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
 
+  // AUTH-01C2B4A: nullable legacy marker; DB default applies ONLY to new rows.
+  // This is NOT mailbox proof and must never grant access by itself.
+  verificationRequiredAt: timestamp("verification_required_at", { withTimezone: true }).defaultNow(),
+
   displayName: varchar("display_name", { length: 120 }),
 
   /*

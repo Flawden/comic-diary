@@ -79,7 +79,7 @@ async function main(): Promise<void> {
   async function addAccount(tag: string): Promise<AccountRow> {
     const email = `auth01c2b3-${tag}-${randomUUID()}@example.invalid`;
     const { rows } = await pool.query<AccountRow>(
-      "INSERT INTO users (email, password_hash, role, is_active) VALUES ($1, $2, 'USER', true) RETURNING id, email",
+      "INSERT INTO users (email, password_hash, role, is_active, verification_required_at) VALUES ($1, $2, 'USER', true, NULL) RETURNING id, email",
       [email, "ci-only-internal-test-password-hash"],
     );
     assert.ok(rows[0]);

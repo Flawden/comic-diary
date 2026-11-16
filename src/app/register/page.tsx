@@ -79,8 +79,8 @@ export default async function RegisterPage({
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            После регистрации вы сразу войдёте
-            в аккаунт.
+            После регистрации нужно будет подтвердить email и задать новый пароль.
+            Отправка писем пока находится в разработке.
           </p>
 
           <RegisterForm

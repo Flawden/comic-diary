@@ -47,6 +47,7 @@ export async function issueEmailVerificationForUser(
         email: users.email,
         passwordHash: users.passwordHash,
         emailVerifiedAt: users.emailVerifiedAt,
+        verificationRequiredAt: users.verificationRequiredAt,
         isActive: users.isActive,
       })
       .from(users)
@@ -139,6 +140,7 @@ export async function redeemEmailVerificationToken(
         email: users.email,
         passwordHash: users.passwordHash,
         emailVerifiedAt: users.emailVerifiedAt,
+        verificationRequiredAt: users.verificationRequiredAt,
         isActive: users.isActive,
       })
       .from(users)
@@ -146,7 +148,9 @@ export async function redeemEmailVerificationToken(
       .limit(1)
       .for("update");
     const account = accounts[0];
-    if (!canIssueEmailVerification(account) || !account) {
+    // This legacy redemption must NEVER activate a pending registration's
+    // attacker-chosen password. Pending accounts use C2B4C, which replaces it.
+    if (!canIssueEmailVerification(account) || !account || account.verificationRequiredAt !== null) {
       return { ok: false, kind: "invalid_token" };
     }
 

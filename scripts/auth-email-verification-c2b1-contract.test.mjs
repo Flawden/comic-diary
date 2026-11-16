@@ -42,8 +42,8 @@ test("one open token per user, expiry, and terminal state DB guards", () => {
 test("0033 is appended after 0032, without rewriting historical migrations", () => {
   assert.equal(journal.version, "7");
   assert.equal(journal.dialect, "postgresql");
-  assert.equal(journal.entries.length, 34);
-  assert.deepEqual(journal.entries.slice(-3).map((e) => [e.idx, e.tag]), [
+  assert.ok(journal.entries.length >= 34);
+  assert.deepEqual(journal.entries.slice(31, 34).map((e) => [e.idx, e.tag]), [
     [31, "0031_auth_password_reset_tokens"],
     [32, "0032_auth_email_verification_state"],
     [33, "0033_auth_email_verification_tokens"],
