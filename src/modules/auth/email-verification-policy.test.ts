@@ -6,6 +6,7 @@ import {
   canRedeemEmailVerification,
   type VerificationAccount,
   type VerificationChallenge,
+  // @ts-expect-error TS5097: Node 24 runs .ts tests natively; the application intentionally keeps tsconfig unchanged.
 } from "./email-verification-policy.ts";
 
 const createdAt = new Date("2026-11-16T03:00:00Z");
