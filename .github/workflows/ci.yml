@@ -46,6 +46,11 @@ jobs:
           node --test scripts/auth-password-reset-c1-contract.test.mjs
           node --test scripts/auth-password-reset-c2a-contract.test.mjs
 
+      - name: AUTH-01C2B email verification local contracts and policy
+        run: |
+          node --test scripts/auth-email-verification-c2b1-contract.test.mjs scripts/auth-email-verification-c2b2-contract.test.mjs scripts/auth-email-verification-c2b3-contract.test.mjs
+          node --import tsx --test src/modules/auth/email-verification-token.test.ts src/modules/auth/email-verification-policy.test.ts
+
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
 
@@ -170,6 +175,9 @@ jobs:
 
       - name: AUTH-01C1 disposable PostgreSQL HTTP boundary probe
         run: node --import tsx scripts/auth-password-reset-c1-api-probe.ts
+
+      - name: AUTH-01C2B3 disposable PostgreSQL mailbox verification probe
+        run: node --import tsx scripts/auth-email-verification-c2b3-probe.ts
 
       - name: Verify optional comic source URL migration
         run: |
