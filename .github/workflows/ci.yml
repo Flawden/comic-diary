@@ -79,6 +79,11 @@ jobs:
           node --test scripts/auth-registration-c2b4d2b2a-contract.test.mjs
           node --import tsx --test src/modules/auth/registration-activation-resend-contract.test.ts
 
+      - name: AUTH-01C2B4D2B2B inert outbox outcome policy (no persistence or sending)
+        run: |
+          node --test scripts/auth-registration-c2b4d2b2b-contract.test.mjs
+          node --import tsx --test src/modules/auth/registration-activation-outbox-policy.test.ts
+
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
 
