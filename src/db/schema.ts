@@ -691,6 +691,49 @@ export const emailVerificationTokens = pgTable(
 
 
 /**
+ * AUTH-01 / R1B2A: inert encrypted recovery-mail storage (NO dispatcher).
+ * A separate password-reset table prevents reusing activation token semantics.
+ * Raw email and reset code MUST NOT be stored in plaintext in this table.
+ */
+export const passwordResetMailOutbox = pgTable(
+  "password_reset_mail_outbox",
+  {
+    id: serial("id").primaryKey(),
+    passwordResetTokenId: integer("password_reset_token_id")
+      .notNull()
+      .references(() => passwordResetTokens.id, { onDelete: "cascade" }),
+    payloadCiphertext: text("payload_ciphertext").notNull(),
+    payloadNonce: varchar("payload_nonce", { length: 16 }).notNull(),
+    payloadKeyId: varchar("payload_key_id", { length: 64 }).notNull(),
+    payloadDigest: varchar("payload_digest", { length: 64 }).notNull(),
+    idempotencyKey: varchar("idempotency_key", { length: 64 }).notNull(),
+    state: varchar("state", { length: 16 }).default("ready").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("password_reset_mail_outbox_token_unique").on(table.passwordResetTokenId),
+    unique("password_reset_mail_outbox_idempotency_unique").on(table.idempotencyKey),
+    index("password_reset_mail_outbox_ready_expiry_idx")
+      .on(table.expiresAt).where(sql`${table.state} = 'ready'`),
+    index("password_reset_mail_outbox_state_updated_idx")
+      .on(table.state, table.updatedAt),
+    check("password_reset_mail_outbox_digest_check", sql`${table.payloadDigest} ~ '^[0-9a-f]{64}$'`),
+    check("password_reset_mail_outbox_nonce_check", sql`${table.payloadNonce} ~ '^[A-Za-z0-9_-]{16}$'`),
+    check("password_reset_mail_outbox_key_id_check", sql`${table.payloadKeyId} ~ '^[a-z0-9][a-z0-9_-]{0,63}$'`),
+    check("password_reset_mail_outbox_ciphertext_check", sql`length(${table.payloadCiphertext}) BETWEEN 32 AND 20000 AND ${table.payloadCiphertext} ~ '^[A-Za-z0-9_-]+$'`),
+    check("password_reset_mail_outbox_idempotency_check", sql`${table.idempotencyKey} ~ '^[A-Za-z0-9_-]{22,64}$'`),
+    check("password_reset_mail_outbox_time_check", sql`${table.expiresAt} > ${table.createdAt} AND ${table.updatedAt} >= ${table.createdAt} AND (${table.finalizedAt} IS NULL OR ${table.finalizedAt} >= ${table.createdAt})`),
+    check("password_reset_mail_outbox_state_check", sql`
+      (${table.state} = 'ready' AND ${table.finalizedAt} IS NULL)
+      OR (${table.state} = 'expired' AND ${table.finalizedAt} IS NOT NULL)
+    `),
+  ],
+);
+
+/**
  * AUTH-01C2B4D2C1. INERT STORAGE DEFINITION ONLY: no enqueue, no mail, no DB write.
  * `payloadCiphertext` is for a future AEAD-encrypted immutable envelope; a raw
  * activation code or recipient MUST NEVER be written to this table. Encryption,

@@ -281,6 +281,13 @@
       "when": 1794907320000,
       "tag": "0039_auth_activation_operator_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794907380000,
+      "tag": "0040_auth_password_reset_mail_outbox",
+      "breakpoints": true
     }
   ]
 }
