@@ -121,6 +121,9 @@ jobs:
       - name: AUTH-01C2B4D2C4B3B3B durable operator gate contract (NO delivery)
         run: node --test scripts/auth-registration-c2b4d2c4b3b3b-contract.test.mjs
 
+      - name: AUTH-01C2B4D2C4B3B3C operator transitions offline contract (NO delivery)
+        run: node --test scripts/auth-registration-c2b4d2c4b3b3c-contract.test.mjs
+
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
 
@@ -266,6 +269,9 @@ jobs:
 
       - name: AUTH-01C2B4D2C4B3B3B disposable PostgreSQL operator gate races (NO delivery)
         run: node --import tsx scripts/auth-registration-c2b4d2c4b3b3b-pg-probe.ts
+
+      - name: AUTH-01C2B4D2C4B3B3C disposable PostgreSQL operator transitions (NO delivery)
+        run: node --import tsx scripts/auth-registration-c2b4d2c4b3b3c-pg-probe.ts
 
       - name: Verify optional comic source URL migration
         run: |

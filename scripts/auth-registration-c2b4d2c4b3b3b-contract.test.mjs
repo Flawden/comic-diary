@@ -22,8 +22,8 @@ test('old migrations 0035 and 0036 unchanged byte for byte',()=>{
  assert.equal(sha(read('drizzle/0036_auth_activation_dispatch_fence.sql')),'271b9876defd7505c6bba90196b69aab9680f50345f797658cd80dbd86391b7d');
 });
 test('0037 append only and journal contiguous with exact historical prefix',()=>{
- assert.equal(journal.entries.length,39);
- assert.deepEqual(journal.entries.slice(35).map(e=>[e.idx,e.tag]),[
+ assert.ok(journal.entries.length>=39);
+ assert.deepEqual(journal.entries.slice(35,39).map(e=>[e.idx,e.tag]),[
   [35,'0035_auth_activation_mail_outbox'],[36,'0036_auth_activation_dispatch_fence'],[37,'0037_auth_activation_operator_gate'],[38,'0038_auth_activation_reservation_presence']]);
  assert.ok(journal.entries[38].when>journal.entries[37].when);
  assert.ok(journal.entries[37].when>journal.entries[36].when);

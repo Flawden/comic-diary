@@ -74,6 +74,7 @@ export const administrativeAuditAction = pgEnum(
     "ACCOUNT_ROLE_CHANGE",
     "ACCOUNT_ACTIVE_CHANGE",
     "ACCOUNT_ENTITLEMENTS_CHANGE",
+    "ACTIVATION_DISPATCH_CONTROL_CHANGE",
   ],
 );
 
@@ -85,6 +86,7 @@ export const administrativeAuditTarget = pgEnum(
     "CHAPTER",
     "IMPORT_BATCH",
     "USER",
+    "ACTIVATION_DISPATCH_CONTROL",
   ],
 );
 

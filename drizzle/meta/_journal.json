@@ -274,6 +274,13 @@
       "when": 1794907260000,
       "tag": "0038_auth_activation_reservation_presence",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794907320000,
+      "tag": "0039_auth_activation_operator_audit",
+      "breakpoints": true
     }
   ]
 }
