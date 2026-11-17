@@ -127,6 +127,9 @@ jobs:
       - name: AUTH-01 D1 user-facing activation and recovery UI contract (NO mail)
         run: node --test scripts/auth-user-flows-d1-contract.test.mjs
 
+      - name: AUTH-01 D1 browser QA source contract (NO mail)
+        run: node --test scripts/auth-d1-browser-qa-contract.test.mjs
+
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
 
@@ -356,6 +359,35 @@ jobs:
           export ADMIN_CHAPTER_VISUAL_CAPTURE=1
           mkdir -p "$ADMIN_CORE_OUTPUT"
           node scripts/admin-core-browser.mjs || { tail -60 "$RUNNER_TEMP/wd-next.log"; exit 1; }
+
+      - name: AUTH-01 D1 isolated browser QA OFF-only (Chrome; NO mail)
+        timeout-minutes: 8
+        env:
+          REGISTRATION_ACTIVATION_REDEEM_ENABLED: "false"
+          PASSWORD_RESET_REDEEM_ENABLED: "false"
+        run: |
+          set -euo pipefail
+          export WD_BROWSER_ROOT="$RUNNER_TEMP/d1-browser-deps"
+          npm install --prefix "$WD_BROWSER_ROOT" --no-audit --no-fund playwright-core@1.56.1
+          ./node_modules/.bin/next dev --webpack -H 127.0.0.1 -p 3103 > "$RUNNER_TEMP/d1-next.log" 2>&1 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          curl -fsS --retry 25 --retry-delay 1 --retry-connrefused http://127.0.0.1:3103/login -o /dev/null
+          export D1_QA_ORIGIN="http://127.0.0.1:3103"
+          export D1_QA_OUTPUT="$RUNNER_TEMP/d1-auth-browser"
+          mkdir -p "$D1_QA_OUTPUT"
+          node scripts/auth-d1-browser-qa.mjs || { tail -60 "$RUNNER_TEMP/d1-next.log"; exit 1; }
+
+      - name: Upload AUTH-01 D1 browser QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth01-d1-browser-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/d1-auth-browser/*.png
+            ${{ runner.temp }}/d1-auth-browser/manifest.json
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload WD-HERO-02B visual QA and sanitized browser diagnostics
         if: always()
