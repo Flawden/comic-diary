@@ -106,6 +106,9 @@ jobs:
           node --test scripts/auth-registration-c2b4d2c4b2-contract.test.mjs
           node --import tsx --test src/modules/auth/registration-activation-resend-contract.test.ts
 
+      - name: AUTH-01C2B4D2C4B3A offline revocation race contract (NO delivery)
+        run: node --test scripts/auth-registration-c2b4d2c4b3a-race-contract.test.mjs
+
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
 
