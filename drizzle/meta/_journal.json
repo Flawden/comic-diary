@@ -260,6 +260,13 @@
       "when": 1794903600000,
       "tag": "0036_auth_activation_dispatch_fence",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794907200000,
+      "tag": "0037_auth_activation_operator_gate",
+      "breakpoints": true
     }
   ]
 }

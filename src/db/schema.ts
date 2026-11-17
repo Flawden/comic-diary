@@ -713,6 +713,8 @@ export const activationMailOutbox = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     claimedAt: timestamp("claimed_at", { withTimezone: true }),
     dispatchFenceAt: timestamp("dispatch_fence_at", { withTimezone: true }),
+    dispatchReservationAt: timestamp("dispatch_reservation_at", { withTimezone: true }),
+    dispatchReservationGeneration: integer("dispatch_reservation_generation"),
     finalizedAt: timestamp("finalized_at", { withTimezone: true }),
     providerMessageId: varchar("provider_message_id", { length: 256 }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -745,6 +747,20 @@ export const activationMailOutbox = pgTable(
         AND ${table.updatedAt} >= ${table.dispatchFenceAt}
       )
     `),
+    check("activation_mail_outbox_dispatch_reservation_shape_check", sql`
+      (${table.dispatchReservationAt} IS NULL AND ${table.dispatchReservationGeneration} IS NULL)
+      OR (
+        ${table.dispatchReservationAt} IS NOT NULL
+        AND ${table.dispatchReservationGeneration} > 0
+        AND ${table.dispatchFenceAt} IS NOT NULL
+        AND ${table.state} IN ('in_flight', 'accepted', 'rejected', 'uncertain')
+        AND ${table.attemptCount} = 1
+        AND ${table.claimId} IS NOT NULL
+        AND ${table.dispatchReservationAt} >= ${table.dispatchFenceAt}
+        AND ${table.dispatchReservationAt} < ${table.expiresAt}
+        AND ${table.updatedAt} >= ${table.dispatchReservationAt}
+      )
+    `),
     check("activation_mail_outbox_state_shape_check", sql`
       (${table.state} = 'ready' AND ${table.attemptCount} = 0 AND ${table.claimId} IS NULL AND ${table.claimedAt} IS NULL AND ${table.finalizedAt} IS NULL AND ${table.providerMessageId} IS NULL)
       OR (${table.state} = 'in_flight' AND ${table.attemptCount} = 1 AND ${table.claimId} IS NOT NULL AND ${table.claimedAt} IS NOT NULL AND ${table.finalizedAt} IS NULL AND ${table.providerMessageId} IS NULL)
@@ -753,6 +769,21 @@ export const activationMailOutbox = pgTable(
     `),
   ],
 );
+
+/**
+ * AUTH-01C2B4D2C4B3B3B: one shared, persisted, default-OFF operator switch.
+ * No API/worker/operator ON action is provided in this stage. A missing or OFF
+ * row blocks all new reservations. Epoch is durable and is never an auth token.
+ */
+export const activationMailDispatchControl = pgTable("activation_mail_dispatch_control", {
+  id: integer("id").primaryKey(),
+  enabled: boolean("enabled").default(false).notNull(),
+  generation: integer("generation").default(0).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  check("activation_mail_dispatch_control_singleton_check", sql`${table.id} = 1`),
+  check("activation_mail_dispatch_control_generation_check", sql`${table.generation} >= 0`),
+]);
 
 export const sessions = pgTable(
   "sessions",

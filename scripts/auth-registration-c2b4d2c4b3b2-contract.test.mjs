@@ -44,9 +44,9 @@ test("new constraint restricts fenced states, owner claim, chronological validit
     /"updated_at" >= "dispatch_fence_at"/,
   ]) assert.match(migration, clause);
 });
-test("journal 0036 exact tail, historical journal prefix 0000..0035 untouched", () => {
-  assert.equal(journal.entries.length, 37);
-  assert.deepEqual(journal.entries.slice(-2).map((e) => [e.idx, e.tag]), [
+test("journal 0036 immutable prefix, later append-only migrations allowed", () => {
+  assert.ok(journal.entries.length >= 37);
+  assert.deepEqual(journal.entries.slice(35,37).map((e) => [e.idx, e.tag]), [
     [35,"0035_auth_activation_mail_outbox"],
     [36,"0036_auth_activation_dispatch_fence"],
   ]);
