@@ -27,6 +27,10 @@ test('browser covers auth pages at three themes and both viewports',()=>{
 test('asserts server OFF content, disabled controls and no fake email form',()=>{
   for(const needle of ["isDisabled()",'input[name="email"]', "Приём кодов восстановления", "Подтверждение пока недоступно", "POST_REQUESTS=0"]) assert.ok(qa.includes(needle.replaceAll('\\\\\\"','"')),needle);
 });
+test('fieldset QA checks native disabled state, not locator.isDisabled() on a fieldset',()=>{
+  assert.ok(qa.includes("el.tagName === 'FIELDSET' && el.disabled === true && el.hasAttribute('disabled')"));
+  assert.doesNotMatch(qa, /form\.locator\('fieldset'\)\.isDisabled\(\)/);
+});
 test('real link click navigation login / forgot / reset / login is covered',()=>{
   for(const needle of ["name: 'Забыли пароль?'","name: 'У меня уже есть код'","name: 'Вернуться ко входу'",'waitForURL']) assert.ok(qa.includes(needle));
 });

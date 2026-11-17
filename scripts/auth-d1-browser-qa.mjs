@@ -66,7 +66,12 @@ try {
           if (entry.href === '/reset-password' || entry.href === '/activate') {
             const form = page.locator('form');
             assert.equal(await form.count(), 1, 'One redemption form');
-            assert.equal(await form.locator('fieldset').isDisabled(), true, 'OFF fieldset must be disabled');
+            // Playwright isDisabled() describes actionable controls; inspect the fieldset native state.
+            assert.equal(
+              await form.locator('fieldset').evaluate(el =>
+                el.tagName === 'FIELDSET' && el.disabled === true && el.hasAttribute('disabled')),
+              true, 'OFF fieldset must have native disabled property and attribute'
+            );
             assert.equal(await form.locator('button[type="submit"]').isDisabled(), true, 'OFF submit must be disabled');
             assert.equal(await form.locator('input[name="token"]').isDisabled(), true, 'OFF token must be disabled');
             assert.equal(await form.locator('input[name="newPassword"]').isDisabled(), true, 'OFF password must be disabled');
