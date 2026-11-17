@@ -7,6 +7,7 @@ const read = (name) => readFileSync(name, 'utf8');
 const schema=read('src/db/schema.ts');
 const journal=JSON.parse(read('drizzle/meta/_journal.json'));
 const migration=read('drizzle/0037_auth_activation_operator_gate.sql');
+const migration0038=read('drizzle/0038_auth_activation_reservation_presence.sql');
 const runtime=read('src/modules/auth/registration-activation-outbox-reserve.ts');
 const fence=read('src/modules/auth/registration-activation-outbox-fence.ts');
 const b3b3a=read('scripts/auth-registration-c2b4d2c4b3b3a-control-spec.test.mjs');
@@ -21,9 +22,10 @@ test('old migrations 0035 and 0036 unchanged byte for byte',()=>{
  assert.equal(sha(read('drizzle/0036_auth_activation_dispatch_fence.sql')),'271b9876defd7505c6bba90196b69aab9680f50345f797658cd80dbd86391b7d');
 });
 test('0037 append only and journal contiguous with exact historical prefix',()=>{
- assert.equal(journal.entries.length,38);
+ assert.equal(journal.entries.length,39);
  assert.deepEqual(journal.entries.slice(35).map(e=>[e.idx,e.tag]),[
-  [35,'0035_auth_activation_mail_outbox'],[36,'0036_auth_activation_dispatch_fence'],[37,'0037_auth_activation_operator_gate']]);
+  [35,'0035_auth_activation_mail_outbox'],[36,'0036_auth_activation_dispatch_fence'],[37,'0037_auth_activation_operator_gate'],[38,'0038_auth_activation_reservation_presence']]);
+ assert.ok(journal.entries[38].when>journal.entries[37].when);
  assert.ok(journal.entries[37].when>journal.entries[36].when);
  assert.match(b3b2,/journal\.entries\.length >= 37/);
  assert.doesNotMatch(migration,/^\s*(?:DROP|TRUNCATE|DELETE|UPDATE|CREATE\s+TRIGGER)\b/im);
@@ -67,6 +69,17 @@ test('reservation requires prior fence, one claim and chronological state',()=>{
 test('NULL-null pairs prevent partial reservation rows',()=>{
  assert.match(migration,/"dispatch_reservation_at" IS NULL AND "dispatch_reservation_generation" IS NULL/);
  assert.match(schema,/dispatchReservationAt} IS NULL AND \$\{table\.dispatchReservationGeneration} IS NULL/);
+});
+test('F1 historical 0037 and PG race probe remain byte-for-byte unchanged',()=>{
+ assert.equal(sha(migration),'f1f963a6f8db4fb08e77087309cde5c2f0e5bab9622294484fb9824a1a712dca');
+ assert.equal(sha(pg),'df9e04044b71426920fe7dff79d000b5d3d1da599ebf64b81dd330eadf4e55e3');
+});
+test('F1 0038 explicitly closes NULL generation SQL CHECK UNKNOWN gap',()=>{
+ assert.match(migration0038,/ADD CONSTRAINT "activation_mail_outbox_reservation_generation_present_check"/);
+ assert.match(migration0038,/"dispatch_reservation_at" IS NULL\s+OR "dispatch_reservation_generation" IS NOT NULL/);
+ assert.match(schema,/check\("activation_mail_outbox_reservation_generation_present_check"/);
+ assert.match(schema,/\$\{table\.dispatchReservationAt\} IS NULL\s+OR \$\{table\.dispatchReservationGeneration\} IS NOT NULL/);
+ assert.doesNotMatch(migration0038,/^\s*(?:DROP|DELETE|UPDATE|TRUNCATE|CREATE\s+TRIGGER)\b/im);
 });
 test('runtime inputs strict and no per-process operatorEnabled',()=>{
  assert.match(runtime,/Object\.keys\(input\)\.length !== 4/);

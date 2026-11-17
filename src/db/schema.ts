@@ -761,6 +761,11 @@ export const activationMailOutbox = pgTable(
         AND ${table.updatedAt} >= ${table.dispatchReservationAt}
       )
     `),
+    // 0038: SQL CHECK accepts UNKNOWN; explicitly reject timestamp + NULL epoch.
+    check("activation_mail_outbox_reservation_generation_present_check", sql`
+      ${table.dispatchReservationAt} IS NULL
+      OR ${table.dispatchReservationGeneration} IS NOT NULL
+    `),
     check("activation_mail_outbox_state_shape_check", sql`
       (${table.state} = 'ready' AND ${table.attemptCount} = 0 AND ${table.claimId} IS NULL AND ${table.claimedAt} IS NULL AND ${table.finalizedAt} IS NULL AND ${table.providerMessageId} IS NULL)
       OR (${table.state} = 'in_flight' AND ${table.attemptCount} = 1 AND ${table.claimId} IS NOT NULL AND ${table.claimedAt} IS NOT NULL AND ${table.finalizedAt} IS NULL AND ${table.providerMessageId} IS NULL)

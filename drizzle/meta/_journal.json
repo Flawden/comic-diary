@@ -267,6 +267,13 @@
       "when": 1794907200000,
       "tag": "0037_auth_activation_operator_gate",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794907260000,
+      "tag": "0038_auth_activation_reservation_presence",
+      "breakpoints": true
     }
   ]
 }
