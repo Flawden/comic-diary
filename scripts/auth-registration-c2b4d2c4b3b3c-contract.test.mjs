@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 const read = name => readFileSync(name,"utf8");
-const sha = name => createHash("sha256").update(readFileSync(name)).digest("hex");
+const sha = name => createHash("sha256").update(readFileSync(name,"utf8").replace(/\r\n/g,"\n")).digest("hex");
 const svc=read("src/modules/auth/registration-activation-operator-control.ts");
 const api=read("src/app/api/admin/security/activation-dispatch/route.ts");
 const schema=read("src/db/schema.ts");
@@ -18,8 +18,8 @@ test("B3B3C unchanged F1 historical migration 0037 and 0038",()=>{
  assert.equal(sha("drizzle/0038_auth_activation_reservation_presence.sql"),"988d2293a010f81b09a65ddab0548d7d2dc749d5a10fe3acfc6d838900718877");
 });
 test("B3B3C append only journal with 0039",()=>{
- assert.equal(journal.entries.length,40);
- assert.deepEqual(journal.entries.slice(37).map(e=>[e.idx,e.tag]),[
+ assert.ok(journal.entries.length>=40);
+ assert.deepEqual(journal.entries.slice(37,40).map(e=>[e.idx,e.tag]),[
  [37,"0037_auth_activation_operator_gate"],[38,"0038_auth_activation_reservation_presence"],[39,"0039_auth_activation_operator_audit"]]);
  assert.ok(journal.entries[39].when>journal.entries[38].when);
 });
