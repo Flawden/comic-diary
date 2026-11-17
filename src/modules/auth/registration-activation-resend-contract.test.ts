@@ -13,7 +13,7 @@ const mail = buildPendingActivationMail({
   email: "reader@example.invalid", token, expiresAt: new Date(now.getTime() + 30 * 60_000), publicOrigin: origin,
 }, now);
 assert.ok(mail);
-const key = "activation/" + Buffer.alloc(16, 83).toString("base64url");
+const key = Buffer.alloc(24, 83).toString("base64url");
 const id = "22222222-aaaa-4444-8888-cccccccccccc";
 
 test("exact API candidate is HTTPS POST, with text-only four-field payload", () => {
@@ -49,10 +49,35 @@ test("raw code stays only in text, not URL, subject, key or sender metadata", ()
   assert.equal(mail.activationPageUrl.includes(token), false);
 });
 
-test("canonical independent random idempotency key required", () => {
-  for (const invalid of ["", "activation/", "activation/abc", "activation/" + token, "activation/" + "a".repeat(22), "activation/" + Buffer.alloc(16, 9).toString("base64url") + "A", "activation/" + Buffer.alloc(16, 3).toString("base64url") + "\r\nX: bad", "activation/" + "reader@example.invalid", "activation/" + "0".repeat(32)]) {
-    assert.equal(prepareResendActivationCandidate(config, mail, invalid), null);
+test("canonical persisted 24-byte outbox key required, no alternate provider format", () => {
+  const wrongSizes = [16, 23, 25, 32].map((n) => Buffer.alloc(n, 15).toString("base64url"));
+  const invalid = [
+    "", "activation/", "activation/abc", "activation/" + key,
+    token, "abc", "a".repeat(31), "a".repeat(33), key + "=", key + "!",
+    key + "\r\nX-Injected: yes", "reader@example.invalid", ...wrongSizes,
+  ];
+  for (const value of invalid) {
+    assert.equal(prepareResendActivationCandidate(config, mail, value), null);
   }
+});
+
+test("provider candidate reuses exact opaque persisted key without remapping", () => {
+  const request = prepareResendActivationCandidate(config, mail, key);
+  assert.ok(request);
+  assert.equal(request.idempotencyKey, key);
+  assert.equal(request.idempotencyKey.length, 32);
+  assert.equal(Buffer.from(request.idempotencyKey, "base64url").byteLength, 24);
+  assert.equal(request.idempotencyKey.startsWith("activation/"), false);
+});
+
+test("different independent outbox issuance keys stay distinct in provider candidate", () => {
+  const other = Buffer.alloc(24, 84).toString("base64url");
+  const first = prepareResendActivationCandidate(config, mail, key);
+  const second = prepareResendActivationCandidate(config, mail, other);
+  assert.ok(first);
+  assert.ok(second);
+  assert.notEqual(first.idempotencyKey, second.idempotencyKey);
+  assert.deepEqual(first.payload, second.payload);
 });
 
 test("same input yields deterministic identical payload for SAME outbox issuance", () => {

@@ -5,6 +5,9 @@
  * credentials, no environment reads, no retry, no logging and no side effects.
  * It is NOT linked to the auth routes or the live delivery transport.
  * Resend is a candidate pending operator selection and domain ownership proof.
+ * D2C4B2: accept the SAME persisted 24-byte base64url outbox issuance key
+ * created by D2C3. Do not mint, derive, truncate, or prefix a second key.
+ * This does not permit delivery or any retries of uncertain outcomes.
  */
 import type { PendingActivationMail } from "./registration-activation-mail";
 // @ts-expect-error TS5097: Node strip-types needs .ts; CI uses tsx.
@@ -20,22 +23,23 @@ export type ResendCandidatePayload = Readonly<{
 export type ResendCandidateRequest = Readonly<{
   endpoint: "https://api.resend.com/emails";
   method: "POST";
-  /** Fresh independent 128-bit random value; persist one per issuance/outbox item. */
+  /** Canonical persisted 192-bit random value from D2C3; one per issuance. */
   idempotencyKey: string;
   payload: ResendCandidatePayload;
 }>;
 
 /**
- * Requiring a canonical independent random key avoids reuse of user IDs,
- * mailbox addresses or raw activation codes in provider request metadata.
- * Key must be persisted alongside the SAME message before network retries.
- * This module deliberately does not create or persist the key.
+ * D2C3 stores 24 random bytes (32 canonical base64url chars) for each outbox
+ * issuance. Resend accepts 1..256-character Idempotency-Key values; we
+ * preserve the exact persisted key, instead of manufacturing a second ID.
+ * The format cannot prove randomness; ONLY trust a key from the atomic issuer.
+ * A provider idempotency window is NOT permanent deduplication. Never retry
+ * an uncertain provider outcome automatically. This module creates no keys.
  */
-function validOpaqueRequestKey(value: string): boolean {
-  if (typeof value !== "string" || !/^activation\/[A-Za-z0-9_-]{22}$/.test(value)) return false;
-  const portion = value.slice("activation/".length);
-  const bytes = Buffer.from(portion, "base64url");
-  return bytes.length === 16 && bytes.toString("base64url") === portion;
+function validOpaqueRequestKey(value: unknown): value is string {
+  if (typeof value !== "string" || !/^[A-Za-z0-9_-]{32}$/.test(value)) return false;
+  const bytes = Buffer.from(value, "base64url");
+  return bytes.length === 24 && bytes.toString("base64url") === value;
 }
 
 export function prepareResendActivationCandidate(
