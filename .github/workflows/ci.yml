@@ -98,6 +98,9 @@ jobs:
       - name: AUTH-01C2B4D2C4A internal claim and finalization contract (no delivery)
         run: node --test scripts/auth-registration-c2b4d2c4-contract.test.mjs
 
+      - name: AUTH-01C2B4D2C4B1 offline snapshot preflight (NO DB or sending)
+        run: node --import tsx --test src/modules/auth/registration-activation-outbox-dry-run.test.ts
+
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
 
