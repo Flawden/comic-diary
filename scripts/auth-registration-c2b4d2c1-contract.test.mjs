@@ -11,8 +11,8 @@ const probe=read('scripts/auth-registration-c2b4d2c1-pg-probe.ts');
 const original=read('scripts/auth-registration-c2b4a-contract.test.mjs');
 
 test('0035 append-only after 0034, historical migration test remains prefix-safe',()=>{
- assert.equal(journal.entries.length,36);
- assert.deepEqual(journal.entries.slice(31).map(x=>[x.idx,x.tag]),[
+ assert.ok(journal.entries.length >= 36);
+ assert.deepEqual(journal.entries.slice(31,36).map(x=>[x.idx,x.tag]),[
  [31,'0031_auth_password_reset_tokens'],[32,'0032_auth_email_verification_state'],
  [33,'0033_auth_email_verification_tokens'],[34,'0034_auth_registration_activation_marker'],
  [35,'0035_auth_activation_mail_outbox']]);

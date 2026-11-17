@@ -112,6 +112,9 @@ jobs:
       - name: AUTH-01C2B4D2C4B3B1 offline fence semantics (NO delivery)
         run: node --test scripts/auth-registration-c2b4d2c4b3b1-fence-spec.test.mjs
 
+      - name: AUTH-01C2B4D2C4B3B2 durable DB dispatch fence contract (NO delivery)
+        run: node --test scripts/auth-registration-c2b4d2c4b3b2-contract.test.mjs
+
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
 
@@ -251,6 +254,9 @@ jobs:
 
       - name: AUTH-01C2B4D2C4A disposable PostgreSQL claim and terminal states
         run: node --import tsx scripts/auth-registration-c2b4d2c4-pg-probe.ts
+
+      - name: AUTH-01C2B4D2C4B3B2 disposable PostgreSQL fence concurrency (NO delivery)
+        run: node --import tsx scripts/auth-registration-c2b4d2c4b3b2-pg-probe.ts
 
       - name: Verify optional comic source URL migration
         run: |

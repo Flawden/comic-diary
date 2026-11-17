@@ -712,6 +712,7 @@ export const activationMailOutbox = pgTable(
     attemptCount: integer("attempt_count").default(0).notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    dispatchFenceAt: timestamp("dispatch_fence_at", { withTimezone: true }),
     finalizedAt: timestamp("finalized_at", { withTimezone: true }),
     providerMessageId: varchar("provider_message_id", { length: 256 }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -733,6 +734,17 @@ export const activationMailOutbox = pgTable(
     check("activation_mail_outbox_idempotency_check", sql`${table.idempotencyKey} ~ '^[A-Za-z0-9_-]{22,64}$'`),
     check("activation_mail_outbox_claim_id_check", sql`${table.claimId} IS NULL OR ${table.claimId} ~ '^[A-Za-z0-9_-]{22,64}$'`),
     check("activation_mail_outbox_time_check", sql`${table.expiresAt} > ${table.createdAt} AND ${table.updatedAt} >= ${table.createdAt} AND (${table.claimedAt} IS NULL OR ${table.claimedAt} < ${table.expiresAt}) AND (${table.finalizedAt} IS NULL OR ${table.finalizedAt} >= ${table.createdAt})`),
+    check("activation_mail_outbox_dispatch_fence_shape_check", sql`
+      ${table.dispatchFenceAt} IS NULL OR (
+        ${table.state} IN ('in_flight', 'accepted', 'rejected', 'uncertain')
+        AND ${table.attemptCount} = 1
+        AND ${table.claimId} IS NOT NULL
+        AND ${table.claimedAt} IS NOT NULL
+        AND ${table.dispatchFenceAt} >= ${table.claimedAt}
+        AND ${table.dispatchFenceAt} < ${table.expiresAt}
+        AND ${table.updatedAt} >= ${table.dispatchFenceAt}
+      )
+    `),
     check("activation_mail_outbox_state_shape_check", sql`
       (${table.state} = 'ready' AND ${table.attemptCount} = 0 AND ${table.claimId} IS NULL AND ${table.claimedAt} IS NULL AND ${table.finalizedAt} IS NULL AND ${table.providerMessageId} IS NULL)
       OR (${table.state} = 'in_flight' AND ${table.attemptCount} = 1 AND ${table.claimId} IS NOT NULL AND ${table.claimedAt} IS NOT NULL AND ${table.finalizedAt} IS NULL AND ${table.providerMessageId} IS NULL)

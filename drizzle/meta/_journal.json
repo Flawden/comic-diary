@@ -253,6 +253,13 @@
       "when": 1794900000000,
       "tag": "0035_auth_activation_mail_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794903600000,
+      "tag": "0036_auth_activation_dispatch_fence",
+      "breakpoints": true
     }
   ]
 }
