@@ -274,6 +274,8 @@ jobs:
         run: node --import tsx --test src/modules/auth/password-reset-request-config.test.ts
       - name: AUTH-01 R1C2A pure password reset outbox lifecycle policy (NO mail)
         run: node --import tsx --test scripts/auth-r1c2a-recovery-outbox-policy.test.mjs
+      - name: AUTH-01 R1C2C1 pure password reset mail AEAD snapshot preflight (NO send)
+        run: node --import tsx --test src/modules/auth/password-reset-request-outbox-preflight.test.ts
       - name: AUTH-01 R1C2B1 recovery claim schema contract (NO delivery)
         run: node --test scripts/auth-r1c2b1-recovery-claim-schema.test.mjs
 
