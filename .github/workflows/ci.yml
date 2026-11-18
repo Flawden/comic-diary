@@ -270,6 +270,8 @@ jobs:
         run: node --import tsx scripts/auth-r1b2c-recovery-pg-probe.ts
       - name: AUTH-01 R1C2B2 disposable PostgreSQL exclusive recovery claim (NO mail)
         run: node --import tsx scripts/auth-r1c2b2-recovery-claim-pg-probe.ts
+      - name: AUTH-01 R1C2C2 disposable PostgreSQL recovery dispatch fence (NO mail)
+        run: node --import tsx scripts/auth-r1c2c2-recovery-fence-pg-probe.ts
       - name: AUTH-01 R1C1 password reset request configuration (OFF by default)
         run: node --import tsx --test src/modules/auth/password-reset-request-config.test.ts
       - name: AUTH-01 R1C2A pure password reset outbox lifecycle policy (NO mail)

@@ -9,8 +9,8 @@ const schema = readFileSync("src/db/schema.ts", "utf8");
 const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8"));
 const slice = schema.split("export const passwordResetMailOutbox = pgTable(")[1]?.split("export const activationMailOutbox = pgTable(")[0];
 
-test("journal appends exactly 0041, preserving all 41 prior indexes", () => {
-  assert.equal(journal.entries.length, 42);
+test("journal preserves the original position of 0041 and 42 prior entries", () => {
+  assert.ok(journal.entries.length >= 42);
   for (let i = 0; i < 42; i++) assert.equal(journal.entries[i].idx, i);
   assert.equal(journal.entries[40].tag, "0040_auth_password_reset_mail_outbox");
   assert.equal(journal.entries[41].tag, "0041_auth_password_reset_outbox_claim");
@@ -47,5 +47,6 @@ test("schema describes exactly 0041 claim fields and checks", () => {
 });
 test("no sender, network, secrets, worker, dispatch authorization or data mutation", () => {
   assert.doesNotMatch(migration, /https?:|fetch\(|sendmail|smtp|resend|credential|API_KEY|NOTIFY|LISTEN|CREATE TRIGGER/i);
-  assert.doesNotMatch(slice, /dispatchReservationAt|dispatchFenceAt|providerMessageId|sendMail|process\.env/);
+  assert.doesNotMatch(migration, /dispatchReservationAt|dispatchFenceAt|providerMessageId|sendMail|process\.env/);
+  assert.doesNotMatch(slice, /sendMail|process\.env/);
 });
