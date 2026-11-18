@@ -13,7 +13,7 @@ const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
 const slice = schema.split("export const passwordResetMailOutbox = pgTable(")[1]?.split("export const activationMailOutbox = pgTable(")[0];
 
 test("0042 journal append preserves prior 42 indexes", () => {
-  assert.equal(journal.entries.length, 43);
+  assert.ok(journal.entries.length >= 43);
   for (let i = 0; i < 43; i++) assert.equal(journal.entries[i]?.idx, i);
   assert.equal(journal.entries[41].tag, "0041_auth_password_reset_outbox_claim");
   assert.equal(journal.entries[42].tag, "0042_auth_password_reset_dispatch_fence");

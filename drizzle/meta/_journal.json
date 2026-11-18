@@ -302,6 +302,13 @@
       "when": 1794907500000,
       "tag": "0042_auth_password_reset_dispatch_fence",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794907560000,
+      "tag": "0043_auth_password_reset_operator_gate",
+      "breakpoints": true
     }
   ]
 }

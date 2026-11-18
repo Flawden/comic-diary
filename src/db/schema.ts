@@ -712,6 +712,8 @@ export const passwordResetMailOutbox = pgTable(
     attemptCount: integer("attempt_count").default(0).notNull(),
     claimedAt: timestamp("claimed_at", { withTimezone: true }),
     dispatchFenceAt: timestamp("dispatch_fence_at", { withTimezone: true }),
+    dispatchReservationAt: timestamp("dispatch_reservation_at", { withTimezone: true }),
+    dispatchReservationGeneration: integer("dispatch_reservation_generation"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     finalizedAt: timestamp("finalized_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -749,6 +751,27 @@ export const passwordResetMailOutbox = pgTable(
         AND ${table.updatedAt} >= ${table.dispatchFenceAt}
         AND ${table.dispatchFenceAt} < ${table.expiresAt}
       )
+    `),
+    check("password_reset_mail_outbox_dispatch_reservation_shape_check", sql`
+      (${table.dispatchReservationAt} IS NULL AND ${table.dispatchReservationGeneration} IS NULL)
+      OR (
+        ${table.dispatchReservationAt} IS NOT NULL
+        AND ${table.dispatchReservationGeneration} IS NOT NULL
+        AND ${table.dispatchReservationGeneration} > 0
+        AND ${table.dispatchFenceAt} IS NOT NULL
+        AND ${table.state} IN ('in_flight', 'accepted', 'rejected', 'uncertain')
+        AND ${table.attemptCount} = 1
+        AND ${table.claimId} IS NOT NULL
+        AND ${table.claimedAt} IS NOT NULL
+        AND ${table.dispatchReservationAt} >= ${table.dispatchFenceAt}
+        AND ${table.dispatchReservationAt} >= ${table.claimedAt}
+        AND ${table.dispatchReservationAt} < ${table.expiresAt}
+        AND ${table.updatedAt} >= ${table.dispatchReservationAt}
+      )
+    `),
+    check("password_reset_mail_outbox_dispatch_reservation_presence_check", sql`
+      (${table.dispatchReservationAt} IS NULL AND ${table.dispatchReservationGeneration} IS NULL)
+      OR (${table.dispatchReservationAt} IS NOT NULL AND ${table.dispatchReservationGeneration} IS NOT NULL)
     `),
   ],
 );
@@ -853,6 +876,23 @@ export const activationMailDispatchControl = pgTable("activation_mail_dispatch_c
 }, (table) => [
   check("activation_mail_dispatch_control_singleton_check", sql`${table.id} = 1`),
   check("activation_mail_dispatch_control_generation_check", sql`${table.generation} >= 0`),
+]);
+
+/**
+ * AUTH-01 / R1C2C3: independent persisted, default-OFF password recovery gate.
+ * This does not expose an operator ON endpoint and is not a send capability.
+ * A missing row or disabled gate fails closed for all new reservations.
+ */
+export const passwordResetMailDispatchControl = pgTable("password_reset_mail_dispatch_control", {
+  id: integer("id").primaryKey(),
+  enabled: boolean("enabled").default(false).notNull(),
+  generation: integer("generation").default(0).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  check("password_reset_mail_dispatch_control_singleton_check", sql`${table.id} = 1`),
+  check("password_reset_mail_dispatch_control_generation_check", sql`
+    ${table.generation} >= 0 AND (${table.enabled} = false OR ${table.generation} > 0)
+  `),
 ]);
 
 export const sessions = pgTable(
