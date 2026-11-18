@@ -274,6 +274,10 @@ jobs:
         run: node --import tsx scripts/auth-r1c2c2-recovery-fence-pg-probe.ts
       - name: AUTH-01 R1C2C3 disposable PostgreSQL recovery operator reservation (NO mail)
         run: node --import tsx scripts/auth-r1c2c3-recovery-reserve-pg-probe.ts
+      - name: AUTH-01 R1C2C4 provider outcome and reservation contracts (NO mail)
+        run: node --import tsx --test src/modules/auth/password-reset-request-provider-outcome.test.ts scripts/auth-r1c2c4-outcome-contract.test.mjs
+      - name: AUTH-01 R1C2C4 disposable PostgreSQL reserved outcome finalization (NO mail)
+        run: node --import tsx scripts/auth-r1c2c4-recovery-finalize-pg-probe.ts
       - name: AUTH-01 R1C1 password reset request configuration (OFF by default)
         run: node --import tsx --test src/modules/auth/password-reset-request-config.test.ts
       - name: AUTH-01 R1C2A pure password reset outbox lifecycle policy (NO mail)
