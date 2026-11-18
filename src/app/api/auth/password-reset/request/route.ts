@@ -56,13 +56,19 @@ function acknowledge() {
 
 export async function POST(request: NextRequest) {
   // No public issuance until explicit readiness after mail-dispatch review.
-  if (!isRecoveryRequestAllowed(process.env)) return errorResponse("recovery_unavailable", 503);
+  const recoveryConfig = {
+    PASSWORD_RESET_REQUEST_ENABLED: process.env.PASSWORD_RESET_REQUEST_ENABLED,
+    PASSWORD_RESET_REQUEST_MAIL_READY: process.env.PASSWORD_RESET_REQUEST_MAIL_READY,
+    PASSWORD_RESET_OUTBOX_KEY_ID: process.env.PASSWORD_RESET_OUTBOX_KEY_ID,
+    PASSWORD_RESET_OUTBOX_KEY_BASE64: process.env.PASSWORD_RESET_OUTBOX_KEY_BASE64,
+  };
+  if (!isRecoveryRequestAllowed(recoveryConfig)) return errorResponse("recovery_unavailable", 503);
   if (!isSameOriginRequest(request)) return errorResponse("forbidden_origin", 403);
 
   // Both pieces originate only from deployment configuration, never HTTP headers.
   const origin = canonicalPasswordResetMailOrigin(process.env.COMIC_DIARY_PUBLIC_ORIGIN);
   if (!origin) return errorResponse("recovery_unavailable", 503);
-  const key = readRecoveryRequestOutboxKey(process.env);
+  const key = readRecoveryRequestOutboxKey(recoveryConfig);
   if (!key) return errorResponse("recovery_unavailable", 503);
 
   try {

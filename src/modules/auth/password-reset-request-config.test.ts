@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   isRecoveryRequestAllowed,
   readRecoveryRequestOutboxKey,
-} from "./password-reset-request-config.ts";
+} from "./password-reset-request-config";
 
 const validKey = randomBytes(32).toString("base64");
 const env = {
