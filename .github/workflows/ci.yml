@@ -78,6 +78,10 @@ jobs:
         run: |
           node --test scripts/auth-registration-c2b4d2b2a-contract.test.mjs
           node --import tsx --test src/modules/auth/registration-activation-resend-contract.test.ts
+      - name: AUTH-01 R1C2C5 recovery Resend one-shot test adapter (MOCK HTTP ONLY)
+        run: |
+          node --import tsx --test src/modules/auth/password-reset-request-resend-test-adapter.test.ts
+          node --test scripts/auth-r1c2c5-resend-inert-contract.test.mjs
 
       - name: AUTH-01C2B4D2B2B inert outbox outcome policy (no persistence or sending)
         run: |
