@@ -63,7 +63,8 @@ test("disabled or nonboolean operator flag fails closed", () => {
 });
 test("unknown or extra input fields fail closed", () => {
   assert.deepEqual(preflight(null as unknown as ReturnType<typeof fixture>), BLOCKED);
-  const x = clone(); assert.deepEqual(preflight({ ...x, extra: true }), BLOCKED);
+  const x = clone(); const inputWithExtraField = { ...x, extra: true };
+  assert.deepEqual(preflight(inputWithExtraField), BLOCKED);
 });
 test("account inactive, no password, unverified, invalid account link", () => {
   blockedWith((x) => { x.snapshot.account.isActive = false; });
