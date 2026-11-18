@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { prepareRecoveryResendRuntimeCandidate } from "./password-reset-request-resend-runtime-config.ts";
+import { prepareRecoveryResendRuntimeCandidate } from "./password-reset-request-resend-runtime-config";
 
 const TEST_KEY = `re_${"A".repeat(30)}`; // Synthetic; not a credential.
 const ready = () => ({
