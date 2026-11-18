@@ -288,6 +288,13 @@
       "when": 1794907380000,
       "tag": "0040_auth_password_reset_mail_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794907440000,
+      "tag": "0041_auth_password_reset_outbox_claim",
+      "breakpoints": true
     }
   ]
 }

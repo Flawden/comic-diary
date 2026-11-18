@@ -708,6 +708,9 @@ export const passwordResetMailOutbox = pgTable(
     payloadDigest: varchar("payload_digest", { length: 64 }).notNull(),
     idempotencyKey: varchar("idempotency_key", { length: 64 }).notNull(),
     state: varchar("state", { length: 16 }).default("ready").notNull(),
+    claimId: varchar("claim_id", { length: 64 }),
+    attemptCount: integer("attempt_count").default(0).notNull(),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     finalizedAt: timestamp("finalized_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -716,6 +719,7 @@ export const passwordResetMailOutbox = pgTable(
   (table) => [
     unique("password_reset_mail_outbox_token_unique").on(table.passwordResetTokenId),
     unique("password_reset_mail_outbox_idempotency_unique").on(table.idempotencyKey),
+    unique("password_reset_mail_outbox_claim_unique").on(table.claimId),
     index("password_reset_mail_outbox_ready_expiry_idx")
       .on(table.expiresAt).where(sql`${table.state} = 'ready'`),
     index("password_reset_mail_outbox_state_updated_idx")
@@ -727,9 +731,13 @@ export const passwordResetMailOutbox = pgTable(
     check("password_reset_mail_outbox_idempotency_check", sql`${table.idempotencyKey} ~ '^[A-Za-z0-9_-]{22,64}$'`),
     check("password_reset_mail_outbox_time_check", sql`${table.expiresAt} > ${table.createdAt} AND ${table.updatedAt} >= ${table.createdAt} AND (${table.finalizedAt} IS NULL OR ${table.finalizedAt} >= ${table.createdAt})`),
     check("password_reset_mail_outbox_state_check", sql`
-      (${table.state} = 'ready' AND ${table.finalizedAt} IS NULL)
-      OR (${table.state} = 'expired' AND ${table.finalizedAt} IS NOT NULL)
+      (${table.state} = 'ready' AND ${table.claimId} IS NULL AND ${table.claimedAt} IS NULL AND ${table.attemptCount} = 0 AND ${table.finalizedAt} IS NULL)
+      OR (${table.state} = 'expired' AND ${table.claimId} IS NULL AND ${table.claimedAt} IS NULL AND ${table.attemptCount} = 0 AND ${table.finalizedAt} IS NOT NULL)
+      OR (${table.state} = 'in_flight' AND ${table.claimId} IS NOT NULL AND ${table.claimedAt} IS NOT NULL AND ${table.attemptCount} = 1 AND ${table.finalizedAt} IS NULL)
+      OR (${table.state} IN ('accepted', 'rejected', 'uncertain') AND ${table.claimId} IS NOT NULL AND ${table.claimedAt} IS NOT NULL AND ${table.attemptCount} = 1 AND ${table.finalizedAt} IS NOT NULL)
     `),
+    check("password_reset_mail_outbox_claim_id_check", sql`${table.claimId} IS NULL OR ${table.claimId} ~ '^[A-Za-z0-9_-]{32}$'`),
+    check("password_reset_mail_outbox_claim_times_check", sql`${table.claimedAt} IS NULL OR (${table.claimedAt} >= ${table.createdAt} AND ${table.updatedAt} >= ${table.claimedAt} AND (${table.finalizedAt} IS NULL OR ${table.finalizedAt} >= ${table.claimedAt}))`),
   ],
 );
 

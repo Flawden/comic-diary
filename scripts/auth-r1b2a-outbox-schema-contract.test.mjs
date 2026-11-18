@@ -8,7 +8,7 @@ const journal = JSON.parse(readFileSync('drizzle/meta/_journal.json','utf8'));
 const crypto = readFileSync('src/modules/auth/password-reset-request-outbox-crypto.ts','utf8');
 const clean = s => s.replace(/\r\n/g,'\n');
 test('new migration is append-only after 0039 and journal remains sequential', () => {
-  assert.equal(journal.entries.length,41);
+  assert.ok(journal.entries.length >= 41);
   for(let i=0;i<41;i++) assert.equal(journal.entries[i].idx,i);
   assert.equal(journal.entries[39].tag,'0039_auth_activation_operator_audit');
   assert.equal(journal.entries[40].tag,'0040_auth_password_reset_mail_outbox');
@@ -32,8 +32,8 @@ test('initial state has ready/expired only; no automatic dispatch', () => {
   assert.match(migration,/\("state" = 'ready' AND "finalized_at" IS NULL\)/);
   assert.match(migration,/\("state" = 'expired' AND "finalized_at" IS NOT NULL\)/);
   assert.doesNotMatch(migration,/in_flight|accepted|claimed_at|provider_message_id/);
-  assert.doesNotMatch(schema.slice(schema.indexOf('export const passwordResetMailOutbox'),schema.indexOf('export const activationMailOutbox')),
-    /dispatchReservationAt|dispatchFenceAt|providerMessageId|claimId/);
+  // Historical 0040 remains inert; newer additive schema stages may add claim fields.
+  assert.doesNotMatch(migration, /dispatch_reservation_at|dispatch_fence_at|provider_message_id|claim_id/);
 });
 test('encryption and key constraints match the Drizzle model', () => {
   for (const suffix of ['digest_check','nonce_check','key_id_check','ciphertext_check','idempotency_check','time_check','state_check']) {
