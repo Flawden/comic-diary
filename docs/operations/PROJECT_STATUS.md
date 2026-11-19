@@ -1,4 +1,4 @@
-# Comic Diary — integrated local status (2026-11-19)
+# Comic Diary — integrated status (2026-11-19)
 
 ## Verified baseline and source checkpoints
 
@@ -17,11 +17,22 @@
 - Other source worktrees unchanged; original two user UI edits remain separately
   in comic-diary-auth01 (globals.css +1/-15, ChapterReadingPanel.tsx -1).
 
+## Feature branch publication (owner-authorized)
+
+- Published branch: origin/codex/integration-auth-rate-community-20261119.
+- Published code/review checkpoint: 8aff72ce98dc59017a2c000281b7f6c271ac40c4.
+- First remote CI run: https://github.com/Flawden/comic-diary/actions/runs/44587045302
+  was in progress when publication was recorded; no green result claimed.
+- This status-only follow-up does not change runtime code or local test results.
+- Remote master was independently rechecked and remains
+  a5119b2d599fc9d9915e7bfeb71d6ba2b26f5f57. No merge or production deployment.
+- Existing review ZIPs are immutable evidence of their recorded pre-push checkpoints.
+
 ## Actual task states
 
 | Task | State |
 | --- | --- |
-| AUTH + RATE + COMMUNITY integration | DONE LOCALLY / AWAITING INDEPENDENT REVIEW / NOT PUBLISHED |
+| AUTH + RATE + COMMUNITY integration | FEATURE BRANCH PUSHED / AWAITING CI AND INDEPENDENT REVIEW / NOT DEPLOYED |
 | Live interface | Preserved from verified live commit, no redesign rollback |
 | AUTH recovery | Included unchanged, locally retested, sending OFF |
 | RATE | Included and adapted to live chapter UI; old local acceptance preserved |
@@ -89,7 +100,7 @@ No real email until separately configured domain/sender, key and explicit gates.
   Long control title fits two desktop lines, chapter row <=150px in the direct-link
   fixture, rating/read controls never overlap. 74 current synthetic screenshots.
 - New thread-model tests explicitly run in CI; two additional PG cases are included
-  in the existing complete COMMUNITY suite. Remote CI remains unexecuted.
+  in the existing complete COMMUNITY suite. Remote CI was triggered by the owner-authorized feature push; result pending.
 - PG17 follow-up used an exact copy of the suite with ONLY strict loopback port
   55503 changed to 55513 to avoid interrupting the owner demo. Owner/database and
   all assertions unchanged; normalized hashes recorded in QA evidence.
@@ -117,7 +128,7 @@ No real email until separately configured domain/sender, key and explicit gates.
 - Typecheck, ESLint, production build, Docker build/network-none smoke: PASS.
 - npm audit --omit=dev: 0 production vulnerabilities. Diff/staged/secret scan PASS.
 - CI retains AUTH and explicitly runs RATE, COMMUNITY, design/lineage contracts.
-  Remote CI not triggered. Existing CI service PG17, PG18 checked locally.
+  Remote CI triggered by feature push; result pending. Existing CI service PG17; PG18 checked locally.
 - Full diff from live + integration-only diff from AUTH, report, source and logs
   are included in ignored .qa/ review package with SHA-256 manifest.
 
@@ -136,4 +147,4 @@ remain subject to acceptance. Global community write mutex is a known capacity
 tradeoff; no production-scale load benchmark. Minimal audit latest 20 events,
 no realtime push, reactions/attachments/notifications/deep trees. Beta onboarding
 and email activation remain separate. Original live service was not changed.
-STOP for independent review. No push, merge, deploy or next stage.
+STOP for CI and independent review. Feature push authorized and completed; no merge, deploy or next stage.
