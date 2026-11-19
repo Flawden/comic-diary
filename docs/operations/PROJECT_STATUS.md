@@ -23,8 +23,8 @@
 - Resend Verified, API-ключ подготовлен на VPS, реальная интеграция и доставка ещё не проверены.
   This is owner-provided infrastructure context. No credential file was read, copied,
   changed or connected. No live provider requests or production operations occurred.
-- Local code/review SHA and exact source hashes are recorded in the review manifest
-  and subsequent evidence checkpoint; no self-referential SHA is embedded here.
+- Local implementation commit: 6b816a15c55e2731613aa2d580199df927666c43.
+  Final documentation checkpoint and exact source hashes are in the review manifest.
 - Rollout and accepted failure policy: [AUTH_ACTIVATION_RUNBOOK.md](AUTH_ACTIVATION_RUNBOOK.md).
 
 ## Remaining external steps
