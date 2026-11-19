@@ -71,7 +71,7 @@ No real email until separately configured domain/sender, key and explicit gates.
 
 ## Latest reply/style review follow-up
 
-- Follow-up implementation SHA: recorded in the next local status commit.
+- Follow-up implementation SHA: 0f83b355af0e6016e14ecac871e7380982f3d031.
 - Replies render directly beneath their parent, with an indented branch and inline
   reply composer. Root pages (20) and reply pages (20) are independent; the first
   three replies per visible root are loaded in one bounded batch, not N+1 calls.
