@@ -4,4 +4,8 @@ export async function register() {
     const { startPasswordResetWorker } = await import("./modules/auth/password-reset-dispatch");
     startPasswordResetWorker();
   }
+  if (process.env.NEXT_RUNTIME === "nodejs" && process.env.AUTH_ACTIVATION_WORKER_ENABLED === "true") {
+    const { startActivationWorker } = await import("./modules/auth/registration-activation-dispatch");
+    startActivationWorker();
+  }
 }

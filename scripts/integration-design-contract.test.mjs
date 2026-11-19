@@ -14,7 +14,7 @@ test('integration preserves current hero, chapter art/progress/volume controls a
 test('COMMUNITY migration follows complete live and AUTH history without replaying AUTH DDL',()=>{
   const journal=JSON.parse(read('drizzle/meta/_journal.json')).entries;
   for(const tag of ['0028_comic_volume_titles','0029_optional_comic_source_url','0030_chapter_cover','0044_auth_password_reset_dispatch_start'])assert.ok(journal.some(e=>e.tag===tag),tag);
-  assert.equal(journal.at(-1).tag,'0045_community_comments');
+  assert.equal(journal[45].tag,'0045_community_comments');
   const sql=read('drizzle/0045_community_comments.sql');
   assert.equal((sql.match(/CREATE TABLE /g)??[]).length,4);
   assert.doesNotMatch(sql,/ALTER TYPE|CREATE TABLE "(?:password_reset|activation|email_verification)|DROP /);

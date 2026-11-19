@@ -192,7 +192,9 @@ async function main(): Promise<void> {
     console.log("C2B4D2C4B3B2_NEAR_EXPIRY_DENIED=PASS");
 
     const terminal = await create();
-    assert.equal(await finalizeClaimedActivationMail({outboxId:terminal.outboxId,claimId:terminal.claimId,result:"uncertain"}),true);
+    assert.equal(await finalizeClaimedActivationMail({outboxId:terminal.outboxId,claimId:terminal.claimId,result:"uncertain"}),false);
+    // Recovery may terminalize abandoned ownership; provider finalizer may not.
+    await pool.query("UPDATE activation_mail_outbox SET state='uncertain',finalized_at=now(),updated_at=now() WHERE id=$1",[terminal.outboxId]);
     assert.deepEqual(await attempt(terminal.outboxId,terminal.claimId),denied);
     assert.equal((await rowFor(terminal.outboxId)).state,"uncertain");
     assert.equal((await rowFor(terminal.outboxId)).dispatch_fence_at,null);
@@ -200,7 +202,9 @@ async function main(): Promise<void> {
 
     const marked = await create();
     assert.deepEqual(await attempt(marked.outboxId,marked.claimId),recorded);
-    assert.equal(await finalizeClaimedActivationMail({outboxId:marked.outboxId,claimId:marked.claimId,result:"uncertain"}),true);
+    for (const result of ["accepted", "rejected", "uncertain"] as const) assert.equal(await finalizeClaimedActivationMail({outboxId:marked.outboxId,claimId:marked.claimId,result}),false);
+    assert.equal((await rowFor(marked.outboxId)).state,"in_flight");
+    await pool.query("UPDATE activation_mail_outbox SET state='uncertain',finalized_at=now(),updated_at=now() WHERE id=$1",[marked.outboxId]);
     assert.equal((await rowFor(marked.outboxId)).state,"uncertain");
     assert.ok((await rowFor(marked.outboxId)).dispatch_fence_at instanceof Date);
     assert.deepEqual(await attempt(marked.outboxId,marked.claimId),denied);

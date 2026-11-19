@@ -1,19 +1,15 @@
-/**
- * B3B3C internal operator transition. No sender, worker, fetch, credentials,
- * or authority to start HTTP/mail delivery. No public route invokes this
- * without same-origin session authorization and an explicit opt-in for ON.
- *
- * Required lock order: CONTROL -> actor USER -> actor SESSION -> AUDIT.
- * Existing reservation code locks CONTROL first, so an OFF commit before a
- * reservation obtains that lock blocks new reservations. OFF does NOT undo
- * an earlier committed reservation or cancel future external HTTP; such a
- * guarantee requires a separately reviewed transport handoff protocol.
+/** Operator-only audited gate transition. CONTROL -> USER -> SESSION -> AUDIT.
+ * ON requires complete runtime readiness and current ADMIN_SECURITY authority.
+ * OFF blocks new starts but cannot recall a start already committed before OFF.
+ * The response is status only, never an HTTP permit or reservation receipt.
  */
 import { and, eq, gt } from "drizzle-orm";
 import { db } from "@/db";
 import { activationMailDispatchControl, administrativeAuditEvents, sessions, users } from "@/db/schema";
 import { hasPermission } from "./permissions";
 import { canUseFullAccountSession } from "./registration-activation-policy";
+
+import { activationDispatchOperational } from "./registration-activation-config";
 
 const DENIED = Object.freeze({ ok: false, kind: "blocked", sendAuthorized: false } as const);
 export type OperatorTransitionResult =
@@ -36,7 +32,7 @@ export async function transitionActivationDispatchControl(input: Readonly<{
 
   // An ON transition is disabled by default. OFF is always permitted for an
   // authorized operator, including when this explicit opt-in is absent.
-  if (input.enabled && process.env.AUTH_ACTIVATION_OPERATOR_CONTROL_ENABLED !== "true") return DENIED;
+  if (input.enabled && (process.env.AUTH_ACTIVATION_OPERATOR_CONTROL_ENABLED !== "true" || !activationDispatchOperational(process.env))) return DENIED;
 
   return db.transaction(async (tx): Promise<OperatorTransitionResult> => {
     // First lock CONTROL, never trust the separate preflight/UI read.

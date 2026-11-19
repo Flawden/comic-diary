@@ -1,3 +1,42 @@
+# AUTH-01 email activation — local review (2026-11-19)
+
+- Worktree: C:/Users/Atell/IdeaProjects/comic-diary-activation.
+- Branch: codex/email-activation-complete-20261119.
+- Exact integrated base: a96eadd05597e849d2f22d03f87c27f722c3e88f.
+  This includes current Tea/Paper/Night UI, AUTH, RATE, COMMUNITY and threaded replies.
+- New atomic registration/activation delivery is implemented with existing AEAD,
+  claim, fence, reservation, redemption and Resend wire components. Default OFF.
+- 0046 adds activation dispatch start; historical migrations including 0044 unchanged.
+  Registration never creates a session. The account/queue transaction rolls back
+  together, duplicate identities receive generic 202, explicit manual reissue is bounded.
+- Latest local checks: 285 unit, 334 contracts; activation 33/33 on PG17 and PG18;
+  recovery regression 59/59 on PG17 and PG18; five updated historical PG17 probes PASS;
+  typecheck, ESLint, production build, Docker build/OFF smoke, browser 3 themes x 2 widths PASS.
+  Production npm audit --omit=dev: zero advisories. No dependency updates.
+- Browser manifest covers pending state, invalid code, activation, no automatic session,
+  normal login, responsive overflow and zero page errors. Only synthetic users/mock HTTP.
+- Current branch has no new push/CI/deployment. Parent remote CI run 44587303919 failed
+  in an existing mobile reader cover-image load assertion; Verify passed. That separate
+  failure was observed before this task and is not represented as resolved here.
+- All other worktrees preserved. Original two UI edits remain in comic-diary-auth01:
+  globals.css +1/-15 and ChapterReadingPanel.tsx -1. Owner demo was not changed.
+- Resend Verified, API-ключ подготовлен на VPS, реальная интеграция и доставка ещё не проверены.
+  This is owner-provided infrastructure context. No credential file was read, copied,
+  changed or connected. No live provider requests or production operations occurred.
+- Local code/review SHA and exact source hashes are recorded in the review manifest
+  and subsequent evidence checkpoint; no self-referential SHA is embedded here.
+- Rollout and accepted failure policy: [AUTH_ACTIVATION_RUNBOOK.md](AUTH_ACTIVATION_RUNBOOK.md).
+
+## Remaining external steps
+
+Independent review -> separately authorized Git integration -> deployment/migration 0046
+-> protected existing-key/container configuration and durable AEAD key -> explicit
+operator gate/readiness/public registration rollout -> controlled real receipt test.
+At-most-once can lose mail on crash even before HTTP; uncertain is never retried.
+Worker health monitoring and safe key rotation/retention remain operational requirements.
+
+---
+
 # Comic Diary — integrated status (2026-11-19)
 
 ## Verified baseline and source checkpoints

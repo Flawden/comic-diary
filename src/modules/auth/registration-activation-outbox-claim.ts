@@ -11,7 +11,7 @@
  * outcome. NEVER recycle it into `ready`, even if the process has crashed.
  */
 import { randomBytes } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 
 import { db } from "@/db";
 import { activationMailOutbox, emailVerificationTokens, users } from "@/db/schema";
@@ -25,7 +25,7 @@ export type ClaimPendingActivationMailResult = Claimed | NoWork;
 
 /**
  * Claim at most ONE eligible entry. No plaintext/token/ciphertext is returned.
- * A future dispatcher must separately validate and decrypt under its own
+ * The integrated dispatcher separately validates and decrypts under its own
  * explicit trust boundary, and revalidate token/account immediately before
  * attempting delivery. This method DOES NOT authorize sending.
  */
@@ -100,7 +100,7 @@ export async function claimPendingActivationMailOnce(): Promise<ClaimPendingActi
 
 /**
  * Record a safe terminal provider classification. The caller must hold the
- * unpredictable claimId from a successful durable claim. This is NOT a retry,
+ * unpredictable claimId AND a committed dispatch start bound to its reservation. This is NOT a retry,
  * provider call, delivery receipt, or permission to perform a send.
  */
 export async function finalizeClaimedActivationMail(input: Readonly<{
@@ -131,10 +131,16 @@ export async function finalizeClaimedActivationMail(input: Readonly<{
     const [item] = await tx.select({
       id: activationMailOutbox.id, state: activationMailOutbox.state,
       claimId: activationMailOutbox.claimId, createdAt: activationMailOutbox.createdAt,
+      dispatchFenceAt: activationMailOutbox.dispatchFenceAt,
+      dispatchReservationAt: activationMailOutbox.dispatchReservationAt,
+      dispatchReservationGeneration: activationMailOutbox.dispatchReservationGeneration,
+      dispatchStartedAt: activationMailOutbox.dispatchStartedAt,
     }).from(activationMailOutbox).where(eq(activationMailOutbox.id, input.outboxId))
       .limit(1).for("update");
     if (!account || !token || !item || token.userId !== account.id ||
         item.state !== "in_flight" || item.claimId !== input.claimId ||
+        !item.dispatchFenceAt || !item.dispatchReservationAt || !item.dispatchStartedAt ||
+        item.dispatchReservationGeneration === null || item.dispatchReservationGeneration <= 0 ||
         deriveActivationOutboxNextState("in_flight", {
           kind: "provider_result", result: input.result,
         }) !== input.result) return false;
@@ -145,6 +151,10 @@ export async function finalizeClaimedActivationMail(input: Readonly<{
     }).where(and(
       eq(activationMailOutbox.id, item.id), eq(activationMailOutbox.state, "in_flight"),
       eq(activationMailOutbox.claimId, input.claimId),
+      isNotNull(activationMailOutbox.dispatchFenceAt),
+      isNotNull(activationMailOutbox.dispatchReservationAt),
+      isNotNull(activationMailOutbox.dispatchStartedAt),
+      eq(activationMailOutbox.dispatchReservationGeneration, item.dispatchReservationGeneration),
     )).returning({ id: activationMailOutbox.id });
     return updated.length === 1;
   });

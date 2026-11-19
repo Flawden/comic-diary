@@ -1,3 +1,5 @@
+import { activationDispatchOperational } from "@/modules/auth/registration-activation-config";
+import { readRegistrationActivationBody } from "@/modules/auth/registration-activation-http";
 /**
  * B3B3C administrative control plane. No public client UI, scheduler, mail
  * provider or network dispatch. Operator enable is default disabled.
@@ -30,7 +32,7 @@ export async function GET() {
     }).from(activationMailDispatchControl).where(eq(activationMailDispatchControl.id, 1)).limit(1);
     if (!control) return error("control-unavailable", 503);
     return json({ ok: true, enabled: control.enabled, generation: control.generation,
-      canEnable: process.env.AUTH_ACTIVATION_OPERATOR_CONTROL_ENABLED === "true",
+      canEnable: process.env.AUTH_ACTIVATION_OPERATOR_CONTROL_ENABLED === "true" && activationDispatchOperational(process.env),
       sendAuthorized: false }, 200);
   } catch { return error("control-unavailable", 503); }
 }
@@ -45,7 +47,9 @@ export async function POST(request: NextRequest) {
     return error("unsupported-media-type", 415);
   const length = request.headers.get("content-length");
   if (length !== null && (!/^\d+$/.test(length) || Number(length) > MAX_BODY)) return error("request-too-large", 413);
-  const body = await request.text();
+  const read = await readRegistrationActivationBody(request);
+  if (!read.ok) return error(read.reason, read.reason === "request_too_large" ? 413 : 400);
+  const body = read.raw;
   if (Buffer.byteLength(body, "utf8") > MAX_BODY) return error("request-too-large", 413);
   let parsed: unknown;
   try { parsed = JSON.parse(body); } catch { return error("invalid-json", 400); }
@@ -55,8 +59,8 @@ export async function POST(request: NextRequest) {
       typeof value.enabled !== "boolean" ||
       !Number.isSafeInteger(value.expectedGeneration) ||
       (value.expectedGeneration as number) < 0 || (value.expectedGeneration as number) >= 2147483647 ||
-      (value.confirm !== "ACTIVATE_INERT_RESERVATIONS" && value.confirm !== "DISABLE_RESERVATIONS") ||
-      (value.enabled ? value.confirm !== "ACTIVATE_INERT_RESERVATIONS" : value.confirm !== "DISABLE_RESERVATIONS"))
+      (value.confirm !== "ENABLE_ACTIVATION_DISPATCH" && value.confirm !== "DISABLE_ACTIVATION_DISPATCH") ||
+      (value.enabled ? value.confirm !== "ENABLE_ACTIVATION_DISPATCH" : value.confirm !== "DISABLE_ACTIVATION_DISPATCH"))
     return error("invalid-request", 400);
   try {
     const result = await transitionActivationDispatchControl({

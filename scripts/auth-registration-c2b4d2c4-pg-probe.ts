@@ -88,6 +88,12 @@ async function main(): Promise<void> {
 
     assert.equal(await finalizeClaimedActivationMail({
       outboxId:claim.outboxId,claimId:"a".repeat(32),result:"accepted"}),false);
+    for (const result of ["accepted", "rejected", "uncertain"] as const) {
+      assert.equal(await finalizeClaimedActivationMail({outboxId:claim.outboxId,claimId:claim.claimId,result}),false);
+    }
+    assert.equal((await rowFor(userId)).state,"in_flight");
+    // Synthetic committed start fixture. This probe performs no HTTP.
+    await pool.query("UPDATE activation_mail_outbox SET dispatch_fence_at=$2,dispatch_reservation_at=$2,dispatch_reservation_generation=1,dispatch_started_at=$2,updated_at=$2 WHERE id=$1",[claim.outboxId,new Date()]);
     assert.equal(await finalizeClaimedActivationMail({
       outboxId:claim.outboxId,claimId:claim.claimId,result:"accepted"}),true);
     row=await rowFor(userId);
@@ -133,6 +139,8 @@ async function main(): Promise<void> {
     const pendingClaim=await claimPendingActivationMailOnce();
     assert.equal(pendingClaim.ok,true);
     if (!pendingClaim.ok) throw new Error("unreachable claim type");
+    assert.equal(await finalizeClaimedActivationMail({outboxId:pendingClaim.outboxId,claimId:pendingClaim.claimId,result:"uncertain"}),false);
+    await pool.query("UPDATE activation_mail_outbox SET dispatch_fence_at=$2,dispatch_reservation_at=$2,dispatch_reservation_generation=1,dispatch_started_at=$2,updated_at=$2 WHERE id=$1",[pendingClaim.outboxId,new Date()]);
     assert.equal(await finalizeClaimedActivationMail({
       outboxId:pendingClaim.outboxId,claimId:pendingClaim.claimId,result:"uncertain"}),true);
     assert.equal((await rowFor(uncertainUser)).state,"uncertain");

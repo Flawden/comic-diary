@@ -2,7 +2,7 @@
  * AUTH-01C2B4D2C3: INTERNAL ONLY — atomically issue a pending account's
  * challenge and store ONE encrypted outbox message in the SAME transaction.
  *
- * This is NOT connected to registration, HTTP, mail transport or a worker.
+ * Used by atomic registration and trusted reissuance; performs no HTTP.
  * The caller must be trusted and supply the canonical origin + external key;
  * do not expose this function to untrusted request input or public routes.
  */
@@ -47,7 +47,18 @@ export async function enqueuePendingActivationMailForUser(input: Readonly<{
   const origin = canonicalActivationMailOrigin(input.publicOrigin);
   if (!origin) return { ok: false, kind: "invalid_origin" };
 
-  return db.transaction(async (tx): Promise<PendingActivationEnqueueResult> => {
+  return db.transaction(tx => enqueuePendingActivationMailInTransaction(tx, input));
+}
+
+type ActivationTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+/** Internal composition point: caller owns rollback and locks CONTROL before USER. */
+export async function enqueuePendingActivationMailInTransaction(
+  tx: ActivationTransaction,
+  input: Readonly<{ userId: number; publicOrigin: string; key: ActivationMailOutboxKey }>,
+): Promise<PendingActivationEnqueueResult> {
+  const origin = canonicalActivationMailOrigin(input.publicOrigin);
+  if (!origin) throw new Error("Activation origin unavailable");
+
     const rows = await tx.select({
       id: users.id,
       email: users.email,
@@ -116,5 +127,4 @@ export async function enqueuePendingActivationMailForUser(input: Readonly<{
     }).returning({ id: activationMailOutbox.id });
     if (!queued[0]) throw new Error("Activation-mail queue insertion aborted");
     return { ok: true, queued: true };
-  });
 }

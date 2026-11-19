@@ -116,10 +116,14 @@ test('B3B2 migration records fence but contains no global gate table', () => {
   assert.match(migration0036, /dispatch_fence_at/);
   assert.doesNotMatch(migration0036, /operator_gate|control_plane|dispatch_enabled/);
 });
-test('existing finalizer accepts terminal classification without fence (compatibility gap)', () => {
+test('integrated finalizer requires committed start and reservation', () => {
   assert.match(claim, /export async function finalizeClaimedActivationMail/);
   const finalize=claim.slice(claim.indexOf('export async function finalizeClaimedActivationMail'));
-  assert.doesNotMatch(finalize,/dispatchFenceAt|dispatch_fence_at/);
+  for (const marker of ['dispatchFenceAt','dispatchReservationAt','dispatchStartedAt']) {
+    assert.ok(finalize.includes(`!item.${marker}`));
+    assert.ok(finalize.includes(`isNotNull(activationMailOutbox.${marker})`));
+  }
+  assert.match(finalize,/eq\(activationMailOutbox.dispatchReservationGeneration, item.dispatchReservationGeneration\)/);
   assert.match(finalize,/state: input\.result, finalizedAt: now/);
 });
 test('existing classifier treats ambiguity conservatively, not as safe retry', () => {

@@ -1,3 +1,5 @@
+import { ResendActivationForm } from "./ResendActivationForm";
+import { activationRegistrationOperational } from "@/modules/auth/registration-activation-config";
 import Link from "next/link";
 import { ActivationForm } from "./ActivationForm";
 
@@ -24,6 +26,7 @@ export default function ActivationPage() {
               : "Подтверждение пока недоступно: отправка писем не запущена, а приём кодов отключён."}
           </p>
           <ActivationForm enabled={enabled} />
+          {activationRegistrationOperational(process.env) ? <ResendActivationForm /> : null}
         </section>
         <div className="fantasy-auth-links mt-6 text-center text-sm text-[var(--muted)]">
           <Link href="/login" className="font-medium text-[var(--primary)] hover:underline">Вернуться ко входу</Link>

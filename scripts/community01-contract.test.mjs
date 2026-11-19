@@ -11,7 +11,7 @@ test('migration is additive and comments are not private diary storage',()=>{
   assert.doesNotMatch(migration,/DROP |ALTER TABLE "(?:users|comics|chapters|user_comics|user_chapter_reads)"/);
   assert.match(migration,/UNIQUE\("author_user_id","request_id"\)/);
   assert.match(migration,/community_comments_body_check/);assert.match(migration,/community_reports_reporter_unique/);
-  const journal=JSON.parse(read('drizzle/meta/_journal.json'));assert.equal(journal.entries.at(-1).tag,'0045_community_comments');
+  const journal=JSON.parse(read('drizzle/meta/_journal.json'));assert.equal(journal.entries[45].tag,'0045_community_comments');
 });
 test('write lock/identity/access/quota remain server-side, no caller authorization token',()=>{
   const start=service.indexOf('async function mutate');const body=service.slice(start,service.indexOf('function requireUnrestricted',start));

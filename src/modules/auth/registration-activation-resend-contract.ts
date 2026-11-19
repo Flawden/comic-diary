@@ -3,8 +3,8 @@
  *
  * Pure request-body construction and reply classification only. No fetch, no
  * credentials, no environment reads, no retry, no logging and no side effects.
- * It is NOT linked to the auth routes or the live delivery transport.
- * Resend is a candidate pending operator selection and domain ownership proof.
+ * The integrated worker uses this pure contract after a committed DB start.
+ * Domain verification is an operator deployment prerequisite, not code authority.
  * D2C4B2: accept the SAME persisted 24-byte base64url outbox issuance key
  * created by D2C3. Do not mint, derive, truncate, or prefix a second key.
  * This does not permit delivery or any retries of uncertain outcomes.

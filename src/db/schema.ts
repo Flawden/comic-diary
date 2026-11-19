@@ -815,6 +815,7 @@ export const activationMailOutbox = pgTable(
     dispatchFenceAt: timestamp("dispatch_fence_at", { withTimezone: true }),
     dispatchReservationAt: timestamp("dispatch_reservation_at", { withTimezone: true }),
     dispatchReservationGeneration: integer("dispatch_reservation_generation"),
+    dispatchStartedAt: timestamp("dispatch_started_at", { withTimezone: true }),
     finalizedAt: timestamp("finalized_at", { withTimezone: true }),
     providerMessageId: varchar("provider_message_id", { length: 256 }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -865,6 +866,19 @@ export const activationMailOutbox = pgTable(
     check("activation_mail_outbox_reservation_generation_present_check", sql`
       ${table.dispatchReservationAt} IS NULL
       OR ${table.dispatchReservationGeneration} IS NOT NULL
+    `),
+    check("activation_mail_outbox_dispatch_start_shape_check", sql`
+      ${table.dispatchStartedAt} IS NULL OR (
+        ${table.state} IN ('in_flight', 'accepted', 'rejected', 'uncertain')
+        AND ${table.attemptCount} = 1 AND ${table.claimId} IS NOT NULL
+        AND ${table.dispatchReservationAt} IS NOT NULL
+        AND ${table.dispatchReservationGeneration} IS NOT NULL
+        AND ${table.dispatchReservationGeneration} > 0
+        AND ${table.dispatchStartedAt} >= ${table.dispatchReservationAt}
+        AND ${table.dispatchStartedAt} < ${table.expiresAt}
+        AND ${table.updatedAt} >= ${table.dispatchStartedAt}
+        AND (${table.finalizedAt} IS NULL OR ${table.finalizedAt} >= ${table.dispatchStartedAt})
+      )
     `),
     check("activation_mail_outbox_state_shape_check", sql`
       (${table.state} = 'ready' AND ${table.attemptCount} = 0 AND ${table.claimId} IS NULL AND ${table.claimedAt} IS NULL AND ${table.finalizedAt} IS NULL AND ${table.providerMessageId} IS NULL)

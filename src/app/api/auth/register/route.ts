@@ -1,311 +1,38 @@
-import {
-  type NextRequest,
-  NextResponse,
-} from "next/server";
-
-import {
-  isSameOriginRequest,
-} from "@/modules/auth/request-origin";
-
-import {
-  readTrustedClientIp,
-} from "@/modules/auth/client-ip";
-
-import {
-  consumeRegistrationRateLimit,
-} from "@/modules/auth/auth-rate-limit";
-
-import {
-  registerPasswordUser,
-} from "@/modules/auth/registration-service";
-
-export const dynamic =
-  "force-dynamic";
-
-export const runtime =
-  "nodejs";
-
-const MAX_REGISTRATION_BODY_BYTES =
-  16 * 1024;
-
-const allowedRegistrationKeys =
-  new Set<string>([
-    "email",
-    "password",
-    "passwordConfirm",
-  ]);
-
-function jsonError(
-  error: string,
-  status: number,
-) {
-  return NextResponse.json(
-    {
-      error,
-    },
-    {
-      status,
-
-      headers: {
-        "Cache-Control":
-          "no-store",
-      },
-    },
-  );
-}
-
-export async function POST(
-  request: NextRequest,
-) {
-  if (
-    !isSameOriginRequest(
-      request,
-    )
-  ) {
-    return jsonError(
-      "forbidden_origin",
-      403,
-    );
-  }
-
-  const clientIp =
-    readTrustedClientIp(
-      request.headers,
-    );
-
-  if (!clientIp) {
-    return jsonError(
-      "rate_limit_identity_unavailable",
-      503,
-    );
-  }
-
-  let rateLimit;
-
+import { type NextRequest, NextResponse } from "next/server";
+import { isSameOriginRequest } from "@/modules/auth/request-origin";
+import { readTrustedClientIp } from "@/modules/auth/client-ip";
+import { consumeRegistrationRateLimit } from "@/modules/auth/auth-rate-limit";
+import { registerPasswordUser } from "@/modules/auth/registration-service";
+import { activationRegistrationOperational } from "@/modules/auth/registration-activation-config";
+import { readRegistrationActivationBody } from "@/modules/auth/registration-activation-http";
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+const headers = { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff" };
+function error(kind: string, status: number) { return NextResponse.json({ error: kind }, { status, headers }); }
+export async function POST(request: NextRequest) {
+  if (!isSameOriginRequest(request)) return error("forbidden_origin", 403);
+  if (!activationRegistrationOperational(process.env)) return error("registration_unavailable", 503);
+  if (request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !== "application/json") return error("unsupported_media_type", 415);
+  const read = await readRegistrationActivationBody(request);
+  if (!read.ok) return error(read.reason, read.reason === "request_too_large" ? 413 : 400);
+  let value: unknown;
+  try { value = JSON.parse(read.raw); } catch { return error("invalid_json", 400); }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return error("invalid_request", 400);
+  const body = value as Record<string, unknown>;
+  if (Object.keys(body).sort().join() !== "email,password,passwordConfirm" ||
+      typeof body.email !== "string" || typeof body.password !== "string" || typeof body.passwordConfirm !== "string") return error("invalid_request", 400);
+  if (body.password !== body.passwordConfirm) return error("password_mismatch", 400);
+  const ip = readTrustedClientIp(request.headers);
+  if (!ip) return error("rate_limit_identity_unavailable", 503);
   try {
-    rateLimit =
-      await consumeRegistrationRateLimit(
-        clientIp,
-      );
-  } catch {
-    /*
-     * Public registration fails closed when the shared
-     * anti-abuse backend is unavailable. It must never
-     * silently fall back to an unprotected signup path.
-     */
-    return jsonError(
-      "rate_limit_unavailable",
-      503,
-    );
-  }
-
-  if (!rateLimit.allowed) {
-    return NextResponse.json(
-      {
-        error:
-          "rate_limited",
-      },
-      {
-        status:
-          429,
-
-        headers: {
-          "Cache-Control":
-            "no-store",
-
-          "Retry-After":
-            String(
-              rateLimit.retryAfterSeconds,
-            ),
-        },
-      },
-    );
-  }
-
-  const contentType =
-    request.headers
-      .get(
-        "content-type",
-      )
-      ?.split(";")[0]
-      ?.trim()
-      .toLowerCase();
-
-  if (
-    contentType !==
-      "application/json"
-  ) {
-    return jsonError(
-      "unsupported_media_type",
-      415,
-    );
-  }
-
-  const declaredLength =
-    request.headers.get(
-      "content-length",
-    );
-
-  if (declaredLength) {
-    const parsedLength =
-      Number(
-        declaredLength,
-      );
-
-    if (
-      Number.isFinite(
-        parsedLength,
-      ) &&
-      parsedLength >
-        MAX_REGISTRATION_BODY_BYTES
-    ) {
-      return jsonError(
-        "request_too_large",
-        413,
-      );
-    }
-  }
-
-  const rawBody =
-    await request.text();
-
-  if (
-    Buffer.byteLength(
-      rawBody,
-      "utf8",
-    ) >
-    MAX_REGISTRATION_BODY_BYTES
-  ) {
-    return jsonError(
-      "request_too_large",
-      413,
-    );
-  }
-
-  let body:
-    unknown;
-
-  try {
-    body =
-      JSON.parse(
-        rawBody,
-      );
-  } catch {
-    return jsonError(
-      "invalid_json",
-      400,
-    );
-  }
-
-  if (
-    typeof body !==
-      "object" ||
-    body === null ||
-    Array.isArray(
-      body,
-    )
-  ) {
-    return jsonError(
-      "invalid_request",
-      400,
-    );
-  }
-
-  const record =
-    body as Record<
-      string,
-      unknown
-    >;
-
-  const keys =
-    Object.keys(
-      record,
-    );
-
-  if (
-    keys.some(
-      (key) =>
-        !allowedRegistrationKeys.has(
-          key,
-        ),
-    )
-  ) {
-    return jsonError(
-      "invalid_request",
-      400,
-    );
-  }
-
-  const email =
-    record.email;
-
-  const password =
-    record.password;
-
-  const passwordConfirm =
-    record.passwordConfirm;
-
-  if (
-    typeof email !==
-      "string" ||
-    typeof password !==
-      "string" ||
-    typeof passwordConfirm !==
-      "string" ||
-    email.length > 320
-  ) {
-    return jsonError(
-      "invalid_request",
-      400,
-    );
-  }
-
-  if (
-    password !==
-      passwordConfirm
-  ) {
-    return jsonError(
-      "password_mismatch",
-      400,
-    );
-  }
-
-  const registration =
-    await registerPasswordUser(
-      email,
-      password,
-    );
-
-  if (!registration.ok) {
-    if (
-      registration.kind ===
-        "email_unavailable"
-    ) {
-      return jsonError(
-        registration.kind,
-        409,
-      );
-    }
-
-    return jsonError(
-      registration.kind,
-      400,
-    );
-  }
-
-  /*
-   * Registration creates a pending account, NOT a login session.
-   * No email has been sent yet: C2B4C/D will add secure activation
-   * and delivery before this flow can be released to production.
-   */
-  return NextResponse.json(
-    {
-      ok: true,
-      activationRequired: true,
-    },
-    {
-      status: 201,
-      headers: { "Cache-Control": "no-store" },
-    },
-  );
+    // Shared registration/resend IP quota; per-account cooldown is locked in PG.
+    const limit = await consumeRegistrationRateLimit(ip);
+    if (!limit.allowed) return NextResponse.json({ error: "rate_limited" }, {
+      status: 429, headers: { ...headers, "Retry-After": String(limit.retryAfterSeconds) },
+    });
+    const result = await registerPasswordUser(body.email as string, body.password as string);
+    if (!result.ok) return error(result.kind, result.kind === "registration_unavailable" ? 503 : 400);
+    // Same acknowledgement for new, pending, verified, disabled and absent addresses.
+    return NextResponse.json({ ok: true, activationRequired: true }, { status: 202, headers });
+  } catch { return error("registration_unavailable", 503); }
 }

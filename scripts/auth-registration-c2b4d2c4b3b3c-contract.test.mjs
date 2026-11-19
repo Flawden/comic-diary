@@ -31,7 +31,7 @@ test("B3B3C audit vocabulary only, no grants or mail",()=>{
  assert.doesNotMatch(mig,/^\s*(?:UPDATE|INSERT|DELETE|GRANT|DROP|TRUNCATE)\b/im);
 });
 test("B3B3C ON is explicitly disabled by default; OFF may still work",()=>{
- assert.match(svc,/if \(input.enabled && process.env.AUTH_ACTIVATION_OPERATOR_CONTROL_ENABLED !== "true"\) return DENIED/);
+ assert.match(svc,/if \(input.enabled && \(process.env.AUTH_ACTIVATION_OPERATOR_CONTROL_ENABLED !== "true" \|\| !activationDispatchOperational\(process.env\)\)\) return DENIED/);
  assert.doesNotMatch(svc,/process.env.*\|\|.*true/);
 });
 test("B3B3C rejects malformed or unexpected input",()=>{
@@ -74,12 +74,12 @@ test("B3B3C cannot grant HTTP delivery or return secrets",()=>{
 test("B3B3C origin checked before any session or body",()=>{
  const post=api.slice(api.indexOf('export async function POST'));
  const ori=post.indexOf('if (!isSameOriginRequest(request))');
- assert.ok(ori>0 && ori<post.indexOf('await getCurrentSession()') && ori<post.indexOf('await request.text()'));
+ assert.ok(ori>0 && ori<post.indexOf('await getCurrentSession()') && ori<post.indexOf('await readRegistrationActivationBody(request)'));
 });
 test("B3B3C route requires current ADMIN_SECURITY and confirmation phrase",()=>{
  assert.match(api,/hasPermission\(current.user.role, "ADMIN_SECURITY"\)/);
- assert.match(api,/"ACTIVATE_INERT_RESERVATIONS"/);
- assert.match(api,/"DISABLE_RESERVATIONS"/);
+ assert.match(api,/"ENABLE_ACTIVATION_DISPATCH"/);
+ assert.match(api,/"DISABLE_ACTIVATION_DISPATCH"/);
  assert.match(api,/current.sessionId/);
 });
 test("B3B3C route rejects unknown keys and oversized bodies",()=>{

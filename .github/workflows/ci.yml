@@ -105,6 +105,9 @@ jobs:
       - name: AUTH-01 abandoned recovery SQL and concurrency coverage contracts
         run: node --test scripts/auth-dispatch-recovery-contract.test.mjs
 
+      - name: Activation runtime readiness and integrated dispatch contracts
+        run: node --import tsx --test src/modules/auth/registration-activation-config.test.ts scripts/auth-activation-dispatch-contract.test.mjs
+
       - name: AUTH-01 claim-only runtime and fence/reservation contracts (NO legacy settlement)
         run: |
           node --test scripts/auth-r1c2b2-recovery-claim-contract.test.mjs
@@ -320,6 +323,11 @@ jobs:
         env:
           RATE01_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
         run: node --import tsx --test scripts/rate01-integration.test.ts
+
+      - name: AUTH activation integrated registration and mock dispatch
+        env:
+          ACTIVATION_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: node --import tsx --test scripts/auth-activation-integration.test.ts
 
       - name: AUTH-01 integrated recovery dispatch (disposable PostgreSQL and MOCK HTTP)
         env:

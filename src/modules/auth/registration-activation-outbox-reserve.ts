@@ -2,10 +2,11 @@
  * AUTH-01C2B4D2C4B3B3B — INTERNAL OPERATOR-GATED RESERVATION ONLY.
  *
  * This function does not grant email/HTTP permission. It holds a single
- * GLOBAL control row lock first, then USER -> TOKEN -> OUTBOX. A committed
+ * shared control row lock first, then USER -> TOKEN -> OUTBOX. A committed
  * disable before this transaction acquires the control lock blocks a NEW
  * durable reservation. A disable after commit cannot revoke a past marker
- * or prevent a later external HTTP start (NO guarantee B).
+ * alone. The integrated dispatcher rechecks the gate at committed start.
+ * Reservation alone retains NO guarantee B.
  *
  * The control row is default OFF. This module provides NO enable endpoint,
  * scheduler, sender, key loader, environment switch or provider adapter.
@@ -65,7 +66,7 @@ export async function reservePendingActivationDispatchOnce(input: Readonly<{
       enabled: activationMailDispatchControl.enabled,
       generation: activationMailDispatchControl.generation,
     }).from(activationMailDispatchControl)
-      .where(eq(activationMailDispatchControl.id, 1)).limit(1).for("update");
+      .where(eq(activationMailDispatchControl.id, 1)).limit(1).for("share");
     if (!control || control.enabled !== true ||
         !Number.isSafeInteger(control.generation) || control.generation <= 0) return BLOCKED;
 

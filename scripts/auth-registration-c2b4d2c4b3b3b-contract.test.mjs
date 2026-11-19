@@ -96,7 +96,8 @@ test('control first, then USER -> TOKEN -> OUTBOX locks',()=>{
  const p=terms.map(t=>trans.indexOf(t));
  assert.ok(p.every(x=>x>=0));
  assert.deepEqual([...p].sort((a,b)=>a-b),p);
- assert.equal((trans.match(/\.for\("update"\)/g)??[]).length,4);
+ assert.equal((trans.match(/\.for\("update"\)/g)??[]).length,3);
+ assert.equal((trans.match(/\.for\("share"\)/g)??[]).length,1);
 });
 test('default-off or missing control blocks before user locking',()=>{
  const gate=trans.indexOf('if (!control || control.enabled !== true');

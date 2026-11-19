@@ -9,7 +9,7 @@ const schema=read('drizzle/0035_auth_activation_mail_outbox.sql');
 const tokens=read('src/modules/auth/email-verification-service.ts');
 
 test('D2C3 uses one transaction with account lock, revocation and encrypted enqueue',()=>{
- assert.match(issue,/db\.transaction\(async \(tx\)/);
+ assert.match(issue,/db\.transaction\(tx => enqueuePendingActivationMailInTransaction\(tx, input\)\)/);
  assert.match(issue,/\.from\(users\)[\s\S]*?\.for\("update"\)/);
  assert.match(issue,/needsSecurePendingActivation\(account\)/);
  assert.match(issue,/canIssueEmailVerification\(account\)/);

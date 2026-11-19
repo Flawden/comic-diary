@@ -1,5 +1,9 @@
+import { activationRegistrationOperational, readActivationDispatchConfig } from "./registration-activation-config";
+import { enqueuePendingActivationMailInTransaction } from "./registration-activation-outbox-issue";
+import { needsSecurePendingActivation } from "./registration-activation-policy";
+import { canIssueEmailVerification } from "./email-verification-policy";
 import {
-  eq,
+  eq, and, gte, sql,
 } from "drizzle-orm";
 
 import {
@@ -7,12 +11,8 @@ import {
 } from "@/db";
 
 import {
-  users,
+  users, activationMailDispatchControl, emailVerificationTokens,
 } from "@/db/schema";
-
-import type {
-  UserRole,
-} from "./permissions";
 
 import {
   normalizeLoginIdentifier,
@@ -27,29 +27,6 @@ const REGISTRATION_PASSWORD_MIN_CHARACTERS =
 
 const REGISTRATION_PASSWORD_MAX_BYTES =
   256;
-
-export type RegisteredUser = {
-  id: number;
-  email: string;
-  displayName: string | null;
-  role: UserRole;
-};
-
-export type RegistrationFailureKind =
-  | "invalid_email"
-  | "weak_password"
-  | "email_unavailable";
-
-export type RegistrationResult =
-  | {
-      ok: true;
-      user: RegisteredUser;
-    }
-  | {
-      ok: false;
-      kind:
-        RegistrationFailureKind;
-    };
 
 export function normalizeRegistrationEmail(
   value: string,
@@ -93,187 +70,43 @@ export function isRegistrationPasswordAllowed(
   );
 }
 
-function isUniqueViolation(
-  error: unknown,
-): boolean {
-  if (
-    typeof error !==
-      "object" ||
-    error === null ||
-    !(
-      "code" in error
-    )
-  ) {
-    return false;
-  }
-
-  return (
-    (
-      error as {
-        code?: unknown;
-      }
-    ).code ===
-    "23505"
-  );
-}
-
+/** Public composition: CONTROL -> USER -> TOKEN -> OUTBOX, one atomic commit.
+ * Generic acknowledgement for existing identities. Never replace their password.
+ * A manual fresh issuance is distinct from retrying any old dispatch attempt.
+ */
 export async function registerPasswordUser(
-  rawEmail: string,
-  password: string,
-): Promise<RegistrationResult> {
-  const email =
-    normalizeRegistrationEmail(
-      rawEmail,
-    );
-
-  if (!email) {
-    return {
-      ok: false,
-      kind:
-        "invalid_email",
-    };
-  }
-
-  if (
-    !isRegistrationPasswordAllowed(
-      password,
-    )
-  ) {
-    return {
-      ok: false,
-      kind:
-        "weak_password",
-    };
-  }
-
-  /*
-   * Existing active and inactive accounts are both
-   * unavailable for public self-registration.
-   *
-   * Registration must never reactivate or overwrite an
-   * existing identity.
-   */
-  const existing =
-    await db
-      .select({
-        id:
-          users.id,
-      })
-      .from(users)
-      .where(
-        eq(
-          users.email,
-          email,
-        ),
-      )
-      .limit(1);
-
-  if (existing[0]) {
-    return {
-      ok: false,
-      kind:
-        "email_unavailable",
-    };
-  }
-
-  const passwordHash =
-    await hashPassword(
-      password,
-    );
-
+  rawEmail: string, password: string | null,
+): Promise<{ ok: true } | { ok: false; kind: "invalid_email" | "weak_password" | "registration_unavailable" }> {
+  const email = normalizeRegistrationEmail(rawEmail);
+  if (!email) return { ok: false, kind: "invalid_email" };
+  if (password !== null && !isRegistrationPasswordAllowed(password)) return { ok: false, kind: "weak_password" };
+  if (!activationRegistrationOperational(process.env)) return { ok: false, kind: "registration_unavailable" };
+  const config = readActivationDispatchConfig(process.env);
+  if (!config) return { ok: false, kind: "registration_unavailable" };
   try {
-    const rows =
-      await db
-        .insert(users)
-        .values({
-          email,
-          passwordHash,
-
-          /*
-           * Public registration has no role selector.
-           * The server explicitly fixes the new account
-           * to USER even though the schema default is
-           * also USER.
-           */
-          role:
-            "USER",
-
-          isActive:
-            true,
-
-          // New registrations require ownership proof and password replacement.
-          verificationRequiredAt: new Date(),
-        })
-        .returning({
-          id:
-            users.id,
-
-          email:
-            users.email,
-
-          displayName:
-            users.displayName,
-
-          role:
-            users.role,
-
-          isActive:
-            users.isActive,
-
-          emailVerifiedAt: users.emailVerifiedAt,
-          verificationRequiredAt: users.verificationRequiredAt,
-        });
-
-    const user =
-      rows[0];
-
-    if (
-      !user ||
-      user.role !==
-        "USER" ||
-      !user.isActive ||
-      user.emailVerifiedAt !== null ||
-      !user.verificationRequiredAt
-    ) {
-      throw new Error(
-        "Registration user invariant failed",
-      );
-    }
-
-    return {
-      ok: true,
-
-      user: {
-        id:
-          user.id,
-
-        email:
-          user.email,
-
-        displayName:
-          user.displayName,
-
-        role:
-          user.role,
-      },
-    };
-  } catch (error) {
-    /*
-     * The pre-check gives a friendly fast path, while the
-     * unique constraint remains the race-safe authority.
-     */
-    if (
-      isUniqueViolation(
-        error,
-      )
-    ) {
-      return {
-        ok: false,
-        kind:
-          "email_unavailable",
-      };
-    }
-
-    throw error;
-  }
+    // Equal work for new and existing registration addresses; no duplicate fast path.
+    const passwordHash = password === null ? null : await hashPassword(password);
+    return await db.transaction(async tx => {
+      const [gate] = await tx.select().from(activationMailDispatchControl)
+        .where(eq(activationMailDispatchControl.id, 1)).for("share");
+      if (!gate?.enabled || gate.generation <= 0) return { ok: false, kind: "registration_unavailable" } as const;
+      if (passwordHash) {
+        await tx.insert(users).values({ email, passwordHash, role: "USER", isActive: true,
+          verificationRequiredAt: new Date() }).onConflictDoNothing({ target: users.email });
+      }
+      const [account] = await tx.select().from(users).where(eq(users.email, email)).for("update");
+      if (!account || !needsSecurePendingActivation(account) || !canIssueEmailVerification(account)) return { ok: true } as const;
+      // Serialize per account. Suppress bursts without invalidating the first email.
+      const recent = await tx.select({ count: sql<number>`count(*)::int`, newest: sql<Date | null>`max(${emailVerificationTokens.createdAt})` })
+        .from(emailVerificationTokens).where(and(eq(emailVerificationTokens.userId, account.id),
+          gte(emailVerificationTokens.createdAt, new Date(Date.now() - 3600_000))));
+      if (recent[0].count >= 5 || (recent[0].newest && Date.now() - new Date(recent[0].newest).getTime() < 60_000)) return { ok: true } as const;
+      const queued = await enqueuePendingActivationMailInTransaction(tx, {
+        userId: account.id, publicOrigin: config.publicOrigin, key: config.key,
+      });
+      if (!queued.ok) throw new Error("Activation issuance unavailable");
+      return { ok: true } as const;
+    });
+  } catch { return { ok: false, kind: "registration_unavailable" }; }
+  finally { config.key.bytes.fill(0); }
 }

@@ -54,6 +54,14 @@ async function main():Promise<void> {
   console.log("B3B3C_DEFAULT_OFF=PASS");
 
   process.env.AUTH_ACTIVATION_OPERATOR_CONTROL_ENABLED="true"; // disposable CI probe ONLY
+  Object.assign(process.env, {
+    AUTH_ACTIVATION_WORKER_ENABLED:"true", AUTH_ACTIVATION_DISPATCH_ENABLED:"true",
+    AUTH_ACTIVATION_SENDER_VERIFIED:"true", AUTH_ACTIVATION_RESEND_CONFIG_READY:"true",
+    REGISTRATION_ACTIVATION_REDEEM_ENABLED:"true", RESEND_API_KEY:"re_SYNTHETIC_NO_REAL_CREDENTIAL",
+    AUTH_ACTIVATION_FROM_ADDRESS:"no-reply@example.invalid", AUTH_ACTIVATION_SENDER_DOMAIN:"example.invalid",
+    AUTH_ACTIVATION_PUBLIC_ORIGIN:"https://example.invalid", COMIC_DIARY_PUBLIC_ORIGIN:"https://example.invalid",
+    AUTH_ACTIVATION_OUTBOX_KEY_ID:"ci-only", AUTH_ACTIVATION_OUTBOX_KEY_BASE64:randomBytes(32).toString("base64"),
+  }); // Syntax readiness only: no worker is started, no provider is contacted.
   const on=await changeAs(true,start.generation);
   assert.deepEqual(on,{ok:true,enabled:true,generation:start.generation+1,sendAuthorized:false});
   if (on.ok !== true) throw new Error("CI fixture: enable transition blocked");

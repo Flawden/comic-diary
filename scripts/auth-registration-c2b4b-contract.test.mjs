@@ -13,7 +13,7 @@ const activation = read("src/modules/auth/registration-activation-policy.ts");
 
 test("new registration is explicitly marked pending and never auto-verifies", () => {
   assert.match(reg, /verificationRequiredAt:\s*new Date\(\)/);
-  assert.match(reg, /emailVerifiedAt:\s*users\.emailVerifiedAt/);
+  assert.match(reg, /onConflictDoNothing\(\{ target: users.email \}\)/);
   assert.doesNotMatch(reg, /emailVerifiedAt:\s*new Date\(\)/);
   assert.match(reg, /role:\s*"USER"/);
 });
@@ -37,9 +37,9 @@ test("new session creation and reading enforce active verified or historical acc
   assert.match(activation, /state === "verified" \|\| state === "legacy_unverified"/);
 });
 test("registration UI does not redirect pending users or claim email was sent", () => {
-  assert.match(registerForm, /response\.status === 201/);
+  assert.match(registerForm, /response\.status === 202/);
   assert.match(registerForm, /setPendingActivation\(true\)/);
   assert.ok(registerForm.indexOf('setPendingActivation(true)') < registerForm.indexOf('router.replace('));
-  assert.match(registerForm, /письмо ещё не отправлено/);
+  assert.match(registerForm, /Если адрес доступен для подтверждения/);
   assert.doesNotMatch(registerPage, /После регистрации вы сразу войдёте/);
 });
