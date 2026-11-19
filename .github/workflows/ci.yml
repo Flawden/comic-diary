@@ -31,6 +31,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: COMMUNITY-01 policy and boundary contracts
+        run: node --import tsx --test src/modules/community/policy.test.ts scripts/community01-contract.test.mjs
+
+      - name: RATE-01 public ratings unit and boundary contracts
+        run: node --import tsx --test src/modules/library/ratings/community-rating.test.ts scripts/rate01-contract.test.mjs
+
+      - name: Integrated live design and migration lineage contracts
+        run: node --test scripts/integration-design-contract.test.mjs
+
       - name: Lint
         run: npm run lint
 
@@ -298,6 +307,16 @@ jobs:
         run: node --import tsx --test src/modules/auth/password-reset-request-provider-outcome.test.ts scripts/auth-r1c2c4-outcome-contract.test.mjs
       - name: AUTH-01 R1C2C4 disposable PostgreSQL reserved outcome finalization (NO mail)
         run: node --import tsx scripts/auth-r1c2c4-recovery-finalize-pg-probe.ts
+
+      - name: COMMUNITY-01 transactional comments and moderation (disposable PG)
+        env:
+          COMMUNITY01_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: node --import tsx --test scripts/community01-integration.test.ts
+
+      - name: RATE-01 set-based ratings integration (disposable PostgreSQL)
+        env:
+          RATE01_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: node --import tsx --test scripts/rate01-integration.test.ts
 
       - name: AUTH-01 integrated recovery dispatch (disposable PostgreSQL and MOCK HTTP)
         env:

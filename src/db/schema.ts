@@ -14,6 +14,7 @@ import {
   timestamp,
   unique,
   uniqueIndex,
+  uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 
@@ -1081,4 +1082,84 @@ export const userChapterReads = pgTable("user_chapter_reads", {
   primaryKey({ columns: [table.userId, table.chapterId] }),
   check("user_chapter_reads_rating_range", sql`${table.rating} BETWEEN 1 AND 5`),
   index("user_chapter_reads_chapter_idx").on(table.chapterId),
+]);
+
+
+// COMMUNITY-01: public content, independent from private diary/ratings.
+export const communityComments = pgTable("community_comments", {
+  id: serial("id").primaryKey(),
+  comicId: integer("comic_id").notNull().references(() => comics.id, { onDelete: "cascade" }),
+  chapterId: integer("chapter_id").references(() => chapters.id, { onDelete: "cascade" }),
+  authorUserId: integer("author_user_id").references(() => users.id, { onDelete: "set null" }),
+  parentId: integer("parent_id").references((): AnyPgColumn => communityComments.id, { onDelete: "cascade" }),
+  requestId: uuid("request_id").notNull(),
+  requestDigest: varchar("request_digest", { length: 64 }).notNull(),
+  body: text("body"),
+  spoiler: boolean("spoiler").notNull().default(false),
+  status: varchar("status", { length: 24 }).notNull().default("VISIBLE"),
+  createdAt: timestamp("created_at", { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+  editedAt: timestamp("edited_at", { withTimezone: true, precision: 3 }),
+  deletedAt: timestamp("deleted_at", { withTimezone: true, precision: 3 }),
+}, t => [
+  unique("community_comments_request_unique").on(t.authorUserId, t.requestId),
+  index("community_comments_target_cursor_idx").on(t.comicId, t.chapterId, t.createdAt, t.id),
+  index("community_comments_parent_idx").on(t.parentId),
+  check("community_comments_status_check", sql`${t.status} IN ('VISIBLE','REMOVED_BY_AUTHOR','HIDDEN_BY_MODERATOR')`),
+  check("community_comments_body_check", sql`(${t.status} = 'REMOVED_BY_AUTHOR' AND ${t.body} IS NULL AND ${t.deletedAt} IS NOT NULL) OR (${t.status} <> 'REMOVED_BY_AUTHOR' AND char_length(${t.body}) BETWEEN 1 AND 2000 AND ${t.body} IS NOT NULL AND ${t.deletedAt} IS NULL)`),
+  check("community_comments_parent_check", sql`${t.parentId} IS NULL OR ${t.parentId} <> ${t.id}`),
+  check("community_comments_digest_check", sql`${t.requestDigest} ~ '^[0-9a-f]{64}$'`),
+  check("community_comments_time_check", sql`${t.updatedAt} >= ${t.createdAt} AND (${t.editedAt} IS NULL OR ${t.editedAt} >= ${t.createdAt}) AND (${t.deletedAt} IS NULL OR ${t.deletedAt} >= ${t.createdAt})`),
+]);
+
+// One row per participant is both the comment restriction and distributed quota lock.
+export const communityControls = pgTable("community_comment_restrictions", {
+  userId: integer("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  blockedUntil: timestamp("blocked_until", { withTimezone: true, precision: 3 }),
+  reason: varchar("reason", { length: 500 }).notNull().default(""),
+  moderatorUserId: integer("moderator_user_id").references(() => users.id, { onDelete: "set null" }),
+  lastPostAt: timestamp("last_post_at", { withTimezone: true, precision: 3 }),
+  postWindowAt: timestamp("post_window_at", { withTimezone: true, precision: 3 }),
+  postCount: integer("post_count").notNull().default(0),
+  reportWindowAt: timestamp("report_window_at", { withTimezone: true, precision: 3 }),
+  reportCount: integer("report_count").notNull().default(0),
+  editWindowAt: timestamp("edit_window_at", { withTimezone: true, precision: 3 }),
+  editCount: integer("edit_count").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+}, t => [check("community_controls_counts_check", sql`${t.postCount} >= 0 AND ${t.reportCount} >= 0 AND ${t.editCount} >= 0`)]);
+
+export const communityReports = pgTable("community_comment_reports", {
+  id: serial("id").primaryKey(),
+  commentId: integer("comment_id").notNull().references(() => communityComments.id, { onDelete: "cascade" }),
+  reporterUserId: integer("reporter_user_id").references(() => users.id, { onDelete: "set null" }),
+  reason: varchar("reason", { length: 16 }).notNull(),
+  note: varchar("note", { length: 300 }),
+  status: varchar("status", { length: 16 }).notNull().default("OPEN"),
+  createdAt: timestamp("created_at", { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true, precision: 3 }),
+  moderatorUserId: integer("moderator_user_id").references(() => users.id, { onDelete: "set null" }),
+}, t => [
+  unique("community_reports_reporter_unique").on(t.commentId, t.reporterUserId),
+  index("community_reports_queue_idx").on(t.status, t.createdAt, t.id),
+  index("community_reports_reporter_idx").on(t.reporterUserId),
+  check("community_reports_reason_check", sql`${t.reason} IN ('SPAM','INSULT','SPOILER','OTHER')`),
+  check("community_reports_status_check", sql`${t.status} IN ('OPEN','RESOLVED','REJECTED')`),
+  check("community_reports_resolution_check", sql`(${t.status} = 'OPEN' AND ${t.resolvedAt} IS NULL) OR (${t.status} <> 'OPEN' AND ${t.resolvedAt} IS NOT NULL)`),
+]);
+
+export const communityModerationEvents = pgTable("community_comment_moderation_events", {
+  id: serial("id").primaryKey(),
+  actorUserId: integer("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+  action: varchar("action", { length: 16 }).notNull(),
+  // Historical target references intentionally survive actual target deletion.
+  commentId: integer("comment_id"),
+  reportId: integer("report_id"),
+  targetUserId: integer("target_user_id"),
+  reason: varchar("reason", { length: 500 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+}, t => [
+  index("community_events_cursor_idx").on(t.createdAt, t.id),
+  index("community_events_actor_idx").on(t.actorUserId),
+  check("community_events_action_check", sql`${t.action} IN ('HIDE','RESTORE','RESOLVE','REJECT','RESTRICT','UNRESTRICT')`),
 ]);
