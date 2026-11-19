@@ -24,6 +24,7 @@ import {
 } from "@/modules/auth/password-reset-request-http";
 import {
   isRecoveryRequestAllowed,
+  isRecoveryRequestOperational,
   readRecoveryRequestOutboxKey,
 } from "@/modules/auth/password-reset-request-config";
 import { canonicalPasswordResetMailOrigin } from "@/modules/auth/password-reset-request-mail";
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
     PASSWORD_RESET_OUTBOX_KEY_BASE64: process.env.PASSWORD_RESET_OUTBOX_KEY_BASE64,
   };
   if (!isRecoveryRequestAllowed(recoveryConfig)) return errorResponse("recovery_unavailable", 503);
+  if (!isRecoveryRequestOperational(process.env)) return errorResponse("recovery_unavailable", 503);
   if (!isSameOriginRequest(request)) return errorResponse("forbidden_origin", 403);
 
   // Both pieces originate only from deployment configuration, never HTTP headers.

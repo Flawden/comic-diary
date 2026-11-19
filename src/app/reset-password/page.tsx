@@ -19,12 +19,13 @@ export default function ResetPasswordPage() {
           <h2 className="text-lg font-semibold">Смена пароля по коду</h2>
           <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
             {enabled
-              ? "Если код уже выдан, введите его и придумайте новый пароль. Получение кода по email пока недоступно."
+              ? "Введите код из письма и придумайте новый пароль. Код действует 20 минут и используется один раз."
               : "Приём кодов восстановления сейчас отключён, а отправка писем ещё не подключена."}
           </p>
           <ResetPasswordForm enabled={enabled} />
         </section>
         <div className="fantasy-auth-links mt-6 text-center text-sm text-[var(--muted)]">
+          <Link href="/forgot-password" className="mr-4 font-medium text-[var(--primary)] hover:underline">Запросить новый код</Link>
           <Link href="/login" className="font-medium text-[var(--primary)] hover:underline">Вернуться ко входу</Link>
         </div>
       </div>

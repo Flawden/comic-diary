@@ -4,7 +4,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 const root = process.cwd();
-const service = readFileSync(join(root, "src/modules/auth/email-verification-service.ts"), "utf8");
+const service = readFileSync(join(root, "src/modules/auth/email-verification-service.ts"), "utf8").replace(/\r\n/g, "\n");
 const policy = readFileSync(join(root, "src/modules/auth/email-verification-policy.ts"), "utf8");
 const schema = readFileSync(join(root, "src/db/schema.ts"), "utf8");
 

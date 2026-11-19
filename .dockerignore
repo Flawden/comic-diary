@@ -8,3 +8,4 @@ npm-debug.log*
 README.md
 # Runtime media is mounted separately
 .media
+.qa

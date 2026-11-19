@@ -87,6 +87,18 @@ jobs:
           node --import tsx --test src/modules/auth/password-reset-request-resend-runtime-config.test.ts
           node --test scripts/auth-r1c2c6-resend-config-inert-contract.test.mjs
 
+      - name: AUTH-01 R1C2C7 outcome bridge contract (NO mail)
+        run: node --test scripts/auth-r1c2c7-inert-bridge-contract.test.mjs
+
+      - name: AUTH-01 abandoned recovery SQL and concurrency coverage contracts
+        run: node --test scripts/auth-dispatch-recovery-contract.test.mjs
+
+      - name: AUTH-01 claim-only runtime and fence/reservation contracts (NO legacy settlement)
+        run: |
+          node --test scripts/auth-r1c2b2-recovery-claim-contract.test.mjs
+          node --test scripts/auth-r1c2c2-recovery-fence-contract.test.mjs
+          node --test scripts/auth-r1c2c3-recovery-reserve-contract.test.mjs
+
       - name: AUTH-01C2B4D2B2B inert outbox outcome policy (no persistence or sending)
         run: |
           node --test scripts/auth-registration-c2b4d2b2b-contract.test.mjs
@@ -286,6 +298,11 @@ jobs:
         run: node --import tsx --test src/modules/auth/password-reset-request-provider-outcome.test.ts scripts/auth-r1c2c4-outcome-contract.test.mjs
       - name: AUTH-01 R1C2C4 disposable PostgreSQL reserved outcome finalization (NO mail)
         run: node --import tsx scripts/auth-r1c2c4-recovery-finalize-pg-probe.ts
+
+      - name: AUTH-01 integrated recovery dispatch (disposable PostgreSQL and MOCK HTTP)
+        env:
+          AUTH01_DISPATCH_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: node --import tsx --test scripts/auth-dispatch-integration.test.ts
       - name: AUTH-01 R1C1 password reset request configuration (OFF by default)
         run: node --import tsx --test src/modules/auth/password-reset-request-config.test.ts
       - name: AUTH-01 R1C2A pure password reset outbox lifecycle policy (NO mail)
@@ -414,6 +431,35 @@ jobs:
           path: |
             ${{ runner.temp }}/d1-auth-browser/*.png
             ${{ runner.temp }}/d1-auth-browser/manifest.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: AUTH-01 integrated recovery browser acceptance (ALL provider HTTP BLOCKED)
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          npm run build
+          export WD_BROWSER_ROOT="$RUNNER_TEMP/d1-browser-deps"
+          for mode in enabled disabled; do
+            export AUTH01_BROWSER_MODE="$mode"
+            if [ "$mode" = enabled ]; then port=3108; else port=3109; fi
+            export AUTH01_BROWSER_ORIGIN="http://127.0.0.1:$port"
+            node scripts/auth-recovery-browser-server.mjs > "$RUNNER_TEMP/auth-recovery-$mode.log" 2>&1 &
+            qa_pid=$!
+            trap 'kill "$qa_pid" 2>/dev/null || true' EXIT
+            curl -fsS --retry 25 --retry-delay 1 --retry-connrefused "$AUTH01_BROWSER_ORIGIN/login" -o /dev/null
+            node scripts/auth-recovery-browser.mjs
+            kill "$qa_pid"
+            wait "$qa_pid" || true
+            trap - EXIT
+          done
+
+      - name: Upload AUTH-01 integrated browser acceptance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth01-integrated-browser-${{ github.run_id }}
+          path: .qa/recovery-browser/
           if-no-files-found: ignore
           retention-days: 7
 

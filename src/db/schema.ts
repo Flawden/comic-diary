@@ -714,6 +714,7 @@ export const passwordResetMailOutbox = pgTable(
     dispatchFenceAt: timestamp("dispatch_fence_at", { withTimezone: true }),
     dispatchReservationAt: timestamp("dispatch_reservation_at", { withTimezone: true }),
     dispatchReservationGeneration: integer("dispatch_reservation_generation"),
+    dispatchStartedAt: timestamp("dispatch_started_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     finalizedAt: timestamp("finalized_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -772,6 +773,16 @@ export const passwordResetMailOutbox = pgTable(
     check("password_reset_mail_outbox_dispatch_reservation_presence_check", sql`
       (${table.dispatchReservationAt} IS NULL AND ${table.dispatchReservationGeneration} IS NULL)
       OR (${table.dispatchReservationAt} IS NOT NULL AND ${table.dispatchReservationGeneration} IS NOT NULL)
+    `),
+    check("password_reset_mail_outbox_dispatch_start_check", sql`
+      ${table.dispatchStartedAt} IS NULL OR (
+        ${table.dispatchReservationAt} IS NOT NULL
+        AND ${table.dispatchReservationGeneration} IS NOT NULL
+        AND ${table.dispatchStartedAt} >= ${table.dispatchReservationAt}
+        AND ${table.dispatchStartedAt} < ${table.expiresAt}
+        AND ${table.updatedAt} >= ${table.dispatchStartedAt}
+        AND ${table.state} IN ('in_flight', 'accepted', 'rejected', 'uncertain')
+      )
     `),
   ],
 );

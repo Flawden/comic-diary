@@ -32,6 +32,13 @@ test("finalizer requires committed reservation generation and one claim", () => 
   assert.match(finalizer, /isNotNull\(passwordResetMailOutbox\.dispatchReservationAt\)/);
   assert.match(finalizer, /isNull\(passwordResetMailOutbox\.finalizedAt\)/);
 });
+
+test("every reserved classification requires a durable start in validation AND SQL", () => {
+  assert.match(finalizer, /!\(item\.dispatchStartedAt instanceof Date\)/);
+  const update = finalizer.slice(finalizer.indexOf("const rows = await tx.update"));
+  assert.match(update, /isNotNull\(passwordResetMailOutbox\.dispatchStartedAt\)/);
+  assert.match(workflow, /node --import tsx --test scripts\/auth-dispatch-integration\.test\.ts/);
+});
 test("OFF does not hide the outcome of an already reserved attempt", () => {
   assert.match(finalizer, /if \(!control\) return BLOCKED/);
   assert.doesNotMatch(finalizer, /control\.enabled !== true/);

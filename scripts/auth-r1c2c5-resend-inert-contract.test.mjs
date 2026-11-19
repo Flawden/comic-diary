@@ -18,6 +18,7 @@ function files(dir){
 }
 test('test adapter is isolated from all auth routes and other runtime modules',()=>{
   const locations=[...files('src/app/api/auth'),...files('src/modules/auth')]
+    .map(p=>p.replaceAll('\\','/'))
     .filter(p=>p!==path && p!==`src/modules/auth/${MODULE}.test.ts`);
   const references=locations.filter(p=>readFileSync(p,'utf8').includes(MODULE));
   assert.deepEqual(references,[]);

@@ -1,5 +1,5 @@
 /**
- * AUTH-01 / R1C2B2: exclusive recovery outbox claim/finalize, disposable PG17.
+ * AUTH-01 / R1C2B2: exclusive recovery outbox claim only, disposable PG17.
  * No provider, HTTP, key access, mail, scheduler or production DB.
  */
 import assert from "node:assert/strict";
@@ -104,22 +104,14 @@ async function main(): Promise<void> {
     assert.deepEqual(await claimer.claimPendingPasswordResetMailOnce(), noWork,
       "in_flight can never be claimed twice");
 
-    // Forged, mismatched or invalid finalization must not mutate the row.
-    assert.equal(await claimer.finalizeClaimedPasswordResetMail({
-      outboxId: a.outboxId, claimId: randomBytes(24).toString("base64url"), result: "accepted",
-    }), false);
-    assert.equal(await claimer.finalizeClaimedPasswordResetMail({
-      outboxId: a.outboxId, claimId: a.claimId, result: "retry" as "accepted",
-    }), false);
-    assert.equal((await last()).state, "in_flight");
-    assert.equal(await claimer.finalizeClaimedPasswordResetMail({
-      outboxId: a.outboxId, claimId: a.claimId, result: "accepted",
-    }), true);
-    assert.equal((await last()).state, "accepted");
-    assert.ok((await last()).finalized_at);
-    assert.equal(await claimer.finalizeClaimedPasswordResetMail({
-      outboxId: a.outboxId, claimId: a.claimId, result: "accepted",
-    }), false, "replay is forbidden");
+    // Claim alone has NO provider-outcome API. Old positive claim-only
+    // settlement assertions were intentionally removed, not preserved as fixtures.
+    for (const result of ["accepted", "rejected", "uncertain"]) {
+      assert.equal(Reflect.get(claimer, "finalizeClaimedPasswordResetMail"), undefined);
+      assert.throws(() => Reflect.apply(Reflect.get(claimer, "finalizeClaimedPasswordResetMail"), undefined,
+        [{ outboxId: a.outboxId, claimId: a.claimId, result }]), TypeError);
+      assert.deepEqual(await last(), firstClaimed);
+    }
     assert.deepEqual(await claimer.claimPendingPasswordResetMailOnce(), noWork);
 
     // Unverified mailbox invalidates READY before anyone can send.
@@ -172,22 +164,16 @@ async function main(): Promise<void> {
     assert.equal(next.ok, true);
     if (!next.ok) throw new Error("next claim failed");
     assert.notEqual(oldClaim.outboxId, next.outboxId);
-    assert.equal(await claimer.finalizeClaimedPasswordResetMail({
-      outboxId: oldClaim.outboxId, claimId: oldClaim.claimId, result: "uncertain",
-    }), true);
-    assert.equal(await claimer.finalizeClaimedPasswordResetMail({
-      outboxId: next.outboxId, claimId: oldClaim.claimId, result: "rejected",
-    }), false);
-    assert.equal(await claimer.finalizeClaimedPasswordResetMail({
-      outboxId: next.outboxId, claimId: next.claimId, result: "rejected",
-    }), true);
+    assert.equal(Reflect.get(claimer, "finalizeClaimedPasswordResetMail"), undefined);
     assert.deepEqual(await claimer.claimPendingPasswordResetMailOnce(), noWork);
     const final = await queue();
-    assert.equal(final.find((r) => r.id === oldClaim.outboxId)?.state, "uncertain");
-    assert.equal(final.find((r) => r.id === next.outboxId)?.state, "rejected");
+    assert.equal(final.find((r) => r.id === oldClaim.outboxId)?.state, "in_flight");
+    assert.equal(final.find((r) => r.id === next.outboxId)?.state, "in_flight");
+    assert.equal(final.find((r) => r.id === oldClaim.outboxId)?.finalized_at, null);
+    assert.equal(final.find((r) => r.id === next.outboxId)?.finalized_at, null);
     assert.ok(final.every((r) => r.state !== "ready"));
 
-    console.log("AUTH01_R1C2B2_DISPOSABLE_PG17=PASS; EXCLUSIVE_CLAIM_FINALIZE_REVOKE_RACE_NO_MAIL");
+    console.log("AUTH01_R1C2B2_DISPOSABLE_PG17=PASS; EXCLUSIVE_CLAIM_NO_LEGACY_FINALIZER_REVOKE_RACE_NO_MAIL");
   } finally {
     try {
       if (userId) await pool.query("DELETE FROM users WHERE id=$1 AND email=$2", [userId, email]);

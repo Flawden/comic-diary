@@ -76,6 +76,11 @@ COPY --from=builder \
     /app/scripts/admin-bootstrap.mjs \
     ./scripts/admin-bootstrap.mjs
 
+COPY --from=builder \
+    --chown=nextjs:nodejs \
+    /app/scripts/auth-recovery-control.mjs \
+    ./scripts/auth-recovery-control.mjs
+
 USER nextjs
 
 EXPOSE 3000

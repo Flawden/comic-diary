@@ -1,16 +1,18 @@
 /**
- * AUTH-01 / R1C2B2. INTERNAL claim/finalize for password recovery outbox.
- * This module is NOT wired to a route, worker, provider, scheduler or dispatcher.
- * It has no mail sending, key loading, envelope decryption or network calls.
+ * AUTH-01 / R1C2B2. INTERNAL exclusive claim only for password recovery outbox.
+ * The integrated dispatcher uses this exclusive claim before its locked
+ * preflight/reservation/start. This module itself has no mail sending,
+ * key loading, envelope decryption or network calls.
  *
  * Strict lock order USER -> TOKEN -> OUTBOX, same as recovery issuance.
  * Candidate enumeration is advisory; every eligibility condition is rechecked
  * AFTER holding all three row locks. A durable in_flight claim is NEVER reset
  * to ready even after process failure; the external outcome may be unknown.
  *
- * IMPORTANT: a claim does NOT authorize delivery. A separately gated sender
- * must revalidate the actual AEAD-decrypted recipient against the current
- * verified account mailbox, token epoch and dispatch permissions.
+ * IMPORTANT: a claim does NOT authorize delivery. The dispatcher revalidates
+ * the AEAD-decrypted recipient, verified mailbox, token epoch and PostgreSQL
+ * permission at the final durable start. No claim-only settlement API exists:
+ * provider outcomes require the reserved finalizer AND a committed start.
  */
 import { randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
@@ -99,60 +101,4 @@ export async function claimPendingPasswordResetMailOnce(): Promise<ClaimPendingP
     if (result) return result;
   }
   return { ok: false, kind: "no_work" };
-}
-
-/**
- * Persist a terminal provider *classification* only for an exact durable
- * claim. This function never performs delivery or a retry. A provider
- * accepting a request is NOT proof that the mailbox received the message.
- */
-export async function finalizeClaimedPasswordResetMail(input: Readonly<{
-  outboxId: number;
-  claimId: string;
-  result: "accepted" | "rejected" | "uncertain";
-}>): Promise<boolean> {
-  if (!input || typeof input !== "object" || Array.isArray(input) ||
-      !Number.isSafeInteger(input.outboxId) || input.outboxId <= 0 ||
-      input.outboxId > 2147483647 || typeof input.claimId !== "string" ||
-      !/^[A-Za-z0-9_-]{32}$/.test(input.claimId) ||
-      (input.result !== "accepted" && input.result !== "rejected" && input.result !== "uncertain") ||
-      Object.keys(input).length !== 3) return false;
-
-  const [candidate] = await db.select({
-    tokenId: passwordResetTokens.id, userId: passwordResetTokens.userId,
-  }).from(passwordResetMailOutbox)
-    .innerJoin(passwordResetTokens, eq(passwordResetMailOutbox.passwordResetTokenId, passwordResetTokens.id))
-    .where(eq(passwordResetMailOutbox.id, input.outboxId)).limit(1);
-  if (!candidate) return false;
-
-  return db.transaction(async (tx): Promise<boolean> => {
-    const [account] = await tx.select({ id: users.id }).from(users)
-      .where(eq(users.id, candidate.userId)).limit(1).for("update");
-    const [token] = await tx.select({ id: passwordResetTokens.id, userId: passwordResetTokens.userId })
-      .from(passwordResetTokens).where(eq(passwordResetTokens.id, candidate.tokenId))
-      .limit(1).for("update");
-    const [item] = await tx.select({
-      id: passwordResetMailOutbox.id, state: passwordResetMailOutbox.state,
-      claimId: passwordResetMailOutbox.claimId,
-      claimedAt: passwordResetMailOutbox.claimedAt,
-      createdAt: passwordResetMailOutbox.createdAt,
-    }).from(passwordResetMailOutbox).where(eq(passwordResetMailOutbox.id, input.outboxId))
-      .limit(1).for("update");
-    if (!account || !token || !item || token.userId !== account.id ||
-        item.state !== "in_flight" || item.claimId !== input.claimId ||
-        item.claimedAt === null ||
-        deriveRecoveryOutboxNextState("in_flight", {
-          kind: "provider_result", result: input.result,
-        }) !== input.result) return false;
-
-    const now = new Date(Math.max(Date.now(), item.createdAt.getTime(), item.claimedAt.getTime()));
-    const updated = await tx.update(passwordResetMailOutbox).set({
-      state: input.result, finalizedAt: now, updatedAt: now,
-    }).where(and(
-      eq(passwordResetMailOutbox.id, item.id),
-      eq(passwordResetMailOutbox.state, "in_flight"),
-      eq(passwordResetMailOutbox.claimId, input.claimId),
-    )).returning({ id: passwordResetMailOutbox.id });
-    return updated.length === 1;
-  });
 }

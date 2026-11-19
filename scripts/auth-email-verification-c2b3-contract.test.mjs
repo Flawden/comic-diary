@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 const root = process.cwd();
-const ci = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
+const ci = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8").replace(/\r\n/g, "\n");
 const probe = readFileSync(join(root, "scripts/auth-email-verification-c2b3-probe.ts"), "utf8");
 const service = readFileSync(join(root, "src/modules/auth/email-verification-service.ts"), "utf8");
 

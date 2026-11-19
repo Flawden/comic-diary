@@ -124,11 +124,16 @@ async function main(): Promise<void> {
     assert.deepEqual(await fence(ready.id, claimed.claimId), blocked);
     assert.deepEqual(await claimer.claimPendingPasswordResetMailOnce(), { ok: false, kind: "no_work" });
 
-    // A terminal classification does not clear an already-durable fence.
-    assert.equal(await claimer.finalizeClaimedPasswordResetMail({
-      outboxId: ready.id, claimId: claimed.claimId, result: "uncertain",
-    }), true);
-    assert.equal((await last()).state, "uncertain");
+    // A fence does not grant settlement authority. The removed legacy API
+    // cannot finalize any classification and must leave the fenced row intact.
+    const fenced = await last();
+    for (const result of ["accepted", "rejected", "uncertain"]) {
+      assert.equal(Reflect.get(claimer, "finalizeClaimedPasswordResetMail"), undefined);
+      assert.throws(() => Reflect.apply(Reflect.get(claimer, "finalizeClaimedPasswordResetMail"), undefined,
+        [{ outboxId: ready.id, claimId: claimed.claimId, result }]), TypeError);
+      assert.deepEqual(await last(), fenced);
+    }
+    assert.equal((await last()).state, "in_flight");
     assert.ok((await last()).dispatch_fence_at);
     assert.deepEqual(await fence(ready.id, claimed.claimId), blocked);
 

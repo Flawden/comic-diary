@@ -120,7 +120,7 @@ async function main(): Promise<void> {
           SET dispatch_reservation_at=now(),updated_at=now() WHERE id=$1`, [first.id],
     ), (e: unknown) => (e as { code?: string }).code === "23514", "NULL generation invalid");
 
-    // Disposable CI fixture ONLY. No ON action or API exists in application code.
+    // Disposable CI gate fixture ONLY; this probe never calls runtime ON or HTTP.
     await setGate(true,1);
     assert.deepEqual(await reserve(first.id, randomBytes(24).toString("base64url")), blocked);
     assert.deepEqual(await reserve(first.id, claimed.claimId, { keys: new Map() }), blocked);
@@ -142,9 +142,14 @@ async function main(): Promise<void> {
     // A later OFF is durable but cannot retroactively delete an earlier reservation.
     await setGate(false,2);
     assert.ok((await getLast()).dispatch_reservation_at);
-    assert.equal(await claimer.finalizeClaimedPasswordResetMail({
-      outboxId: first.id, claimId: claimed.claimId, result: "uncertain",
-    }), true);
+    const unstarted = await getLast();
+    for (const result of ["accepted", "rejected", "uncertain"]) {
+      assert.equal(Reflect.get(claimer, "finalizeClaimedPasswordResetMail"), undefined);
+      assert.throws(() => Reflect.apply(Reflect.get(claimer, "finalizeClaimedPasswordResetMail"), undefined,
+        [{ outboxId: first.id, claimId: claimed.claimId, result }]), TypeError);
+      assert.deepEqual(await getLast(), unstarted);
+    }
+    assert.equal((await getLast()).state, "in_flight");
     assert.deepEqual(await reserve(first.id, claimed.claimId), blocked);
 
     assert.deepEqual(await issue(), { ok: true, queued: true });

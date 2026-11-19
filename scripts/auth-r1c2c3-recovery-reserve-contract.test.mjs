@@ -80,3 +80,9 @@ test("CI schedules exact disposable PG17 reservation probe after migration", () 
   assert.match(workflow, /Migrate clean database and verify repeat migration/);
   assert.match(workflow, /AUTH-01 R1C2C3 disposable PostgreSQL recovery operator reservation \(NO mail\)/);
 });
+
+test("reservation without start cannot use legacy settlement or change the row", () => {
+  assert.match(probe, /Reflect\.get\(claimer, "finalizeClaimedPasswordResetMail"\), undefined/);
+  assert.doesNotMatch(probe, /claimer\.finalizeClaimedPasswordResetMail\s*\(/);
+  assert.match(probe, /assert\.deepEqual\(await getLast\(\), unstarted\)/);
+});

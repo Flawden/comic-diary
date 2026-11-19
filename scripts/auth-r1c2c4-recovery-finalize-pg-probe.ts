@@ -1,7 +1,7 @@
 /**
  * AUTH-01 R1C2C4: ONLY disposable PostgreSQL 17 GitHub CI.
  * Simulates synthetic provider classifications; NEVER sends actual mail.
- * Tests once-only outcome persistence after a durable operator reservation.
+ * Tests once-only outcome persistence after reservation AND committed start.
  */
 import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -32,6 +32,7 @@ type Row = Readonly<{
   finalized_at: Date | null;
   dispatch_reservation_generation: number | null;
   dispatch_reservation_at: Date | null;
+  dispatch_started_at: Date | null;
   attempt_count: number;
 }>;
 
@@ -61,7 +62,7 @@ async function main(): Promise<void> {
   const state = async (id: number): Promise<Row> => {
     const res = await pool.query<Row>(
       `SELECT id,state,finalized_at,dispatch_reservation_at,
-              dispatch_reservation_generation,attempt_count
+              dispatch_reservation_generation,dispatch_started_at,attempt_count
          FROM password_reset_mail_outbox WHERE id=$1`, [id],
     );
     assert.equal(res.rows.length, 1);
@@ -104,6 +105,16 @@ async function main(): Promise<void> {
     finalizer.finalizeReservedRecoveryProviderOutcomeOnce({
       ...f, reservationGeneration: generation, evidence,
     });
+  // CI-only start fixture, NOT production authorization and never followed by HTTP.
+  // Autocommit completes before calling the real finalizer, as in dispatch.
+  const start = async (f: { outboxId: number; claimId: string }) => {
+    const result = await pool.query(`UPDATE password_reset_mail_outbox
+      SET dispatch_started_at=date_trunc('milliseconds',clock_timestamp()),updated_at=clock_timestamp()
+      WHERE id=$1 AND claim_id=$2 AND state='in_flight'
+        AND dispatch_reservation_at IS NOT NULL AND dispatch_started_at IS NULL RETURNING id`, [f.outboxId, f.claimId]);
+    assert.equal(result.rowCount, 1);
+    assert.ok((await state(f.outboxId)).dispatch_started_at instanceof Date);
+  };
   try {
     const version = await pool.query<{ major: number }>(
       "SELECT current_setting('server_version_num')::int / 10000 AS major",
@@ -118,6 +129,12 @@ async function main(): Promise<void> {
       "unreserved outcome must be blocked");
     await setGate(true, 1); // CI-only SQL, never app runtime.
     assert.deepEqual(await reserve(first), { ok: true, reserved: true, sendAuthorized: false });
+    for (const evidence of [{ kind: "provider_accepted", acknowledged: true },
+      { kind: "provider_rejected", definitivelyNotAccepted: true }, { kind: "transport_uncertain" }]) {
+      assert.deepEqual(await finish(first, evidence), blocked, "reservation without start cannot settle any classification");
+      assert.equal((await state(first.outboxId)).state, "in_flight");
+    }
+    await start(first);
     assert.deepEqual(await finish(first, { kind: "provider_accepted", acknowledged: true }, 2), blocked,
       "wrong reservation generation must block");
     assert.deepEqual(await finish({ ...first, claimId: randomBytes(24).toString("base64url") },
@@ -125,7 +142,7 @@ async function main(): Promise<void> {
       "wrong claim must block");
     assert.equal((await state(first.outboxId)).state, "in_flight");
 
-    // OFF after reservation must not make durable historical outcome unrecordable.
+    // OFF after start must not make durable historical outcome unrecordable.
     await setGate(false, 2);
     const competing = await Promise.all([
       finish(first, { kind: "provider_accepted", acknowledged: true }),
@@ -147,6 +164,7 @@ async function main(): Promise<void> {
     await setGate(true, 3);
     const second = await fixture();
     assert.deepEqual(await reserve(second), { ok: true, reserved: true, sendAuthorized: false });
+    await start(second);
     const ambiguous = await finalizer.finalizeReservedRecoveryProviderOutcomeOnce({
       ...second, reservationGeneration: 3, evidence: { kind: "transport_uncertain" },
     });
@@ -160,6 +178,7 @@ async function main(): Promise<void> {
 
     const third = await fixture();
     assert.deepEqual(await reserve(third), { ok: true, reserved: true, sendAuthorized: false });
+    await start(third);
     const rejected = await finalizer.finalizeReservedRecoveryProviderOutcomeOnce({
       ...third, reservationGeneration: 3,
       evidence: { kind: "provider_rejected", definitivelyNotAccepted: true },

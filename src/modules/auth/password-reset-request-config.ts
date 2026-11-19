@@ -1,7 +1,9 @@
 /**
  * AUTH-01 / R1C1: strict, provider-independent recovery request configuration.
- * OFF by default; no transport exists yet. Keep keys out of logs, DB and HTTP.
+ * OFF by default; readiness does not authorize dispatch. Keep keys out of logs, DB and HTTP.
  */
+import { prepareRecoveryResendRuntimeCandidate } from "./password-reset-request-resend-runtime-config";
+
 export type PasswordResetRequestRuntime = Readonly<{
   PASSWORD_RESET_REQUEST_ENABLED?: string;
   PASSWORD_RESET_REQUEST_MAIL_READY?: string;
@@ -36,4 +38,17 @@ export function readRecoveryRequestOutboxKey(config: PasswordResetRequestRuntime
     return null;
   }
   return { keyId, bytes: decoded };
+}
+
+/** UI/API readiness, never a network permit. Secrets stay on the server. */
+export function isRecoveryRequestOperational(config: Readonly<Record<string, string | undefined>>): boolean {
+  if (!isRecoveryRequestAllowed(config) || config.PASSWORD_RESET_REDEEM_ENABLED !== "true" ||
+      config.AUTH_RECOVERY_WORKER_ENABLED !== "true" || config.AUTH_RECOVERY_DISPATCH_ENABLED !== "true" ||
+      config.AUTH_RECOVERY_SENDER_VERIFIED !== "true") return false;
+  const sender = prepareRecoveryResendRuntimeCandidate(config);
+  if (!sender || sender.publicOrigin !== config.COMIC_DIARY_PUBLIC_ORIGIN) return false;
+  const key = readRecoveryRequestOutboxKey(config);
+  if (!key) return false;
+  key.bytes.fill(0);
+  return true;
 }

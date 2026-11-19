@@ -1,11 +1,11 @@
 /**
- * AUTH-01 / R1C2C4: INTERNAL durable classification for a PREVIOUSLY RESERVED
- * recovery dispatch. NO sender, provider, HTTP route, worker, network, secrets,
- * mail, retries or operator-ON control. This function only records evidence
- * supplied by a FUTURE, separately reviewed transport adapter.
+ * INTERNAL durable classification for a RESERVED and durably STARTED recovery
+ * dispatch. Called by the integrated dispatcher after its private HTTP boundary.
+ * This module performs no network, retries, credential loading or operator ON.
+ * A reservation alone is insufficient: every classification requires start.
  *
  * The control row is locked first; finalization deliberately remains possible
- * after OFF (or token expiry) to record the outcome of an earlier reservation.
+ * after OFF (or token expiry) to record the outcome of an earlier started attempt.
  * OFF does not cancel past remote activity. Never requeue in_flight/uncertain.
  * A recorded provider `accepted` is NOT proof of mailbox delivery.
  */
@@ -79,6 +79,7 @@ export async function finalizeReservedRecoveryProviderOutcomeOnce(input: Readonl
       dispatchFenceAt: passwordResetMailOutbox.dispatchFenceAt,
       dispatchReservationAt: passwordResetMailOutbox.dispatchReservationAt,
       dispatchReservationGeneration: passwordResetMailOutbox.dispatchReservationGeneration,
+      dispatchStartedAt: passwordResetMailOutbox.dispatchStartedAt,
       finalizedAt: passwordResetMailOutbox.finalizedAt,
       createdAt: passwordResetMailOutbox.createdAt,
     }).from(passwordResetMailOutbox)
@@ -90,6 +91,7 @@ export async function finalizeReservedRecoveryProviderOutcomeOnce(input: Readonl
         item.finalizedAt !== null || !(item.claimedAt instanceof Date) ||
         !(item.dispatchFenceAt instanceof Date) ||
         !(item.dispatchReservationAt instanceof Date) ||
+        !(item.dispatchStartedAt instanceof Date) ||
         item.dispatchReservationGeneration !== input.reservationGeneration) return BLOCKED;
 
     // A malformed/ambiguous provider reply must NOT be misclassified as rejected.
@@ -98,6 +100,7 @@ export async function finalizeReservedRecoveryProviderOutcomeOnce(input: Readonl
     const now = new Date(Math.max(
       Date.now(), item.createdAt.getTime(), item.claimedAt.getTime(),
       item.dispatchFenceAt.getTime(), item.dispatchReservationAt.getTime(),
+      item.dispatchStartedAt.getTime(),
     ));
     const rows = await tx.update(passwordResetMailOutbox).set({
       state: decision.classification, finalizedAt: now, updatedAt: now,
@@ -110,6 +113,7 @@ export async function finalizeReservedRecoveryProviderOutcomeOnce(input: Readonl
       eq(passwordResetMailOutbox.dispatchReservationGeneration, input.reservationGeneration),
       isNotNull(passwordResetMailOutbox.dispatchFenceAt),
       isNotNull(passwordResetMailOutbox.dispatchReservationAt),
+      isNotNull(passwordResetMailOutbox.dispatchStartedAt),
       isNull(passwordResetMailOutbox.finalizedAt),
     )).returning({ id: passwordResetMailOutbox.id });
     return rows.length === 1

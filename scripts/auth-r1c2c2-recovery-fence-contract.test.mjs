@@ -67,3 +67,9 @@ test("CI requires disposable PG17 probe after migration", () => {
   assert.match(workflow, /AUTH-01 R1C2C2 disposable PostgreSQL recovery dispatch fence \(NO mail\)/);
   assert.match(workflow, /run: node --import tsx scripts\/auth-r1c2c2-recovery-fence-pg-probe.ts/);
 });
+
+test("fenced rows cannot be settled through a legacy claim-only API", () => {
+  assert.match(probe, /Reflect\.get\(claimer, "finalizeClaimedPasswordResetMail"\), undefined/);
+  assert.doesNotMatch(probe, /claimer\.finalizeClaimedPasswordResetMail\s*\(/);
+  assert.match(probe, /assert\.deepEqual\(await last\(\), fenced\)/);
+});

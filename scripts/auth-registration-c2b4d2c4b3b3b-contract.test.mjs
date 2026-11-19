@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-const read = (name) => readFileSync(name, 'utf8');
+const read = (name) => readFileSync(name, 'utf8').replace(/\r\n/g, '\n');
 const schema=read('src/db/schema.ts');
 const journal=JSON.parse(read('drizzle/meta/_journal.json'));
 const migration=read('drizzle/0037_auth_activation_operator_gate.sql');
@@ -17,7 +17,7 @@ const pg=read('scripts/auth-registration-c2b4d2c4b3b3b-pg-probe.ts');
 const trans=runtime.slice(runtime.indexOf('return db.transaction'));
 const sha=(s)=>createHash('sha256').update(s).digest('hex');
 
-test('old migrations 0035 and 0036 unchanged byte for byte',()=>{
+test('old migrations 0035 and 0036 unchanged in canonical LF form',()=>{
  assert.equal(sha(read('drizzle/0035_auth_activation_mail_outbox.sql')),'3384762d2aab3b32cf1f7d9dc26471761d41845289f5d67ff075a4c41f8ba71a');
  assert.equal(sha(read('drizzle/0036_auth_activation_dispatch_fence.sql')),'271b9876defd7505c6bba90196b69aab9680f50345f797658cd80dbd86391b7d');
 });
@@ -70,7 +70,7 @@ test('NULL-null pairs prevent partial reservation rows',()=>{
  assert.match(migration,/"dispatch_reservation_at" IS NULL AND "dispatch_reservation_generation" IS NULL/);
  assert.match(schema,/dispatchReservationAt} IS NULL AND \$\{table\.dispatchReservationGeneration} IS NULL/);
 });
-test('F1 historical 0037 and PG race probe remain byte-for-byte unchanged',()=>{
+test('F1 historical 0037 and PG race probe remain unchanged in canonical LF form',()=>{
  assert.equal(sha(migration),'f1f963a6f8db4fb08e77087309cde5c2f0e5bab9622294484fb9824a1a712dca');
  assert.equal(sha(pg),'df9e04044b71426920fe7dff79d000b5d3d1da599ebf64b81dd330eadf4e55e3');
 });

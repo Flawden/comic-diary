@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const read = (path) => readFileSync(path, "utf8");
+const read = (path) => readFileSync(path, "utf8").replace(/\r\n/g, "\n");
 const fence = read("src/modules/auth/registration-activation-outbox-fence.ts");
 const schema = read("src/db/schema.ts");
 const migration = read("drizzle/0036_auth_activation_dispatch_fence.sql");
@@ -18,7 +18,7 @@ const pgProbe = read("scripts/auth-registration-c2b4d2c4b3b2-pg-probe.ts");
 const fnh = fence.slice(fence.indexOf("export async function recordPendingActivationDispatchFenceOnce"));
 const trans = fnh.slice(fnh.indexOf("return db.transaction"));
 
-test("historical 0035 remains byte-for-byte unmodified", () => {
+test("historical 0035 canonical LF content remains unmodified", () => {
   assert.equal(createHash("sha256").update(old0035).digest("hex"), "3384762d2aab3b32cf1f7d9dc26471761d41845289f5d67ff075a4c41f8ba71a");
 });
 test("0036 migration append-only: one nullable fence timestamp, one check, no implicit sending", () => {
