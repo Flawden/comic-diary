@@ -10,7 +10,9 @@ export type CreateComment = Target & { parentId: number | null; body: string; sp
 export type CommentStatus = "VISIBLE" | "REMOVED_BY_AUTHOR" | "HIDDEN_BY_MODERATOR";
 export type PublicComment = { id: number; parentId: number | null; author: string; mine: boolean;
   body: string | null; spoiler: boolean; status: CommentStatus; createdAt: string; editedAt: string | null };
-export type CommentPage = { items: PublicComment[]; nextCursor: string | null; visibleCount: number };
+export type ReplyPage = { total: number; nextCursor: string | null };
+export type CommentPage = { items: PublicComment[]; nextCursor: string | null; visibleCount: number;
+  replyPages?: Record<number, ReplyPage> };
 
 export class CommunityError extends Error {
   constructor(readonly status: number, readonly code: string, readonly retryAfter?: number) { super(code); }
@@ -79,7 +81,7 @@ export function decodeCursor(value: string | null): { at: Date; id: number } | n
   } catch { return invalid(); }
 }
 export function targetQuery(params: URLSearchParams): Target {
-  for (const key of params.keys()) if (!["comicId", "chapterId", "cursor"].includes(key) || params.getAll(key).length !== 1) invalid();
+  for (const key of params.keys()) if (!["comicId", "chapterId", "cursor", "parentId"].includes(key) || params.getAll(key).length !== 1) invalid();
   return { comicId: queryId(params.get("comicId")), chapterId: params.has("chapterId") ? queryId(params.get("chapterId")) : null };
 }
 export type ModerationAction = { action: "HIDE" | "RESTORE" | "RESOLVE" | "REJECT" | "RESTRICT" | "UNRESTRICT";

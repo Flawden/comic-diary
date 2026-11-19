@@ -130,7 +130,7 @@ export default async function ComicPage({
         <CoverImage src={comic.coverUrl} alt={`Обложка: ${comic.title}`} className="wd-cover" imageClassName="object-contain" fallback={comic.title}/>
         <div className="wd-identity">
           <p className="wd-hero-eyebrow">{comic.categoryName}</p>
-          <h1>{comic.title}</h1>
+          <h1 className={Array.from(comic.title).length > 20 ? "wd-title--long" : undefined}>{comic.title}</h1>
           <span className="wd-hero-meta">{[comic.workType!=="UNKNOWN" && workTypeLabels[comic.workType],new Intl.NumberFormat("ru").format(total)+" "+({one:"глава",few:"главы",many:"глав"}[new Intl.PluralRules("ru").select(total) as "one"|"few"|"many"]??"глав")].filter(Boolean).join(" · ")}</span>
           <div className="wd-hero-badges">
             {comic.seriesStatus!=="UNKNOWN" && <small>● {seriesStatusLabels[comic.seriesStatus]}</small>}

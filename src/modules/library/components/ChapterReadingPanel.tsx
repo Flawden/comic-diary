@@ -143,11 +143,11 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
               <span className="wd08-date">Выход: {formatExpectedRelease(c.expectedRelease)}</span>
             ) : null}
           </div>
-          {!isScheduled && communityRatings[c.id] && <small className="mt-1 block text-[var(--text-secondary)]" data-chapter-community={c.id}>
+          {c.status === "RELEASED" && (commentsEnabled || (communityRatings[c.id]?.votes ?? 0) > 0) && <div className="wd-community-chapter-meta">{!isScheduled && communityRatings[c.id] && communityRatings[c.id].votes > 0 && <small data-chapter-community={c.id}>
             Рейтинг читателей: {formatRating(communityRatings[c.id].average)} · {formatRatingVotes(communityRatings[c.id].votes)}
           </small>}
           {commentsEnabled && c.status === "RELEASED" && <button type="button" data-open-discussion={c.id}
-            className="tea-text-action mt-1 block text-sm" onClick={() => setDiscussion(c.id)}>Обсудить главу</button>}
+            className="tea-text-action" onClick={() => setDiscussion(c.id)}>Обсудить главу</button>}</div>}
         </div>
         <div className="wd08-actions">
           {canMark && !isScheduled && isRead ? (

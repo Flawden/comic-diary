@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, asc, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, or, sql, inArray, lte, getTableColumns } from "drizzle-orm";
 import { db } from "@/db";
 import { chapters, comics, users, sessions, communityComments as comments, communityControls as controls,
   communityReports as reports, communityModerationEvents as events } from "@/db/schema";
@@ -84,19 +84,44 @@ async function lockComment(c: Context, id: number) {
   return row ?? notFound();
 }
 
-export async function listComments(target: Target, cursor: string | null = null, viewer: number | null = null): Promise<CommentPage> {
+export async function listComments(target: Target, cursor: string | null = null, viewer: number | null = null, parentId: number | null = null): Promise<CommentPage> {
   const after = decodeCursor(cursor);
+  if (parentId !== null) positiveId(parentId);
   return db.transaction(async tx => {
     await lockTarget(tx, target);
+    if (parentId !== null) {
+      const [parent] = await tx.select({ id: comments.id }).from(comments)
+        .where(and(eq(comments.id, parentId), isNull(comments.parentId), targetWhere(target)));
+      if (!parent) notFound();
+    }
     const rows = await tx.select({ row: comments, name: users.displayName, active: users.isActive }).from(comments)
-      .leftJoin(users, eq(users.id, comments.authorUserId)).where(and(targetWhere(target), after ?
+      .leftJoin(users, eq(users.id, comments.authorUserId)).where(and(targetWhere(target),
+        parentId === null ? isNull(comments.parentId) : eq(comments.parentId, parentId), after ?
         or(gt(comments.createdAt, after.at), and(eq(comments.createdAt, after.at), gt(comments.id, after.id))) : undefined))
       .orderBy(asc(comments.createdAt), asc(comments.id)).limit(limits.pageSize + 1);
-    const [count] = await tx.select({ value: sql<number>`count(*) FILTER (WHERE ${comments.status} = 'VISIBLE')::int` })
+    const [count] = await tx.select({ value: sql<number>`count(*) FILTER (WHERE ${comments.status} = 'VISIBLE')::int`,
+      replies: sql<number>`count(*) FILTER (WHERE ${comments.parentId} = ${parentId})::int` })
       .from(comments).where(targetWhere(target));
     const more = rows.length > limits.pageSize, page = rows.slice(0, limits.pageSize), last = page.at(-1)?.row;
-    return { items: page.map(r => dto(r.row, r.name, r.active ?? false, viewer)), visibleCount: count.value,
-      nextCursor: more && last ? encodeCursor(last.createdAt, last.id) : null };
+    const nextCursor = more && last ? encodeCursor(last.createdAt, last.id) : null;
+    const items = page.map(r => dto(r.row, r.name, r.active ?? false, viewer));
+    const replyPages: NonNullable<CommentPage["replyPages"]> = {};
+    if (parentId !== null) replyPages[parentId] = { total: count.replies, nextCursor };
+    else if (page.length) {
+      // One bounded batch for all visible roots, not one query per thread.
+      // Independent reply cursors prevent a long thread displacing other roots.
+      const ranked = tx.select({ ...getTableColumns(comments), authorName: users.displayName, authorActive: users.isActive,
+        rank: sql<number>`row_number() OVER (PARTITION BY ${comments.parentId} ORDER BY ${comments.createdAt}, ${comments.id})`.as("reply_rank"),
+        total: sql<number>`count(*) OVER (PARTITION BY ${comments.parentId})::int`.as("reply_total") })
+        .from(comments).leftJoin(users, eq(users.id, comments.authorUserId))
+        .where(and(targetWhere(target), inArray(comments.parentId, page.map(r => r.row.id)))).as("ranked_replies");
+      const previews = await tx.select().from(ranked).where(lte(ranked.rank, 3)).orderBy(asc(ranked.createdAt), asc(ranked.id));
+      for (const row of previews) {
+        items.push(dto(row, row.authorName, row.authorActive ?? false, viewer));
+        replyPages[row.parentId!] = { total: row.total, nextCursor: row.total > 3 ? encodeCursor(row.createdAt, row.id) : null };
+      }
+    }
+    return { items, visibleCount: count.value, nextCursor, replyPages };
   }, { isolationLevel: "repeatable read" });
 }
 

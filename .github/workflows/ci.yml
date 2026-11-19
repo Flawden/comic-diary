@@ -34,6 +34,9 @@ jobs:
       - name: COMMUNITY-01 policy and boundary contracts
         run: node --import tsx --test src/modules/community/policy.test.ts scripts/community01-contract.test.mjs
 
+      - name: COMMUNITY threaded reply grouping regression
+        run: node --import tsx --test src/modules/community/thread-model.test.ts
+
       - name: RATE-01 public ratings unit and boundary contracts
         run: node --import tsx --test src/modules/library/ratings/community-rating.test.ts scripts/rate01-contract.test.mjs
 

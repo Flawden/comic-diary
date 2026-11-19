@@ -324,6 +324,34 @@ test("catalog row-lock wait rechecks a newly PRIVATE target before inserting",as
     assert.equal((await pool.query("SELECT count(*)::int AS n FROM community_comments WHERE comic_id=$1",[target.comicId])).rows[0].n,0);
   }finally{await locker.query("ROLLBACK");locker.release();if(pending)await Promise.allSettled([pending]);}
 });
+test("root pagination and bounded reply previews keep a long thread beside its parent",async()=>{
+  const root=(await service.createComment(actors[0],comment("First root"))).item;
+  await pool.query("INSERT INTO community_comments(comic_id,author_user_id,request_id,request_digest,body) SELECT $1,$2,gen_random_uuid(),repeat('a',64),'Root '||n FROM generate_series(2,25) n",[target.comicId,actors[0].userId]);
+  const replies=(await pool.query("INSERT INTO community_comments(comic_id,author_user_id,parent_id,request_id,request_digest,body) SELECT $1,$2,$3,gen_random_uuid(),repeat('a',64),'Reply '||n FROM generate_series(1,30) n RETURNING id",[target.comicId,actors[1].userId,root.id])).rows.map(r=>r.id);
+  const first=await service.listComments(target);
+  assert.equal(first.items.filter(r=>r.parentId===null).length,20);
+  assert.deepEqual(first.items.filter(r=>r.parentId===root.id).map(r=>r.id),replies.slice(0,3));
+  assert.equal(first.items.length,23);assert.equal(first.visibleCount,55);
+  assert.equal(first.replyPages![root.id].total,30);assert.ok(first.replyPages![root.id].nextCursor);
+  const nextRoots=await service.listComments(target,first.nextCursor);
+  assert.equal(nextRoots.items.length,5);assert.ok(nextRoots.items.every(r=>r.parentId===null));assert.equal(nextRoots.nextCursor,null);
+  const replyPage=await service.listComments(target,first.replyPages![root.id].nextCursor,null,root.id);
+  assert.deepEqual(replyPage.items.map(r=>r.id),replies.slice(3,23));assert.ok(replyPage.nextCursor);
+  const last=await service.listComments(target,replyPage.nextCursor,null,root.id);
+  assert.deepEqual(last.items.map(r=>r.id),replies.slice(23));assert.equal(last.nextCursor,null);
+  assert.equal(new Set([...first.items.filter(r=>r.parentId!==null),...replyPage.items,...last.items].map(r=>r.id)).size,30);
+});
+test("reply reads independently enforce target/parent boundaries and preserve tombstone context",async()=>{
+  const root=(await service.createComment(actors[0],comment())).item;
+  const reply=(await service.createComment(actors[1],{...comment("Reply"),parentId:root.id})).item;
+  await assert.rejects(service.listComments({comicId:books[1],chapterId:null},null,null,root.id),code(404));
+  await assert.rejects(service.listComments({...target,chapterId:chapter},null,null,root.id),code(404));
+  await assert.rejects(service.listComments(target,null,null,reply.id),code(404));
+  await service.deleteComment(actors[0],root.id);
+  assert.equal((await service.listComments(target,null,null,root.id)).items[0].body,"Reply");
+  await pool.query("UPDATE comics SET publication_status='HIDDEN' WHERE id=$1",[target.comicId]);
+  await assert.rejects(service.listComments(target,null,null,root.id),code(404));
+});
 test("constant list query count on 102 chapters and realistic indexed page EXPLAIN",async()=>{
   await pool.query("INSERT INTO chapters(comic_id,display_code,sort_order,status) SELECT $1,'bulk-'||n,n+10,'RELEASED' FROM generate_series(1,100)n",[target.comicId]);
   const ids=(await pool.query("SELECT id FROM chapters WHERE comic_id=$1 AND status='RELEASED' ORDER BY id",[target.comicId])).rows.map(r=>r.id);

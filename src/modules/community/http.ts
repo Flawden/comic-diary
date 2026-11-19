@@ -65,7 +65,8 @@ export function commentsGet(request: NextRequest) {
   return respond(async () => {
     const target = targetQuery(request.nextUrl.searchParams);
     const session = await getCurrentSession();
-    return { body: await listComments(target, request.nextUrl.searchParams.get("cursor"), session?.user.id ?? null) };
+    const parentId = request.nextUrl.searchParams.has("parentId") ? queryId(request.nextUrl.searchParams.get("parentId")) : null;
+    return { body: await listComments(target, request.nextUrl.searchParams.get("cursor"), session?.user.id ?? null, parentId) };
   });
 }
 export function commentsPost(request: NextRequest) {

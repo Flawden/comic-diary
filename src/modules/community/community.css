@@ -1,0 +1,102 @@
+.community-section,
+.reader-rating {
+  min-width: 0;
+  margin: 26px 0;
+  padding: clamp(18px, 3vw, 28px);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--surface) 96%, var(--primary)), var(--surface));
+}
+.community-kicker {
+  margin: 0 0 8px;
+  color: var(--primary);
+  font-size: .65rem;
+  font-weight: 750;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+.community-section .community-heading,
+.reader-rating .community-heading {
+  margin: 0 0 12px;
+  font: 500 clamp(1.65rem, 2.8vw, 2.1rem)/1.15 var(--cd-font-display), Georgia, serif;
+  color: var(--text-primary);
+}
+.community-section > p:not(.community-kicker) { margin: 10px 0; font-size: .82rem; line-height: 1.6; }
+.community-section > .tea-text-action { margin: 6px 0 16px; }
+.community-threads { display: grid; gap: 22px; }
+.community-thread { min-width: 0; border-top: 1px solid var(--border); }
+.community-comment { min-width: 0; padding: 18px 0 4px; overflow-wrap: anywhere; }
+.community-comment .community-comment-meta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-height: 0;
+  margin: 0 0 10px;
+  padding: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: .72rem;
+  line-height: 1.5;
+}
+.community-comment-meta strong { color: var(--primary); font-weight: 650; }
+.community-comment-meta time { font-size: .68rem; }
+.community-comment-meta .tea-text-action { min-height: 24px; padding: 0; font-size: .7rem; }
+.community-comment p { margin: 0; line-height: 1.7; }
+.community-comment > .mt-3 { margin-top: 10px; }
+.community-comment > .mt-3 > button { min-height: 30px; font-size: .76rem; }
+.community-replies {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 0 22px;
+  padding-left: 18px;
+  border-left: 2px solid color-mix(in srgb, var(--primary) 48%, var(--border));
+}
+.community-comment--reply {
+  padding: 14px 16px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-raised) 72%, transparent);
+}
+.community-more-replies { justify-self: start; min-height: 38px; font-size: .8rem; }
+.community-composer {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.community-replies .community-composer { margin-top: 0; padding: 16px; border: 1px solid var(--border); border-radius: 12px; }
+.community-composer > label:first-of-type { font: 600 1.2rem/1.3 var(--cd-font-display), Georgia, serif; }
+.community-section textarea { display: block; font-size: .875rem; line-height: 1.6; resize: vertical; }
+.community-section :is(textarea, select, button, a):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.community-section > button:not(.tea-text-action) { margin-top: 20px; }
+.reader-rating-overview { display: grid; grid-template-columns: minmax(130px, .8fr) minmax(0, 3fr); align-items: center; gap: 22px; }
+.reader-rating-score { margin: 0; font: 600 2.9rem/1.1 var(--cd-font-display), Georgia, serif; color: var(--primary); }
+.reader-rating-votes { margin: 5px 0 0; color: var(--text-secondary); font-size: .75rem; }
+.reader-rating-criteria { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin: 0; }
+.reader-rating-criteria > div { min-width: 0; padding-left: 14px; border-left: 1px solid var(--border); }
+.reader-rating-criteria dt { font: 600 1.1rem/1.3 var(--cd-font-display), Georgia, serif; }
+.reader-rating-criteria dd { margin: 7px 0 0; font-size: .8rem; }
+.reader-rating-criteria dd span { display: block; margin-top: 3px; color: var(--text-secondary); font-size: .7rem; }
+
+/* Keep the current hero; scale only long titles within its existing identity column. */
+.wd-work .wd-hero .wd-identity .wd-title--long {
+  font-size: clamp(2rem, 3.2vw, 3.4rem);
+  line-height: 1.08;
+  text-wrap: balance;
+}
+.wd-work .chapter-panel--ux08 .wd-community-chapter-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-top: 7px; }
+.wd-work .chapter-panel--ux08 .wd-community-chapter-meta small { margin: 0; color: var(--text-secondary); font-size: .7rem; line-height: 1.4; }
+.wd-work .chapter-panel--ux08 .wd-community-chapter-meta button { min-height: 30px; margin: 0; padding: 3px 0; font-size: .73rem; line-height: 1.4; }
+.wd-work .chapter-panel--ux08 .wd08-actions { position: relative; gap: 8px; white-space: nowrap; }
+@media (max-width: 900px) {
+  .reader-rating-overview { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .reader-rating-criteria { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; }
+  .community-replies { margin-left: 8px; padding-left: 10px; }
+  .community-comment--reply { padding: 12px 10px 6px; }
+  .community-comment-meta time { flex-basis: 100%; }
+  .community-comment-meta .tea-text-action { min-height: 30px; }
+  .community-comment > .mt-3 > button { min-height: 40px; }
+  .wd-work .wd-hero .wd-identity .wd-title--long { font-size: clamp(2rem, 7vw, 3rem); }
+  .wd-work .chapter-panel--ux08 .wd-community-chapter-meta button { min-height: 44px; }
+}

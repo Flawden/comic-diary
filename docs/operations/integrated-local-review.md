@@ -76,3 +76,30 @@ current dashboard/wizard and recovery OFF. Full results are in REPORT.md.
 The original worktrees, AUTH checkpoint, old RATE/COMMUNITY commits and two user
 UI edits remain untouched. Local integration is not independent acceptance or a
 production release. Stop for owner review after the integrated demo and package.
+
+
+## Reply/style review follow-up
+
+Public comment pages now paginate roots independently of replies. Initial GET
+returns up to 20 roots plus at most three replies per root, obtained with one
+window-query batch (maximum 80 items, seven queries including transaction/target
+checks in the chapter fixture). Items retain the safe public DTO; `replyPages`
+contains total/nextCursor per root. GET with the same target and `parentId=ROOT`
+returns up to 20 replies and its own cursor. Parent must be a root in that exact
+accessible discussion. Hidden/removed roots remain as context for their replies.
+No database migration is needed. Existing two-field cursor encoding remains;
+root and reply cursor scopes are kept separate by the request.
+
+The client groups replies under their root, sorts/deduplicates them, preserves
+root pagination while posting a reply, and places the reply composer in that
+branch. Loading additional roots preserves existing reply cursors. A manual
+refresh may collapse a long thread to its first three replies; the remaining
+replies are available inside that same branch. New-comment drafts are preserved.
+
+New scoped community CSS supplies the existing display font, theme variables,
+compact metadata and reply indentation. Long work titles scale without shrinking
+short titles. Chapter rating/discussion extras share one line; score/read buttons
+retain distinct hit boxes. Global CSS and the original illustrations are unchanged.
+Follow-up evidence and remaining limits are recorded in PROJECT_STATUS and the
+ignored threads/style review package. This is a local review iteration, not a
+production release or a new AUTH round.

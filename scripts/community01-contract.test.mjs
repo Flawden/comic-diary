@@ -74,3 +74,11 @@ test('RSC refresh revalidates public and moderation data without key-remounting 
   assert.match(read('src/app/admin/community/page.tsx'),/refreshToken=\{randomUUID\(\)\}/);
   assert.doesNotMatch(page,/<Comments key=\{commentsRefreshToken\}/);
 });
+test('thread previews are batched and reply pagination/grouping regressions run in CI',()=>{
+  assert.match(service,/inArray\(comments.parentId, page.map/);
+  assert.match(service,/row_number\(\) OVER \(PARTITION BY/);
+  assert.match(service,/isNull\(comments.parentId\) : eq\(comments.parentId, parentId\)/);
+  assert.match(ui,/data-thread=\{root.id\}/);assert.match(ui,/className="community-replies"/);
+  assert.match(ui,/&parentId=\$\{root.id\}/);
+  assert.match(read('.github/workflows/ci.yml'),/node --import tsx --test src\/modules\/community\/thread-model.test.ts/);
+});

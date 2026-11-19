@@ -69,7 +69,34 @@ rollback/roll-forward plan, owner approval. No production migration performed.
 Do not automatically drop community tables containing user content as rollback.
 No real email until separately configured domain/sender, key and explicit gates.
 
-## Evidence on the actual integrated tree
+## Latest reply/style review follow-up
+
+- Follow-up implementation SHA: recorded in the next local status commit.
+- Replies render directly beneath their parent, with an indented branch and inline
+  reply composer. Root pages (20) and reply pages (20) are independent; the first
+  three replies per visible root are loaded in one bounded batch, not N+1 calls.
+  Response replyPages metadata and parentId query support thread-local paging.
+- Long titles receive scoped sizing; short-title hero style is unchanged. New
+  ratings/discussion headings use the existing display font and theme variables.
+  Chapter extras share one compact line; score/read controls do not overlap.
+  No global palette, fonts, assets, AUTH runtime, schema or migration changes.
+- Current checks: 264/264 unit; 349/349 contracts; COMMUNITY 28/28 on EACH PG17/18;
+  typecheck, lint, production build passed. AUTH/RATE SQL/runtime are unchanged;
+  their initial integration results below are retained, not claimed as rerun.
+- Current browser: 42 cases + 66 refusal checks, RSC refresh, lost response; six
+  additional theme/size flows check 25 root comments, a long reply thread, late
+  replies, independent paging/deduplication, second-page reply and reload.
+  Long control title fits two desktop lines, chapter row <=150px in the direct-link
+  fixture, rating/read controls never overlap. 74 current synthetic screenshots.
+- New thread-model tests explicitly run in CI; two additional PG cases are included
+  in the existing complete COMMUNITY suite. Remote CI remains unexecuted.
+- PG17 follow-up used an exact copy of the suite with ONLY strict loopback port
+  55503 changed to 55513 to avoid interrupting the owner demo. Owner/database and
+  all assertions unchanged; normalized hashes recorded in QA evidence.
+- Demo content, including owner-written comments, was not changed by test cleanup.
+  Test users/comments were cleaned from separate review DBs. Demo remains on 3114.
+
+## Initial integration evidence (e1ee86f)
 
 - Clean npm ci passed. No package.json/package-lock.json changes.
 - All src unit: 261/261; all script .test.mjs contracts: 348/348; no skips.
