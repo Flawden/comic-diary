@@ -12,7 +12,8 @@
   its old checkpoint 7443ea03ab9a94586f050db16e464212a8ccb824 is preserved.
 - Imported COMMUNITY checkpoint: 23b8c18c3a55828fb8c05824bef4471069bddb97;
   old implementation c8c65cc37a8fd8f6f3e100d47ffc9c2ee7c2cda2 is preserved.
-- Integration implementation SHA: recorded by the following local status commit.
+- Integration implementation SHA: e1ee86f39dc5a9f55bd7c9f80852e09e2b756609.
+  This follow-up status commit records its identity without rewriting it.
 - Other source worktrees unchanged; original two user UI edits remain separately
   in comic-diary-auth01 (globals.css +1/-15, ChapterReadingPanel.tsx -1).
 
