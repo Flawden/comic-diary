@@ -63,7 +63,7 @@ assert(
 
 assert(
   service.includes(
-    'role:\n            "USER"',
+    'role: "USER"',
   ),
   "Registration does not explicitly force USER role",
 );
@@ -73,14 +73,14 @@ assert(
     "users.email",
   ) &&
     service.includes(
-      "email_unavailable",
+      "onConflictDoNothing",
     ),
   "Duplicate email protection missing",
 );
 
 assert(
   service.includes(
-    '"23505"',
+    "onConflictDoNothing",
   ),
   "Race-safe unique violation handling missing",
 );
@@ -93,21 +93,16 @@ assert(
 );
 
 assert(
-  route.includes(
-    "createUserSession",
-  ) &&
-    route.includes(
-      "setSessionCookie",
-    ),
-  "Registration does not reuse established session stack",
+  !route.includes("createUserSession") && !route.includes("setSessionCookie"),
+  "Registration must never create a session",
 );
 
 assert(
   route.includes(
-    "allowedRegistrationKeys",
+    "Object.keys(body).sort().join()",
   ) &&
     route.includes(
-      '"passwordConfirm"',
+      "passwordConfirm",
     ),
   "Registration request whitelist missing",
 );
@@ -127,9 +122,9 @@ assert(
 
 assert(
   route.includes(
-    "status: 201",
+    "status: 202",
   ),
-  "Registration success is not 201",
+  "Registration acknowledgement is not 202",
 );
 
 assert(
@@ -188,7 +183,7 @@ console.log(
   "EMAIL_NORMALIZATION=REUSED_FROM_LOGIN",
 );
 console.log(
-  "DUPLICATE_EMAIL=409_CONTROLLED",
+  "DUPLICATE_EMAIL=202_GENERIC",
 );
 console.log(
   "INACTIVE_EMAIL_RECREATE=DENIED",
@@ -197,11 +192,11 @@ console.log(
   "PASSWORD_HASH=ARGON2ID_REUSED",
 );
 console.log(
-  "AUTO_LOGIN=EXISTING_SESSION_STACK",
+  "AUTO_LOGIN=DISABLED_UNTIL_ACTIVATION",
 );
 console.log(
   "SAME_ORIGIN_REQUIRED=YES",
 );
 console.log(
-  "REGISTRATION_RATE_LIMIT=DEFERRED_TO_RELEASE_HARDENING",
+  "REGISTRATION_RATE_LIMIT=SHARED_POSTGRESQL",
 );

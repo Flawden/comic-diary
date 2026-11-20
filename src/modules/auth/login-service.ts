@@ -19,6 +19,8 @@ import {
   verifyPassword,
 } from "./password";
 
+import { canUseFullAccountSession } from "./registration-activation-policy";
+
 export type PasswordLoginUser = {
   id: number;
   email: string;
@@ -61,6 +63,9 @@ export async function authenticatePasswordLogin(
 
       isActive:
         users.isActive,
+
+      emailVerifiedAt: users.emailVerifiedAt,
+      verificationRequiredAt: users.verificationRequiredAt,
     })
     .from(users)
     .where(
@@ -99,7 +104,8 @@ export async function authenticatePasswordLogin(
       password,
     );
 
-  if (!passwordMatches) {
+  if (!passwordMatches || !canUseFullAccountSession(user)) {
+    // Same generic HTTP error for bad credentials and pending activation.
     return null;
   }
 

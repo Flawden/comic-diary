@@ -20,6 +20,7 @@ import {
   createSessionToken,
   hashSessionToken,
 } from "./session-token";
+import { canUseFullAccountSession } from "./registration-activation-policy";
 
 export type AuthenticatedUser = {
   id: number;
@@ -46,6 +47,9 @@ export async function createUserSession(
   const userRows = await db
     .select({
       id: users.id,
+      isActive: users.isActive,
+      emailVerifiedAt: users.emailVerifiedAt,
+      verificationRequiredAt: users.verificationRequiredAt,
     })
     .from(users)
     .where(
@@ -62,9 +66,9 @@ export async function createUserSession(
     )
     .limit(1);
 
-  if (!userRows[0]) {
+  if (!canUseFullAccountSession(userRows[0])) {
     throw new Error(
-      "Cannot create session for inactive or missing user",
+      "Cannot create session for unavailable user",
     );
   }
 
@@ -130,6 +134,9 @@ export async function getAuthenticatedSession(
       email: users.email,
       displayName: users.displayName,
       role: users.role,
+      isActive: users.isActive,
+      emailVerifiedAt: users.emailVerifiedAt,
+      verificationRequiredAt: users.verificationRequiredAt,
     })
     .from(sessions)
     .innerJoin(
@@ -160,7 +167,8 @@ export async function getAuthenticatedSession(
   const row =
     rows[0];
 
-  if (!row) {
+  if (!canUseFullAccountSession(row)) {
+    // Previously-issued cookies cannot bypass the activation policy.
     return null;
   }
 

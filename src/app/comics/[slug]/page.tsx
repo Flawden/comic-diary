@@ -1,3 +1,7 @@
+import { randomUUID } from "node:crypto";
+import { Comments } from "@/modules/community/Comments";
+import { CommunityRatings } from "@/modules/library/components/CommunityRatings";
+import { getCommunityRatings } from "@/modules/library/queries/get-community-ratings";
 import { listReturn } from "@/modules/library/list-navigation";
 import { WorkDescriptionModal } from "@/modules/comics/components/WorkDescriptionModal";
 import { WorkTabs, WorkPreferences, PromptSwitch, ShelfAction, DiaryForm } from "@/modules/library/components/WorkControls";
@@ -66,6 +70,8 @@ export default async function ComicPage({
     notFound();
   }
 
+  const commentsRefreshToken = randomUUID();
+  const communityRatings = await getCommunityRatings(comic.id, currentUser?.id ?? null);
   const back = listReturn(await searchParams, comic.id);
 
   const canSeeUnreleasedChapters =
@@ -124,7 +130,7 @@ export default async function ComicPage({
         <CoverImage src={comic.coverUrl} alt={`Обложка: ${comic.title}`} className="wd-cover" imageClassName="object-contain" fallback={comic.title}/>
         <div className="wd-identity">
           <p className="wd-hero-eyebrow">{comic.categoryName}</p>
-          <h1>{comic.title}</h1>
+          <h1 className={Array.from(comic.title).length > 20 ? "wd-title--long" : undefined}>{comic.title}</h1>
           <span className="wd-hero-meta">{[comic.workType!=="UNKNOWN" && workTypeLabels[comic.workType],new Intl.NumberFormat("ru").format(total)+" "+({one:"глава",few:"главы",many:"глав"}[new Intl.PluralRules("ru").select(total) as "one"|"few"|"many"]??"глав")].filter(Boolean).join(" · ")}</span>
           <div className="wd-hero-badges">
             {comic.seriesStatus!=="UNKNOWN" && <small>● {seriesStatusLabels[comic.seriesStatus]}</small>}
@@ -144,6 +150,7 @@ export default async function ComicPage({
             <div className="wd-hero-summary-empty"><h2>Об истории</h2><p>Описание пока не добавлено.</p></div>}
         </aside>
       </header>
+      {communityRatings && <CommunityRatings ratings={communityRatings}/>}
       <WorkTabs count={total} chapters={
         <div className={`wd-chapter-content${visibleChapters.length === 0 ? " wd-chapter-content--empty" : ""}`}>
           {visibleChapters.length === 0 ? (
@@ -171,6 +178,10 @@ export default async function ComicPage({
             canMark={readingState?.inLibrary === true}
             workSourceUrl={comic.sourceUrl}
             volumeTitles={volumeTitles}
+            communityRatings={communityRatings?.chapters ?? {}}
+            commentsEnabled={comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED"}
+            commentsRefreshToken={commentsRefreshToken}
+            commentsLoginHref={`/login?next=${encodeURIComponent("/comics/" + comic.slug)}`}
           />
         </div>
       } about={<div className="wd-about wd-about-editorial">
@@ -471,6 +482,9 @@ export default async function ComicPage({
 
 
       }/>
+      {comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED" && <Comments comicId={comic.id}
+        refreshToken={commentsRefreshToken} canWrite={currentUser !== null}
+        loginHref={`/login?next=${encodeURIComponent("/comics/" + comic.slug)}`} />}
     </article>
     </WorkChapterProgressProvider>
   </WorkPreferences>;

@@ -5,14 +5,20 @@ import { createRequire } from "node:module";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
-if (process.env.CI !== "true" || new URL(process.env.DATABASE_URL).pathname !== "/comic_diary_release")
-  throw new Error("This probe requires the disposable CI database");
+const ciDbUrl = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL) : null;
+if (process.env.CI !== "true" || !ciDbUrl ||
+    !["postgres:", "postgresql:"].includes(ciDbUrl.protocol) ||
+    ciDbUrl.hostname !== "127.0.0.1" || ciDbUrl.port !== "5432" ||
+    ciDbUrl.pathname !== "/comic_diary_release" || ciDbUrl.username !== "comic_diary_ci")
+  throw new Error("This probe requires the local disposable CI database");
 const { chromium } = createRequire(process.env.WD_BROWSER_ROOT+"/package.json")("playwright-core");
 const pool = new pg.Pool({connectionString:process.env.DATABASE_URL});
 const prefix="reader-"+randomUUID(), origin="http://127.0.0.1:3102";
 let user,comic,browser;
 try {
-  user=(await pool.query("INSERT INTO users(email) VALUES ($1) RETURNING id",[prefix+"@test.invalid"])).rows[0].id;
+  // CI-only synthetic legacy account: 0034 defaults NEW users to pending.
+  // This fixture deliberately emulates a historical user; public registration must not do this.
+  user=(await pool.query("INSERT INTO users(email,verification_required_at) VALUES ($1,NULL) RETURNING id",[prefix+"@test.invalid"])).rows[0].id;
   const token=randomBytes(32).toString("base64url");
   await pool.query("INSERT INTO sessions(user_id,token_hash,expires_at) VALUES ($1,$2,now()+interval '1 hour')",[user,createHash("sha256").update(token).digest("hex")]);
   comic=(await pool.query("INSERT INTO comics(slug,title,source_url,description) VALUES ($1,'Мезолит',$2,'Описание истории') RETURNING id",[prefix,"https://example.com/book"])).rows[0].id;
@@ -180,7 +186,16 @@ try {
   await page.goto(url+"#my-reading");
   const diary=page.getByRole("tabpanel",{name:"Мой дневник"});
   await diary.waitFor();
-  await diary.locator("textarea").fill("Моя заметка");
+  // Record only synthetic-fixture booleans, never note contents or credentials.
+  const captureDraftState = async phase => {
+    if (!process.env.WD_VISUAL_OUTPUT) return;
+    const state = await page.locator('#my-reading').evaluate(panel => ({
+      noteMatches: panel.querySelector('textarea')?.value === "Моя заметка",
+      dirty: panel.textContent.includes("Есть несохранённые изменения"),
+      sameDocument: window.readerDraftDocument === "kept",
+    }));
+    console.log("WD16_DRAFT_STATE=" + JSON.stringify({phase, ...state}));
+  };
   await page.getByRole("tab",{name:"Об истории"}).click();
   await page.locator(".wd-hero-summary").getByText("Описание истории",{exact:true}).waitFor();
   assert.equal(await page.getByRole("tabpanel",{name:"Об истории"}).getByText("Описание истории",{exact:true}).count(),0);
@@ -344,6 +359,9 @@ try {
         await mobilePage.reload();
         await mobilePage.locator('.wd-hero-summary button[aria-haspopup="dialog"]').waitFor();
         await mobilePage.locator('.wd-cover img').waitFor();
+        // Reload preserves #chapters/deep scroll. A lazy cover above the viewport
+        // need not load until viewed; exercise that real user action first.
+        await mobilePage.locator('.wd-cover img').scrollIntoViewIfNeeded();
         await mobilePage.waitForFunction(() => {
           const img=document.querySelector('.wd-cover img');
           return !!img && img.complete && img.naturalWidth>0;
@@ -414,6 +432,18 @@ try {
     assert.deepEqual(diagnostics.violations,[],"WD-HERO-02B: viewport or browser failures; see uploaded diagnostic JSON");
     console.log("WD_HERO_02B_VISUAL_QA=PASS");
   }
+  // The visual setup deliberately changes SQL fixtures and reloads other
+  // clients. A cold Next dev server can reload the original document too.
+  // Start the unsaved-draft scenario AFTER that unrelated setup; the strict
+  // assertions below still cover tabs, failed mutations, ratings and refresh.
+  await page.getByRole("tab",{name:"Мой дневник"}).click();
+  await diary.locator("textarea").fill("Моя заметка");
+  await diary.getByText("Есть несохранённые изменения",{exact:true}).waitFor();
+  await page.evaluate(() => { window.readerDraftDocument = "kept"; });
+  await captureDraftState("after-fill");
+  await page.getByRole("tab",{name:"Об истории"}).click();
+  await page.getByRole("tab",{name:/Главы/}).click();
+  await captureDraftState("after-tab-roundtrip");
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).check();
   assert.equal(await chapters.locator(".wd-row--scheduled").count(), 0);
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).uncheck();
@@ -447,6 +477,7 @@ try {
   assert.deepEqual(await sheet.locator(".wd-stars button").allTextContents(),["★","★","☆","☆","☆"]);
   await sheet.locator("h2").hover();
   assert.deepEqual(await sheet.locator(".wd-stars button").allTextContents(),["☆","☆","☆","☆","☆"]);
+  await captureDraftState("before-chapter-rating");
   await sheet.getByRole("checkbox").check();
   await sheet.getByRole("button",{name:"4 из 5"}).click();
   await sheet.getByText("Оценка сохранена").waitFor();
@@ -466,6 +497,7 @@ try {
   const sharedWorkSource = chapters.getByRole("link", {name:"Открыть источник ↗"});
   assert.equal(await sharedWorkSource.getAttribute("href"), "https://example.com/book");
   await page.getByRole("tab",{name:"Мой дневник"}).click();
+  await captureDraftState("after-chapter-rating");
   assert.equal(await diary.locator("textarea").inputValue(),"Моя заметка");
   assert.equal(await page.evaluate(()=>window.readerDocument),"kept");
   // WD16: ratings are independent of chapter stars and survive failed saves, tabs and reloads.

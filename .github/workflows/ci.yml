@@ -31,11 +31,142 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Production Compose AUTH configuration contract (no containers or secrets)
+        run: node --test deploy/compose-auth-contract.test.mjs
+
+      - name: COMMUNITY-01 policy and boundary contracts
+        run: node --import tsx --test src/modules/community/policy.test.ts scripts/community01-contract.test.mjs
+
+      - name: COMMUNITY threaded reply grouping regression
+        run: node --import tsx --test src/modules/community/thread-model.test.ts
+
+      - name: RATE-01 public ratings unit and boundary contracts
+        run: node --import tsx --test src/modules/library/ratings/community-rating.test.ts scripts/rate01-contract.test.mjs
+
+      - name: Integrated live design and migration lineage contracts
+        run: node --test scripts/integration-design-contract.test.mjs
+
       - name: Lint
         run: npm run lint
 
       - name: Type check
         run: npm run typecheck
+
+      - name: Password reset token and schema contract regressions
+        run: |
+          node --import tsx --test src/modules/auth/password-reset-token.test.ts
+          node --test scripts/auth-password-reset-schema-contract.test.mjs
+          node --test scripts/auth-password-reset-b2-contract.test.mjs
+          node --import tsx --test src/modules/auth/password-reset-http.test.ts
+          node --test scripts/auth-password-reset-c1-contract.test.mjs
+          node --test scripts/auth-password-reset-c2a-contract.test.mjs
+
+      - name: AUTH-01C2B email verification local contracts and policy
+        run: |
+          node --test scripts/auth-email-verification-c2b1-contract.test.mjs scripts/auth-email-verification-c2b2-contract.test.mjs scripts/auth-email-verification-c2b3-contract.test.mjs
+          node --import tsx --test src/modules/auth/email-verification-token.test.ts src/modules/auth/email-verification-policy.test.ts
+
+      - name: AUTH-01C2B4A registration activation model contracts
+        run: |
+          node --test scripts/auth-registration-c2b4a-contract.test.mjs scripts/auth-registration-c2b4b-contract.test.mjs scripts/auth-registration-c2b4c-contract.test.mjs
+          node --import tsx --test src/modules/auth/registration-activation-policy.test.ts
+
+      - name: AUTH-01C2B4 browser fixture activation regression
+        run: node --test scripts/auth-registration-c2b4abc-browser-fixture-contract.test.mjs
+
+      - name: AUTH-01C2B4D1 disabled activation HTTP boundary and limits
+        run: |
+          node --test scripts/auth-registration-c2b4d1-contract.test.mjs
+          node --import tsx --test src/modules/auth/registration-activation-http.test.ts
+
+      - name: AUTH-01C2B4D2A safe activation mail contract (no sending)
+        run: |
+          node --test scripts/auth-registration-c2b4d2a-contract.test.mjs
+          node --import tsx --test src/modules/auth/registration-activation-mail.test.ts
+
+      - name: AUTH-01C2B4D2B1 inert sender envelope validation (no delivery)
+        run: |
+          node --test scripts/auth-registration-c2b4d2b1-contract.test.mjs
+          node --import tsx --test src/modules/auth/registration-activation-sender.test.ts
+
+      - name: AUTH-01C2B4D2B2A inert Resend candidate wire contract (no network)
+        run: |
+          node --test scripts/auth-registration-c2b4d2b2a-contract.test.mjs
+          node --import tsx --test src/modules/auth/registration-activation-resend-contract.test.ts
+      - name: AUTH-01 R1C2C5 recovery Resend one-shot test adapter (MOCK HTTP ONLY)
+        run: |
+          node --import tsx --test src/modules/auth/password-reset-request-resend-test-adapter.test.ts
+          node --test scripts/auth-r1c2c5-resend-inert-contract.test.mjs
+      - name: AUTH-01 R1C2C6 inert recovery Resend runtime config (NO SECRETS/NETWORK)
+        run: |
+          node --import tsx --test src/modules/auth/password-reset-request-resend-runtime-config.test.ts
+          node --test scripts/auth-r1c2c6-resend-config-inert-contract.test.mjs
+
+      - name: AUTH-01 R1C2C7 outcome bridge contract (NO mail)
+        run: node --test scripts/auth-r1c2c7-inert-bridge-contract.test.mjs
+
+      - name: AUTH-01 abandoned recovery SQL and concurrency coverage contracts
+        run: node --test scripts/auth-dispatch-recovery-contract.test.mjs
+
+      - name: Activation runtime readiness and integrated dispatch contracts
+        run: node --import tsx --test src/modules/auth/registration-activation-config.test.ts scripts/auth-activation-dispatch-contract.test.mjs
+
+      - name: AUTH-01 claim-only runtime and fence/reservation contracts (NO legacy settlement)
+        run: |
+          node --test scripts/auth-r1c2b2-recovery-claim-contract.test.mjs
+          node --test scripts/auth-r1c2c2-recovery-fence-contract.test.mjs
+          node --test scripts/auth-r1c2c3-recovery-reserve-contract.test.mjs
+
+      - name: AUTH-01C2B4D2B2B inert outbox outcome policy (no persistence or sending)
+        run: |
+          node --test scripts/auth-registration-c2b4d2b2b-contract.test.mjs
+          node --import tsx --test src/modules/auth/registration-activation-outbox-policy.test.ts
+
+      - name: AUTH-01C2B4D2C1 inert durable outbox schema contracts (no dispatcher)
+        run: node --test scripts/auth-registration-c2b4d2c1-contract.test.mjs
+
+      - name: AUTH-01C2B4D2C2 AEAD outbox payload contract (no persistence or mail)
+        run: |
+          node --test scripts/auth-registration-c2b4d2c2-contract.test.mjs
+          node --import tsx --test src/modules/auth/registration-activation-outbox-crypto.test.ts
+
+      - name: AUTH-01C2B4D2C3 atomic encrypted enqueue contract (no delivery)
+        run: node --test scripts/auth-registration-c2b4d2c3-contract.test.mjs
+
+      - name: AUTH-01C2B4D2C4A internal claim and finalization contract (no delivery)
+        run: node --test scripts/auth-registration-c2b4d2c4-contract.test.mjs
+
+      - name: AUTH-01C2B4D2C4B1 offline snapshot preflight (NO DB or sending)
+        run: node --import tsx --test src/modules/auth/registration-activation-outbox-dry-run.test.ts
+
+      - name: AUTH-01C2B4D2C4B2 persisted idempotency compatibility (NO network or sending)
+        run: |
+          node --test scripts/auth-registration-c2b4d2c4b2-contract.test.mjs
+          node --import tsx --test src/modules/auth/registration-activation-resend-contract.test.ts
+
+      - name: AUTH-01C2B4D2C4B3A offline revocation race contract (NO delivery)
+        run: node --test scripts/auth-registration-c2b4d2c4b3a-race-contract.test.mjs
+
+      - name: AUTH-01C2B4D2C4B3B1 offline fence semantics (NO delivery)
+        run: node --test scripts/auth-registration-c2b4d2c4b3b1-fence-spec.test.mjs
+
+      - name: AUTH-01C2B4D2C4B3B2 durable DB dispatch fence contract (NO delivery)
+        run: node --test scripts/auth-registration-c2b4d2c4b3b2-contract.test.mjs
+
+      - name: AUTH-01C2B4D2C4B3B3A offline operator gate and uncertain-outcome semantics (NO delivery)
+        run: node --test scripts/auth-registration-c2b4d2c4b3b3a-control-spec.test.mjs
+
+      - name: AUTH-01C2B4D2C4B3B3B durable operator gate contract (NO delivery)
+        run: node --test scripts/auth-registration-c2b4d2c4b3b3b-contract.test.mjs
+
+      - name: AUTH-01C2B4D2C4B3B3C operator transitions offline contract (NO delivery)
+        run: node --test scripts/auth-registration-c2b4d2c4b3b3c-contract.test.mjs
+
+      - name: AUTH-01 D1 user-facing activation and recovery UI contract (NO mail)
+        run: node --test scripts/auth-user-flows-d1-contract.test.mjs
+
+      - name: AUTH-01 D1 browser QA source contract (NO mail)
+        run: node --test scripts/auth-d1-browser-qa-contract.test.mjs
 
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
@@ -156,6 +287,76 @@ jobs:
           node scripts/migrate-production.mjs
           node scripts/migrate-production.mjs
 
+      - name: AUTH-01B2 disposable PostgreSQL security and concurrency probe
+        run: node --import tsx scripts/auth-password-reset-probe.ts
+
+      - name: AUTH-01C1 disposable PostgreSQL HTTP boundary probe
+        run: node --import tsx scripts/auth-password-reset-c1-api-probe.ts
+
+      - name: AUTH-01C2B3 disposable PostgreSQL mailbox verification probe
+        run: node --import tsx scripts/auth-email-verification-c2b3-probe.ts
+
+      - name: AUTH-01C2B4C disposable PostgreSQL pending-account activation probe
+        run: node --import tsx scripts/auth-registration-c2b4c-probe.ts
+
+      - name: AUTH-01C2B4D2C1 disposable PostgreSQL outbox constraints and claim race
+        run: node --import tsx scripts/auth-registration-c2b4d2c1-pg-probe.ts
+
+      - name: AUTH-01C2B4D2C3 disposable PostgreSQL atomic enqueue and rollback
+        run: node --import tsx scripts/auth-registration-c2b4d2c3-pg-probe.ts
+      - name: AUTH-01 R1B2C disposable PostgreSQL recovery enqueue rollback and race (NO delivery)
+        run: node --import tsx scripts/auth-r1b2c-recovery-pg-probe.ts
+      - name: AUTH-01 R1C2B2 disposable PostgreSQL exclusive recovery claim (NO mail)
+        run: node --import tsx scripts/auth-r1c2b2-recovery-claim-pg-probe.ts
+      - name: AUTH-01 R1C2C2 disposable PostgreSQL recovery dispatch fence (NO mail)
+        run: node --import tsx scripts/auth-r1c2c2-recovery-fence-pg-probe.ts
+      - name: AUTH-01 R1C2C3 disposable PostgreSQL recovery operator reservation (NO mail)
+        run: node --import tsx scripts/auth-r1c2c3-recovery-reserve-pg-probe.ts
+      - name: AUTH-01 R1C2C4 provider outcome and reservation contracts (NO mail)
+        run: node --import tsx --test src/modules/auth/password-reset-request-provider-outcome.test.ts scripts/auth-r1c2c4-outcome-contract.test.mjs
+      - name: AUTH-01 R1C2C4 disposable PostgreSQL reserved outcome finalization (NO mail)
+        run: node --import tsx scripts/auth-r1c2c4-recovery-finalize-pg-probe.ts
+
+      - name: COMMUNITY-01 transactional comments and moderation (disposable PG)
+        env:
+          COMMUNITY01_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: node --import tsx --test scripts/community01-integration.test.ts
+
+      - name: RATE-01 set-based ratings integration (disposable PostgreSQL)
+        env:
+          RATE01_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: node --import tsx --test scripts/rate01-integration.test.ts
+
+      - name: AUTH activation integrated registration and mock dispatch
+        env:
+          ACTIVATION_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: node --import tsx --test scripts/auth-activation-integration.test.ts
+
+      - name: AUTH-01 integrated recovery dispatch (disposable PostgreSQL and MOCK HTTP)
+        env:
+          AUTH01_DISPATCH_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: node --import tsx --test scripts/auth-dispatch-integration.test.ts
+      - name: AUTH-01 R1C1 password reset request configuration (OFF by default)
+        run: node --import tsx --test src/modules/auth/password-reset-request-config.test.ts
+      - name: AUTH-01 R1C2A pure password reset outbox lifecycle policy (NO mail)
+        run: node --import tsx --test scripts/auth-r1c2a-recovery-outbox-policy.test.mjs
+      - name: AUTH-01 R1C2C1 pure password reset mail AEAD snapshot preflight (NO send)
+        run: node --import tsx --test src/modules/auth/password-reset-request-outbox-preflight.test.ts
+      - name: AUTH-01 R1C2B1 recovery claim schema contract (NO delivery)
+        run: node --test scripts/auth-r1c2b1-recovery-claim-schema.test.mjs
+
+      - name: AUTH-01C2B4D2C4A disposable PostgreSQL claim and terminal states
+        run: node --import tsx scripts/auth-registration-c2b4d2c4-pg-probe.ts
+
+      - name: AUTH-01C2B4D2C4B3B2 disposable PostgreSQL fence concurrency (NO delivery)
+        run: node --import tsx scripts/auth-registration-c2b4d2c4b3b2-pg-probe.ts
+
+      - name: AUTH-01C2B4D2C4B3B3B disposable PostgreSQL operator gate races (NO delivery)
+        run: node --import tsx scripts/auth-registration-c2b4d2c4b3b3b-pg-probe.ts
+
+      - name: AUTH-01C2B4D2C4B3B3C disposable PostgreSQL operator transitions (NO delivery)
+        run: node --import tsx scripts/auth-registration-c2b4d2c4b3b3c-pg-probe.ts
+
       - name: Verify optional comic source URL migration
         run: |
           node --input-type=module <<'JS'
@@ -236,6 +437,64 @@ jobs:
           export ADMIN_CHAPTER_VISUAL_CAPTURE=1
           mkdir -p "$ADMIN_CORE_OUTPUT"
           node scripts/admin-core-browser.mjs || { tail -60 "$RUNNER_TEMP/wd-next.log"; exit 1; }
+
+      - name: AUTH-01 D1 isolated browser QA OFF-only (Chrome; NO mail)
+        timeout-minutes: 8
+        env:
+          REGISTRATION_ACTIVATION_REDEEM_ENABLED: "false"
+          PASSWORD_RESET_REDEEM_ENABLED: "false"
+        run: |
+          set -euo pipefail
+          export WD_BROWSER_ROOT="$RUNNER_TEMP/d1-browser-deps"
+          npm install --prefix "$WD_BROWSER_ROOT" --no-audit --no-fund playwright-core@1.56.1
+          ./node_modules/.bin/next dev --webpack -H 127.0.0.1 -p 3103 > "$RUNNER_TEMP/d1-next.log" 2>&1 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          curl -fsS --retry 25 --retry-delay 1 --retry-connrefused http://127.0.0.1:3103/login -o /dev/null
+          export D1_QA_ORIGIN="http://127.0.0.1:3103"
+          export D1_QA_OUTPUT="$RUNNER_TEMP/d1-auth-browser"
+          mkdir -p "$D1_QA_OUTPUT"
+          node scripts/auth-d1-browser-qa.mjs || { tail -60 "$RUNNER_TEMP/d1-next.log"; exit 1; }
+
+      - name: Upload AUTH-01 D1 browser QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth01-d1-browser-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/d1-auth-browser/*.png
+            ${{ runner.temp }}/d1-auth-browser/manifest.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: AUTH-01 integrated recovery browser acceptance (ALL provider HTTP BLOCKED)
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          npm run build
+          export WD_BROWSER_ROOT="$RUNNER_TEMP/d1-browser-deps"
+          for mode in enabled disabled; do
+            export AUTH01_BROWSER_MODE="$mode"
+            if [ "$mode" = enabled ]; then port=3108; else port=3109; fi
+            export AUTH01_BROWSER_ORIGIN="http://127.0.0.1:$port"
+            node scripts/auth-recovery-browser-server.mjs > "$RUNNER_TEMP/auth-recovery-$mode.log" 2>&1 &
+            qa_pid=$!
+            trap 'kill "$qa_pid" 2>/dev/null || true' EXIT
+            curl -fsS --retry 25 --retry-delay 1 --retry-connrefused "$AUTH01_BROWSER_ORIGIN/login" -o /dev/null
+            node scripts/auth-recovery-browser.mjs
+            kill "$qa_pid"
+            wait "$qa_pid" || true
+            trap - EXIT
+          done
+
+      - name: Upload AUTH-01 integrated browser acceptance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth01-integrated-browser-${{ github.run_id }}
+          path: .qa/recovery-browser/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload WD-HERO-02B visual QA and sanitized browser diagnostics
         if: always()

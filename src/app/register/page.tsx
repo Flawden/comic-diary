@@ -1,3 +1,4 @@
+import { activationRegistrationOperational } from "@/modules/auth/registration-activation-config";
 import Link from "next/link";
 
 import {
@@ -79,15 +80,15 @@ export default async function RegisterPage({
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            После регистрации вы сразу войдёте
-            в аккаунт.
+            После регистрации нужно будет подтвердить email и задать новый пароль.
+            Код придёт на указанный адрес после включения регистрации.
           </p>
 
-          <RegisterForm
+          {activationRegistrationOperational(process.env) ? <RegisterForm
             nextPath={
               nextPath
             }
-          />
+          /> : <p role="status" className="mt-5 text-sm leading-6">Регистрация временно закрыта. Если у вас уже есть аккаунт, войдите или восстановите пароль на странице входа.</p>}
         </section>
 
         <div className="fantasy-auth-links mt-6 text-center text-sm text-[var(--muted)]">

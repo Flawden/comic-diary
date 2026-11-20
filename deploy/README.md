@@ -105,3 +105,53 @@ The CI deploy job now verifies the public HTTPS application, PostgreSQL
 readiness and exact image commit before reporting deployment success.
 See [`docs/operations/br02-production-smoke.md`](../docs/operations/br02-production-smoke.md).
 The `PRODUCTION_BASE_URL` GitHub Actions variable is required before deployment.
+
+
+## RELEASE-01B1: AUTH configuration and server ownership
+
+`compose.production.yml` forwards the existing recovery contract plus all 12
+registration/activation settings. Every AUTH switch defaults to `false`; sender,
+origin, outbox key and shared `RESEND_API_KEY` default to empty. The example env
+contains names/defaults only. Empty/unset switches render as the string `false`.
+An API key alone enables nothing. Persisted PostgreSQL gates remain independent.
+Each AUTH public origin must exactly match `COMIC_DIARY_PUBLIC_ORIGIN` (HTTPS).
+Use separate durable activation/recovery AEAD keys; retain them for existing jobs.
+
+The checked-in Compose is a template, not proof of the live server configuration.
+Current GitHub Actions sends only `deploy SHA DIGEST` to the restricted SSH gate;
+it does not contain the VPS gate implementation or a command installing this
+file as `/opt/comic-diary/compose.yml`. Backup/health tools reference that server
+path. Thus the actual copy/install source and whether a deployment overwrites
+server files must be confirmed by the operator; they were NOT inspected on VPS.
+Do not rely on manual edits of `/opt/comic-diary/compose.yml`: if the gate replaces
+it from the Git template, literal settings will be lost.
+
+Before a separately approved rollout the VPS operator must:
+
+1. Identify the gate's exact source for `/opt/comic-diary/compose.yml`, working
+   directory and Compose invocation. Confirm it preserves the protected settings
+   file, changes only the intended image reference and has a rollback copy.
+2. Keep AUTH values outside Git and outside a replaceable Compose template.
+   Use the protected server interpolation environment/explicit `--env-file` that
+   the gate actually consumes. Shell environment overrides env-file values;
+   do not assume a different working directory finds the intended `.env`.
+   A service `env_file:` alone does not supply Compose interpolation and explicit
+   `environment:` defaults would override it. An override file works only if the
+   actual invocation loads it; explicit `-f` must include each intended file.
+3. Reconcile names with `production.env.example` WITHOUT copying that template
+   over the real server settings or resetting existing database/image/origin values.
+   Verify resolved AUTH flags/defaults using redacted status checks. Full `docker
+   compose config` can expose injected secrets: do not paste/log/upload its output.
+4. The existing Resend key is at `/etc/comic-diary/resend-api-key` (root:root 600).
+   Do not create a replacement or change its permissions. This stage does not
+   open/copy/mount it. Future approved provisioning must deliver `RESEND_API_KEY`
+   securely at runtime; `RESEND_API_KEY_FILE` is not supported. Activation and
+   recovery reuse the same Resend credential, with separate outbox encryption keys.
+5. Confirm all AUTH flags and both DB gates OFF before launch. Later enable in
+   the documented readiness -> redemption -> worker/dispatch -> operator gate ->
+   public intake order, and separately authorize one real-mail check.
+
+No workflow/gate behavior is changed here; feature-branch CI cannot deploy.
+See [activation runbook](../docs/operations/AUTH_ACTIVATION_RUNBOOK.md),
+[recovery runbook](../docs/operations/auth01-integrated-dispatch.md) and the
+[rollout plan](../docs/operations/RELEASE01_ROLLOUT_PLAN.md).

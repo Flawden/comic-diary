@@ -9,6 +9,8 @@ import {
   useRouter,
 } from "next/navigation";
 
+import Link from "next/link";
+
 type LoginFormProps = {
   nextPath: string;
 };
@@ -163,6 +165,15 @@ export function LoginForm({
           className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-4 py-3 outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
         />
       </label>
+
+      <div className="text-right">
+        <Link
+          href="/forgot-password"
+          className="text-sm font-medium text-[var(--primary)] hover:underline"
+        >
+          Забыли пароль?
+        </Link>
+      </div>
 
       {error ? (
         <p

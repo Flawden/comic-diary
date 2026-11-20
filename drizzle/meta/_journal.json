@@ -218,6 +218,118 @@
       "when": 1794571200000,
       "tag": "0030_chapter_cover",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794740795188,
+      "tag": "0031_auth_password_reset_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794747000000,
+      "tag": "0032_auth_email_verification_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794833400000,
+      "tag": "0033_auth_email_verification_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794872400000,
+      "tag": "0034_auth_registration_activation_marker",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794900000000,
+      "tag": "0035_auth_activation_mail_outbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794903600000,
+      "tag": "0036_auth_activation_dispatch_fence",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794907200000,
+      "tag": "0037_auth_activation_operator_gate",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794907260000,
+      "tag": "0038_auth_activation_reservation_presence",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794907320000,
+      "tag": "0039_auth_activation_operator_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794907380000,
+      "tag": "0040_auth_password_reset_mail_outbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794907440000,
+      "tag": "0041_auth_password_reset_outbox_claim",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794907500000,
+      "tag": "0042_auth_password_reset_dispatch_fence",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794907560000,
+      "tag": "0043_auth_password_reset_operator_gate",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1795000000000,
+      "tag": "0044_auth_password_reset_dispatch_start",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1795108031800,
+      "tag": "0045_community_comments",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1795113951351,
+      "tag": "0046_activation_dispatch_start",
+      "breakpoints": true
     }
   ]
 }

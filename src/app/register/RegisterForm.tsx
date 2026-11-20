@@ -35,6 +35,8 @@ export function RegisterForm({
     string | null
   >(null);
 
+  const [pendingActivation, setPendingActivation] = useState(false);
+
   async function handleSubmit(
     event:
       FormEvent<HTMLFormElement>,
@@ -134,20 +136,6 @@ export function RegisterForm({
 
       if (
         response.status ===
-          409 &&
-        body.error ===
-          "email_unavailable"
-      ) {
-        setError(
-          "Аккаунт с этим email уже существует. Попробуйте войти.",
-        );
-
-        setSubmitting(false);
-        return;
-      }
-
-      if (
-        response.status ===
           400 &&
         body.error ===
           "password_mismatch"
@@ -197,6 +185,13 @@ export function RegisterForm({
         return;
       }
 
+      if (response.status === 202 && (body as { activationRequired?: unknown }).activationRequired === true) {
+        form.reset();
+        setPendingActivation(true);
+        setSubmitting(false);
+        return;
+      }
+
       router.replace(
         nextPath,
       );
@@ -209,6 +204,18 @@ export function RegisterForm({
 
       setSubmitting(false);
     }
+  }
+
+  if (pendingActivation) {
+    return (
+      <div role="status" className="rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-4 text-sm leading-6 text-[var(--text-primary)]">
+        <p>Если адрес доступен для подтверждения, письмо с одноразовым кодом появится в почте.
+        Проверьте также папку «Спам». На странице активации введите код и задайте новый пароль.</p>
+        <a href="/activate" className="mt-3 inline-block text-[var(--primary)] underline">Подтвердить почту</a>
+        <p className="mt-3">Письмо не пришло? Подождите минуту и запросите новый код на странице активации.
+        Если аккаунт уже подтверждён, перейдите ко входу или восстановлению пароля.</p>
+      </div>
+    );
   }
 
   return (
