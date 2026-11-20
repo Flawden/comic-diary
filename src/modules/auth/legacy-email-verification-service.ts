@@ -5,6 +5,7 @@
 import { and, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { activationMailDispatchControl, activationMailOutbox, emailVerificationTokens, sessions, users } from "@/db/schema";
+import { pilotAllowsIssue } from "./activation-mail-pilot";
 import { verifyPassword } from "./password";
 import { hashSessionToken } from "./session-token";
 import { hashEmailVerificationToken } from "./email-verification-token";
@@ -70,8 +71,9 @@ async function request(sessionToken: string, currentPassword: string, afterPassw
   if (!config) return UNAVAILABLE;
   try {
     return await db.transaction(async tx => {
-      const [control] = await tx.select().from(activationMailDispatchControl).where(eq(activationMailDispatchControl.id, 1)).for("share");
+      const [control] = await tx.select().from(activationMailDispatchControl).where(eq(activationMailDispatchControl.id, 1)).for("update");
       if (!control?.enabled || control.generation <= 0) return UNAVAILABLE;
+      if (!pilotAllowsIssue(control, checked.userId)) return FAILED;
       const account = await lockOwner(tx, checked);
       if (!account) return FAILED;
       const now = new Date();
@@ -82,6 +84,20 @@ async function request(sessionToken: string, currentPassword: string, afterPassw
       const queued = await enqueueVerificationMailInTransaction(tx,
         { userId: account.id, publicOrigin: config.publicOrigin, key: config.key }, "legacy_email_verification");
       if (!queued.ok) throw new Error("Verification issuance aborted");
+      if (control.pilotId !== null) {
+        // USER is still locked; the one-open-token index identifies this issuance.
+        const issued = await tx.select({ id: activationMailOutbox.id }).from(activationMailOutbox)
+          .innerJoin(emailVerificationTokens, eq(activationMailOutbox.verificationTokenId, emailVerificationTokens.id))
+          .where(and(eq(emailVerificationTokens.userId, account.id), eq(emailVerificationTokens.purpose, "legacy_email_verification"),
+            isNull(emailVerificationTokens.revokedAt), isNull(emailVerificationTokens.consumedAt)));
+        if (issued.length !== 1) throw new Error("Pilot job binding unavailable");
+        const pinned = await tx.update(activationMailDispatchControl).set({ pilotOutboxId: issued[0].id })
+          .where(and(eq(activationMailDispatchControl.id, 1), eq(activationMailDispatchControl.pilotId, control.pilotId),
+            eq(activationMailDispatchControl.pilotUserId, 1), isNull(activationMailDispatchControl.pilotOutboxId),
+            isNull(activationMailDispatchControl.pilotDispatchUsedAt), isNull(activationMailDispatchControl.pilotClosedAt)))
+          .returning({ id: activationMailDispatchControl.id });
+        if (pinned.length !== 1) throw new Error("Pilot issuance binding aborted");
+      }
       // Expiry can pass while waiting for TOKEN/OUTBOX. Roll back every write.
       const [live] = await tx.select({ id: sessions.id }).from(sessions).where(and(eq(sessions.id, checked.sessionId), liveSession(checked)));
       if (!live) throw new Error("Verification session expired");

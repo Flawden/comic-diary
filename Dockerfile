@@ -81,6 +81,8 @@ COPY --from=builder \
     /app/scripts/auth-recovery-control.mjs \
     ./scripts/auth-recovery-control.mjs
 
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/auth-activation-pilot-control.mjs ./scripts/auth-activation-pilot-control.mjs
+
 USER nextjs
 
 EXPOSE 3000

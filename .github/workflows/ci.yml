@@ -66,6 +66,9 @@ jobs:
           node --test scripts/auth-email-verification-c2b1-contract.test.mjs scripts/auth-email-verification-c2b2-contract.test.mjs scripts/auth-email-verification-c2b3-contract.test.mjs
           node --import tsx --test src/modules/auth/email-verification-token.test.ts src/modules/auth/email-verification-policy.test.ts
 
+      - name: One-shot activation pilot policy and schema contracts
+        run: node --import tsx --test src/modules/auth/activation-mail-pilot.test.ts scripts/auth-activation-pilot-contract.test.mjs
+
       - name: Verification purpose additive schema contract
         run: node --test scripts/auth-verification-purpose-contract.test.mjs
 
@@ -347,6 +350,13 @@ jobs:
         env:
           LEGACY_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
         run: node --import tsx --test scripts/auth-legacy-email-verification-integration.test.ts
+
+      - name: One-shot legacy pilot concurrency and fault injection (mock HTTP only)
+        env:
+          PILOT_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: |
+          node --import tsx --test scripts/auth-activation-pilot-migration.test.ts
+          node --import tsx --test scripts/auth-activation-pilot-integration.test.ts
 
       - name: AUTH-01 integrated recovery dispatch (disposable PostgreSQL and MOCK HTTP)
         env:
