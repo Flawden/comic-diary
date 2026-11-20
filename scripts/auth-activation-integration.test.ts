@@ -33,6 +33,7 @@ let email: string;
 let calls: number;
 let token: string;
 let sentKey: string | null;
+let initialControl: { enabled: boolean; generation: number; updated_at: Date };
 const nativeFetch = globalThis.fetch;
 const request = (body: unknown, route = "/api/auth/register", source = origin) => new NextRequest(origin + route, {
  method:"POST", headers: { host:"reader.example.invalid", origin:source, "x-real-ip":"192.0.2.71", "content-type":"application/json" }, body:JSON.stringify(body) });
@@ -48,6 +49,8 @@ const http = async (endpoint:string, init:RequestInit) => {
 };
 const run = (transport = http, hooks?: Parameters<typeof dispatch.dispatchActivationMailForTest>[0]["hooks"]) => dispatch.dispatchActivationMailForTest({env:process.env,http:transport,hooks});
 before(async()=>{
+ initialControl=(await pool.query("SELECT enabled,generation,updated_at FROM activation_mail_dispatch_control WHERE id=1")).rows[0];
+ assert.ok(initialControl,"migration must seed activation control");
  globalThis.fetch=async()=>{throw new Error("UNMOCKED NETWORK FORBIDDEN");};
  dispatch=await import("../src/modules/auth/registration-activation-dispatch");
  registration=await import("../src/app/api/auth/register/route"); resend=await import("../src/app/api/auth/activate/request/route");
@@ -61,7 +64,14 @@ beforeEach(async()=>{Object.assign(process.env,flags);email=`activation-${random
  await pool.query("DELETE FROM auth_rate_limits WHERE scope LIKE 'registration%'");
 });
 afterEach(async()=>{await pool.query("DELETE FROM users WHERE email=$1",[email]);});
-after(async()=>{globalThis.fetch=nativeFetch;key.fill(0);await pool.end();});
+after(async()=>{
+ try {
+  // Disposable fixture ownership ends here. Later CI probes must see the same
+  // default-OFF control row, not this suite's last ON/generation fixture.
+  if(initialControl) await pool.query("UPDATE activation_mail_dispatch_control SET enabled=$1,generation=$2,updated_at=$3 WHERE id=1",
+   [initialControl.enabled,initialControl.generation,initialControl.updated_at]);
+ } finally {globalThis.fetch=nativeFetch;key.fill(0);await pool.end();}
+});
 
 test("registration -> encrypted outbox -> mock HTTP -> activation -> new-password login",async()=>{
  const response=await register(); assert.equal(response.status,202);assert.equal(response.headers.get("set-cookie"),null);

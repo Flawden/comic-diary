@@ -11,6 +11,11 @@
   local SVG HTTP 200; scroll into view -> complete=true/naturalWidth=113. Only the
   browser scenario now scrolls before the same load assertion; no test disabled,
   no timeout relaxed, no app image/network semantics changed. Full reader PASS.
+- First feature CI runs 44661598610/44661644476 exposed activation-suite fixture
+  leakage: its last enabled/generation row affected the subsequent default-OFF
+  gate probe. The suite now snapshots/restores its original control row in after;
+  the unchanged 33 activation tests followed by the unchanged historical gate
+  probe pass in the SAME disposable PG17 database. Production code is unchanged.
 - Next dev regenerated AGENTS heading level (# -> ##); instructions unchanged.
 - Live reference captured by public GET only in Tea/Paper/Night at 1440/320/390.
   Remaining release visual/general checks and remote CI are in progress at this
