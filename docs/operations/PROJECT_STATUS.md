@@ -1,3 +1,25 @@
+# RELEASE-01A — candidate verification (2026-11-20)
+
+- Isolated worktree: C:/Users/Atell/IdeaProjects/comic-diary-release01a.
+- Branch: codex/release01a-candidate-20261120, based directly on accepted activation
+  8b6e78cbea7abcc4930ffc4f01ed61cf06b1afbb. Integrated a96eadd is its ancestor;
+  published integration still points to a96eadd, master last read a5119b2.
+- No merge/cherry-pick. Current UI, RATE, COMMUNITY, activation and recovery are
+  inherited intact. Original two user UI edits remain in comic-diary-auth01.
+- Reproduced baseline CI 44587303919 failure at reader lazy-cover naturalWidth check.
+  Proof: lazy img top -2020, complete=false/naturalWidth=0 after unchanged 12s wait;
+  local SVG HTTP 200; scroll into view -> complete=true/naturalWidth=113. Only the
+  browser scenario now scrolls before the same load assertion; no test disabled,
+  no timeout relaxed, no app image/network semantics changed. Full reader PASS.
+- Next dev regenerated AGENTS heading level (# -> ##); instructions unchanged.
+- Live reference captured by public GET only in Tea/Paper/Night at 1440/320/390.
+  Remaining release visual/general checks and remote CI are in progress at this
+  candidate checkpoint; final evidence belongs to the full review package.
+- Plan only: RELEASE01_ROLLOUT_PLAN.md. No production mutation/deploy/SQL, no real
+  Resend, no secret file read or injection. All AUTH sending stays default OFF.
+
+---
+
 # AUTH-01 email activation — local review (2026-11-19)
 
 - Worktree: C:/Users/Atell/IdeaProjects/comic-diary-activation.

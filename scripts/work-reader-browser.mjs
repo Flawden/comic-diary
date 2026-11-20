@@ -350,6 +350,9 @@ try {
         await mobilePage.reload();
         await mobilePage.locator('.wd-hero-summary button[aria-haspopup="dialog"]').waitFor();
         await mobilePage.locator('.wd-cover img').waitFor();
+        // Reload preserves #chapters/deep scroll. A lazy cover above the viewport
+        // need not load until viewed; exercise that real user action first.
+        await mobilePage.locator('.wd-cover img').scrollIntoViewIfNeeded();
         await mobilePage.waitForFunction(() => {
           const img=document.querySelector('.wd-cover img');
           return !!img && img.complete && img.naturalWidth>0;
