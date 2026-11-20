@@ -1,3 +1,30 @@
+# RELEASE-01A — independent review checkpoint (2026-11-20)
+
+- Draft PR: https://github.com/Flawden/comic-diary/pull/29, target master.
+- Branch: codex/release01a-candidate-20261120. Candidate code checkpoint:
+  433d4058d21d4f6dfc3725a5ce77ac6d03c2a57a.
+- GREEN exact-code PR CI: https://github.com/Flawden/comic-diary/actions/runs/44664329802.
+  Verify, PostgreSQL release checks and Windows backup client passed; publish/deploy
+  are intentionally skipped for feature/PR. Final documentation HEAD and its exact
+  CI conclusions are captured in the full review ZIP manifest and final report.
+- Full release report: RELEASE01_REPORT_RU.md. Visual evidence/report:
+  RELEASE01_VISUAL_REVIEW.md. Future deployment PLAN ONLY: RELEASE01_ROLLOUT_PLAN.md.
+- Local 285 unit / 334 contracts; both PostgreSQL majors: activation 33, recovery 59,
+  RATE 8, COMMUNITY 28; 11 reading/authorization/export probes each. Typecheck,
+  ESLint, production build, Docker build/OFF smoke and production audit (0) PASS.
+- Actual public-server/candidate visual comparison: 3 themes x 1440/320/390 on the
+  same public Mezolit metadata/assets, exact hero height match, plus full synthetic
+  signed-in functionality. No prior demo design was used as the reference.
+- src/, drizzle/, package.json and package-lock.json are byte-identical to accepted
+  activation 8b6e78c. Release-only changes are test isolation/readiness and docs;
+  no runtime workaround, schema alteration, test disabling or dependency upgrade.
+- Only this new feature branch was pushed, non-force. Master/integrated branches
+  and all original worktrees preserved; original two UI edits were not transferred.
+- No production SQL/deploy/restart, no domain/DNS changes, no real Resend requests,
+  no secret-file read/copy/injection or sending enablement. Review stop applies.
+
+---
+
 # RELEASE-01A — candidate verification (2026-11-20)
 
 - Isolated worktree: C:/Users/Atell/IdeaProjects/comic-diary-release01a.
