@@ -26,7 +26,7 @@ const snapshot = {
     emailVerifiedAt: null, verificationRequiredAt: new Date(now.getTime() - 10_000),
   },
   token: {
-    id: 17, userId: 4, emailSnapshot: email, tokenHash: hashEmailVerificationToken(token)!,
+    id: 17, userId: 4, emailSnapshot: email, purpose: "pending_activation", tokenHash: hashEmailVerificationToken(token)!,
     createdAt: new Date(now.getTime() - 5_000), expiresAt: expiration,
     consumedAt: null, revokedAt: null,
   },

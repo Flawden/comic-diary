@@ -73,6 +73,9 @@ services:
       PASSWORD_RESET_OUTBOX_KEY_ID: ${PASSWORD_RESET_OUTBOX_KEY_ID:-}
       PASSWORD_RESET_OUTBOX_KEY_BASE64: ${PASSWORD_RESET_OUTBOX_KEY_BASE64:-}
 
+      AUTH_LEGACY_EMAIL_VERIFICATION_ENABLED: ${AUTH_LEGACY_EMAIL_VERIFICATION_ENABLED:-false}
+      AUTH_LEGACY_EMAIL_VERIFICATION_REQUEST_ENABLED: ${AUTH_LEGACY_EMAIL_VERIFICATION_REQUEST_ENABLED:-false}
+
       # Registration/activation is independent of recovery and remains default-OFF.
       # Operator values come from protected deployment interpolation, never Git literals.
       REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-false}

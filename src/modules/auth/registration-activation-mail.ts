@@ -11,6 +11,25 @@ export type PendingActivationMail = Readonly<{
   activationPageUrl: string;
 }>;
 
+/** Fixed purpose-specific templates; never accept a URL or purpose from HTTP. */
+export function buildVerificationMail(
+  input: PendingActivationMailInput, purpose: unknown, now: Date = new Date(),
+): PendingActivationMail | null {
+  if (purpose === "pending_activation") return buildPendingActivationMail(input, now);
+  if (purpose !== "legacy_email_verification" || !input || !safeRecipient(input.email) || !safeToken(input.token)) return null;
+  const origin = canonicalActivationMailOrigin(input.publicOrigin);
+  const nowMs = now instanceof Date ? now.getTime() : NaN;
+  const remaining = input.expiresAt instanceof Date ? input.expiresAt.getTime() - nowMs : NaN;
+  if (!origin || !Number.isFinite(remaining) || remaining <= 60_000 || remaining > 30 * 60_000) return null;
+  const activationPageUrl = `${origin}/account`;
+  return { to: input.email, subject: "Дракотека — подтверждение почты аккаунта", activationPageUrl,
+    text: ["Дракотека — подтверждение почты аккаунта", "", "В вашем профиле запрошено подтверждение этой почты.",
+      "Откройте профиль:", activationPageUrl, "", "Введите одноразовый код и действующий пароль:", input.token,
+      "", "Пароль при подтверждении почты не изменится.",
+      `Код действителен до ${input.expiresAt.toISOString()} (UTC).`,
+      "Никому не пересылайте код. Если вы не запрашивали подтверждение, проигнорируйте письмо."].join("\n") };
+}
+
 export type PendingActivationMailInput = Readonly<{
   /** Exact mailbox snapshot read from the locked account, not request input. */
   email: string;

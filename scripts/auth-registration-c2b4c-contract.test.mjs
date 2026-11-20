@@ -37,9 +37,13 @@ test("activation revokes sessions and outstanding reset/verification secrets", (
   assert.match(service, /tx\.update\(emailVerificationTokens\)/);
   assert.doesNotMatch(service, /createUserSession\(/);
 });
-test("legacy redeem denies pending marker without undermining legacy", () => {
-  assert.match(old, /account\.verificationRequiredAt !== null/);
-  assert.match(olderProbe, /verification_required_at\) VALUES \(\$1, \$2, 'USER', true, NULL\)/);
+test("retired bearer redemption cannot confirm any state; pending retains lifecycle coverage", () => {
+  const retired = old.split("export async function redeemEmailVerificationToken(")[1];
+  assert.match(retired, /return \{ ok: false, kind: "invalid_token" \}/);
+  assert.doesNotMatch(retired, /\bdb\b|ok: true/);
+  assert.match(old, /!needsSecurePendingActivation\(account\)/);
+  assert.match(olderProbe, /activatePendingRegistrationWithEmailToken\(token,/);
+  assert.match(probe, /assert.equal\(legacyAfter.email_verified_at, null\)/);
 });
 test("real PostgreSQL probe refuses unknown DB before importing service", () => {
   assert.match(probe, /GITHUB_ACTIONS/);

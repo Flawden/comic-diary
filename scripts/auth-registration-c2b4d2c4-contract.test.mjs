@@ -19,8 +19,10 @@ test('D2C4 is an internal claim/finalize API with no transport, secrets, or rout
 test('D2C4 enforces the SAME user-token-outbox lock order as D2C3', () => {
   assert.match(svc, /from\(users\)[\s\S]*?\.for\("update"\)[\s\S]*?from\(emailVerificationTokens\)[\s\S]*?\.for\("update"\)[\s\S]*?from\(activationMailOutbox\)[\s\S]*?\.for\("update"\)/);
   assert.match(previousIssue,/Lock order: USER -> TOKEN update -> prior READY outbox update/);
-  assert.match(svc,/needsSecurePendingActivation\(account\)/);
-  assert.match(svc,/canIssueEmailVerification\(account\)/);
+  assert.match(svc,/canDispatchVerificationPurpose\(account, (?:purpose|token\.purpose)\)/);
+  const purposePolicy = readFileSyncCompat();
+  assert.match(purposePolicy,/purpose === "pending_activation".*needsSecurePendingActivation\(account\)/);
+  assert.match(purposePolicy,/canIssueEmailVerification\(account\)/);
   assert.match(svc,/token\.consumedAt === null && token\.revokedAt === null/);
   assert.match(svc,/token\.emailSnapshot === account\.email/);
 });
@@ -56,3 +58,5 @@ test('CI exercises read-only contract and disposable PG claim concurrency, no re
   assert.match(workflow,/node --import tsx scripts\/auth-registration-c2b4d2c4-pg-probe\.ts/);
   assert.match(workflow,/if: github\.event_name == 'push' && github\.ref == 'refs\/heads\/master'/);
 });
+
+function readFileSyncCompat() { return readFileSync('src/modules/auth/verification-purpose.ts','utf8'); }

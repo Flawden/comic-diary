@@ -69,7 +69,12 @@ function canonicalOrigin(value: string): string | null {
 export function prepareActivationSenderEnvelope(
   config: ActivationSenderConfiguration,
   message: PendingActivationMail,
+  ...purposeArgument: [] | [unknown]
 ): ActivationSenderEnvelope | null {
+  // Only historical two-argument callers imply pending. Explicit unknown,
+  // including undefined, is never interpreted as a pending database purpose.
+  if (purposeArgument.length > 1) return null;
+  const purpose = purposeArgument.length === 0 ? "pending_activation" : purposeArgument[0];
   if (!config || !message || typeof message !== "object") return null;
   if (!safeDomain(config.senderDomain) || !safeSenderAddress(config.fromAddress, config.senderDomain)) return null;
   const origin = canonicalOrigin(config.publicOrigin);
@@ -83,7 +88,8 @@ export function prepareActivationSenderEnvelope(
   if (typeof message.text !== "string" || message.text.length < 1 ||
       message.text.length > 8192 || /[\x00-\x09\x0b-\x1f\x7f\r]/.test(message.text)) return null;
 
-  const url = `${origin}/activate`;
+  if (purpose !== "pending_activation" && purpose !== "legacy_email_verification") return null;
+  const url = purpose === "pending_activation" ? `${origin}/activate` : `${origin}/account`;
   if (message.activationPageUrl !== url || !message.text.includes(url)) return null;
   const links = message.text.match(/https?:\/\/[^\s]+/g) ?? [];
   if (links.length !== 1 || links[0] !== url) return null;

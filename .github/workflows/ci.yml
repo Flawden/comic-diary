@@ -66,6 +66,12 @@ jobs:
           node --test scripts/auth-email-verification-c2b1-contract.test.mjs scripts/auth-email-verification-c2b2-contract.test.mjs scripts/auth-email-verification-c2b3-contract.test.mjs
           node --import tsx --test src/modules/auth/email-verification-token.test.ts src/modules/auth/email-verification-policy.test.ts
 
+      - name: Verification purpose additive schema contract
+        run: node --test scripts/auth-verification-purpose-contract.test.mjs
+
+      - name: Legacy verification purpose, AEAD and mail isolation
+        run: node --import tsx --test src/modules/auth/verification-purpose.test.ts scripts/auth-legacy-email-verification-contract.test.mjs
+
       - name: AUTH-01C2B4A registration activation model contracts
         run: |
           node --test scripts/auth-registration-c2b4a-contract.test.mjs scripts/auth-registration-c2b4b-contract.test.mjs scripts/auth-registration-c2b4c-contract.test.mjs
@@ -287,6 +293,11 @@ jobs:
           node scripts/migrate-production.mjs
           node scripts/migrate-production.mjs
 
+      - name: Verification purpose upgrade and backward compatibility (isolated PG17 database)
+        env:
+          PURPOSE_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: node --import tsx --test scripts/auth-verification-purpose-pg.test.ts
+
       - name: AUTH-01B2 disposable PostgreSQL security and concurrency probe
         run: node --import tsx scripts/auth-password-reset-probe.ts
 
@@ -331,6 +342,11 @@ jobs:
         env:
           ACTIVATION_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
         run: node --import tsx --test scripts/auth-activation-integration.test.ts
+
+      - name: Legacy email verification HTTP, concurrency and mock dispatch
+        env:
+          LEGACY_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: node --import tsx --test scripts/auth-legacy-email-verification-integration.test.ts
 
       - name: AUTH-01 integrated recovery dispatch (disposable PostgreSQL and MOCK HTTP)
         env:
@@ -486,6 +502,33 @@ jobs:
             wait "$qa_pid" || true
             trap - EXIT
           done
+
+      - name: Legacy verification profile browser acceptance (real APIs, provider HTTP blocked)
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          export WD_BROWSER_ROOT="$RUNNER_TEMP/d1-browser-deps"
+          for mode in enabled disabled; do
+            export LEGACY_BROWSER_MODE="$mode"
+            if [ "$mode" = enabled ]; then port=3110; else port=3111; fi
+            node scripts/auth-legacy-browser-server.mjs > "$RUNNER_TEMP/legacy-$mode.log" 2>&1 &
+            legacy_pid=$!
+            trap 'kill "$legacy_pid" 2>/dev/null || true' EXIT
+            curl -fsS --retry 25 --retry-delay 1 --retry-connrefused "http://127.0.0.1:$port/login" -o /dev/null
+            node --import tsx scripts/auth-legacy-browser.mjs
+            kill "$legacy_pid"
+            wait "$legacy_pid" || true
+            trap - EXIT
+          done
+
+      - name: Upload legacy verification browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-legacy-browser-${{ github.run_id }}
+          path: .qa/legacy-browser/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload AUTH-01 integrated browser acceptance
         if: always()

@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { Pool } from "pg";
+import { issueEmailVerificationToken } from "../src/modules/auth/email-verification-token";
 
 function assertDisposableCiTarget(): string {
   const url = process.env.DATABASE_URL;
@@ -135,14 +136,17 @@ async function main(): Promise<void> {
     assert.notEqual(passA, passB);
     console.log("AUTH01C2B4C_CONCURRENT_ACTIVATION=PASS");
 
-    // Legacy mailbox proof remains separate and cannot change its password.
+    // Neither historical bearer path can claim a legacy account, even with pending purpose.
     const legacy = await addUser("legacy", false);
-    const legacyToken = await issue(legacy.id);
+    assert.deepEqual(await issueEmailVerificationForUser(legacy.id), { ok: false, kind: "account_unavailable" });
+    const fixture = issueEmailVerificationToken();
+    const legacyToken = fixture.token;
+    await pool.query("INSERT INTO email_verification_tokens(user_id,email_snapshot,token_hash,expires_at,purpose) VALUES($1,$2,$3,$4,'pending_activation')", [legacy.id, legacy.email, fixture.tokenHash, fixture.expiresAt]);
     assert.deepEqual(await activatePendingRegistrationWithEmailToken(legacyToken, replacementPassword),
       { ok: false, kind: "invalid_token" });
-    assert.deepEqual(await redeemEmailVerificationToken(legacyToken), { ok: true });
+    assert.deepEqual(await redeemEmailVerificationToken(legacyToken), { ok: false, kind: "invalid_token" });
     const legacyAfter = await account(legacy.id);
-    assert.ok(legacyAfter.email_verified_at instanceof Date);
+    assert.equal(legacyAfter.email_verified_at, null);
     assert.equal(legacyAfter.password_hash, initialHash);
     console.log("AUTH01C2B4C_LEGACY_PENDING_SEPARATION=PASS");
 

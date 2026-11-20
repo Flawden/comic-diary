@@ -1,3 +1,44 @@
+# AUTH legacy email verification — local review candidate (2026-11-20)
+
+Independent-review blocker correction: historical issuer is now pending-only
+with explicit purpose; historical bearer-only redemption rejects ALL tokens
+without DB access. The former legacy/pending-purpose bypass was reproduced on
+disposable PG17 before correction. Lifecycle/replay/race/rollback coverage moved
+to the real pending activation path; secure legacy API dependency isolation and
+both-purpose denial have explicit regressions. UI states the five-emails/hour cap.
+See the separate local `.qa/legacy-bypass-review` evidence for this correction;
+earlier review ZIP describes the pre-correction candidate and is superseded.
+Correction checks: 652 unit/contracts, 28 AUTH PG17 commands; activation 33,
+legacy 31 and recovery 59 integration tests passed. Typecheck, lint and build
+passed; browser 3 themes x 320/390/1440 passed with provider HTTP blocked.
+
+- Exact base: f7bf7a8c81134828a82641e2b38ee19fbc555806; tree
+  89bb8b50c5dfdfcbff1aaf61a5772fec8cf6f8aa. Isolated branch:
+  feature/auth-legacy-email-verification-20261120. No commit/push/deploy.
+- Additive 0047 purpose foundation; safe own-account request/redeem with live
+  session and current password on BOTH steps; Argon snapshot checked under USER
+  lock. Password, ordinary sessions and verification_required_at stay unchanged.
+- Shared activation outbox/worker with strict pending/legacy purpose isolation,
+  pending v1 compatibility, purpose-bound legacy v2 AEAD, canonical profile mail,
+  existing at-most-once/uncertain/start/finalization guarantees. No second sender.
+- Two independent default-OFF legacy flags; Tea/Paper/Night profile UI. Existing
+  public registration and recovery policies retained. Migration changes no users.
+- Local checks: 651 unit/contracts; PG17 upgrade/replay foundation 4 assertions;
+  legacy HTTP/concurrency/fault-injection/E2E 30 tests. Production build, ESLint,
+  typecheck and Compose contracts passed. CI definitions include new tests and
+  browser evidence; remote CI has NOT run because pushing is not authorized.
+- Final PG17 AUTH rerun: activation 33/33, legacy 30/30, recovery 59/59. The broad
+  disposable database regression passed all 41 commands. Drizzle metadata check
+  and production npm audit passed (0 vulnerabilities); dependencies unchanged.
+- Real browser/real account APIs on disposable PG17: enabled and disabled modes,
+  3 themes x widths 320/390/1440, 18 screenshots; provider HTTP blocked in fixture.
+  No production user data or secret files used. Other worktrees/UI edits preserved.
+- Runbook: AUTH_LEGACY_EMAIL_VERIFICATION_RUNBOOK.md. Independent review and a
+  separately authorized rollout remain required. Local QA is not production
+  readiness, DNS validation or evidence of real mail delivery.
+
+---
+
 # RELEASE-01A — independent review checkpoint (2026-11-20)
 
 - Draft PR: https://github.com/Flawden/comic-diary/pull/29, target master.

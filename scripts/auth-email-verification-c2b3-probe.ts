@@ -71,6 +71,13 @@ async function main(): Promise<void> {
   const { issueEmailVerificationForUser, redeemEmailVerificationToken } =
     await import("../src/modules/auth/email-verification-service");
 
+  const { activatePendingRegistrationWithEmailToken } = await import("../src/modules/auth/registration-activation-service");
+  async function redeemPending(token: string) {
+    const result = await activatePendingRegistrationWithEmailToken(token, "ci-owner-chosen-password-123");
+    if (result.ok) { assert.equal(result.sessionsRevoked, 0); return { ok: true } as const; }
+    return result;
+  }
+
   const pool = new Pool({ connectionString, connectionTimeoutMillis: 5000 });
   const fixtureIds: number[] = [];
   let rollbackTriggerInstalled = false;
@@ -79,7 +86,7 @@ async function main(): Promise<void> {
   async function addAccount(tag: string): Promise<AccountRow> {
     const email = `auth01c2b3-${tag}-${randomUUID()}@example.invalid`;
     const { rows } = await pool.query<AccountRow>(
-      "INSERT INTO users (email, password_hash, role, is_active, verification_required_at) VALUES ($1, $2, 'USER', true, NULL) RETURNING id, email",
+      "INSERT INTO users (email, password_hash, role, is_active, verification_required_at) VALUES ($1, $2, 'USER', true, date_trunc('milliseconds',now())) RETURNING id, email",
       [email, "ci-only-internal-test-password-hash"],
     );
     assert.ok(rows[0]);
@@ -111,6 +118,7 @@ async function main(): Promise<void> {
     assert.equal(server.rows[0]?.major, 17, "requires PostgreSQL 17 CI service");
 
     expectUnavailable(await issueEmailVerificationForUser(0));
+    expectInvalid(await redeemPending("invalid"));
     expectInvalid(await redeemEmailVerificationToken("invalid"));
 
     // Initial mailbox ownership is NEVER assumed. Only digests are persisted.
@@ -120,6 +128,8 @@ async function main(): Promise<void> {
     expectIssued(first);
     assert.equal(first.email, primary.email);
     assert.equal(first.token.length, 43);
+    expectInvalid(await redeemEmailVerificationToken(first.token));
+    assert.equal(await verifiedAt(primary.id), null);
     assert.equal((await tokenRows(primary.id)).length, 1);
     const firstRow = (await tokenRows(primary.id))[0];
     assert.equal(firstRow.token_hash, hashEmailVerificationToken(first.token));
@@ -135,13 +145,13 @@ async function main(): Promise<void> {
     assert.equal(rows.length, 2);
     assert.ok(rows[0].revoked_at instanceof Date);
     assert.equal(rows[1].revoked_at, null);
-    expectInvalid(await redeemEmailVerificationToken(first.token));
-    assert.deepEqual(await redeemEmailVerificationToken(second.token), { ok: true });
+    expectInvalid(await redeemPending(first.token));
+    assert.deepEqual(await redeemPending(second.token), { ok: true });
     assert.ok((await verifiedAt(primary.id)) instanceof Date);
     rows = await tokenRows(primary.id);
     assert.ok(rows[1].consumed_at instanceof Date);
     assert.equal(rows[1].revoked_at, null);
-    expectInvalid(await redeemEmailVerificationToken(second.token));
+    expectInvalid(await redeemPending(second.token));
     expectUnavailable(await issueEmailVerificationForUser(primary.id));
     console.log("AUTH01C2B3_ISSUE_REVOKE_REDEEM_REPLAY=PASS");
 
@@ -150,8 +160,8 @@ async function main(): Promise<void> {
     const raceIssue = await issueEmailVerificationForUser(racing.id);
     expectIssued(raceIssue);
     const raceResults = await Promise.all([
-      redeemEmailVerificationToken(raceIssue.token),
-      redeemEmailVerificationToken(raceIssue.token),
+      redeemPending(raceIssue.token),
+      redeemPending(raceIssue.token),
     ]);
     assert.equal(raceResults.filter((r) => r.ok).length, 1);
     assert.equal(raceResults.filter((r) => !r.ok && r.kind === "invalid_token").length, 1);
@@ -174,9 +184,9 @@ async function main(): Promise<void> {
     for (const item of issued) {
       if (!item.ok) throw new Error("inconsistent issue result");
       if (hashEmailVerificationToken(item.token) === openRows[0].token_hash) {
-        assert.deepEqual(await redeemEmailVerificationToken(item.token), { ok: true });
+        assert.deepEqual(await redeemPending(item.token), { ok: true });
       } else {
-        expectInvalid(await redeemEmailVerificationToken(item.token));
+        expectInvalid(await redeemPending(item.token));
       }
     }
     assert.ok((await verifiedAt(multi.id)) instanceof Date);
@@ -194,7 +204,7 @@ async function main(): Promise<void> {
        WHERE user_id = $1`,
       [expired.id],
     );
-    expectInvalid(await redeemEmailVerificationToken(expiredIssue.token));
+    expectInvalid(await redeemPending(expiredIssue.token));
     assert.equal(await verifiedAt(expired.id), null);
 
     const changed = await addAccount("changed-email");
@@ -203,21 +213,21 @@ async function main(): Promise<void> {
     await pool.query("UPDATE users SET email = $1 WHERE id = $2", [
       `auth01c2b3-changed-${randomUUID()}@example.invalid`, changed.id,
     ]);
-    expectInvalid(await redeemEmailVerificationToken(changedIssue.token));
+    expectInvalid(await redeemPending(changedIssue.token));
     assert.equal(await verifiedAt(changed.id), null);
 
     const inactive = await addAccount("inactive");
     const inactiveIssue = await issueEmailVerificationForUser(inactive.id);
     expectIssued(inactiveIssue);
     await pool.query("UPDATE users SET is_active = false WHERE id = $1", [inactive.id]);
-    expectInvalid(await redeemEmailVerificationToken(inactiveIssue.token));
+    expectInvalid(await redeemPending(inactiveIssue.token));
     expectUnavailable(await issueEmailVerificationForUser(inactive.id));
 
     const passwordless = await addAccount("passwordless");
     const passwordlessIssue = await issueEmailVerificationForUser(passwordless.id);
     expectIssued(passwordlessIssue);
     await pool.query("UPDATE users SET password_hash = NULL WHERE id = $1", [passwordless.id]);
-    expectInvalid(await redeemEmailVerificationToken(passwordlessIssue.token));
+    expectInvalid(await redeemPending(passwordlessIssue.token));
     expectUnavailable(await issueEmailVerificationForUser(passwordless.id));
     console.log("AUTH01C2B3_EXPIRY_ACCOUNT_GATES=PASS");
 
@@ -246,8 +256,8 @@ async function main(): Promise<void> {
     `);
     rollbackTriggerInstalled = true;
     await assert.rejects(
-      redeemEmailVerificationToken(rollbackIssue.token),
-      /Email-verification account update did not persist/,
+      redeemPending(rollbackIssue.token),
+      /Pending account activation did not persist/,
     );
     assert.equal(await verifiedAt(rollback.id), null);
     assert.equal((await tokenRows(rollback.id))[0].consumed_at, null);
@@ -255,7 +265,7 @@ async function main(): Promise<void> {
     rollbackTriggerInstalled = false;
     await pool.query("DROP FUNCTION comic_diary_c2b3_block_verify()");
     rollbackFunctionInstalled = false;
-    assert.deepEqual(await redeemEmailVerificationToken(rollbackIssue.token), { ok: true });
+    assert.deepEqual(await redeemPending(rollbackIssue.token), { ok: true });
     console.log("AUTH01C2B3_TRANSACTION_ROLLBACK=PASS");
 
     console.log("AUTH01C2B3_DISPOSABLE_PG_INTEGRATION=PASS");

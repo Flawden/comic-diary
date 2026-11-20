@@ -70,6 +70,7 @@ export async function activatePendingRegistrationWithEmailToken(
         id: emailVerificationTokens.id,
         userId: emailVerificationTokens.userId,
         emailSnapshot: emailVerificationTokens.emailSnapshot,
+        purpose: emailVerificationTokens.purpose,
         createdAt: emailVerificationTokens.createdAt,
         expiresAt: emailVerificationTokens.expiresAt,
         consumedAt: emailVerificationTokens.consumedAt,
@@ -81,7 +82,7 @@ export async function activatePendingRegistrationWithEmailToken(
       .for("update");
     const challenge = challenges[0];
     const now = new Date();
-    if (!canRedeemEmailVerification(account, challenge, now) || !challenge) {
+    if (!canRedeemEmailVerification(account, challenge, now) || !challenge || challenge.purpose !== "pending_activation") {
       return { ok: false, kind: "invalid_token" };
     }
 

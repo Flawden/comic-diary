@@ -11,8 +11,10 @@ const tokens=read('src/modules/auth/email-verification-service.ts');
 test('D2C3 uses one transaction with account lock, revocation and encrypted enqueue',()=>{
  assert.match(issue,/db\.transaction\(tx => enqueuePendingActivationMailInTransaction\(tx, input\)\)/);
  assert.match(issue,/\.from\(users\)[\s\S]*?\.for\("update"\)/);
- assert.match(issue,/needsSecurePendingActivation\(account\)/);
- assert.match(issue,/canIssueEmailVerification\(account\)/);
+ assert.match(issue,/canDispatchVerificationPurpose\(account, (?:purpose|token\.purpose)\)/);
+  const purposePolicy = readFileSyncCompat();
+  assert.match(purposePolicy,/purpose === "pending_activation".*needsSecurePendingActivation\(account\)/);
+ assert.match(purposePolicy,/canIssueEmailVerification\(account\)/);
  assert.match(issue,/\.update\(emailVerificationTokens\)[\s\S]*?\.set\(\{ revokedAt: now \}\)/);
  assert.match(issue,/\.update\(activationMailOutbox\)[\s\S]*?state: "expired"/);
  assert.match(issue,/\.insert\(emailVerificationTokens\)/);
@@ -50,3 +52,5 @@ test('CI verifies D2C3 structural and disposable PostgreSQL race/rollback tests'
  assert.match(ci,/AUTH-01C2B4D2C3 disposable PostgreSQL atomic enqueue and rollback/);
  assert.match(ci,/node --import tsx scripts\/auth-registration-c2b4d2c3-pg-probe\.ts/);
 });
+
+function readFileSyncCompat() { return read('src/modules/auth/verification-purpose.ts'); }

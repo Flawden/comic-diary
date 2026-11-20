@@ -1,20 +1,21 @@
 /**
  * AUTH-01C2B4D2C3: INTERNAL ONLY — atomically issue a pending account's
  * challenge and store ONE encrypted outbox message in the SAME transaction.
+ * The pending wrapper remains strict. The shared transaction kernel also serves
+ * session/password-authorized legacy verification with an explicit purpose.
  *
  * Used by atomic registration and trusted reissuance; performs no HTTP.
  * The caller must be trusted and supply the canonical origin + external key;
  * do not expose this function to untrusted request input or public routes.
  */
+import { canDispatchVerificationPurpose, type VerificationPurpose } from "./verification-purpose";
 import { randomBytes } from "node:crypto";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 
 import { db } from "@/db";
 import { activationMailOutbox, emailVerificationTokens, users } from "@/db/schema";
-import { canIssueEmailVerification } from "./email-verification-policy";
 import { issueEmailVerificationToken } from "./email-verification-token";
 import { canonicalActivationMailOrigin } from "./registration-activation-mail";
-import { needsSecurePendingActivation } from "./registration-activation-policy";
 import {
   sealActivationMailOutboxPayload,
   type ActivationMailOutboxKey,
@@ -56,6 +57,15 @@ export async function enqueuePendingActivationMailInTransaction(
   tx: ActivationTransaction,
   input: Readonly<{ userId: number; publicOrigin: string; key: ActivationMailOutboxKey }>,
 ): Promise<PendingActivationEnqueueResult> {
+  return enqueueVerificationMailInTransaction(tx, input, "pending_activation");
+}
+
+/** Internal only: caller holds CONTROL -> USER (and SESSION for legacy). */
+export async function enqueueVerificationMailInTransaction(
+  tx: ActivationTransaction,
+  input: Readonly<{ userId: number; publicOrigin: string; key: ActivationMailOutboxKey }>,
+  purpose: VerificationPurpose,
+): Promise<PendingActivationEnqueueResult> {
   const origin = canonicalActivationMailOrigin(input.publicOrigin);
   if (!origin) throw new Error("Activation origin unavailable");
 
@@ -68,8 +78,7 @@ export async function enqueuePendingActivationMailInTransaction(
       verificationRequiredAt: users.verificationRequiredAt,
     }).from(users).where(eq(users.id, input.userId)).limit(1).for("update");
     const account = rows[0];
-    if (!account || !needsSecurePendingActivation(account) ||
-        !canIssueEmailVerification(account)) {
+    if (!account || !canDispatchVerificationPurpose(account, purpose)) {
       return { ok: false, kind: "account_unavailable" };
     }
 
@@ -97,6 +106,7 @@ export async function enqueuePendingActivationMailInTransaction(
     const saved = await tx.insert(emailVerificationTokens).values({
       userId: account.id,
       emailSnapshot: account.email, // Exact address from the locked row.
+      purpose,
       tokenHash: issued.tokenHash, // NEVER the raw token.
       expiresAt: issued.expiresAt,
       createdAt: now,
@@ -107,7 +117,7 @@ export async function enqueuePendingActivationMailInTransaction(
     const idempotencyKey = randomBytes(24).toString("base64url");
     const envelope = sealActivationMailOutboxPayload(
       { email: account.email, token: issued.token, publicOrigin: origin, expiresAt: issued.expiresAt },
-      { verificationTokenId, idempotencyKey, expiresAt: issued.expiresAt },
+      { verificationTokenId, idempotencyKey, expiresAt: issued.expiresAt, purpose },
       input.key,
       now,
     );
