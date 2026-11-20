@@ -187,6 +187,18 @@ try {
   const diary=page.getByRole("tabpanel",{name:"Мой дневник"});
   await diary.waitFor();
   await diary.locator("textarea").fill("Моя заметка");
+  // Record only synthetic-fixture booleans, never note contents or credentials.
+  await page.evaluate(() => { window.readerDraftDocument = "kept"; });
+  const captureDraftState = async phase => {
+    if (!process.env.WD_VISUAL_OUTPUT) return;
+    const state = await page.locator('#my-reading').evaluate(panel => ({
+      noteMatches: panel.querySelector('textarea')?.value === "Моя заметка",
+      dirty: panel.textContent.includes("Есть несохранённые изменения"),
+      sameDocument: window.readerDraftDocument === "kept",
+    }));
+    console.log("WD16_DRAFT_STATE=" + JSON.stringify({phase, ...state}));
+  };
+  await captureDraftState("after-fill");
   await page.getByRole("tab",{name:"Об истории"}).click();
   await page.locator(".wd-hero-summary").getByText("Описание истории",{exact:true}).waitFor();
   assert.equal(await page.getByRole("tabpanel",{name:"Об истории"}).getByText("Описание истории",{exact:true}).count(),0);
@@ -423,6 +435,7 @@ try {
     assert.deepEqual(diagnostics.violations,[],"WD-HERO-02B: viewport or browser failures; see uploaded diagnostic JSON");
     console.log("WD_HERO_02B_VISUAL_QA=PASS");
   }
+  await captureDraftState("after-visual-fixtures");
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).check();
   assert.equal(await chapters.locator(".wd-row--scheduled").count(), 0);
   await chapters.getByRole("checkbox",{name:/Скрыть запланированные/}).uncheck();
@@ -456,6 +469,7 @@ try {
   assert.deepEqual(await sheet.locator(".wd-stars button").allTextContents(),["★","★","☆","☆","☆"]);
   await sheet.locator("h2").hover();
   assert.deepEqual(await sheet.locator(".wd-stars button").allTextContents(),["☆","☆","☆","☆","☆"]);
+  await captureDraftState("before-chapter-rating");
   await sheet.getByRole("checkbox").check();
   await sheet.getByRole("button",{name:"4 из 5"}).click();
   await sheet.getByText("Оценка сохранена").waitFor();
@@ -475,6 +489,7 @@ try {
   const sharedWorkSource = chapters.getByRole("link", {name:"Открыть источник ↗"});
   assert.equal(await sharedWorkSource.getAttribute("href"), "https://example.com/book");
   await page.getByRole("tab",{name:"Мой дневник"}).click();
+  await captureDraftState("after-chapter-rating");
   assert.equal(await diary.locator("textarea").inputValue(),"Моя заметка");
   assert.equal(await page.evaluate(()=>window.readerDocument),"kept");
   // WD16: ratings are independent of chapter stars and survive failed saves, tabs and reloads.
