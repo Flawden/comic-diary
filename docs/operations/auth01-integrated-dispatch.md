@@ -135,8 +135,12 @@ This table describes a future approved launch, not current production settings.
 
 1. Review/approve/release the local change, apply additive migrations through 0044
    using the ordinary controlled release procedure. Existing migrations are intact.
-2. Buy/connect the domain; configure HTTPS and the public origin; verify the
-   sender domain/DNS in Resend. Create a send-only key and a separate AES key.
+2. Use the owner's already verified `dracoteka.com` sender domain and existing
+   send-only Resend key, prepared on the VPS; do not create a replacement key.
+   Confirm website HTTPS/public origin separately, and provision a separate AES
+   outbox key through protected server configuration. See `deploy/README.md` for
+   Compose interpolation and deploy-gate preservation requirements. No secret
+   file is opened or configured by this documentation change.
 3. **Prepare redemption and worker, keep public requests OFF.** Inject secrets,
    sender/origin settings; set `PASSWORD_RESET_REDEEM_ENABLED=true`,
    `AUTH_RECOVERY_RESEND_CONFIG_READY=true`, `AUTH_RECOVERY_SENDER_VERIFIED=true`,
