@@ -3,17 +3,17 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { emailVerificationTokens, users } from "@/db/schema";
 
+import { needsSecurePendingActivation } from "./registration-activation-policy";
+
 import {
   canIssueEmailVerification,
-  canRedeemEmailVerification,
 } from "./email-verification-policy";
 import {
-  hashEmailVerificationToken,
   issueEmailVerificationToken,
 } from "./email-verification-token";
 
 /**
- * INTERNAL ONLY: a trusted, authorized caller may pass the raw token directly
+ * INTERNAL ONLY, PENDING ACCOUNTS ONLY: a trusted caller may pass the raw token directly
  * to a future secure mail-delivery boundary. Never return it in JSON or logs.
  * The email property is the locked account's exact address at issuance.
  */
@@ -56,7 +56,7 @@ export async function issueEmailVerificationForUser(
       .for("update");
 
     const account = accounts[0];
-    if (!canIssueEmailVerification(account)) {
+    if (!account || !needsSecurePendingActivation(account) || !canIssueEmailVerification(account)) {
       return { ok: false, kind: "account_unavailable" };
     }
     if (!account) {
@@ -83,6 +83,7 @@ export async function issueEmailVerificationForUser(
       .values({
         userId: account.id,
         emailSnapshot: account.email,
+        purpose: "pending_activation",
         tokenHash: issued.tokenHash,
         expiresAt: issued.expiresAt,
         createdAt: now,
@@ -103,125 +104,15 @@ export async function issueEmailVerificationForUser(
 }
 
 /**
- * Consumes a token and marks ONLY the current matching mailbox verified in
- * one database transaction; no success cookie/session is created.
- *
- * Lock ordering is always USER -> CHALLENGE to avoid deadlocks with issuance.
- * The first candidate read does not grant authority: all decisions are made
- * again under locks. A repeated or concurrent claim fails closed.
- *
- * SECURITY BLOCKER: before a public route is enabled, decide how legacy
- * unverified accounts, pre-verification sessions, and unsolicited registrations
- * are handled. This service does NOT solve that identity-claim policy.
+ * Retired bearer-only redemption. Deliberately rejects EVERY token and state,
+ * without reading or mutating the database. Pending registrations must choose
+ * a new password through registration-activation-service; legacy accounts must
+ * use legacy-email-verification-service with a live session and current password.
+ * Kept as a fail-closed compatibility entrypoint for historical internal callers.
  */
 export async function redeemEmailVerificationToken(
   token: unknown,
 ): Promise<EmailVerificationRedeemResult> {
-  const tokenHash = hashEmailVerificationToken(token);
-  if (!tokenHash) {
-    return { ok: false, kind: "invalid_token" };
-  }
-
-  return db.transaction(async (tx): Promise<EmailVerificationRedeemResult> => {
-    // Only discover the stable user ID; do not trust any other candidate data.
-    const candidates = await tx
-      .select({ userId: emailVerificationTokens.userId })
-      .from(emailVerificationTokens)
-      .where(eq(emailVerificationTokens.tokenHash, tokenHash))
-      .limit(1);
-    const candidate = candidates[0];
-    if (!candidate) {
-      return { ok: false, kind: "invalid_token" };
-    }
-
-    const accounts = await tx
-      .select({
-        id: users.id,
-        email: users.email,
-        passwordHash: users.passwordHash,
-        emailVerifiedAt: users.emailVerifiedAt,
-        verificationRequiredAt: users.verificationRequiredAt,
-        isActive: users.isActive,
-      })
-      .from(users)
-      .where(eq(users.id, candidate.userId))
-      .limit(1)
-      .for("update");
-    const account = accounts[0];
-    // This legacy redemption must NEVER activate a pending registration's
-    // attacker-chosen password. Pending accounts use C2B4C, which replaces it.
-    if (!canIssueEmailVerification(account) || !account || account.verificationRequiredAt !== null) {
-      return { ok: false, kind: "invalid_token" };
-    }
-
-    const challenges = await tx
-      .select({
-        id: emailVerificationTokens.id,
-        userId: emailVerificationTokens.userId,
-        emailSnapshot: emailVerificationTokens.emailSnapshot,
-        createdAt: emailVerificationTokens.createdAt,
-        expiresAt: emailVerificationTokens.expiresAt,
-        consumedAt: emailVerificationTokens.consumedAt,
-        revokedAt: emailVerificationTokens.revokedAt,
-      })
-      .from(emailVerificationTokens)
-      .where(eq(emailVerificationTokens.tokenHash, tokenHash))
-      .limit(1)
-      .for("update");
-
-    const challenge = challenges[0];
-    const now = new Date();
-    if (!canRedeemEmailVerification(account, challenge, now)) {
-      return { ok: false, kind: "invalid_token" };
-    }
-    if (!challenge) {
-      return { ok: false, kind: "invalid_token" };
-    }
-
-    const consumed = await tx
-      .update(emailVerificationTokens)
-      .set({ consumedAt: now })
-      .where(
-        and(
-          eq(emailVerificationTokens.id, challenge.id),
-          isNull(emailVerificationTokens.consumedAt),
-          isNull(emailVerificationTokens.revokedAt),
-        ),
-      )
-      .returning({ id: emailVerificationTokens.id });
-    if (!consumed[0]) {
-      return { ok: false, kind: "invalid_token" };
-    }
-
-    const verified = await tx
-      .update(users)
-      .set({ emailVerifiedAt: now, updatedAt: now })
-      .where(
-        and(
-          eq(users.id, account.id),
-          eq(users.email, account.email),
-          eq(users.isActive, true),
-          isNull(users.emailVerifiedAt),
-        ),
-      )
-      .returning({ id: users.id });
-    if (!verified[0]) {
-      // Roll back token consumption too; never commit a partially verified state.
-      throw new Error("Email-verification account update did not persist");
-    }
-
-    // Defense in depth; this challenge is already consumed.
-    await tx
-      .update(emailVerificationTokens)
-      .set({ revokedAt: now })
-      .where(
-        and(
-          eq(emailVerificationTokens.userId, account.id),
-          isNull(emailVerificationTokens.consumedAt),
-          isNull(emailVerificationTokens.revokedAt),
-        ),
-      );
-
-    return { ok: true };
-  });
+  void token;
+  return { ok: false, kind: "invalid_token" };
 }

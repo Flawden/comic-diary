@@ -79,6 +79,7 @@ export async function reservePendingActivationDispatchOnce(input: Readonly<{
     const [token] = await tx.select({
       id: emailVerificationTokens.id, userId: emailVerificationTokens.userId,
       emailSnapshot: emailVerificationTokens.emailSnapshot,
+        purpose: emailVerificationTokens.purpose,
       tokenHash: emailVerificationTokens.tokenHash,
       createdAt: emailVerificationTokens.createdAt,
       expiresAt: emailVerificationTokens.expiresAt,

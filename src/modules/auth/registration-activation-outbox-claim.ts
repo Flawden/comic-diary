@@ -1,6 +1,8 @@
 /**
  * AUTH-01C2B4D2C4A: INTERNAL ONLY — transactionally claim/finalize an
  * encrypted pending-activation outbox entry. This module performs NO delivery,
+ * Legacy jobs share this claim only with explicit internal opt-in; their purpose
+ * and account state are still checked, and only committed start permits HTTP.
  * HTTP calls, decryption, key loading, automatic retry, or scheduler activity.
  *
  * Lock order is USER -> TOKEN -> OUTBOX, matching D2C3 issuance. Candidate
@@ -11,12 +13,11 @@
  * outcome. NEVER recycle it into `ready`, even if the process has crashed.
  */
 import { randomBytes } from "node:crypto";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { activationMailOutbox, emailVerificationTokens, users } from "@/db/schema";
-import { canIssueEmailVerification } from "./email-verification-policy";
-import { needsSecurePendingActivation } from "./registration-activation-policy";
+import { canDispatchVerificationPurpose } from "./verification-purpose";
 import { deriveActivationOutboxNextState } from "./registration-activation-outbox-policy";
 
 type Claimed = Readonly<{ ok: true; outboxId: number; claimId: string }>;
@@ -29,14 +30,15 @@ export type ClaimPendingActivationMailResult = Claimed | NoWork;
  * explicit trust boundary, and revalidate token/account immediately before
  * attempting delivery. This method DOES NOT authorize sending.
  */
-export async function claimPendingActivationMailOnce(): Promise<ClaimPendingActivationMailResult> {
+export async function claimPendingActivationMailOnce(legacyEnabled = false): Promise<ClaimPendingActivationMailResult> {
   const candidates = await db.select({
     outboxId: activationMailOutbox.id,
     tokenId: emailVerificationTokens.id,
     userId: emailVerificationTokens.userId,
   }).from(activationMailOutbox)
     .innerJoin(emailVerificationTokens, eq(activationMailOutbox.verificationTokenId, emailVerificationTokens.id))
-    .where(eq(activationMailOutbox.state, "ready"))
+    .where(and(eq(activationMailOutbox.state, "ready"), inArray(emailVerificationTokens.purpose,
+      legacyEnabled === true ? ["pending_activation", "legacy_email_verification"] : ["pending_activation"])))
     .orderBy(activationMailOutbox.expiresAt, activationMailOutbox.id)
     .limit(16);
 
@@ -51,6 +53,7 @@ export async function claimPendingActivationMailOnce(): Promise<ClaimPendingActi
       const [token] = await tx.select({
         id: emailVerificationTokens.id, userId: emailVerificationTokens.userId,
         emailSnapshot: emailVerificationTokens.emailSnapshot,
+        purpose: emailVerificationTokens.purpose,
         expiresAt: emailVerificationTokens.expiresAt,
         consumedAt: emailVerificationTokens.consumedAt,
         revokedAt: emailVerificationTokens.revokedAt,
@@ -71,7 +74,7 @@ export async function claimPendingActivationMailOnce(): Promise<ClaimPendingActi
         token.userId === account.id && token.id === item.verificationTokenId &&
         token.consumedAt === null && token.revokedAt === null &&
         token.emailSnapshot === account.email &&
-        needsSecurePendingActivation(account) && canIssueEmailVerification(account) &&
+        canDispatchVerificationPurpose(account, token.purpose) &&
         item.expiresAt.getTime() === token.expiresAt.getTime();
       const next = live ? deriveActivationOutboxNextState("ready", {
         kind: "claimed", now, expiresAt: item.expiresAt,

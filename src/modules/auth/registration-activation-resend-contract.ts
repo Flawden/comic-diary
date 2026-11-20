@@ -46,9 +46,12 @@ export function prepareResendActivationCandidate(
   config: ActivationSenderConfiguration,
   message: PendingActivationMail,
   idempotencyKey: string,
+  ...purposeArgument: [] | [unknown]
 ): ResendCandidateRequest | null {
+  if (purposeArgument.length > 1) return null;
+  const purpose = purposeArgument.length === 0 ? "pending_activation" : purposeArgument[0];
   if (!validOpaqueRequestKey(idempotencyKey)) return null;
-  const envelope = prepareActivationSenderEnvelope(config, message);
+  const envelope = prepareActivationSenderEnvelope(config, message, purpose);
   if (!envelope) return null;
   const payload: ResendCandidatePayload = Object.freeze({
     from: envelope.from,

@@ -13,7 +13,11 @@ import {
   createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual,
 } from "node:crypto";
 
+import { isVerificationPurpose, type VerificationPurpose } from "./verification-purpose";
+
 export type ActivationMailOutboxBinding = Readonly<{
+  /** Omission is supported only for historical pending/v1 callers. */
+  purpose?: VerificationPurpose;
   verificationTokenId: number;
   idempotencyKey: string;
   expiresAt: Date;
@@ -61,7 +65,13 @@ function exactKeys(value: Record<string, unknown>, expected: readonly string[]):
 }
 
 function validBinding(value: unknown): value is ActivationMailOutboxBinding {
-  if (!plainObject(value) || !exactKeys(value, ["verificationTokenId", "idempotencyKey", "expiresAt"])) return false;
+  if (!plainObject(value)) return false;
+  const fields = ["verificationTokenId", "idempotencyKey", "expiresAt"];
+  if (Object.hasOwn(value, "purpose")) {
+    if (!isVerificationPurpose(value.purpose)) return false;
+    fields.push("purpose");
+  }
+  if (!exactKeys(value, fields)) return false;
   return typeof value.verificationTokenId === "number" && Number.isSafeInteger(value.verificationTokenId) &&
     (value.verificationTokenId as number) > 0 &&
     (value.verificationTokenId as number) <= 2147483647 &&
@@ -97,7 +107,9 @@ function validKey(value: unknown): value is ActivationMailOutboxKey {
 function aad(binding: ActivationMailOutboxBinding, keyId: string): Buffer {
   // JSON array prevents delimiter ambiguity; UTC ISO preserves the DB timestamp.
   return Buffer.from(JSON.stringify([
-    DOMAIN, binding.verificationTokenId, binding.idempotencyKey,
+    ...(binding.purpose === "legacy_email_verification"
+      ? ["comic-diary:auth-verification-mail-outbox:aes-256-gcm:v2", binding.purpose]
+      : [DOMAIN]), binding.verificationTokenId, binding.idempotencyKey,
     binding.expiresAt.toISOString(), keyId,
   ]), "utf8");
 }

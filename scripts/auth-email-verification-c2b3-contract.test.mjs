@@ -38,7 +38,9 @@ test("probe refuses non-CI or non-disposable database before importing service",
 });
 
 test("integration probe covers serializability, rollback, account gates and fixture cleanup", () => {
-  assert.match(probe, /Promise\.all\(\[\s*redeemEmailVerificationToken/);
+  assert.match(probe, /Promise\.all\(\[\s*redeemPending/);
+  assert.match(probe, /activatePendingRegistrationWithEmailToken\(token, "ci-owner-chosen-password-123"\)/);
+  assert.match(probe, /expectInvalid\(await redeemEmailVerificationToken\(first.token\)\)/);
   assert.match(probe, /Promise\.all\(\[\s*issueEmailVerificationForUser/);
   assert.match(probe, /addAccount\("changed-email"\)/);
   assert.match(probe, /interval '31 minutes'/);

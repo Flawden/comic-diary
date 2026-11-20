@@ -330,6 +330,13 @@
       "when": 1795113951351,
       "tag": "0046_activation_dispatch_start",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1795132800000,
+      "tag": "0047_auth_verification_purpose",
+      "breakpoints": true
     }
   ]
 }

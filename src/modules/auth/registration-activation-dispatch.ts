@@ -4,6 +4,7 @@
  * Its commit is the authorization point; later OFF/revoke cannot cancel HTTP.
  * A crash after commit sacrifices delivery rather than risks a second attempt.
  */
+import { legacyVerificationEnabled } from "./verification-purpose";
 import { and, eq, isNotNull, isNull, lte, or } from "drizzle-orm";
 import { db } from "@/db";
 import { activationMailDispatchControl as controlTable, activationMailOutbox as outboxTable, emailVerificationTokens, users } from "@/db/schema";
@@ -12,7 +13,7 @@ import { recordPendingActivationDispatchFenceOnce } from "./registration-activat
 import { reservePendingActivationDispatchOnce } from "./registration-activation-outbox-reserve";
 import { preflightClaimedActivationMailDryRun } from "./registration-activation-outbox-dry-run";
 import { unsealActivationMailOutboxPayload } from "./registration-activation-outbox-crypto";
-import { buildPendingActivationMail } from "./registration-activation-mail";
+import { buildVerificationMail } from "./registration-activation-mail";
 import { prepareResendActivationCandidate, classifyResendCandidateReply } from "./registration-activation-resend-contract";
 import { readActivationDispatchConfig as readConfig } from "./registration-activation-config";
 
@@ -63,7 +64,7 @@ async function dispatch(env: Environment, http: Http, hooks: TestHooks = {}): Pr
     // Do not consume work while the persisted operator gate is OFF.
     const [gate] = await db.select().from(controlTable).where(eq(controlTable.id, 1));
     if (!gate?.enabled) return BLOCKED;
-    const claim = await claimPendingActivationMailOnce();
+    const claim = await claimPendingActivationMailOnce(legacyVerificationEnabled(env));
     if (!claim.ok) return { status: "no_work", attempted: false };
     await hooks.afterClaim?.();
     const binding = { outboxId: claim.outboxId, claimId: claim.claimId,
@@ -73,7 +74,7 @@ async function dispatch(env: Environment, http: Http, hooks: TestHooks = {}): Pr
     const reserved = await reservePendingActivationDispatchOnce(binding);
     if (!reserved.ok) return BLOCKED;
     await hooks.afterReservation?.();
-    const start = await beginDispatch(claim, config);
+    const start = await beginDispatch(claim, config, legacyVerificationEnabled(env));
     if (!start) return BLOCKED;
     await hooks.afterStart?.();
     // A paused/crashed worker must not use a stale handoff on resumption.
@@ -92,7 +93,7 @@ async function dispatch(env: Environment, http: Http, hooks: TestHooks = {}): Pr
 /** Private: this is not callable with a forged external authorization object.
  * No HTTP occurs in this transaction. Commit acknowledgement is required.
  */
-async function beginDispatch(claim: Claim, config: Config) {
+async function beginDispatch(claim: Claim, config: Config, legacyEnabled: boolean) {
   const [candidate] = await db.select({ userId: emailVerificationTokens.userId, tokenId: emailVerificationTokens.id })
     .from(outboxTable).innerJoin(emailVerificationTokens, eq(outboxTable.verificationTokenId, emailVerificationTokens.id))
     .where(eq(outboxTable.id, claim.outboxId));
@@ -103,7 +104,7 @@ async function beginDispatch(claim: Claim, config: Config) {
     const [account] = await tx.select().from(users).where(eq(users.id, candidate.userId)).for("update");
     const [token] = await tx.select().from(emailVerificationTokens).where(eq(emailVerificationTokens.id, candidate.tokenId)).for("update");
     const [outbox] = await tx.select().from(outboxTable).where(eq(outboxTable.id, claim.outboxId)).for("update");
-    if (!account || !token || !outbox || outbox.dispatchStartedAt !== null ||
+    if (!account || !token || !outbox || (token.purpose === "legacy_email_verification" && !legacyEnabled) || outbox.dispatchStartedAt !== null ||
         !outbox.dispatchFenceAt || !outbox.dispatchReservationAt ||
         outbox.dispatchReservationGeneration !== control.generation) return null;
     const now = new Date();
@@ -113,13 +114,14 @@ async function beginDispatch(claim: Claim, config: Config) {
     if (preflight.status !== "eligible_snapshot") return null;
     const payload = unsealActivationMailOutboxPayload({ payloadCiphertext: outbox.payloadCiphertext,
       payloadNonce: outbox.payloadNonce, payloadKeyId: outbox.payloadKeyId, payloadDigest: outbox.payloadDigest },
-    { verificationTokenId: token.id, idempotencyKey: outbox.idempotencyKey, expiresAt: token.expiresAt }, config.keys, now);
+    { verificationTokenId: token.id, idempotencyKey: outbox.idempotencyKey, expiresAt: token.expiresAt,
+      purpose: token.purpose as import("./verification-purpose").VerificationPurpose }, config.keys, now);
     if (!payload) return null;
-    const mail = buildPendingActivationMail(payload, now);
+    const mail = buildVerificationMail(payload, token.purpose, now);
     if (!mail) return null;
     // Serialize a fresh literal of validated primitives BEFORE committing start.
     // Neither caller objects nor toJSON hooks can enter this body.
-    const wire = prepareResendActivationCandidate(config, mail, outbox.idempotencyKey);
+    const wire = prepareResendActivationCandidate(config, mail, outbox.idempotencyKey, token.purpose);
     if (!wire) return null;
     const body = JSON.stringify({ from: wire.payload.from, to: [wire.payload.to[0]], subject: wire.payload.subject, text: wire.payload.text });
     const changed = await tx.update(outboxTable).set({ dispatchStartedAt: now, updatedAt: now }).where(and(

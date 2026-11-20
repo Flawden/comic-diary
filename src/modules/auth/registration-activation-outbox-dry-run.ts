@@ -10,15 +10,12 @@
  * dispatcher must solve the atomic last-mile revalidation/revocation race
  * before allowing ANY network boundary. Never use this result to call fetch.
  */
+import { canDispatchVerificationPurpose } from "./verification-purpose";
 import { timingSafeEqual } from "node:crypto";
-// @ts-expect-error TS5097: Node 22 standalone strip-types requires .ts; CI uses tsx.
-import { canIssueEmailVerification } from "./email-verification-policy.ts";
 // @ts-expect-error TS5097: standalone Node strip-types; CI uses tsx.
 import { hashEmailVerificationToken } from "./email-verification-token.ts";
 // @ts-expect-error TS5097: standalone Node strip-types; CI uses tsx.
-import { canonicalActivationMailOrigin, buildPendingActivationMail } from "./registration-activation-mail.ts";
-// @ts-expect-error TS5097: standalone Node strip-types; CI uses tsx.
-import { needsSecurePendingActivation } from "./registration-activation-policy.ts";
+import { canonicalActivationMailOrigin, buildVerificationMail } from "./registration-activation-mail.ts";
 // @ts-expect-error TS5097: standalone Node strip-types; CI uses tsx.
 import { unsealActivationMailOutboxPayload } from "./registration-activation-outbox-crypto.ts";
 
@@ -28,7 +25,7 @@ export type DryRunActivationAccount = Readonly<{
   verificationRequiredAt: Date | null;
 }>;
 export type DryRunActivationToken = Readonly<{
-  id: number; userId: number; emailSnapshot: string; tokenHash: string;
+  id: number; userId: number; emailSnapshot: string; tokenHash: string; purpose: string;
   createdAt: Date; expiresAt: Date; consumedAt: Date | null;
   revokedAt: Date | null;
 }>;
@@ -105,7 +102,7 @@ export function preflightClaimedActivationMailDryRun(input: Readonly<{
         token.userId !== account.id || token.id !== outbox.verificationTokenId ||
         token.emailSnapshot !== account.email ||
         ms(outbox.expiresAt) !== expiresMs ||
-        !canIssueEmailVerification(account) || !needsSecurePendingActivation(account)) return BLOCKED;
+        !canDispatchVerificationPurpose(account, token.purpose)) return BLOCKED;
     if (!canonical24(input.claimId) || !canonical24(outbox.claimId) ||
         input.claimId !== outbox.claimId || typeof outbox.idempotencyKey !== "string" ||
         !IDEM.test(outbox.idempotencyKey) || !canonical24(outbox.idempotencyKey)) return BLOCKED;
@@ -117,6 +114,7 @@ export function preflightClaimedActivationMailDryRun(input: Readonly<{
       payloadKeyId: outbox.payloadKeyId,
       payloadDigest: outbox.payloadDigest,
     }, {
+      purpose: token.purpose as import("./verification-purpose").VerificationPurpose,
       verificationTokenId: token.id,
       idempotencyKey: outbox.idempotencyKey,
       expiresAt: token.expiresAt,
@@ -124,7 +122,7 @@ export function preflightClaimedActivationMailDryRun(input: Readonly<{
     if (!plaintext || plaintext.email !== account.email || plaintext.publicOrigin !== origin ||
         !sameHash(token.tokenHash, hashEmailVerificationToken(plaintext.token) ?? "")) return BLOCKED;
     // Build only as an additional validation. Do not return the plaintext/mail.
-    if (!buildPendingActivationMail(plaintext, input.now)) return BLOCKED;
+    if (!buildVerificationMail(plaintext, token.purpose, input.now)) return BLOCKED;
     return ELIGIBLE;
   } catch {
     return BLOCKED;

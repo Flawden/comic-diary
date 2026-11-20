@@ -660,6 +660,7 @@ export const emailVerificationTokens = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     emailSnapshot: varchar("email_snapshot", { length: 320 }).notNull(),
+    purpose: varchar("purpose", { length: 32 }).notNull().default("pending_activation"),
     tokenHash: varchar("token_hash", { length: 64 }).notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     consumedAt: timestamp("consumed_at", { withTimezone: true }),
@@ -670,6 +671,10 @@ export const emailVerificationTokens = pgTable(
   },
   (table) => [
     unique("email_verification_tokens_token_hash_unique").on(table.tokenHash),
+    check(
+      "email_verification_tokens_purpose_check",
+      sql`${table.purpose} IN ('pending_activation', 'legacy_email_verification')`,
+    ),
     index("email_verification_tokens_user_id_idx").on(table.userId),
     index("email_verification_tokens_expires_at_idx").on(table.expiresAt),
     uniqueIndex("email_verification_tokens_one_open_per_user_idx")

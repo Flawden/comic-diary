@@ -7,6 +7,7 @@ const root = process.cwd();
 const service = readFileSync(join(root, "src/modules/auth/email-verification-service.ts"), "utf8").replace(/\r\n/g, "\n");
 const policy = readFileSync(join(root, "src/modules/auth/email-verification-policy.ts"), "utf8");
 const schema = readFileSync(join(root, "src/db/schema.ts"), "utf8");
+const activation = readFileSync(join(root, "src/modules/auth/registration-activation-service.ts"), "utf8").replace(/\r\n/g, "\n");
 
 test("C2B2 is internal-only: two service entrypoints, no routes/mail/sessions", () => {
   assert.match(service, /export async function issueEmailVerificationForUser\(/);
@@ -24,13 +25,16 @@ test("issuance uses a transaction, account lock, old revocation, then insertion"
   assert.match(issue, /Number\.isSafeInteger\(userId\)/);
   assert.match(issue, /\.for\("update"\)/);
   assert.match(issue, /canIssueEmailVerification\(account\)/);
+  assert.match(issue, /!account \|\| !needsSecurePendingActivation\(account\) \|\| !canIssueEmailVerification\(account\)/);
+  assert.match(issue, /purpose: "pending_activation"/);
+  assert.ok(issue.indexOf("!needsSecurePendingActivation(account)") < issue.indexOf(".update(emailVerificationTokens)"));
   assert.match(issue, /emailSnapshot:\s*account\.email/);
   assert.match(issue, /tokenHash:\s*issued\.tokenHash/);
   assert.ok(issue.indexOf(".set({ revokedAt: now })") < issue.indexOf(".insert(emailVerificationTokens)"));
 });
 
-test("redeem rechecks the secret after acquiring USER then TOKEN locks", () => {
-  const redeem = service.split("export async function redeemEmailVerificationToken(")[1];
+test("pending activation rechecks the secret after acquiring USER then TOKEN locks", () => {
+  const redeem = activation.split("export async function activatePendingRegistrationWithEmailToken(")[1];
   assert.match(redeem, /hashEmailVerificationToken\(token\)/);
   assert.match(redeem, /return db\.transaction\(/);
   assert.match(redeem, /\.where\(eq\(users\.id, candidate\.userId\)\)/);
@@ -39,14 +43,22 @@ test("redeem rechecks the secret after acquiring USER then TOKEN locks", () => {
   assert.match(redeem, /canRedeemEmailVerification\(account, challenge, now\)/);
 });
 
-test("consumption and verification occur in the SAME transaction with guards", () => {
-  const redeem = service.split("export async function redeemEmailVerificationToken(")[1];
+test("pending consumption and verification occur in the SAME transaction with guards", () => {
+  const redeem = activation.split("export async function activatePendingRegistrationWithEmailToken(")[1];
   assert.match(redeem, /\.set\(\{ consumedAt: now \}\)/);
-  assert.match(redeem, /\.set\(\{ emailVerifiedAt: now, updatedAt: now \}\)/);
+  assert.match(redeem, /\.set\(\{ passwordHash, emailVerifiedAt: now, updatedAt: now \}\)/);
   assert.match(redeem, /isNull\(users\.emailVerifiedAt\)/);
   assert.match(redeem, /eq\(users\.email, account\.email\)/);
-  assert.match(redeem, /throw new Error\("Email-verification account update did not persist"\)/);
-  assert.match(redeem, /return \{ ok: true \}/);
+  assert.match(redeem, /throw new Error\("Pending account activation did not persist"\)/);
+  assert.match(redeem, /return \{ ok: true, sessionsRevoked: revoked.length \}/);
+  assert.match(redeem, /!needsSecurePendingActivation\(account\)/);
+  assert.match(redeem, /challenge.purpose !== "pending_activation"/);
+});
+
+test("retired token-only redemption rejects all states and cannot read or write DB", () => {
+  const redeem = service.split("export async function redeemEmailVerificationToken(")[1];
+  assert.match(redeem, /return \{ ok: false, kind: "invalid_token" \}/);
+  assert.doesNotMatch(redeem, /\bdb\b|\.transaction\(|\.select\(|\.update\(|\.insert\(|\.delete\(|ok: true/);
 });
 
 test("policy preserves password-only and exact-address gates", () => {

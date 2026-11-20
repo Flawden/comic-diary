@@ -117,6 +117,15 @@ An API key alone enables nothing. Persisted PostgreSQL gates remain independent.
 Each AUTH public origin must exactly match `COMIC_DIARY_PUBLIC_ORIGIN` (HTTPS).
 Use separate durable activation/recovery AEAD keys; retain them for existing jobs.
 
+Legacy own-account email verification adds two default-OFF switches:
+`AUTH_LEGACY_EMAIL_VERIFICATION_ENABLED` (UI/redeem/legacy dispatch) and
+`AUTH_LEGACY_EMAIL_VERIFICATION_REQUEST_ENABLED` (new issuance). It reuses the
+activation key, sender, persisted gate and worker; public registration can remain
+OFF. Keep intake OFF until every app/worker supports purpose migration 0047.
+See `docs/operations/AUTH_LEGACY_EMAIL_VERIFICATION_RUNBOOK.md` for shutdown,
+mixed-version limitations and additive-schema rollback. Do not reset existing
+AUTH values or replace the protected server env with the example.
+
 The checked-in Compose is a template, not proof of the live server configuration.
 Current GitHub Actions sends only `deploy SHA DIGEST` to the restricted SSH gate;
 it does not contain the VPS gate implementation or a command installing this
