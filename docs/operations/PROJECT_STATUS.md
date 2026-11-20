@@ -16,6 +16,19 @@
   gate probe. The suite now snapshots/restores its original control row in after;
   the unchanged 33 activation tests followed by the unchanged historical gate
   probe pass in the SAME disposable PG17 database. Production code is unchanged.
+- Runs 44662608869/44662612969 passed activation/gate isolation and the cover
+  assertion, then exposed diary-test interference. Diagnostic run 44663715522
+  and a fresh local cold app both prove after-fill note/dirty/document=true,
+  then after visual setup note/dirty/document=false BEFORE chapter interactions.
+  The visual SQL/reload scenario replaced the original document on cold dev.
+  Draft setup now starts after visual fixtures; dirty-state handshake and all
+  strict tab/failure/rating/refresh/save assertions remain. No app draft code changed.
+- Full local release checks: 285 unit, 334 contracts; PG17/PG18 activation 33,
+  recovery 59, RATE 8, COMMUNITY 28 each. Eleven reading/authorization/export
+  probes on each major PASS. Typecheck, lint, production/Docker build and OFF
+  smoke PASS; production npm audit 0. Visual comparison: 9 matching public hero
+  cases, 9 signed-in cases; integrated UI 45 checks; community 63/99 negative;
+  threading and activation each 9 theme/width cases. See RELEASE01_VISUAL_REVIEW.md.
 - Next dev regenerated AGENTS heading level (# -> ##); instructions unchanged.
 - Live reference captured by public GET only in Tea/Paper/Night at 1440/320/390.
   Remaining release visual/general checks and remote CI are in progress at this
