@@ -23,6 +23,40 @@ test('hidden/private/scheduled/wrong-work targets cannot publish or leak reviews
 test('chapter review uses one score, follows a moved chapter and enforces binding in PostgreSQL',async()=>{const item=await svc.saveReview(actors[0],{comicId:books[0],chapterId:chapter,scores:[4],body:''});assert.equal((await svc.listReviews({comicId:books[0],chapterId:chapter},null)).items[0].scores[0],4);await assert.rejects(q('UPDATE community_reviews SET comic_id=$1 WHERE id=$2',[books[1],item.id]),{code:'23503'});await q('UPDATE chapters SET comic_id=$1 WHERE id=$2',[books[1],chapter]);assert.equal((await svc.listReviews({comicId:books[1],chapterId:chapter},null)).total,1);assert.equal((await q('SELECT comic_id FROM community_reviews WHERE id=$1',[item.id])).rows[0].comic_id,books[1]);});
 test('public averages count each reader once; deletion does not republish old diary scores',async()=>{await q("INSERT INTO user_comics(user_id,comic_id,rating_plot,personal_note) VALUES($1,$3,1,'DO NOT PUBLISH'),($2,$3,5,'PRIVATE')",[actors[0].userId,actors[1].userId,books[0]]);assert.equal((await ratings.getCommunityRatings(books[0]))?.overall.average,3);const item=await svc.saveReview(actors[0],input({scores:[5,5,5,5,5]}));const aggregate=await ratings.getCommunityRatings(books[0]);assert.equal(aggregate?.overall.votes,2);assert.equal(aggregate?.overall.average,5);const publicPage=JSON.stringify(await svc.listReviews(t,null));assert.ok(!publicPage.includes('DO NOT PUBLISH'));assert.ok(!publicPage.includes('PRIVATE'));assert.ok(!publicPage.includes('userId'));await svc.removeReview(actors[0],item.id,1);assert.equal((await ratings.getCommunityRatings(books[0]))?.overall.votes,1);assert.equal((await q('SELECT personal_note FROM user_comics WHERE user_id=$1 AND comic_id=$2',[actors[0].userId,books[0]])).rows[0].personal_note,'DO NOT PUBLISH');});
 test('chapter averages deduplicate legacy read rating and public review',async()=>{await q('INSERT INTO user_chapter_reads(user_id,chapter_id,rating) VALUES($1,$3,1),($2,$3,3)',[actors[0].userId,actors[1].userId,chapter]);await svc.saveReview(actors[0],{comicId:books[0],chapterId:chapter,scores:[5]});const r=(await ratings.getCommunityRatings(books[0]))!.chapters[chapter];assert.equal(r.votes,2);assert.equal(r.average,4);});
+
+test('score-only chapter edits preserve historical text, spoiler and private diary',async()=>{
+ const target={comicId:books[0],chapterId:chapter};
+ await q('INSERT INTO user_chapter_reads(user_id,chapter_id,rating) VALUES($1,$2,1)',[actors[0].userId,chapter]);
+ const original=await svc.saveReview(actors[0],{...target,scores:[5],body:'Historical text kept verbatim',spoiler:true});
+ await svc.saveChapterRating(actors[0],{...target,rating:4,version:original.version});
+ const row=(await q('SELECT body,spoiler,rating,version FROM community_reviews WHERE id=$1',[original.id])).rows[0];
+ await assert.rejects(svc.reactToReview(actors[1],original.id,{value:1}),{status:404});
+ assert.deepEqual(row,{body:'Historical text kept verbatim',spoiler:true,rating:4,version:2});
+ assert.deepEqual(await svc.ownChapterRating(target,actors[0]),{rating:4,version:2,hidden:false});
+ assert.deepEqual(await svc.ownChapterRating(target,actors[1]),{rating:null,version:null,hidden:false});
+ assert.equal((await q('SELECT rating FROM user_chapter_reads WHERE user_id=$1 AND chapter_id=$2',[actors[0].userId,chapter])).rows[0].rating,1);
+ await svc.saveChapterRating(actors[0],{...target,rating:null,version:2});
+ assert.equal((await ratings.getCommunityRatings(books[0]))?.chapters[chapter]?.votes??0,0);
+ assert.equal((await q('SELECT body FROM community_reviews WHERE id=$1',[original.id])).rows[0].body,row.body);
+ await assert.rejects(svc.saveChapterRating(actors[0],{...target,rating:3,version:3}),{status:429});
+ await q("UPDATE community_comment_restrictions SET last_post_at=now()-interval '16 seconds' WHERE user_id=$1",[actors[0].userId]);
+ await svc.saveChapterRating(actors[0],{...target,rating:3,version:3});
+ assert.equal((await q('SELECT body FROM community_reviews WHERE id=$1',[original.id])).rows[0].body,row.body);
+});
+test('parallel chapter ratings consume once; stale changes, wrong targets and expired sessions fail',async()=>{
+ const target={comicId:books[0],chapterId:chapter};const input={...target,rating:5,version:null};
+ assert.deepEqual(await svc.ownChapterRating(target,actors[0]),{rating:null,version:null,hidden:false});
+ assert.equal((await q('SELECT count(*)::int n FROM community_comment_restrictions WHERE user_id=$1',[actors[0].userId])).rows[0].n,0);
+ const all=await Promise.all(Array.from({length:8},()=>svc.saveChapterRating(actors[0],input)));
+ assert.equal(all.filter(x=>'replay' in x&&!x.replay).length,1);
+ const edit=await Promise.allSettled([svc.saveChapterRating(actors[0],{...input,rating:3,version:1}),svc.saveChapterRating(actors[0],{...input,rating:4,version:1})]);
+ assert.equal(edit.filter(x=>x.status==='fulfilled').length,1);assert.equal(edit.filter(x=>x.status==='rejected'&&x.reason.status===409).length,1);
+ await assert.rejects(svc.saveChapterRating(actors[0],{...input,comicId:books[1]}),{status:404});
+ await assert.rejects(svc.saveChapterRating(actors[0],{...input,chapterId:scheduled}),{status:404});
+ for(const extra of [{userId:actors[1].userId},{body:'text'},{spoiler:true}])await assert.rejects(svc.saveChapterRating(actors[0],{...input,...extra}),{status:400});
+ await q("UPDATE sessions SET expires_at=now()-interval '1 second' WHERE id=$1",[actors[0].sessionId]);
+ await assert.rejects(svc.ownChapterRating(target,actors[0]),{status:401});await assert.rejects(svc.saveChapterRating(actors[0],{...input,rating:2,version:2}),{status:401});
+});
 test('empty text, safe literal HTML, filters, counts and deterministic pagination',async()=>{await svc.saveReview(actors[0],input({body:''}));await svc.saveReview(actors[1],input({body:'<script>alert(1)</script>'}));assert.equal((await svc.listReviews(t,null,null,'scores')).total,1);assert.equal((await svc.listReviews(t,null,null,'text')).items[0].body,'<script>alert(1)</script>');assert.equal((await svc.getReviewCounts(books[0])).work,2);assert.equal((await svc.listReviews(t,actors[0].userId,null,'text')).mine?.body,'');assert.equal((await svc.listReviews(t,null,null,'all','old')).items[0].body,'');});
 test('database enforces unique review, valid purpose shape and reaction values',async()=>{const item=await svc.saveReview(actors[0],input());await assert.rejects(q('INSERT INTO community_reviews(comic_id,user_id,rating_plot,rating_characters,rating_art,rating_depth,rating_world) SELECT comic_id,user_id,1,1,1,1,1 FROM community_reviews WHERE id=$1',[item.id]),{code:'23505'});await assert.rejects(q('UPDATE community_reviews SET rating_plot=NULL WHERE id=$1',[item.id]),{code:'23514'});await assert.rejects(q('INSERT INTO community_review_reactions(review_id,user_id,value) VALUES($1,$2,2)',[item.id,actors[1].userId]),{code:'23514'});});
 test('failed insert rolls back quota and review atomically',async()=>{await q("CREATE FUNCTION reviews_test_fault() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic fault'; END $$");await q('CREATE TRIGGER reviews_test_fault BEFORE INSERT ON community_reviews FOR EACH ROW EXECUTE FUNCTION reviews_test_fault()');try{await assert.rejects(svc.saveReview(actors[0],input()));assert.equal((await svc.listReviews(t,null)).total,0);assert.equal((await q('SELECT count(*)::int n FROM community_comment_restrictions WHERE user_id=$1',[actors[0].userId])).rows[0].n,0);}finally{await q('DROP TRIGGER reviews_test_fault ON community_reviews');await q('DROP FUNCTION reviews_test_fault()');}assert.equal((await svc.saveReview(actors[0],input())).replay,false);});

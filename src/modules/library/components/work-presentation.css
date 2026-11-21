@@ -1,6 +1,5 @@
 /* Work presentation: all colour follows the active Tea/Paper/Night tokens. */
 .work-icon{display:inline-block;inline-size:1.1em;block-size:1.1em;flex-shrink:0;vertical-align:-.15em}
-.wd-work .wd-title-flourish{display:block;width:clamp(100px,65%,235px);height:18px;margin:-.15rem 0 .6rem auto;color:var(--wd-gold);opacity:.85;pointer-events:none}
 .wd-work .wd-hero-meta{font-size:.95rem}
 .wd-work .wd-hero-badges{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap}
 .wd-work .wd-hero-rating{display:inline-flex;align-items:center;gap:.3rem;color:var(--wd-gold);font-weight:700;font-size:.95rem;text-decoration:none}

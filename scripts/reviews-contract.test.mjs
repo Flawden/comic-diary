@@ -6,9 +6,9 @@ test('0049 is additive, unique per object/user, strict score shape and chapter b
  assert.ok(sql.indexOf('chapters_id_comic_review_unique')<sql.indexOf('community_reviews_chapter_binding_fk'));
  const j=JSON.parse(read('drizzle/meta/_journal.json')).entries;assert.equal(j[49].tag,'0049_reviews_and_reactions');assert.equal(j[49].idx,49);assert.ok(j[49].when>j[48].when);
 });
-test('new reviews expose no reply API, page uses fourth tab and chapter modal',()=>{
+test('work reviews expose no reply API; chapters offer a score-only dialog',()=>{
  assert.match(read('src/modules/library/components/WorkControls.tsx'),/\["reviews","Отзывы и комментарии"\]/);
- const panel=read('src/modules/library/components/ChapterReadingPanel.tsx');assert.match(panel,/<ChapterReviewsDialog/);assert.doesNotMatch(panel,/<Comments\b/);
+ const panel=read('src/modules/library/components/ChapterReadingPanel.tsx');assert.match(panel,/<ChapterPublicRating/);assert.doesNotMatch(panel,/ChapterReviewsDialog|data-open-discussion/);assert.doesNotMatch(panel,/<Comments\b/);
  const ui=read('src/modules/community/Reviews.tsx');assert.doesNotMatch(ui,/dangerouslySetInnerHTML|parentId|onReply/);assert.ok(ui.includes('/reaction'));
  assert.match(read('src/modules/community/ReviewDialog.tsx'),/onCancel/);assert.match(read('src/modules/community/ReviewDialog.tsx'),/Есть несохранённые изменения/);
  assert.match(read('src/modules/community/reviews.css'),/var\(--primary\)/);assert.doesNotMatch(read('src/modules/community/reviews.css'),/#[0-9a-fA-F]{3,8}\b/);

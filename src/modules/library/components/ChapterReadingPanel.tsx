@@ -1,7 +1,7 @@
 "use client";
 
 import { CoverImage } from "@/shared/components/media/CoverImage";
-import { ChapterReviewsDialog } from "@/modules/community/Reviews";
+import { ChapterPublicRating } from "@/modules/community/ChapterPublicRating";
 import { formatRating, formatRatingVotes, type RatingAggregate } from "../ratings/community-rating";
 import { ChapterRating } from "./ChapterRating";
 import { UnreadChapterConfirmation } from "./UnreadChapterConfirmation";
@@ -21,9 +21,9 @@ import { readingMeasures,chapterCountLabel } from "@/modules/catalog/work-presen
 import { WorkIcon } from "@/shared/components/WorkIcon";
 
 type Chapter = Omit<ComicChapter, "releasedAt">;
-type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; canMark: boolean; workSourceUrl: string | null; volumeTitles?: Record<number, string>; communityRatings?: Record<number, RatingAggregate>; volumeRatings?:Record<number,RatingAggregate>;viewerRatings?:Record<number,{rating:number|null;source:'review'|'diary'|'withdrawn';hidden:boolean}>; commentsEnabled?: boolean; commentsLoginHref?: string; commentsRefreshToken?: string; reviewCounts?: Record<number,number>; canModerateReviews?: boolean };
+type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; canMark: boolean; workSourceUrl: string | null; volumeTitles?: Record<number, string>; communityRatings?: Record<number, RatingAggregate>; volumeRatings?:Record<number,RatingAggregate>;viewerRatings?:Record<number,{rating:number|null;source:'review'|'diary'|'withdrawn';hidden:boolean}>; ratingsEnabled?: boolean };
 
-export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canMark, workSourceUrl, volumeTitles = {}, communityRatings = {}, volumeRatings={},viewerRatings={},commentsEnabled = false, commentsLoginHref = "/login", commentsRefreshToken = "", reviewCounts = {}, canModerateReviews = false }: Props) {
+export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canMark, workSourceUrl, volumeTitles = {}, communityRatings = {}, volumeRatings={},viewerRatings={},ratingsEnabled = false }: Props) {
   const [discussion, setDiscussion] = useState<number | null>(null);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("MAIN");
@@ -154,13 +154,11 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
           {!isScheduled&&<span className="wd08-community-score" data-chapter-community={c.id} title={formatRatingVotes(communityRatings[c.id]?.votes??0)} aria-label={`Рейтинг читателей: ${communityRatings[c.id]?.average==null?'оценок пока нет':formatRating(communityRatings[c.id].average)}`}><WorkIcon name="star"/>{communityRatings[c.id]?.average==null?'—':communityRatings[c.id].average!.toLocaleString('ru',{maximumFractionDigits:1,minimumFractionDigits:1})}</span>}
           {readerId!==null && !isScheduled ? (
             <button type="button" className="wd-score" disabled={pending}
-              title={personal?.hidden?'Отзыв скрыт и не учитывается в рейтинге':usePublicEditor?'Оценка публичного отзыва':'Личная оценка дневника'}
-              aria-label={(usePublicEditor?'Моя оценка отзыва: ':"Оценить: ") + label} onClick={() => usePublicEditor?setDiscussion(c.id):setSheet(c)}>
-              <small>{usePublicEditor?'Моя · отзыв':'Моя · дневник'}</small><span>{myRating===null?'—':`★ ${myRating}`}{personal?.hidden?' · скрыта':''}</span>
+              title={personal?.hidden?'Оценка скрыта и не учитывается в рейтинге':usePublicEditor?'Оценка главы':'Личная оценка дневника'}
+              aria-label={(usePublicEditor?'Моя оценка главы: ':"Оценить: ") + label} onClick={() => usePublicEditor?setDiscussion(c.id):setSheet(c)}>
+              <small>{usePublicEditor?'Моя оценка':'Моя · дневник'}</small><span>{myRating===null?'—':`★ ${myRating}`}{personal?.hidden?' · скрыта':''}</span>
             </button>
           ) : null}
-          {commentsEnabled && c.status === "RELEASED" && <button type="button" data-open-discussion={c.id}
-            className="tea-text-action wd08-discussion" onClick={() => setDiscussion(c.id)}><WorkIcon name="chat"/>Отзывы · {reviewCounts[c.id] ?? 0}</button>}
           {canMark && !isScheduled ? (
             <button type="button" className="wd-mark" aria-pressed={isRead}
               aria-label={(isRead ? "Снять отметку: " : "Отметить прочитанной: ") + label}
@@ -275,10 +273,9 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
         offerRatings={enabled} onClose={() => setPreviousPrompt(null)} onDecline={() => {
           const target = previousPrompt.target; setPreviousPrompt(null); if (enabled) setSheet(target);
         }} onChanged={() => router.refresh()} onRemember={disablePreviousPrompt} />}
-      {commentsEnabled && discussion !== null && chapters.some(c => c.id === discussion && c.status === "RELEASED") && <ChapterReviewsDialog
-        key={discussion} comicId={comicId} chapterId={discussion} canModerate={canModerateReviews} canWrite={readerId!==null} loginHref={commentsLoginHref}
-        refreshToken={commentsRefreshToken} title={[chapters.find(c=>c.id===discussion)?.displayCode,chapters.find(c=>c.id===discussion)?.title].filter(Boolean).join(' · ')||'Глава'}
-        rating={communityRatings[discussion]} count={reviewCounts[discussion]??0} onClose={()=>{const id=discussion;setDiscussion(null);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>(`[data-open-discussion="${id}"]`)?.focus());}}/>}
+      {ratingsEnabled && discussion !== null && chapters.some(c => c.id === discussion && c.status === "RELEASED") && <ChapterPublicRating
+        key={discussion} comicId={comicId} chapterId={discussion}
+        title={chapters.find(c=>c.id===discussion)?.title||'Глава'} onClose={()=>setDiscussion(null)}/>}
       {sheet && <ChapterRating comicId={comicId} chapter={sheet} rating={ratings[sheet.id]??null} onClose={()=>setSheet(null)}/>}
       {!canMark && chapters.length > 0 ? <p className="wd-library-hint mt-4 text-sm text-[var(--text-secondary)]">Добавьте комикс в свою библиотеку, чтобы отмечать чтение.</p> : null}
     </section>

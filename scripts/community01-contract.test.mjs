@@ -48,11 +48,11 @@ test('spoilers have conditional DOM content, all message text is escaped React t
   assert.match(ui,/Ответ на исходное сообщение/);
   assert.match(ui,/retry.current.requestId/);assert.match(ui,/lock.current/);
 });
-test('one selected chapter panel, no discussion fetching inside chapter row map',()=>{
+test('one selected score-only chapter dialog; no discussion or fetching inside chapter row map',()=>{
   const panel=read('src/modules/library/components/ChapterReadingPanel.tsx');
   const render=panel.slice(panel.indexOf('function renderChapter'),panel.indexOf('\n  return (',panel.indexOf('function renderChapter')));
-  assert.doesNotMatch(render,/<Comments|fetch\(/);assert.match(render,/c.status === "RELEASED"/);
-  assert.equal((panel.match(/<ChapterReviewsDialog/g)??[]).length,1);
+  assert.doesNotMatch(render,/<Comments|fetch\(|data-open-discussion/);assert.match(panel,/c.id === discussion && c.status === "RELEASED"/);
+  assert.equal((panel.match(/<ChapterPublicRating/g)??[]).length,1);assert.doesNotMatch(panel,/ChapterReviewsDialog/);
   assert.doesNotMatch(panel,/<Comments /);
   const page=read('src/app/comics/[slug]/page.tsx');
   assert.match(page,/comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED" \? <Reviews/);
