@@ -4,15 +4,42 @@ import {communityReviews as reviews,communityReviewReactions as reactions,commun
 import {mutate,lockTarget,requireUnrestricted,consume,type Context} from "./service";
 import {CommunityError,decodeCursor,encodeCursor,positiveId,publicAlias,textValue,record,exactKeys,type Actor,type Target} from "./policy";
 import {reviewBody,reactionBody,type Review,type ReviewPage,type ReviewFilter} from "./review-policy";
+import {chapterRatingBody,type OwnChapterRating} from './chapter-rating-policy';
 type Row=typeof reviews.$inferSelect;
 type Tx=Parameters<Parameters<typeof db.transaction>[0]>[0];
 const whereTarget=(t:Target)=>and(eq(reviews.comicId,t.comicId),t.chapterId===null?isNull(reviews.chapterId):eq(reviews.chapterId,t.chapterId));
 async function live(c:Context){const result=await c.tx.execute(sql`SELECT 1 FROM sessions WHERE id=${c.actor.sessionId} AND user_id=${c.actor.userId} AND expires_at>clock_timestamp()`);if(result.rows.length!==1)throw new CommunityError(401,'unauthenticated');}
 const scores=(r:Row)=>r.chapterId===null?[r.ratingPlot!,r.ratingCharacters!,r.ratingArt!,r.ratingDepth!,r.ratingWorld!]:[r.rating!];
-export async function saveReview(actor:Actor,input:unknown){const v=reviewBody(input);return mutate(actor,async c=>{
+export async function saveReview(actor:Actor,input:unknown){return writeReview(actor,input);}
+/** The score-only interface never returns chapter text or other readers' records. */
+export async function ownChapterRating(target:Target,actor:Actor):Promise<OwnChapterRating>{
+ if(target.chapterId===null)throw new CommunityError(400,'invalid_request');
+ return db.transaction(async tx=>{await lockTarget(tx,target);
+ const session=await tx.execute(sql`SELECT 1 FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id=${actor.sessionId} AND s.user_id=${actor.userId} AND s.expires_at>clock_timestamp() AND u.is_active AND (u.email_verified_at IS NOT NULL OR u.verification_required_at IS NULL)`);
+ if(session.rows.length!==1)throw new CommunityError(401,'unauthenticated');
+ const [row]=await tx.select({rating:reviews.rating,version:reviews.version,hiddenAt:reviews.hiddenAt,deletedAt:reviews.deletedAt}).from(reviews).where(and(whereTarget(target),eq(reviews.userId,actor.userId)));
+ return {rating:row&&!row.deletedAt?row.rating:null,version:row?.version??null,hidden:!!row?.hiddenAt};
+ },{isolationLevel:'repeatable read'});
+}
+export async function saveChapterRating(actor:Actor,input:unknown){
+ const v=chapterRatingBody(input);
+ if(v.rating!==null)return writeReview(actor,{comicId:v.comicId,chapterId:v.chapterId,scores:[v.rating],version:v.version},true);
+ return mutate(actor,async c=>{await lockTarget(c.tx,v);requireUnrestricted(c);
+ const [row]=await c.tx.select().from(reviews).where(and(whereTarget(v),eq(reviews.userId,actor.userId))).for('update');
+ if(!row||row.deletedAt){await live(c);return {ok:true,replay:true};}
+ if(row.version!==v.version)throw new CommunityError(409,'review_changed');
+ await consume(c,'edit');await c.tx.delete(reactions).where(eq(reactions.reviewId,row.id));
+ // Preserve historical text and score bytes; withdrawing a vote uses the existing tombstone.
+ await c.tx.update(reviews).set({deletedAt:c.now,updatedAt:c.now,version:row.version+1}).where(eq(reviews.id,row.id));
+ await live(c);return {ok:true,replay:false};
+ });
+}
+async function writeReview(actor:Actor,input:unknown,ratingOnly=false){const v=reviewBody(input);return mutate(actor,async c=>{
  await lockTarget(c.tx,v);requireUnrestricted(c);
  const [old]=await c.tx.select().from(reviews).where(and(whereTarget(v),eq(reviews.userId,actor.userId))).for('update');
  if(old?.hiddenAt)throw new CommunityError(403,'review_hidden');
+ // A score-only edit must preserve previously written chapter text and its spoiler flag.
+ if(ratingOnly){v.body=old?.body??'';v.spoiler=old?.spoiler??false;}
  const fields=v.chapterId===null?{ratingPlot:v.scores[0],ratingCharacters:v.scores[1],ratingArt:v.scores[2],ratingDepth:v.scores[3],ratingWorld:v.scores[4],rating:null}:
   {ratingPlot:null,ratingCharacters:null,ratingArt:null,ratingDepth:null,ratingWorld:null,rating:v.scores[0]};
  if(old&&!old.deletedAt&&old.body===v.body&&old.spoiler===v.spoiler&&JSON.stringify(scores(old))===JSON.stringify(v.scores)){await live(c);return {id:old.id,version:old.version,replay:true};}
@@ -34,7 +61,7 @@ export async function removeReview(actor:Actor,id:number,version:number){positiv
  requireUnrestricted(c);await consume(c,'edit');await c.tx.delete(reactions).where(eq(reactions.reviewId,id));await c.tx.update(reviews).set({deletedAt:c.now,updatedAt:c.now,version:row.version+1}).where(eq(reviews.id,id));await live(c);return {ok:true};
 });}
 export async function reactToReview(actor:Actor,id:number,input:unknown){positiveId(id);const value=reactionBody(input);return mutate(actor,async c=>{
- const [hint]=await c.tx.select().from(reviews).where(eq(reviews.id,id));if(!hint)throw new CommunityError(404,'not_found');await lockTarget(c.tx,hint);
+ const [hint]=await c.tx.select().from(reviews).where(eq(reviews.id,id));if(!hint||hint.chapterId!==null)throw new CommunityError(404,'not_found');await lockTarget(c.tx,hint);
  const [row]=await c.tx.select().from(reviews).where(eq(reviews.id,id)).for('update');if(!row||row.deletedAt||row.hiddenAt)throw new CommunityError(404,'not_found');
  if(row.userId===actor.userId)throw new CommunityError(403,'own_reaction');requireUnrestricted(c);
  const [old]=await c.tx.select().from(reactions).where(and(eq(reactions.reviewId,id),eq(reactions.userId,actor.userId)));

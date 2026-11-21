@@ -42,10 +42,10 @@ try{
  assert.equal((await ac.request.put(endpoint,{headers:{origin},data:{revision:0,ageRating:null,genres:[],chapters:[]}})).status(),409);result.checks.push('REAL_ADMIN_EDITOR_SAVE_AND_HTTP_STALE_REVISION=PASS');
  for(const theme of ['tea','paper','night'])for(const width of [320,390,1440]){
   const c=await context(user.token,theme,width),p=await c.newPage();await p.goto(origin+'/comics/'+slug,{waitUntil:'networkidle'});
-  assert.equal(await p.locator('.wd-title-flourish').count(),1);assert.equal(await p.locator('.wd-age-rating').textContent(),'12+');assert.equal(await p.locator('.wd-genre-tags li').count(),3);
+  assert.equal(await p.locator('.wd-title-flourish').count(),0);assert.equal(await p.locator('[data-open-discussion]').count(),0);assert.equal(await p.locator('.wd-age-rating').textContent(),'12+');assert.equal(await p.locator('.wd-genre-tags li').count(),3);
   const volume=p.locator('.wd-volume').filter({hasText:'Храбрый маленький король'}).first();assert.match(await volume.locator('summary').textContent(),/130 стр/);assert.match(await volume.locator('summary').textContent(),/15 мин/);assert.match(await volume.locator('summary').textContent(),/20%/);assert.match(await volume.locator('summary').textContent(),/18%/);assert.match(await volume.locator('summary').textContent(),/По оценкам глав/);
   if(await volume.getAttribute('open')===null)await volume.locator('summary').click();
-  const first=p.locator('.wd08-row').filter({hasText:'Короли настоящего и будущего'});assert.match(await first.locator('.wd08-pages').textContent(),/24/);assert.match(await first.locator('.wd-score').textContent(),/Моя · отзыв.*4/);
+  const first=p.locator('.wd08-row').filter({hasText:'Короли настоящего и будущего'});assert.match(await first.locator('.wd08-pages').textContent(),/24/);assert.match(await first.locator('.wd-score').textContent(),/Моя оценка.*4/);
   const incomplete=p.locator('.wd-volume').nth(1);assert.match(await incomplete.locator('.wd-volume-incomplete').textContent(),/1 из 2/);assert.equal(await incomplete.getByRole('progressbar',{name:/Страницы прочитанных глав/}).count(),0);
   for(const img of await p.locator('.wd08-row:visible .wd08-cover-art img').all()){await img.scrollIntoViewIfNeeded();await img.evaluate(async el=>{await el.decode();if(!el.complete||el.naturalWidth===0)throw Error('fixture illustration not loaded');});}
   await p.evaluate(()=>scrollTo(0,0));

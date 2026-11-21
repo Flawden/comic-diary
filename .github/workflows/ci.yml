@@ -38,7 +38,7 @@ jobs:
         run: node --import tsx --test src/modules/community/policy.test.ts scripts/community01-contract.test.mjs
 
       - name: Public reviews validation and boundary contracts
-        run: node --import tsx --test src/modules/community/review-policy.test.ts scripts/reviews-contract.test.mjs
+        run: node --import tsx --test src/modules/community/review-policy.test.ts src/modules/community/chapter-rating-policy.test.ts scripts/reviews-contract.test.mjs
 
       - name: Work presentation metadata and honest progress policy
         run: node --import tsx --test src/modules/catalog/work-presentation-policy.test.ts

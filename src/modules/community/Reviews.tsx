@@ -3,7 +3,6 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {ReviewDialog} from './ReviewDialog';
 import {reviewCriteria,reviewAverage,type Review,type ReviewPage,type ReviewFilter} from './review-policy';
-import type {RatingAggregate} from '@/modules/library/ratings/community-rating';
 import {formatRating} from '@/modules/library/ratings/community-rating';
 import './reviews.css';
 import { CategoryIcon } from '@/shared/components/RatingIcon';
@@ -102,7 +101,4 @@ export function Reviews(props:Props){
   {editor&&<Editor props={props} own={page?.mine??null} onClose={()=>setEditor(false)} onSaved={saved}/>}
   <HistoricalComments comicId={props.comicId} chapterId={props.chapterId} canWrite={false} loginHref={props.loginHref}/>
  </section>;
-}
-export function ChapterReviewsDialog({title,rating,count,onClose,...props}:Props&{title:string;rating?:RatingAggregate;count:number;onClose:()=>void}){
- return <ReviewDialog title={title} onClose={onClose} wide><p className="reviews-chapter-summary">{formatRating(rating?.average??null)} <span>· {countLabel(count)}</span></p><Reviews {...props}/></ReviewDialog>;
 }

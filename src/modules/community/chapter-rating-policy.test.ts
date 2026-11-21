@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {chapterRatingBody} from './chapter-rating-policy';
+test('one score, explicit removal and CAS version are accepted',()=>{for(const rating of [1,2,3,4,5,null])assert.deepEqual(chapterRatingBody({comicId:1,chapterId:2,rating,version:3}),{comicId:1,chapterId:2,rating,version:3});});
+test('texts, spoofed identity, work target and malformed scores are refused',()=>{const base={comicId:1,chapterId:2,rating:4,version:null};for(const extra of [{body:'text'},{spoiler:true},{scores:[4]},{userId:3},{chapterId:null},{chapterId:0},{rating:0},{rating:6},{rating:1.5},{rating:'4'},{rating:undefined},{version:0}])assert.throws(()=>chapterRatingBody({...base,...extra}),{status:400});});

@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { hasPermission } from "@/modules/auth/permissions";
 import { Reviews } from "@/modules/community/Reviews";
-import { getReviewCounts } from "@/modules/community/review-service";
 import { getComicGenreNames } from "@/modules/catalog/work-presentation-service";
 import { CommunityRatings } from "@/modules/library/components/CommunityRatings";
 import { WorkIcon } from "@/shared/components/WorkIcon";
@@ -77,7 +76,6 @@ export default async function ComicPage({
   }
 
   const commentsRefreshToken = randomUUID();
-  const reviewCounts = await getReviewCounts(comic.id);
   const communityRatings = await getCommunityRatings(comic.id, currentUser?.id ?? null);
   const back = listReturn(await searchParams, comic.id);
 
@@ -140,7 +138,6 @@ export default async function ComicPage({
         <div className="wd-identity">
           <p className="wd-hero-eyebrow">{comic.categoryName}</p>
           <h1 className={Array.from(comic.title).length > 20 ? "wd-title--long" : undefined}>{comic.title}</h1>
-          <svg className="wd-title-flourish" viewBox="0 0 240 18" fill="currentColor" aria-hidden="true"><path d="M2 13C57 8 115 5 181 9c24 1 41-2 57-7-13 10-31 14-57 12C116 10 59 12 2 15Z"/></svg>
           <span className="wd-hero-meta">{[comic.workType!=="UNKNOWN" && workTypeLabels[comic.workType],new Intl.NumberFormat("ru").format(total)+" "+({one:"глава",few:"главы",many:"глав"}[new Intl.PluralRules("ru").select(total) as "one"|"few"|"many"]??"глав")].filter(Boolean).join(" · ")}</span>
           <div className="wd-hero-badges">
             {comic.ageRating!==null&&<small className="wd-age-rating">{comic.ageRating}+</small>}
@@ -194,11 +191,7 @@ export default async function ComicPage({
             communityRatings={communityRatings?.chapters ?? {}}
             volumeRatings={communityRatings?.volumes??{}}
             viewerRatings={communityRatings?.viewerChapters??{}}
-            reviewCounts={reviewCounts.chapters}
-            canModerateReviews={currentUser?hasPermission(currentUser.role,'ADMIN_SECURITY'):false}
-            commentsEnabled={comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED"}
-            commentsRefreshToken={commentsRefreshToken}
-            commentsLoginHref={`/login?next=${encodeURIComponent("/comics/" + comic.slug)}`}
+            ratingsEnabled={comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED"}
           />
         </div>
       } about={<div className="wd-about wd-about-editorial">
