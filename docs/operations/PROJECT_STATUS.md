@@ -1,3 +1,43 @@
+# AUTH + Reviews — интеграционный checkpoint 21.11.2026
+
+Кандидат `feature/auth-reviews-integration-20261121` от production master
+`89efa25970c1139c467cf4d8c22da2dab734de5e` объединяет принятые Reviews с AUTH 0048
+и новым пошаговым окном подтверждения почты. Миграция Reviews 0049 аддитивна;
+журнал 50 записей, snapshot chain 0048 → 0049, Drizzle не генерирует расхождений.
+Проверка upgrade сохраняет закрытый pilot и использованный бюджет.
+
+На production владелец подтвердил почту через one-shot pilot, получил recovery
+письмо, изменил пароль и вошёл с новым паролем; прежние сессии отозваны штатно.
+Recovery включён, gate ON/generation 1. Activation gate OFF/generation 2,
+pilot закрыт/бюджет потрачен; регистрация и legacy intake OFF. Общая legacy
+выдача после pilot не открыта и требует отдельного изменения политики.
+Production-настройки при следующем deploy необходимо сохранить.
+
+Локально: 673 unit/contracts PASS; PostgreSQL 17 activation/legacy/recovery/pilot,
+Reviews, модерация и миграции PASS; production build/typecheck/ESLint PASS;
+Drizzle schema/snapshot PASS; npm audit --omit=dev: 0 vulnerabilities.
+Browser QA: новый AUTH wizard ON/OFF в Tea/Paper/Night на 320/390/1440,
+Reviews — 24 сценария, включая модерацию, replay/потерю ответа и отсутствие
+внешних HTTP. Remote CI и production rollout данного кандидата ещё не выполнены.
+
+## Предыдущий локальный checkpoint Reviews
+
+Изолированная ветка `feature/reviews-chapter-discussions-20261120` от
+`ca60fb2b25f83ee1b5698c5ae3eb06865806a882`; изменения НЕ закоммичены/опубликованы.
+Реализованы отдельная вкладка, модальные редакторы отзывов произведения и главы,
+уникальность/версии/реакции, модерация с audit, сохранение плоского исторического архива,
+Tea/Paper/Night и адаптивность. AUTH business logic не менялась.
+Проверено:667 unit/contracts,20 reviews PG17,30 полных PG-команд без ошибок;
+22 браузерных сценария и19 PNG; typecheck/lint/production build PASS.
+Локальная демонстрация: http://127.0.0.1:3111/comics/nightshift-reviews-demo#reviews.
+Runbook: [REVIEWS_CHAPTER_DISCUSSIONS_RUNBOOK.md](REVIEWS_CHAPTER_DISCUSSIONS_RUNBOOK.md).
+Перед будущей интеграцией с AUTH PR31 согласовать journal/snapshot0048→0049;
+совместный SQL/replay проверен, metadata ещё требует интеграции. Время чтения ожидает
+уточнения назначения, пустые элементы не добавлялись. Production readiness не заявляется.
+Чужие UI-правки в comic-diary-auth01 сохранены; production/SSH/письма не затрагивались.
+
+---
+
 # AUTH legacy email verification — local review candidate (2026-11-20)
 
 One-shot pilot follow-up: isolated branch

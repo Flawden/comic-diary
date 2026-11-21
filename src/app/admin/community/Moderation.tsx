@@ -10,10 +10,11 @@ const labels: Record<string, string> = { HIDE: "Скрыть", RESTORE: "Вос�
 
 export function Moderation({ refreshToken }: { refreshToken: string }) {
   const [status, setStatus] = useState("OPEN"), [page, setPage] = useState<ModerationPage | null>(null);
+  const [reviewId, setReviewId] = useState(""), [reviewFilter, setReviewFilter] = useState("");
   const [error, setError] = useState(""), [notice, setNotice] = useState(""), [busy, setBusy] = useState(false);
   const [decision, setDecision] = useState<Decision | null>(null), [reason, setReason] = useState(""), [until, setUntil] = useState("");
   const lock = useRef(false), reasonRef = useRef<HTMLTextAreaElement>(null);
-  const base = `/api/admin/community/comments?status=${status}`;
+  const base = `/api/admin/community/comments?status=${status}${reviewFilter ? `&reviewId=${reviewFilter}` : ""}`;
   useEffect(() => {
     const abort = new AbortController();
     communityRequest<ModerationPage>(base, "GET", undefined, abort.signal).then(data => { if (!abort.signal.aborted) { setPage(data); setError(""); } })
@@ -23,6 +24,11 @@ export function Moderation({ refreshToken }: { refreshToken: string }) {
   async function refresh(more = false) {
     const data = await communityRequest<ModerationPage>(base + (more && page?.nextCursor ? `&cursor=${page.nextCursor}` : ""));
     setPage(old => ({ ...data, items: more ? [...(old?.items ?? []), ...data.items] : data.items }));
+  }
+  async function moreAudit() {
+    if (!page?.nextAuditCursor) return;
+    const data = await communityRequest<ModerationPage>(base + `&auditCursor=${page.nextAuditCursor}`);
+    setPage(old => old ? { ...old, audit: [...old.audit, ...data.audit], nextAuditCursor: data.nextAuditCursor } : data);
   }
   function choose(value: Decision) {
     setDecision(value); setReason("");
@@ -69,7 +75,12 @@ export function Moderation({ refreshToken }: { refreshToken: string }) {
     </article>)}
     {page?.nextCursor && <Button variant="secondary" disabled={busy} onClick={() => void perform(() => refresh(true))}>Следующие 20 жалоб</Button>}
     {page && <section aria-label="Аудит модерации" className="space-y-2"><h2 className="text-lg font-semibold">Последние события модерации</h2>
-      {page.audit.length === 0 ? <p className="text-sm">Событий пока нет.</p> : <ul className="space-y-2">{page.audit.map(event => <li key={event.id} className="break-words text-sm">{new Date(event.createdAt).toLocaleString("ru-RU")} · {event.action} · {event.reason}</li>)}</ul>}
+      <form className="flex flex-wrap items-center gap-3" onSubmit={e => { e.preventDefault(); setPage(null); setReviewFilter(reviewId); }}>
+        <label>ID отзыва<input type="number" min="1" step="1" value={reviewId} onChange={e => setReviewId(e.target.value)} className="ml-2 w-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2"/></label>
+        <button type="submit" className="tea-text-action" disabled={busy || reviewId === reviewFilter}>Показать историю отзыва</button>
+      </form>
+      {page.audit.length === 0 ? <p className="text-sm">Событий пока нет.</p> : <ul className="space-y-2">{page.audit.map(event => <li key={event.id} className="break-words text-sm">{new Date(event.createdAt).toLocaleString("ru-RU")} · {event.action} · Администратор #{event.actorUserId ?? "удалён"}{event.reviewId !== null && ` · Отзыв #${event.reviewId}`} · {event.reason}</li>)}</ul>}
+      {page.nextAuditCursor && <Button variant="secondary" disabled={busy} onClick={() => void perform(moreAudit)}>Следующие 20 событий</Button>}
     </section>}
   </div>;
 }

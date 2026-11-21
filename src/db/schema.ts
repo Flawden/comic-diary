@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -17,6 +18,40 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+
+// Public reviews are explicit publications, never private diary notes or replies.
+export const communityReviews = pgTable("community_reviews", {
+  id: serial("id").primaryKey(),
+  comicId: integer("comic_id").notNull().references(() => comics.id, { onDelete: "cascade" }),
+  chapterId: integer("chapter_id").references(() => chapters.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  ratingPlot: integer("rating_plot"), ratingCharacters: integer("rating_characters"),
+  ratingArt: integer("rating_art"), ratingDepth: integer("rating_depth"), ratingWorld: integer("rating_world"),
+  rating: integer("rating"),
+  body: text("body").notNull().default(""),
+  spoiler: boolean("spoiler").notNull().default(false),
+  version: integer("version").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true, precision: 3 }),
+  hiddenAt: timestamp("hidden_at", { withTimezone: true, precision: 3 }),
+}, t => [
+  foreignKey({columns:[t.chapterId,t.comicId],foreignColumns:[chapters.id,chapters.comicId],name:"community_reviews_chapter_binding_fk"}).onUpdate("cascade").onDelete("cascade"),
+  uniqueIndex("community_reviews_work_user_unique").on(t.userId,t.comicId).where(sql`${t.chapterId} IS NULL`),
+  uniqueIndex("community_reviews_chapter_user_unique").on(t.userId,t.chapterId).where(sql`${t.chapterId} IS NOT NULL`),
+  index("community_reviews_target_idx").on(t.comicId,t.chapterId,t.createdAt,t.id),
+  check("community_reviews_scores_check",sql`(
+    (${t.chapterId} IS NULL AND ${t.rating} IS NULL AND ${t.ratingPlot} IS NOT NULL AND ${t.ratingCharacters} IS NOT NULL AND ${t.ratingArt} IS NOT NULL AND ${t.ratingDepth} IS NOT NULL AND ${t.ratingWorld} IS NOT NULL
+      AND ${t.ratingPlot} BETWEEN 1 AND 5 AND ${t.ratingCharacters} BETWEEN 1 AND 5 AND ${t.ratingArt} BETWEEN 1 AND 5 AND ${t.ratingDepth} BETWEEN 1 AND 5 AND ${t.ratingWorld} BETWEEN 1 AND 5)
+    OR (${t.chapterId} IS NOT NULL AND ${t.rating} IS NOT NULL AND ${t.rating} BETWEEN 1 AND 5 AND ${t.ratingPlot} IS NULL AND ${t.ratingCharacters} IS NULL AND ${t.ratingArt} IS NULL AND ${t.ratingDepth} IS NULL AND ${t.ratingWorld} IS NULL))`),
+  check("community_reviews_body_check",sql`char_length(${t.body}) <= 2000`),
+  check("community_reviews_version_check",sql`${t.version} > 0 AND ${t.updatedAt} >= ${t.createdAt}`),
+]);
+export const communityReviewReactions = pgTable("community_review_reactions",{
+  reviewId: integer("review_id").notNull().references(() => communityReviews.id,{onDelete:"cascade"}),
+  userId: integer("user_id").notNull().references(() => users.id,{onDelete:"cascade"}),
+  value: integer("value").notNull(),
+},t=>[primaryKey({columns:[t.reviewId,t.userId]}),check("community_review_reactions_value_check",sql`${t.value} IN (-1,1)`)]);
 
 export const readingStatus = pgEnum("reading_status", [
   "WANT_TO_READ",
@@ -341,6 +376,7 @@ export const chapters = pgTable(
       .on(table.comicId, table.displayCode)
       .where(sql`${table.status} <> 'ARCHIVED' AND ${table.displayCode} <> ''`),
     uniqueIndex("chapters_supersedes_unique").on(table.supersedesChapterId),
+    unique("chapters_id_comic_review_unique").on(table.id,table.comicId),
     check("chapters_kind_valid", sql`${table.kind} IN ('MAIN', 'SPECIAL')`),
     check("chapters_volume_number_valid", sql`${table.volumeNumber} IS NULL OR ${table.volumeNumber} BETWEEN 1 AND 99`),
 
@@ -1187,6 +1223,7 @@ export const communityModerationEvents = pgTable("community_comment_moderation_e
   action: varchar("action", { length: 16 }).notNull(),
   // Historical target references intentionally survive actual target deletion.
   commentId: integer("comment_id"),
+  reviewId: integer("review_id"),
   reportId: integer("report_id"),
   targetUserId: integer("target_user_id"),
   reason: varchar("reason", { length: 500 }).notNull(),

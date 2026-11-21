@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, asc, desc, eq, gt, isNull, or, sql, inArray, lte, getTableColumns } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lt, isNull, or, sql, inArray, lte, getTableColumns } from "drizzle-orm";
 import { db } from "@/db";
 import { chapters, comics, users, sessions, communityComments as comments, communityControls as controls,
   communityReports as reports, communityModerationEvents as events } from "@/db/schema";
@@ -13,7 +13,7 @@ import { COMMUNITY_LIMITS as limits, CommunityError, decodeCursor, encodeCursor,
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Comment = typeof comments.$inferSelect;
 type Control = typeof controls.$inferSelect;
-type Context = { tx: Tx; now: Date; actor: Actor; control: Control; name: string | null };
+export type Context = { tx: Tx; now: Date; actor: Actor; control: Control; name: string | null };
 const notFound = (): never => { throw new CommunityError(404, "not_found"); };
 const forbidden = (): never => { throw new CommunityError(403, "forbidden"); };
 const conflict = (): never => { throw new CommunityError(409, "conflict"); };
@@ -27,7 +27,7 @@ function dto(row: Comment, name: string | null, active: boolean, viewer: number 
 }
 
 /** SHARE prevents ordinary catalog UPDATE from changing access during a request. */
-async function lockTarget(tx: Tx, target: Target) {
+export async function lockTarget(tx: Tx, target: Target) {
   positiveId(target.comicId); if (target.chapterId !== null) positiveId(target.chapterId);
   const [comic] = await tx.select({ id: comics.id }).from(comics).where(and(eq(comics.id, target.comicId),
     eq(comics.visibility, "SHARED"), eq(comics.publicationStatus, "PUBLISHED"))).for("share");
@@ -39,7 +39,7 @@ async function lockTarget(tx: Tx, target: Target) {
   }
 }
 
-async function mutate<T>(actor: Actor, action: (context: Context) => Promise<T>, admin = false): Promise<T> {
+export async function mutate<T>(actor: Actor, action: (context: Context) => Promise<T>, admin = false): Promise<T> {
   positiveId(actor.userId); positiveId(actor.sessionId);
   return db.transaction(async tx => {
     // Same first lock as canonical catalog/chapter writers. No network inside TX.
@@ -59,10 +59,10 @@ async function mutate<T>(actor: Actor, action: (context: Context) => Promise<T>,
     return action({ tx, now, actor, control, name: account.name });
   });
 }
-function requireUnrestricted(c: Context) {
+export function requireUnrestricted(c: Context) {
   if (c.control.blockedUntil && c.control.blockedUntil > c.now) forbidden();
 }
-async function consume(c: Context, kind: "post" | "report" | "edit") {
+export async function consume(c: Context, kind: "post" | "report" | "edit") {
   const windowMs = kind === "post" ? limits.postWindowMs : kind === "report" ? limits.reportWindowMs : limits.editWindowMs;
   const max = kind === "post" ? limits.postsPerWindow : kind === "report" ? limits.reportsPerWindow : limits.editsPerWindow;
   const oldAt = c.control[`${kind}WindowAt`], oldCount = c.control[`${kind}Count`];
@@ -220,9 +220,12 @@ export async function moderate(actor: Actor, input: unknown) {
   }, true);
 }
 
-export async function moderationQueue(actor: Actor, status = "OPEN", cursor: string | null = null) {
+export async function moderationQueue(actor: Actor, status = "OPEN", cursor: string | null = null,
+  options: { reviewId?: number; auditCursor?: string | null } = {}) {
   if (!["OPEN", "RESOLVED", "REJECTED", "ALL"].includes(status)) throw new CommunityError(400, "invalid_request");
   const after = decodeCursor(cursor);
+  if (options.reviewId !== undefined) positiveId(options.reviewId);
+  const auditAfter = decodeCursor(options.auditCursor ?? null);
   return mutate(actor, async c => {
     requireUnrestricted(c);
     const rows = await c.tx.select({ report: reports, comment: comments, author: users.displayName, active: users.isActive,
@@ -237,15 +240,20 @@ export async function moderationQueue(actor: Actor, status = "OPEN", cursor: str
       .orderBy(asc(reports.createdAt), asc(reports.id)).limit(limits.pageSize + 1);
     const more = rows.length > limits.pageSize, page = rows.slice(0, limits.pageSize), last = page.at(-1)?.report;
     const audit = await c.tx.select({ id: events.id, action: events.action, commentId: events.commentId,
+      reviewId: events.reviewId, actorUserId: events.actorUserId,
       reportId: events.reportId, targetUserId: events.targetUserId, reason: events.reason, createdAt: events.createdAt })
-      .from(events).orderBy(desc(events.createdAt), desc(events.id)).limit(20);
+      .from(events).where(and(options.reviewId === undefined ? undefined : eq(events.reviewId, options.reviewId),
+        auditAfter ? or(lt(events.createdAt, auditAfter.at), and(eq(events.createdAt, auditAfter.at), lt(events.id, auditAfter.id))) : undefined))
+      .orderBy(desc(events.createdAt), desc(events.id)).limit(21);
+    const auditPage = audit.slice(0,20), lastAudit = auditPage.at(-1);
     return { items: page.map(r => ({ id: r.report.id, commentId: r.comment.id, authorUserId: r.comment.authorUserId,
       author: publicAlias(r.author, r.active ?? false), comicId: r.comment.comicId, chapterId: r.comment.chapterId,
       title: r.title, slug: r.slug, body: r.comment.status === "REMOVED_BY_AUTHOR" ? null : r.comment.body,
       commentStatus: r.comment.status, reason: r.report.reason, note: r.comment.status === "REMOVED_BY_AUTHOR" ? null : r.report.note,
       status: r.report.status, createdAt: r.report.createdAt.toISOString(), blockedUntil: r.blockedUntil?.toISOString() ?? null })),
       nextCursor: more && last ? encodeCursor(last.createdAt, last.id) : null,
-      audit: audit.map(e => ({ ...e, createdAt: e.createdAt.toISOString() })) };
+      audit: auditPage.map(e => ({ ...e, createdAt: e.createdAt.toISOString() })),
+      nextAuditCursor: audit.length > 20 && lastAudit ? encodeCursor(lastAudit.createdAt, lastAudit.id) : null };
   }, true);
 }
 export type ModerationPage = Awaited<ReturnType<typeof moderationQueue>>;
