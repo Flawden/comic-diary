@@ -5,12 +5,13 @@
  */
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { emailVerificationTokens, passwordResetTokens, sessions, users } from "@/db/schema";
+import { emailVerificationTokens, passwordResetTokens, sessions, users, activationMailDispatchControl,betaInvitations } from "@/db/schema";
 import { canRedeemEmailVerification } from "./email-verification-policy";
 import { hashEmailVerificationToken } from "./email-verification-token";
 import { needsSecurePendingActivation } from "./registration-activation-policy";
 import { isRegistrationPasswordAllowed } from "./registration-service";
 import { hashPassword } from "./password";
+import {lockBoundInvitation,activateBoundInvitation} from "./beta-invitation-state";
 
 export type PendingActivationResult =
   | { ok: true; sessionsRevoked: number }
@@ -40,16 +41,26 @@ export async function activatePendingRegistrationWithEmailToken(
 
   return db.transaction(async (tx): Promise<PendingActivationResult> => {
     const candidates = await tx
-      .select({ userId: emailVerificationTokens.userId })
+      .select({ userId: emailVerificationTokens.userId, invitationId:emailVerificationTokens.invitationId })
       .from(emailVerificationTokens)
       .where(eq(emailVerificationTokens.tokenHash, tokenHash))
       .limit(1);
     const candidate = candidates[0];
     if (!candidate) return { ok: false, kind: "invalid_token" };
+    if(candidate.invitationId===null){
+      const [invited]=await tx.select({id:betaInvitations.id}).from(betaInvitations).where(eq(betaInvitations.pendingUserId,candidate.userId)).limit(1);
+      if(invited)return {ok:false,kind:"invalid_token"};
+    }
 
+    if(candidate.invitationId!==null){
+      await tx.select({id:activationMailDispatchControl.id}).from(activationMailDispatchControl).where(eq(activationMailDispatchControl.id,1)).for("share");
+      const invite=await lockBoundInvitation(tx,candidate.invitationId,candidate.userId,"update");
+      if(!invite)return {ok:false,kind:"invalid_token"};
+    }
     const accounts = await tx
       .select({
         id: users.id,
+        role: users.role,
         email: users.email,
         passwordHash: users.passwordHash,
         isActive: users.isActive,
@@ -64,6 +75,7 @@ export async function activatePendingRegistrationWithEmailToken(
     if (!account || !needsSecurePendingActivation(account)) {
       return { ok: false, kind: "invalid_token" };
     }
+    if(candidate.invitationId!==null&&account.role!=="USER")return {ok:false,kind:"invalid_token"};
 
     const challenges = await tx
       .select({
@@ -71,6 +83,7 @@ export async function activatePendingRegistrationWithEmailToken(
         userId: emailVerificationTokens.userId,
         emailSnapshot: emailVerificationTokens.emailSnapshot,
         purpose: emailVerificationTokens.purpose,
+        invitationId:emailVerificationTokens.invitationId,
         createdAt: emailVerificationTokens.createdAt,
         expiresAt: emailVerificationTokens.expiresAt,
         consumedAt: emailVerificationTokens.consumedAt,
@@ -82,7 +95,7 @@ export async function activatePendingRegistrationWithEmailToken(
       .for("update");
     const challenge = challenges[0];
     const now = new Date();
-    if (!canRedeemEmailVerification(account, challenge, now) || !challenge || challenge.purpose !== "pending_activation") {
+    if (!canRedeemEmailVerification(account, challenge, now) || !challenge || challenge.purpose !== "pending_activation" || challenge.invitationId!==candidate.invitationId) {
       return { ok: false, kind: "invalid_token" };
     }
 
@@ -130,6 +143,7 @@ export async function activatePendingRegistrationWithEmailToken(
         isNull(emailVerificationTokens.consumedAt),
         isNull(emailVerificationTokens.revokedAt),
       ));
+    if(candidate.invitationId!==null)await activateBoundInvitation(tx,candidate.invitationId,account.id,now);
     return { ok: true, sessionsRevoked: revoked.length };
   });
 }

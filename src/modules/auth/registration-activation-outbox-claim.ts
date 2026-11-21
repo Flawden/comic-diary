@@ -13,8 +13,10 @@
  * outcome. NEVER recycle it into `ready`, even if the process has crashed.
  */
 import { pilotAllowsDispatch } from "./activation-mail-pilot";
+import {betaPilotCompatible,liveInvitation} from "./beta-invitation-policy";
+import {lockBoundInvitation,liveInvitationCandidate} from "./beta-invitation-state";
 import { randomBytes } from "node:crypto";
-import { and, eq, isNotNull, inArray } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { activationMailDispatchControl, activationMailOutbox, emailVerificationTokens, users } from "@/db/schema";
@@ -31,18 +33,19 @@ export type ClaimPendingActivationMailResult = Claimed | NoWork;
  * explicit trust boundary, and revalidate token/account immediately before
  * attempting delivery. This method DOES NOT authorize sending.
  */
-export async function claimPendingActivationMailOnce(legacyEnabled = false): Promise<ClaimPendingActivationMailResult> {
+export async function claimPendingActivationMailOnce(legacyEnabled = false, betaEnabled = false): Promise<ClaimPendingActivationMailResult> {
   const [pilot] = await db.select().from(activationMailDispatchControl).where(eq(activationMailDispatchControl.id, 1));
-  if (!pilot || (pilot.pilotId !== null && (pilot.pilotClosedAt !== null || pilot.pilotDispatchUsedAt !== null || pilot.pilotOutboxId === null))) return { ok: false, kind: "no_work" };
+  if (!pilot || (betaEnabled === true ? !betaPilotCompatible(pilot) : (pilot.pilotId !== null && (pilot.pilotClosedAt !== null || pilot.pilotDispatchUsedAt !== null || pilot.pilotOutboxId === null)))) return { ok: false, kind: "no_work" };
   const candidates = await db.select({
     outboxId: activationMailOutbox.id,
     purpose: emailVerificationTokens.purpose,
+    invitationId:emailVerificationTokens.invitationId,
     tokenId: emailVerificationTokens.id,
     userId: emailVerificationTokens.userId,
   }).from(activationMailOutbox)
     .innerJoin(emailVerificationTokens, eq(activationMailOutbox.verificationTokenId, emailVerificationTokens.id))
     .where(and(eq(activationMailOutbox.state, "ready"),
-      pilot.pilotId === null ? undefined : and(eq(activationMailOutbox.id, pilot.pilotOutboxId!), eq(emailVerificationTokens.userId, 1), eq(emailVerificationTokens.purpose, "legacy_email_verification")), inArray(emailVerificationTokens.purpose,
+      betaEnabled === true ? and(isNotNull(emailVerificationTokens.invitationId),eq(emailVerificationTokens.purpose,"pending_activation"),liveInvitationCandidate()) : and(isNull(emailVerificationTokens.invitationId),pilot.pilotId === null ? undefined : and(eq(activationMailOutbox.id, pilot.pilotOutboxId!), eq(emailVerificationTokens.userId, 1), eq(emailVerificationTokens.purpose, "legacy_email_verification"))), inArray(emailVerificationTokens.purpose,
       legacyEnabled === true ? ["pending_activation", "legacy_email_verification"] : ["pending_activation"])))
     .orderBy(activationMailOutbox.expiresAt, activationMailOutbox.id)
     .limit(16);
@@ -51,9 +54,12 @@ export async function claimPendingActivationMailOnce(legacyEnabled = false): Pro
     const result = await db.transaction(async (tx): Promise<Claimed | null> => {
       // Recheck pilot before USER; discovery never authorizes or mutates another job.
       const [control] = await tx.select().from(activationMailDispatchControl).where(eq(activationMailDispatchControl.id, 1)).for("share");
-      if (!control || !pilotAllowsDispatch(control, candidate.userId, candidate.purpose, candidate.outboxId)) return null;
+      if (!control) return null;
+      const invite=betaEnabled===true&&betaPilotCompatible(control)&&control.enabled?await lockBoundInvitation(tx,candidate.invitationId,candidate.userId):null;
+      if(betaEnabled===true?!invite:!pilotAllowsDispatch(control,candidate.userId,candidate.purpose,candidate.outboxId))return null;
       const [account] = await tx.select({
         id: users.id, email: users.email, passwordHash: users.passwordHash,
+        role: users.role,
         isActive: users.isActive, emailVerifiedAt: users.emailVerifiedAt,
         verificationRequiredAt: users.verificationRequiredAt,
       }).from(users).where(eq(users.id, candidate.userId)).limit(1).for("update");
@@ -62,6 +68,7 @@ export async function claimPendingActivationMailOnce(legacyEnabled = false): Pro
         id: emailVerificationTokens.id, userId: emailVerificationTokens.userId,
         emailSnapshot: emailVerificationTokens.emailSnapshot,
         purpose: emailVerificationTokens.purpose,
+    invitationId:emailVerificationTokens.invitationId,
         expiresAt: emailVerificationTokens.expiresAt,
         consumedAt: emailVerificationTokens.consumedAt,
         revokedAt: emailVerificationTokens.revokedAt,
@@ -78,7 +85,8 @@ export async function claimPendingActivationMailOnce(legacyEnabled = false): Pro
 
       if (!item || item.state !== "ready" || !token || !account) return null;
       const now = new Date(); // AFTER acquiring locks, never from untrusted caller.
-      if (!pilotAllowsDispatch(control, account.id, token.purpose, item.id)) return null;
+      if(betaEnabled&&!liveInvitation(invite??undefined,now))return null;
+      if (betaEnabled===true ? (!invite||account.role!=="USER"||token.invitationId!==invite.id||token.purpose!=="pending_activation"||account.email!==invite.email) : (!pilotAllowsDispatch(control, account.id, token.purpose, item.id)||token.invitationId!==null)) return null;
       const live = account.id === candidate.userId &&
         token.userId === account.id && token.id === item.verificationTokenId &&
         token.consumedAt === null && token.revokedAt === null &&

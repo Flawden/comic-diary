@@ -64,11 +64,17 @@ test("PG17 upgrade 0046 -> 0047 preserves rows, defaults, v1 jobs and all prior 
     const oldConstraints = await constraints();
     const oldIndexes = (await pool.query("SELECT indexname,indexdef FROM pg_indexes WHERE tablename='email_verification_tokens' ORDER BY indexname")).rows;
 
+    // Keep the historical upgrade assertion scoped to 0047. Later additive
+    // migrations have their own preservation tests and schema checks below.
+    const upgrade = { ...journal, entries: journal.entries.filter((e: { idx: number }) => e.idx <= 47) };
+    writeFileSync(join(folder, "meta/_journal.json"), JSON.stringify(upgrade));
+    for (const entry of upgrade.entries) copyFileSync(`drizzle/${entry.tag}.sql`, join(folder, `${entry.tag}.sql`));
+
     await t.test("upgrade and migrator replay are safe with preexisting data", async () => {
-      await migrate(db, { migrationsFolder: "drizzle" });
+      await migrate(db, { migrationsFolder: folder });
       const applied = (await pool!.query("SELECT * FROM drizzle.__drizzle_migrations ORDER BY id")).rows;
-      assert.equal(applied.length, journal.entries.length);
-      await migrate(db, { migrationsFolder: "drizzle" });
+      assert.equal(applied.length, 48);
+      await migrate(db, { migrationsFolder: folder });
       assert.deepEqual((await pool!.query("SELECT * FROM drizzle.__drizzle_migrations ORDER BY id")).rows, applied);
       for (let i = 0; i < preservedTables.length; i++) assert.deepEqual((await pool!.query(`SELECT * FROM ${preservedTables[i]} ORDER BY id`)).rows, before[i].rows);
       assert.deepEqual((await pool!.query("SELECT * FROM email_verification_tokens ORDER BY id")).rows,
@@ -93,6 +99,8 @@ test("PG17 upgrade 0046 -> 0047 preserves rows, defaults, v1 jobs and all prior 
     });
 
     await t.test("Drizzle column definitions and named checks match actual PostgreSQL", async () => {
+      await migrate(db, { migrationsFolder: "drizzle" });
+      assert.equal((await pool!.query("SELECT count(*)::int n FROM drizzle.__drizzle_migrations")).rows[0].n, journal.entries.length);
       const config = getTableConfig(emailVerificationTokens);
       const columns = (await pool!.query(`SELECT column_name,is_nullable,data_type,character_maximum_length,column_default FROM information_schema.columns
         WHERE table_schema='public' AND table_name='email_verification_tokens' ORDER BY ordinal_position`)).rows;

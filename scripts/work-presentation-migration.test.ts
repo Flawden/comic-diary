@@ -18,14 +18,15 @@ test('0049 -> 0050: additive schema, exact historical data, null defaults, check
   const tables=(await pool.query("SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename")).rows.map(x=>x.tablename as string);
   const snapshot=()=>Promise.all(tables.map(async t=>{const removed=t==='comics'?['age_rating','presentation_revision']:t==='chapters'?['page_count','reading_minutes']:[];return (await pool!.query(`SELECT coalesce(jsonb_agg(to_jsonb(t)-$1::text[] ORDER BY (to_jsonb(t)-$1::text[])::text),'[]') v FROM "${t}" t`,[removed])).rows[0].v;}));
   const before=await snapshot(),prior=(await pool.query('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id')).rows;
-  await migrate(db,{migrationsFolder:'drizzle'});const after=(await pool.query('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id')).rows;
+  const targetJournal={...journal,entries:journal.entries.filter((e:{idx:number})=>e.idx<=50)};writeFileSync(join(folder,'meta/_journal.json'),JSON.stringify(targetJournal));copyFileSync('drizzle/'+targetJournal.entries.at(-1).tag+'.sql',join(folder,targetJournal.entries.at(-1).tag+'.sql'));
+  await migrate(db,{migrationsFolder:folder});const after=(await pool.query('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id')).rows;
   assert.equal(prior.length,50);assert.equal(after.length,51);assert.deepEqual(after.slice(0,50),prior);assert.deepEqual(await snapshot(),before);
   assert.deepEqual((await pool.query('SELECT age_rating,presentation_revision FROM comics WHERE id=$1',[book])).rows[0],{age_rating:null,presentation_revision:0});
   assert.deepEqual((await pool.query('SELECT page_count,reading_minutes FROM chapters WHERE id=$1',[chapter])).rows[0],{page_count:null,reading_minutes:null});
   for(const [field,value] of [['page_count',0],['page_count',100001],['reading_minutes',-1]])await assert.rejects(pool.query(`UPDATE chapters SET ${field}=$1 WHERE id=$2`,[value,chapter]),{code:'23514'});
   await assert.rejects(pool.query('UPDATE comics SET age_rating=7 WHERE id=$1',[book]),{code:'23514'});
   await pool.query('UPDATE chapters SET page_count=24,reading_minutes=3 WHERE id=$1',[chapter]);
-  await migrate(db,{migrationsFolder:'drizzle'});assert.deepEqual((await pool.query('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id')).rows,after);assert.deepEqual(await snapshot(),before);
+  await migrate(db,{migrationsFolder:folder});assert.deepEqual((await pool.query('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id')).rows,after);assert.deepEqual(await snapshot(),before);
   assert.equal((await pool.query('SELECT page_count FROM chapters WHERE id=$1',[chapter])).rows[0].page_count,24);
   for(const table of [comics,chapters,genres,comicGenres]){const config=getTableConfig(table);const columns=(await pool.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=$1",[config.name])).rows.map(x=>x.column_name).sort();assert.deepEqual(columns,config.columns.map(x=>x.name).sort());}
  }finally{await pool?.end();if(created)await admin.query(`DROP DATABASE "${name}"`);await admin.end();rmSync(folder,{recursive:true});}

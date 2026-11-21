@@ -21,6 +21,8 @@ const authSwitches = [
   'AUTH_ACTIVATION_OPERATOR_CONTROL_ENABLED',
   'AUTH_LEGACY_EMAIL_VERIFICATION_ENABLED',
   'AUTH_LEGACY_EMAIL_VERIFICATION_REQUEST_ENABLED',
+  'AUTH_BETA_INVITATION_REGISTRATION_ENABLED',
+  'AUTH_BETA_INVITATION_DISPATCH_ENABLED',
 ];
 const [command, expectedText, ...extra] = process.argv.slice(2);
 if (extra.length || !['status','arm','close'].includes(command) ||
