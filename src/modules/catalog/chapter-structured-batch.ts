@@ -1,8 +1,11 @@
 import { CHAPTER_BATCH_LIMIT, ChapterBatchInputError } from "./chapter-batch-input";
 import { isValidExpectedRelease } from "./chapter-release-dates";
+import { optionalChapterMeasure } from "./chapter-measures";
 
 /** Fully validated data for a single atomic structured chapter batch. */
 export type StructuredChapterRow = {
+  pageCount?: number | null;
+  readingMinutes?: number | null;
   displayCode: string;
   title: string | null;
   sourceUrl: string | null;
@@ -18,6 +21,7 @@ export type StructuredChapterRow = {
 };
 
 const allowed = new Set<keyof StructuredChapterRow>([
+  "pageCount", "readingMinutes",
   "displayCode", "title", "sourceUrl", "kind", "status", "volumeNumber",
   "placementMode", "anchorChapterId", "releasedAt", "expectedRelease", "supersedesChapterId", "revisionConfirmed",
 ]);
@@ -39,6 +43,9 @@ export function parseStructuredChapterBatch(value: unknown): StructuredChapterRo
     if (!raw || typeof raw !== "object" || Array.isArray(raw) ||
         Object.keys(raw).some(key => !allowed.has(key as keyof StructuredChapterRow))) bad("неизвестные поля.");
     const item = raw as Record<string, unknown>;
+    let pageCount: number | null | undefined, readingMinutes: number | null | undefined;
+    try { pageCount = optionalChapterMeasure(item.pageCount); readingMinutes = optionalChapterMeasure(item.readingMinutes); }
+    catch { return bad('страницы и время должны быть целыми числами от 1 до 100000 или пустыми.'); }
     if (typeof item.displayCode !== "string" || item.displayCode.length > 160 || /[\u0000-\u001f\u007f]/u.test(item.displayCode)) return bad("неправильный код.");
     const displayCode = item.displayCode.trim();
     const title = nullable(item.title, 255);
@@ -79,6 +86,8 @@ export function parseStructuredChapterBatch(value: unknown): StructuredChapterRo
     } else if (releasedAt) bad("запланированная глава не может иметь фактическую дату выхода.");
     if (expectedRelease && !isValidExpectedRelease(expectedRelease)) bad("неверная ожидаемая дата.");
     return {
+      ...(pageCount === undefined ? {} : { pageCount }),
+      ...(readingMinutes === undefined ? {} : { readingMinutes }),
       displayCode, title, sourceUrl,
       kind: item.kind as "MAIN" | "SPECIAL",
       status: item.status as "SCHEDULED" | "RELEASED",

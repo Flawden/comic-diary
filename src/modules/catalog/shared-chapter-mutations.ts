@@ -4,6 +4,7 @@ import { parseChapterBatch } from "./chapter-batch-input";
 import { parseStructuredChapterBatch } from "./chapter-structured-batch";
 import { planVolumeChapterPlacement } from "./chapter-placement";
 import { isValidExpectedRelease } from "./chapter-release-dates";
+import { optionalChapterMeasure, expectedChapterMeasures } from "./chapter-measures";
 import {
   and,
   eq,
@@ -45,6 +46,9 @@ export type SharedChapterStatus =
   >;
 
 export type SharedChapterMetadataInput = {
+  expectedMeasures?: { pageCount: number | null; readingMinutes: number | null };
+  pageCount?: number | null;
+  readingMinutes?: number | null;
   kind?: "MAIN" | "SPECIAL";
   displayCode: string;
   title: string | null;
@@ -71,7 +75,8 @@ export type SharedChapterMutationErrorKind =
   | "chapter-archived"
   | "chapter-display-code-conflict"
   | "chapter-batch-stale"
-  | "chapter-order-stale";
+  | "chapter-order-stale"
+  | "chapter-metadata-stale";
 
 export class SharedChapterMutationError
   extends Error {
@@ -204,6 +209,9 @@ function normalizeReleasedAt(
 function normalizeMetadata(
   input: SharedChapterMetadataInput,
 ) {
+  let pageCount: number | null | undefined, readingMinutes: number | null | undefined;
+  try { pageCount = optionalChapterMeasure(input.pageCount); readingMinutes = optionalChapterMeasure(input.readingMinutes); }
+  catch { throw new SharedChapterMutationError('invalid-chapter'); }
   if (input.kind !== undefined && input.kind !== "MAIN" && input.kind !== "SPECIAL") {
     throw new SharedChapterMutationError("invalid-chapter");
   }
@@ -259,6 +267,8 @@ function normalizeMetadata(
   }
 
   return {
+    ...(pageCount === undefined ? {} : { pageCount }),
+    ...(readingMinutes === undefined ? {} : { readingMinutes }),
     ...(input.kind === undefined ? {} : { kind: input.kind }),
     ...(input.volumeNumber === undefined ? {} : { volumeNumber: input.volumeNumber }),
     // Publish transitions clear old plans. Other callers may omit the new field.
@@ -307,6 +317,8 @@ function chapterSnapshot(
   chapter: ChapterRow,
 ) {
   return {
+    pageCount: chapter.pageCount,
+    readingMinutes: chapter.readingMinutes,
     kind: chapter.kind,
     volumeNumber: chapter.volumeNumber,
     supersedesChapterId: chapter.supersedesChapterId,
@@ -477,6 +489,10 @@ export async function createSharedCatalogChapter(
           );
         }
 
+        if (metadata.pageCount !== undefined || metadata.readingMinutes !== undefined) {
+          await tx.update(comics).set({ presentationRevision: sql`${comics.presentationRevision} + 1` }).where(eq(comics.id, comic.id));
+        }
+
         await tx
           .insert(
             administrativeAuditEvents,
@@ -545,6 +561,12 @@ export async function updateSharedCatalogChapter(
   input: SharedChapterMetadataInput,
   actor: SharedChapterAuditActor,
 ) {
+  let expected: ReturnType<typeof expectedChapterMeasures>;
+  try { expected = expectedChapterMeasures(input.expectedMeasures); }
+  catch { throw new SharedChapterMutationError('invalid-chapter'); }
+  if ((input.pageCount !== undefined || input.readingMinutes !== undefined) && !expected) {
+    throw new SharedChapterMutationError('invalid-chapter');
+  }
   requirePositiveId(
     comicId,
   );
@@ -638,6 +660,11 @@ export async function updateSharedCatalogChapter(
           );
         }
 
+        // The catalog advisory lock serializes this comparison with bulk metadata saves.
+        if (expected && (before.pageCount !== expected.pageCount || before.readingMinutes !== expected.readingMinutes)) {
+          throw new SharedChapterMutationError('chapter-metadata-stale');
+        }
+
         if (
           before.status ===
           "ARCHIVED"
@@ -673,6 +700,10 @@ export async function updateSharedCatalogChapter(
           throw new Error(
             "Chapter update returned no row",
           );
+        }
+
+        if (metadata.pageCount !== undefined || metadata.readingMinutes !== undefined) {
+          await tx.update(comics).set({ presentationRevision: sql`${comics.presentationRevision} + 1` }).where(eq(comics.id, comic.id));
         }
 
         await tx
@@ -1169,6 +1200,7 @@ export async function appendSharedChapterStructuredBatch(
       sourceUrl: row.sourceUrl, status: row.status,
       releasedAt: row.releasedAt ? new Date(row.releasedAt) : null,
       expectedRelease: row.expectedRelease, volumeNumber: row.volumeNumber,
+      pageCount: row.pageCount, readingMinutes: row.readingMinutes,
     }),
   }));
   try {
@@ -1260,6 +1292,9 @@ export async function appendSharedChapterStructuredBatch(
           details: { channel: "structured-batch", comicId, comicSlug: comic.slug,
             replaces: row.old ? chapterSnapshot(row.old) : null, after: chapterSnapshot(chapter) },
         });
+      }
+      if (rows.some(row => row.metadata.pageCount !== undefined || row.metadata.readingMinutes !== undefined)) {
+        await tx.update(comics).set({ presentationRevision: sql`${comics.presentationRevision} + 1` }).where(eq(comics.id, comicId));
       }
       return { snapshot, rows: previewRows, createdCount: created.length };
     });

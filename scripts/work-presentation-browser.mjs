@@ -31,6 +31,9 @@ try{
  const initial=await (await ac.request.get(endpoint)).json();assert.equal(initial.revision,0);
  const invalid=await ac.request.put(endpoint,{headers:{origin},data:{...initial,chapters:[{id:chapterIds[0],pageCount:0,readingMinutes:3}]}});assert.equal(invalid.status(),400);
  result.checks.push('HTTP_ANONYMOUS_USER_ORIGIN_AND_INVALID_VALUES=PASS');
+ // This fixture's static illustration is not an uploaded /media/covers asset;
+ // keep the chapter edited below on its supported null/fallback artwork path.
+ await q('UPDATE chapters SET cover_url=NULL WHERE id=$1',[chapterIds[0]]);
  const page=await ac.newPage();await page.goto(origin+'/admin/comics',{waitUntil:'networkidle'});
  const card=page.locator('.admin-studio-navigator').getByRole('button').filter({hasText:'Король лев'});await card.click();
  const editor=page.locator('.presentation-admin:visible');await editor.locator('summary').click();await editor.getByLabel('Жанры',{exact:true}).waitFor();
@@ -38,6 +41,42 @@ try{
  for(let i=0;i<5;i++){const row=editor.locator('.presentation-admin-chapters>div').filter({hasText:['Короли настоящего и будущего','Тайна слоняющегося слонёнка','Соперничество братьев','Да здравствует король!','Тайна Рафики'][i]});await row.getByLabel('Страниц',{exact:true}).fill(String([24,28,22,26,30][i]));await row.getByLabel('Примерное время, мин',{exact:true}).fill('3');}
  const saved=page.waitForResponse(r=>r.request().method()==='PUT'&&r.url()===endpoint);await editor.getByRole('button',{name:'Сохранить сведения',exact:true}).click();assert.equal((await saved).status(),200);await editor.getByRole('status').filter({hasText:'Данные сохранены.'}).waitFor();
  const stored=await (await ac.request.get(endpoint)).json();assert.equal(stored.revision,1);assert.equal(stored.ageRating,12);assert.equal(stored.chapters.filter(c=>c.pageCount!==null).length,5);
+ // Exercise the ordinary chapter dialog, not only the separate bulk metadata section.
+ await page.getByRole('button',{name:'Главы',exact:true}).click();
+ const firstCard=page.locator('.admin-chapter-card').filter({hasText:'Короли настоящего и будущего'});
+ await firstCard.getByRole('button',{name:'Редактировать',exact:true}).click();
+ const edit=page.getByRole('dialog',{name:/Редактирование главы:/});
+ await edit.getByLabel(/^Количество страниц \(необязательно\)/).fill('25');
+ await edit.getByLabel(/^Примерное время чтения, мин \(необязательно\)/).fill('3');
+ await page.screenshot({path:resolve(out,'admin-edit-pages.png')});result.screenshots.push('admin-edit-pages.png');
+ const chapterEndpoint=origin+`/api/admin/catalog/comics/${book}/chapters`;
+ const invalidChapter={intent:'update',chapterId:chapterIds[0],displayCode:'Глава 1',title:'Короли настоящего и будущего',sourceUrl:'https://example.invalid/chapter',status:'RELEASED',releasedAt:null,pageCount:0,readingMinutes:3};
+ assert.equal((await regular.request.patch(chapterEndpoint,{headers:{origin},data:{...invalidChapter,pageCount:99}})).status(),403);
+ assert.equal((await ac.request.patch(chapterEndpoint,{headers:{origin},data:invalidChapter})).status(),400);
+ assert.equal((await q('SELECT page_count FROM chapters WHERE id=$1',[chapterIds[0]])).rows[0].page_count,24);
+ const updated=page.waitForResponse(r=>r.url()===chapterEndpoint&&r.request().method()==='PATCH');
+ await edit.getByRole('button',{name:'Сохранить главу',exact:true}).click();assert.equal((await updated).status(),200);
+ await edit.waitFor({state:'hidden'});
+ assert.equal((await q('SELECT page_count FROM chapters WHERE id=$1',[chapterIds[0]])).rows[0].page_count,25);
+ assert.equal((await ac.request.patch(chapterEndpoint,{headers:{origin},data:{...invalidChapter,pageCount:99,expectedMeasures:{pageCount:24,readingMinutes:3}}})).status(),409);
+ assert.equal((await q('SELECT page_count FROM chapters WHERE id=$1',[chapterIds[0]])).rows[0].page_count,25);
+ // Restore only the synthetic fixture's exact page count for the existing progress assertions below.
+ await q('UPDATE chapters SET page_count=24 WHERE id=$1',[chapterIds[0]]);
+ await page.getByRole('button',{name:'+ Добавить главы',exact:true}).click();
+ const add=page.getByRole('dialog',{name:'Добавить главы',exact:true});
+ await add.getByLabel('Название главы',{exact:true}).fill('Pages creation QA');
+ await add.getByLabel('Количество страниц (необязательно)',{exact:true}).fill('12');
+ await add.getByLabel('Примерное время чтения, мин (необязательно)',{exact:true}).fill('2');
+ await page.setViewportSize({width:390,height:1000});
+ await add.getByLabel('Количество страниц (необязательно)',{exact:true}).scrollIntoViewIfNeeded();
+ await page.screenshot({path:resolve(out,'admin-create-pages-390.png')});result.screenshots.push('admin-create-pages-390.png');
+ await add.getByRole('button',{name:'Проверить главы',exact:true}).click();
+ await add.getByRole('button',{name:'Сохранить главу',exact:true}).click();await add.waitFor({state:'hidden'});
+ const created=(await q("SELECT id,page_count,reading_minutes FROM chapters WHERE comic_id=$1 AND title='Pages creation QA'",[book])).rows[0];
+ assert.equal(created.page_count,12);assert.equal(created.reading_minutes,2);
+ await q('DELETE FROM chapters WHERE id=$1 AND comic_id=$2',[created.id,book]);
+ result.checks.push('REAL_CHAPTER_CREATE_EDIT_OPTIONAL_PAGES_MINUTES=PASS');
+ await q('UPDATE chapters SET title=title || $1 WHERE id=$2',[' — очень длинное название главы о путешествии через далёкую долину и возвращении домой',chapterIds[0]]);
  const known=(await q("SELECT id FROM chapters WHERE comic_id=$1 AND volume_number=2",[book])).rows[0].id;await q('UPDATE chapters SET page_count=10 WHERE id=$1',[known]);await q("INSERT INTO chapters(comic_id,display_code,sort_order,status,volume_number) VALUES($1,'Не заполнена',10,'RELEASED',2)",[book]);
  assert.equal((await ac.request.put(endpoint,{headers:{origin},data:{revision:0,ageRating:null,genres:[],chapters:[]}})).status(),409);result.checks.push('REAL_ADMIN_EDITOR_SAVE_AND_HTTP_STALE_REVISION=PASS');
  for(const theme of ['tea','paper','night'])for(const width of [320,390,1440]){
@@ -48,6 +87,7 @@ try{
   const first=p.locator('.wd08-row').filter({hasText:'Короли настоящего и будущего'});assert.match(await first.locator('.wd08-pages').textContent(),/24/);assert.match(await first.locator('.wd-score').textContent(),/Моя оценка.*4/);
   const incomplete=p.locator('.wd-volume').nth(1);assert.match(await incomplete.locator('.wd-volume-incomplete').textContent(),/1 из 2/);assert.equal(await incomplete.getByRole('progressbar',{name:/Страницы прочитанных глав/}).count(),0);
   for(const img of await p.locator('.wd08-row:visible .wd08-cover-art img').all()){await img.scrollIntoViewIfNeeded();await img.evaluate(async el=>{await el.decode();if(!el.complete||el.naturalWidth===0)throw Error('fixture illustration not loaded');});}
+  if(width===1440){const art=await p.locator('.wd08-row:visible .wd08-cover-art').first().evaluate(el=>{const a=el.getBoundingClientRect(),r=el.closest('.wd08-row').getBoundingClientRect();return {center:(a.left+a.width/2-r.left)/r.width,opacity:Number(getComputedStyle(el).opacity)};});assert.ok(Math.abs(art.center-.5)<.05);assert.ok(art.opacity<=.3);}
   await p.evaluate(()=>scrollTo(0,0));
   const chapterShot=`${theme}-${width}-chapters.png`;await p.screenshot({path:resolve(out,chapterShot),fullPage:true});result.screenshots.push(chapterShot);
   await p.getByRole('tab',{name:'Отзывы и комментарии',exact:true}).click();await p.locator('.reader-rating-personal strong').filter({hasText:'4,2'}).waitFor();assert.equal(await p.locator('.reader-rating-criteria svg').count(),5);

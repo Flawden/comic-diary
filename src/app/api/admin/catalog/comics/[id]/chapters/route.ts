@@ -1,4 +1,5 @@
 import { ChapterBatchInputError } from "@/modules/catalog/chapter-batch-input";
+import { optionalChapterMeasure, expectedChapterMeasures } from "@/modules/catalog/chapter-measures";
 import {
   type NextRequest,
   NextResponse,
@@ -321,6 +322,10 @@ async function readJson(
 function parseMetadata(
   body: Record<string, unknown>,
 ) {
+  let pageCount: number | null | undefined, readingMinutes: number | null | undefined;
+  let expectedMeasures: ReturnType<typeof expectedChapterMeasures>;
+  try { pageCount = optionalChapterMeasure(body.pageCount); readingMinutes = optionalChapterMeasure(body.readingMinutes); expectedMeasures = expectedChapterMeasures(body.expectedMeasures); }
+  catch { return null; }
   if (body.kind !== undefined && body.kind !== "MAIN" && body.kind !== "SPECIAL") return null;
   if (
     typeof body.displayCode !==
@@ -370,6 +375,9 @@ function parseMetadata(
   }
 
   return {
+    ...(pageCount === undefined ? {} : { pageCount }),
+    ...(readingMinutes === undefined ? {} : { readingMinutes }),
+    ...(expectedMeasures === undefined ? {} : { expectedMeasures }),
     kind: body.kind as "MAIN" | "SPECIAL" | undefined,
     displayCode:
       body.displayCode,
@@ -407,6 +415,7 @@ function mutationErrorResponse(
         );
 
       case "chapter-batch-stale":
+      case "chapter-metadata-stale":
       case "chapter-order-stale":
       case "chapter-archived":
       case "chapter-display-code-conflict":
