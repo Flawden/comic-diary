@@ -39,7 +39,7 @@ export async function readBoundedJson(request: Request): Promise<unknown> {
     catch { throw new CommunityError(400, "invalid_request"); }
   } finally { reader.releaseLock(); }
 }
-async function respond(action: () => Promise<{ body: unknown; status?: number }>) {
+export async function respond(action: () => Promise<{ body: unknown; status?: number }>) {
   try { const result = await action(); return NextResponse.json(result.body, { status: result.status ?? 200, headers }); }
   catch (error) {
     const e = error instanceof CommunityError ? error : new CommunityError(503, "unavailable");
@@ -52,7 +52,7 @@ async function identity(): Promise<Actor> {
   if (!session) throw new CommunityError(401, "unauthenticated");
   return { userId: session.user.id, sessionId: session.sessionId };
 }
-async function mutation(request: NextRequest, action: (actor: Actor, body: unknown) => Promise<{ body: unknown; status?: number }>, empty = false) {
+export async function mutation(request: NextRequest, action: (actor: Actor, body: unknown) => Promise<{ body: unknown; status?: number }>, empty = false) {
   return respond(async () => {
     // Rejected origin cannot parse a body or resolve a session/DB connection.
     if (!isSameOriginRequest(request)) throw new CommunityError(403, "forbidden_origin");
@@ -87,8 +87,10 @@ export function commentReport(request: NextRequest, id: string) {
 }
 export function adminCommentsGet(request: NextRequest) {
   return respond(async () => {
-    for (const key of request.nextUrl.searchParams.keys()) if (!["status", "cursor"].includes(key) || request.nextUrl.searchParams.getAll(key).length !== 1) throw new CommunityError(400, "invalid_request");
-    return { body: await moderationQueue(await identity(), request.nextUrl.searchParams.get("status") ?? "OPEN", request.nextUrl.searchParams.get("cursor")) };
+    const q = request.nextUrl.searchParams;
+    for (const key of q.keys()) if (!["status", "cursor", "reviewId", "auditCursor"].includes(key) || q.getAll(key).length !== 1) throw new CommunityError(400, "invalid_request");
+    return { body: await moderationQueue(await identity(), q.get("status") ?? "OPEN", q.get("cursor"),
+      { reviewId: q.has("reviewId") ? queryId(q.get("reviewId")) : undefined, auditCursor: q.get("auditCursor") }) };
   });
 }
 export function adminCommentsPost(request: NextRequest) {

@@ -93,9 +93,7 @@ export default async function AccountPage() {
           <div id="appearance"><ThemeSelector initialTheme={theme} /></div>
           <section id="account-settings" className="reader-panel account-settings">
             <h2>Настройки и данные</h2>
-            {verificationState === "legacy_unverified" && <details id="email-verification"><summary>Подтвердить почту</summary>
-              <AccountEmailVerificationForm requestEnabled={legacyVerificationRequestEnabled(process.env)} />
-            </details>}
+            {verificationState === "legacy_unverified" && <AccountEmailVerificationForm requestEnabled={legacyVerificationRequestEnabled(process.env)} />}
             {verificationState === "verified" && <p className="mt-4 text-sm">Почта подтверждена</p>}
             <details><summary>Скачать дневник <span>Статусы, оценки и заметки</span></summary><DiaryExport /></details>
             <details><summary>Изменить пароль</summary>

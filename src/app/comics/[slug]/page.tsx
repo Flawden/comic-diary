@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { Comments } from "@/modules/community/Comments";
+import { hasPermission } from "@/modules/auth/permissions";
+import { Reviews } from "@/modules/community/Reviews";
+import { getReviewCounts } from "@/modules/community/review-service";
 import { CommunityRatings } from "@/modules/library/components/CommunityRatings";
 import { getCommunityRatings } from "@/modules/library/queries/get-community-ratings";
 import { listReturn } from "@/modules/library/list-navigation";
@@ -71,6 +73,7 @@ export default async function ComicPage({
   }
 
   const commentsRefreshToken = randomUUID();
+  const reviewCounts = await getReviewCounts(comic.id);
   const communityRatings = await getCommunityRatings(comic.id, currentUser?.id ?? null);
   const back = listReturn(await searchParams, comic.id);
 
@@ -150,8 +153,8 @@ export default async function ComicPage({
             <div className="wd-hero-summary-empty"><h2>Об истории</h2><p>Описание пока не добавлено.</p></div>}
         </aside>
       </header>
-      {communityRatings && <CommunityRatings ratings={communityRatings}/>}
-      <WorkTabs count={total} chapters={
+      <WorkTabs count={total} reviews={<>{communityRatings && <CommunityRatings ratings={communityRatings}/>}
+        {comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED" ? <Reviews comicId={comic.id} canWrite={currentUser !== null} canModerate={currentUser?hasPermission(currentUser.role,'ADMIN_SECURITY'):false} refreshToken={commentsRefreshToken} loginHref={`/login?next=${encodeURIComponent("/comics/"+comic.slug)}`} /> : <p>Публичные отзывы недоступны для личного произведения.</p>}</>} chapters={
         <div className={`wd-chapter-content${visibleChapters.length === 0 ? " wd-chapter-content--empty" : ""}`}>
           {visibleChapters.length === 0 ? (
             <div className="wd-empty-state">
@@ -179,6 +182,8 @@ export default async function ComicPage({
             workSourceUrl={comic.sourceUrl}
             volumeTitles={volumeTitles}
             communityRatings={communityRatings?.chapters ?? {}}
+            reviewCounts={reviewCounts.chapters}
+            canModerateReviews={currentUser?hasPermission(currentUser.role,'ADMIN_SECURITY'):false}
             commentsEnabled={comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED"}
             commentsRefreshToken={commentsRefreshToken}
             commentsLoginHref={`/login?next=${encodeURIComponent("/comics/" + comic.slug)}`}
@@ -482,9 +487,7 @@ export default async function ComicPage({
 
 
       }/>
-      {comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED" && <Comments comicId={comic.id}
-        refreshToken={commentsRefreshToken} canWrite={currentUser !== null}
-        loginHref={`/login?next=${encodeURIComponent("/comics/" + comic.slug)}`} />}
+
     </article>
     </WorkChapterProgressProvider>
   </WorkPreferences>;

@@ -34,17 +34,17 @@ export function ShelfAction({comicId, member, hasDiary, login}:{comicId:number;m
   return <div><button type="button" className="wd-bookmark" disabled={pending} onClick={async()=>{setPending(true);setError("");try{await writeReading(comicId,{intent:"add-to-library"});router.refresh();}catch{setPending(false);setError("Не удалось добавить. Попробуйте ещё раз.");}}}>{pending?"Добавляем…":hasDiary?"＋ Вернуть в библиотеку":"＋ В дневник"}</button>{error && <small role="alert">{error}</small>}</div>;
 }
 
-const tabs=[["chapters","Главы"],["about","Об истории"],["my-reading","Мой дневник"]] as const;
-export function WorkTabs({chapters,about,diary,count}:{chapters:ReactNode;about:ReactNode;diary:ReactNode;count:number}) {
+const tabs=[["chapters","Главы"],["about","Об истории"],["reviews","Отзывы и комментарии"],["my-reading","Мой дневник"]] as const;
+export function WorkTabs({chapters,about,diary,reviews,count}:{chapters:ReactNode;about:ReactNode;diary:ReactNode;reviews?:ReactNode;count:number}) {
   const [tab,setTab]=useState<string>("chapters");
   const refs=useRef<(HTMLAnchorElement|null)[]>([]);
   useEffect(()=>{function sync(){const hash=window.location.hash.slice(1);setTab(tabs.some(([id])=>id===hash)?hash:"chapters");}
     sync();window.addEventListener("hashchange",sync);window.addEventListener("popstate",sync);
     return ()=>{window.removeEventListener("hashchange",sync);window.removeEventListener("popstate",sync);};},[]);
   function choose(id:string){setTab(id);if(location.hash!=="#"+id)history.pushState(null,"","#"+id);}
-  const panels=[chapters,about,diary];
+  const panels=[chapters,about,reviews??<p>Отзывы доступны для опубликованных произведений каталога.</p>,diary];
   return <><nav className="wd-tabs" role="tablist" aria-label="О произведении">{tabs.map(([id,label],i)=><a key={id} ref={el=>{refs.current[i]=el;}} href={"#"+id} role="tab" id={"tab-"+id} aria-controls={id} aria-selected={id===tab} tabIndex={id===tab?0:-1}
-    onClick={e=>{e.preventDefault();choose(id);}} onKeyDown={e=>{const j=e.key==="ArrowRight"?(i+1)%3:e.key==="ArrowLeft"?(i+2)%3:e.key==="Home"?0:e.key==="End"?2:-1;if(j>=0){e.preventDefault();choose(tabs[j][0]);refs.current[j]?.focus();}}}>{label}{i===0?" · "+count:""}</a>)}</nav>
+    onClick={e=>{e.preventDefault();choose(id);}} onKeyDown={e=>{const j=e.key==="ArrowRight"?(i+1)%tabs.length:e.key==="ArrowLeft"?(i+tabs.length-1)%tabs.length:e.key==="Home"?0:e.key==="End"?tabs.length-1:-1;if(j>=0){e.preventDefault();choose(tabs[j][0]);refs.current[j]?.focus();}}}>{label}{i===0?" · "+count:""}</a>)}</nav>
     {tabs.map(([id],i)=><section key={id} id={id} role="tabpanel" aria-labelledby={"tab-"+id} hidden={tab!==id}>{panels[i]}</section>)}</>;
 }
 

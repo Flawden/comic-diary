@@ -33,10 +33,14 @@ test('PG17 0047 -> 0048 preserves legacy rows, old SQL, migration replay and sch
   const users=(await pool.query('SELECT * FROM users')).rows;
   const before=(await pool.query('SELECT * FROM activation_mail_dispatch_control')).rows[0];
   const priorJournal=(await pool.query('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id')).rows;
-  await migrate(db,{migrationsFolder:'drizzle'});
+  // Keep this upgrade proof scoped to 0048 even when later migrations exist.
+  const candidate={...journal,entries:journal.entries.filter((e:{idx:number})=>e.idx<=48)};
+  writeFileSync(join(folder,'meta/_journal.json'),JSON.stringify(candidate));
+  copyFileSync('drizzle/'+candidate.entries.at(-1).tag+'.sql',join(folder,candidate.entries.at(-1).tag+'.sql'));
+  await migrate(db,{migrationsFolder:folder});
   const applied=(await pool.query('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id')).rows;
   assert.deepEqual(applied.slice(0,48),priorJournal);assert.equal(applied.length,49);
-  await migrate(db,{migrationsFolder:'drizzle'});
+  await migrate(db,{migrationsFolder:folder});
   assert.deepEqual((await pool.query('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id')).rows,applied);
   assert.deepEqual((await pool.query('SELECT * FROM users')).rows,users);
   const current=(await pool.query('SELECT * FROM activation_mail_dispatch_control')).rows[0];

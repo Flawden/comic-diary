@@ -1,7 +1,7 @@
 "use client";
 
 import { CoverImage } from "@/shared/components/media/CoverImage";
-import { Comments } from "@/modules/community/Comments";
+import { ChapterReviewsDialog } from "@/modules/community/Reviews";
 import { formatRating, formatRatingVotes, type RatingAggregate } from "../ratings/community-rating";
 import { ChapterRating } from "./ChapterRating";
 import { UnreadChapterConfirmation } from "./UnreadChapterConfirmation";
@@ -19,9 +19,9 @@ import { getChapterReadingSource, readingSource } from "@/modules/library/readin
 import { useWorkChapterProgress } from "./WorkChapterProgress";
 
 type Chapter = Omit<ComicChapter, "releasedAt">;
-type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; canMark: boolean; workSourceUrl: string | null; volumeTitles?: Record<number, string>; communityRatings?: Record<number, RatingAggregate>; commentsEnabled?: boolean; commentsLoginHref?: string; commentsRefreshToken?: string };
+type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; canMark: boolean; workSourceUrl: string | null; volumeTitles?: Record<number, string>; communityRatings?: Record<number, RatingAggregate>; commentsEnabled?: boolean; commentsLoginHref?: string; commentsRefreshToken?: string; reviewCounts?: Record<number,number>; canModerateReviews?: boolean };
 
-export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canMark, workSourceUrl, volumeTitles = {}, communityRatings = {}, commentsEnabled = false, commentsLoginHref = "/login", commentsRefreshToken = "" }: Props) {
+export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canMark, workSourceUrl, volumeTitles = {}, communityRatings = {}, commentsEnabled = false, commentsLoginHref = "/login", commentsRefreshToken = "", reviewCounts = {}, canModerateReviews = false }: Props) {
   const [discussion, setDiscussion] = useState<number | null>(null);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("MAIN");
@@ -147,7 +147,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
             Рейтинг читателей: {formatRating(communityRatings[c.id].average)} · {formatRatingVotes(communityRatings[c.id].votes)}
           </small>}
           {commentsEnabled && c.status === "RELEASED" && <button type="button" data-open-discussion={c.id}
-            className="tea-text-action" onClick={() => setDiscussion(c.id)}>Обсудить главу</button>}</div>}
+            className="tea-text-action" onClick={() => setDiscussion(c.id)}>Отзывы · {reviewCounts[c.id] ?? 0}</button>}</div>}
         </div>
         <div className="wd08-actions">
           {canMark && !isScheduled && isRead ? (
@@ -264,13 +264,10 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
         offerRatings={enabled} onClose={() => setPreviousPrompt(null)} onDecline={() => {
           const target = previousPrompt.target; setPreviousPrompt(null); if (enabled) setSheet(target);
         }} onChanged={() => router.refresh()} onRemember={disablePreviousPrompt} />}
-      {commentsEnabled && discussion !== null && chapters.some(c => c.id === discussion && c.status === "RELEASED") && <div tabIndex={-1}
-        ref={el => { if (el) el.focus(); }} role="region" aria-label="Обсуждение выбранной главы" className="mt-4 min-w-0">
-        <p className="font-semibold">{chapters.find(c => c.id === discussion)?.displayCode} · {chapters.find(c => c.id === discussion)?.title}</p>
-        <button type="button" className="tea-text-action" onClick={() => { const id = discussion; setDiscussion(null);
-          requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-open-discussion="${id}"]`)?.focus()); }}>Закрыть обсуждение главы</button>
-        <Comments key={discussion} comicId={comicId} chapterId={discussion} canWrite={readerId !== null} loginHref={commentsLoginHref} refreshToken={commentsRefreshToken}/>
-      </div>}
+      {commentsEnabled && discussion !== null && chapters.some(c => c.id === discussion && c.status === "RELEASED") && <ChapterReviewsDialog
+        key={discussion} comicId={comicId} chapterId={discussion} canModerate={canModerateReviews} canWrite={readerId!==null} loginHref={commentsLoginHref}
+        refreshToken={commentsRefreshToken} title={[chapters.find(c=>c.id===discussion)?.displayCode,chapters.find(c=>c.id===discussion)?.title].filter(Boolean).join(' · ')||'Глава'}
+        rating={communityRatings[discussion]} count={reviewCounts[discussion]??0} onClose={()=>{const id=discussion;setDiscussion(null);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>(`[data-open-discussion="${id}"]`)?.focus());}}/>}
       {sheet && <ChapterRating comicId={comicId} chapter={sheet} rating={ratings[sheet.id]??null} onClose={()=>setSheet(null)}/>}
       {!canMark && chapters.length > 0 ? <p className="wd-library-hint mt-4 text-sm text-[var(--text-secondary)]">Добавьте комикс в свою библиотеку, чтобы отмечать чтение.</p> : null}
     </section>

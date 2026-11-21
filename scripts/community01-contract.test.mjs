@@ -52,9 +52,10 @@ test('one selected chapter panel, no discussion fetching inside chapter row map'
   const panel=read('src/modules/library/components/ChapterReadingPanel.tsx');
   const render=panel.slice(panel.indexOf('function renderChapter'),panel.indexOf('\n  return (',panel.indexOf('function renderChapter')));
   assert.doesNotMatch(render,/<Comments|fetch\(/);assert.match(render,/c.status === "RELEASED"/);
-  assert.equal((panel.match(/<Comments /g)??[]).length,1);
+  assert.equal((panel.match(/<ChapterReviewsDialog/g)??[]).length,1);
+  assert.doesNotMatch(panel,/<Comments /);
   const page=read('src/app/comics/[slug]/page.tsx');
-  assert.match(page,/comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED" && <Comments/);
+  assert.match(page,/comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED" \? <Reviews/);
   assert.match(page,/<CommunityRatings/);
 });
 test('CI runs new unit/contracts and entire guarded PG suite',()=>{

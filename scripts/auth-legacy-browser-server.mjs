@@ -20,7 +20,8 @@ Object.assign(process.env, { NODE_ENV: 'production', NEXT_TELEMETRY_DISABLED: '1
   COMIC_DIARY_PUBLIC_ORIGIN: 'https://reader.example.invalid', AUTH_ACTIVATION_OUTBOX_KEY_ID: 'legacy-browser',
   AUTH_ACTIVATION_OUTBOX_KEY_BASE64: Buffer.alloc(32, 23).toString('base64'),
 });
-const port = enabled ? 3110 : 3111;
+const port = Number(process.env.LEGACY_BROWSER_PORT ?? (enabled ? 3110 : 3111));
+if (![3110,3111,3113].includes(port)) throw Error('REFUSED browser port');
 const app = next({ dev: false, dir: process.cwd(), hostname: '127.0.0.1', port });
 await app.prepare();
 const handler = app.getRequestHandler();
