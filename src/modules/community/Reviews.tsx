@@ -6,14 +6,15 @@ import {reviewCriteria,reviewAverage,type Review,type ReviewPage,type ReviewFilt
 import type {RatingAggregate} from '@/modules/library/ratings/community-rating';
 import {formatRating} from '@/modules/library/ratings/community-rating';
 import './reviews.css';
-type Props={comicId:number;chapterId?:number;canWrite:boolean;loginHref:string;refreshToken?:string;canModerate?:boolean};
+import { CategoryIcon } from '@/shared/components/RatingIcon';
+import { CommunityRatings } from '@/modules/library/components/CommunityRatings';
+type Props={ratings?:import('@/modules/library/ratings/community-rating').CommunityRatings;comicId:number;chapterId?:number;canWrite:boolean;loginHref:string;refreshToken?:string;canModerate?:boolean};
 const countLabel=(n:number)=>n+' '+(({one:'отзыв',few:'отзыва',many:'отзывов',other:'отзывов'} as Record<string,string>)[new Intl.PluralRules('ru').select(n)]??'отзывов');
 const date=(value:string)=>new Date(value).toLocaleDateString('ru',{day:'numeric',month:'long',year:'numeric'});
 function failure(error:unknown){const status=error instanceof ReviewRequestError?error.status:0;return status===409?'Отзыв уже изменился. Обновите обсуждение и проверьте сохранённую версию. Ваш текст остался в форме.':status===429?'Слишком много действий. Подождите немного и повторите — введённый текст сохранён в окне.':status===401?'Сессия завершилась. Войдите в аккаунт заново.':'Не удалось выполнить действие. Повторите попытку.';}
 class ReviewRequestError extends Error{constructor(readonly status:number){super('review request failed');}}
 async function request<T>(url:string,method='GET',body?:unknown,signal?:AbortSignal):Promise<T>{const response=await fetch(url,{method,credentials:'same-origin',cache:'no-store',headers:body===undefined?undefined:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal});if(!response.ok)throw new ReviewRequestError(response.status);return response.json();}
 export function ReviewStars({value}:{value:number}){return <span className="reviews-stars" aria-label={value+' из 5'}><span aria-hidden="true">{'★'.repeat(Math.round(value))}<span className="reviews-stars-empty">{'☆'.repeat(5-Math.round(value))}</span></span></span>;}
-function CategoryIcon({index}:{index:number}){const paths=['M3 4h7l2 2 2-2h7v15h-7l-2 2-2-2H3z M12 6v15','M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M1 21v-3a7 7 0 0 1 14 0v3 M17 4a4 4 0 0 1 0 8 M19 14a7 7 0 0 1 4 7','m14 4 6-2-2 6-9 9-4 1 1-4z M5 18l-3 4 5-2','m2 7 10-5 10 5-10 5z M2 12l10 5 10-5 M2 17l10 5 10-5','M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M2 12h20 M12 2c-6 6-6 14 0 20 6-6 6-14 0-20'];return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5"><path d={paths[index]}/></svg>;}
 type HistoricalPage={items:{id:number;mine:boolean;author:string;body:string|null;spoiler:boolean;status:string;createdAt:string}[];nextCursor:string|null};
 function HistoricalComments({comicId,chapterId}:Props){
  const [page,setPage]=useState<HistoricalPage|null>(null),[loading,setLoading]=useState(false),[error,setError]=useState(''),[revealed,setRevealed]=useState<number[]>([]),[removing,setRemoving]=useState<number|null>(null);const active=useRef<AbortController|null>(null);
@@ -85,6 +86,8 @@ export function Reviews(props:Props){
  const mineMatches=page?.mine&&(filter==='hidden'?page.mine.hidden:page.mine.hidden||filter==='all'||(filter==='text'?!!page.mine.body:!page.mine.body));
  const items=page?(mineMatches?[page.mine!,...page.items.filter(x=>x.id!==page.mine!.id)]:page.items):[];
  return <section className="reviews" aria-label={chapterId?'Отзывы о главе':'Отзывы и комментарии'} data-reviews-target={chapterId??'work'}>
+  {!chapterId&&props.ratings&&<CommunityRatings ratings={props.ratings} personalAverage={page?.mine?reviewAverage(page.mine.scores):null}
+    personalHidden={page?.mine?.hidden??false} onEdit={props.canWrite&&page!==null?()=>setEditor(true):undefined} loginHref={props.canWrite?undefined:props.loginHref}/>}
   <header className="reviews-heading"><div><p className="reviews-kicker">Мнение читателей</p><h2>{chapterId?'Отзывы о главе':'Отзывы и комментарии'} <span>{page?countLabel(page.total):'…'}</span></h2></div>
    {props.canWrite?<button className="reviews-button" type="button" disabled={(loading&&!page)||page?.mine?.hidden} onClick={()=>setEditor(true)}>{page?.mine?.hidden?'Ваш отзыв скрыт':page?.mine?'Редактировать свой отзыв':'Оценить и оставить отзыв'}</button>:<a className="reviews-button" href={props.loginHref}>Войти и оставить отзыв</a>}</header>
   <div className="reviews-toolbar"><div role="group" aria-label="Фильтр отзывов">{([['all','Все отзывы'],['text','С текстом'],['scores','Только оценки']] as const).map(([id,label])=><button key={id} type="button" aria-pressed={filter===id} onClick={()=>{if(id!==filter){setLoading(true);setFilter(id);}}}>{label}</button>)}{props.canModerate&&<button type="button" aria-pressed={filter==='hidden'} onClick={()=>{setLoading(true);setFilter('hidden');}}>Скрытые</button>}</div>

@@ -17,11 +17,13 @@ import { formatExpectedRelease } from "@/modules/catalog/chapter-release-dates";
 import { groupChaptersByVolume, volumeHeading, volumeProgress } from "@/modules/catalog/chapter-volumes";
 import { getChapterReadingSource, readingSource } from "@/modules/library/reading-target";
 import { useWorkChapterProgress } from "./WorkChapterProgress";
+import { readingMeasures,chapterCountLabel } from "@/modules/catalog/work-presentation-policy";
+import { WorkIcon } from "@/shared/components/WorkIcon";
 
 type Chapter = Omit<ComicChapter, "releasedAt">;
-type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; canMark: boolean; workSourceUrl: string | null; volumeTitles?: Record<number, string>; communityRatings?: Record<number, RatingAggregate>; commentsEnabled?: boolean; commentsLoginHref?: string; commentsRefreshToken?: string; reviewCounts?: Record<number,number>; canModerateReviews?: boolean };
+type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; canMark: boolean; workSourceUrl: string | null; volumeTitles?: Record<number, string>; communityRatings?: Record<number, RatingAggregate>; volumeRatings?:Record<number,RatingAggregate>;viewerRatings?:Record<number,{rating:number|null;source:'review'|'diary'|'withdrawn';hidden:boolean}>; commentsEnabled?: boolean; commentsLoginHref?: string; commentsRefreshToken?: string; reviewCounts?: Record<number,number>; canModerateReviews?: boolean };
 
-export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canMark, workSourceUrl, volumeTitles = {}, communityRatings = {}, commentsEnabled = false, commentsLoginHref = "/login", commentsRefreshToken = "", reviewCounts = {}, canModerateReviews = false }: Props) {
+export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canMark, workSourceUrl, volumeTitles = {}, communityRatings = {}, volumeRatings={},viewerRatings={},commentsEnabled = false, commentsLoginHref = "/login", commentsRefreshToken = "", reviewCounts = {}, canModerateReviews = false }: Props) {
   const [discussion, setDiscussion] = useState<number | null>(null);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("MAIN");
@@ -98,17 +100,21 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
     const heading = c.title?.trim() || c.displayCode?.trim() || "Глава без названия";
     const code = c.displayCode?.trim() || (c.kind === "SPECIAL" ? "Спецвыпуск" : "Глава");
     const art = (comicId + c.id) % 4;
+    const personal=viewerRatings[c.id];
+    const publicScore=personal?.source==='review'||personal?.source==='withdrawn';
+    const usePublicEditor=publicScore||!isRead;
+    const myRating=personal?.rating??(publicScore?null:ratings[c.id]??null);
     return (
       <li key={c.id}
         className={`wd-row wd08-row${isScheduled ? " wd-row--scheduled wd08-row--scheduled" : ""}${isRead ? " wd08-row--read" : ""}${isNext ? " wd08-row--next" : ""}`}
         data-ux08-art={art}>
         <span className="wd08-timeline-marker" aria-hidden="true">{isRead ? "✓" : ""}</span>
         {c.coverUrl ? (
-          <CoverImage src={c.coverUrl} alt="" className="wd08-cover-art" imageClassName="wd08-cover-art-image" />
+          <CoverImage src={c.coverUrl} alt="" decorative className="wd08-cover-art" imageClassName="wd08-cover-art-image" />
         ) : (
           <span className="wd08-art" aria-hidden="true" />
         )}
-        <div className="wd08-index" aria-hidden="true"><span>✦</span></div>
+        <div className="wd08-index" aria-hidden="true"><WorkIcon name={isRead?'check':isNext?'play':'book'}/></div>
         <div className="wd08-main">
           <span className="wd08-code">{code}</span>
           <div className="wd-row-title">
@@ -134,28 +140,27 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
             ) : null}
           </div>
           <div className="wd08-state-line">
-            <span className={`wd08-publication${isScheduled ? " wd08-publication--planned" : ""}`}>
-              {isScheduled ? "◷ Ожидается" : "✓ Вышла"}
-            </span>
-            {isRead && !isScheduled ? <span className="wd08-read-state">✓ Прочитано</span> : null}
-            {isNext ? <span className="wd08-next-state">Продолжить чтение</span> : null}
+            {isScheduled&&<span className="wd08-publication wd08-publication--planned"><WorkIcon name="clock"/>Ожидается</span>}
+            {isRead && !isScheduled ? <span className="wd08-read-state"><WorkIcon name="check"/>Прочитано</span> : null}
+            {isNext ? <span className="wd08-next-state"><WorkIcon name="play"/>Продолжить чтение</span> : null}
+            {c.readingMinutes!==null&&c.readingMinutes!==undefined&&<span className="wd08-reading-time"><WorkIcon name="clock"/>≈ {c.readingMinutes} мин</span>}
             {isScheduled && c.expectedRelease ? (
               <span className="wd08-date">Выход: {formatExpectedRelease(c.expectedRelease)}</span>
             ) : null}
           </div>
-          {c.status === "RELEASED" && (commentsEnabled || (communityRatings[c.id]?.votes ?? 0) > 0) && <div className="wd-community-chapter-meta">{!isScheduled && communityRatings[c.id] && communityRatings[c.id].votes > 0 && <small data-chapter-community={c.id}>
-            Рейтинг читателей: {formatRating(communityRatings[c.id].average)} · {formatRatingVotes(communityRatings[c.id].votes)}
-          </small>}
-          {commentsEnabled && c.status === "RELEASED" && <button type="button" data-open-discussion={c.id}
-            className="tea-text-action" onClick={() => setDiscussion(c.id)}>Отзывы · {reviewCounts[c.id] ?? 0}</button>}</div>}
         </div>
         <div className="wd08-actions">
-          {canMark && !isScheduled && isRead ? (
+          {c.pageCount!==null&&c.pageCount!==undefined&&<span className="wd08-pages"><WorkIcon name="pages"/>{c.pageCount} стр.</span>}
+          {!isScheduled&&<span className="wd08-community-score" data-chapter-community={c.id} title={formatRatingVotes(communityRatings[c.id]?.votes??0)} aria-label={`Рейтинг читателей: ${communityRatings[c.id]?.average==null?'оценок пока нет':formatRating(communityRatings[c.id].average)}`}><WorkIcon name="star"/>{communityRatings[c.id]?.average==null?'—':communityRatings[c.id].average!.toLocaleString('ru',{maximumFractionDigits:1,minimumFractionDigits:1})}</span>}
+          {readerId!==null && !isScheduled ? (
             <button type="button" className="wd-score" disabled={pending}
-              aria-label={"Оценить: " + label} onClick={() => setSheet(c)}>
-              {ratings[c.id] ? "★ " + ratings[c.id] : "☆"}
+              title={personal?.hidden?'Отзыв скрыт и не учитывается в рейтинге':usePublicEditor?'Оценка публичного отзыва':'Личная оценка дневника'}
+              aria-label={(usePublicEditor?'Моя оценка отзыва: ':"Оценить: ") + label} onClick={() => usePublicEditor?setDiscussion(c.id):setSheet(c)}>
+              <small>{usePublicEditor?'Моя · отзыв':'Моя · дневник'}</small><span>{myRating===null?'—':`★ ${myRating}`}{personal?.hidden?' · скрыта':''}</span>
             </button>
           ) : null}
+          {commentsEnabled && c.status === "RELEASED" && <button type="button" data-open-discussion={c.id}
+            className="tea-text-action wd08-discussion" onClick={() => setDiscussion(c.id)}><WorkIcon name="chat"/>Отзывы · {reviewCounts[c.id] ?? 0}</button>}
           {canMark && !isScheduled ? (
             <button type="button" className="wd-mark" aria-pressed={isRead}
               aria-label={(isRead ? "Снять отметку: " : "Отметить прочитанной: ") + label}
@@ -225,6 +230,8 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
         {groups.map((group) => {
           const allInVolume = allVolumeGroups.find(candidate => candidate.number === group.number)?.chapters ?? group.chapters;
           const progress = volumeProgress(allInVolume, read);
+          const measures=readingMeasures(allInVolume,read,kind);
+          const volumeRating=group.number===null||kind!=='MAIN'?null:volumeRatings[group.number];
           const scheduled = allInVolume.filter(c => c.status === "SCHEDULED").length;
           const title = volumeHeading(group.number, group.number === null ? null : volumeTitles[group.number]);
           const volumeKey = group.number === null ? "ungrouped" : `volume-${group.number}`;
@@ -242,12 +249,16 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
                 [volumeKey]: !(current[volumeKey] ?? autoOpen),
               }));
             }}>
-              <span className="wd-volume-heading">{title} <small>{allInVolume.length} глав</small></span>
+              <span className="wd-volume-heading">{title}</span>
+              <span className="wd-volume-measures"><span><WorkIcon name="book"/>{chapterCountLabel(measures.totalChapters,kind)}</span>{scheduled>0&&<span>Ожидается: {scheduled}</span>}{measures.totalPages!==null&&<span><WorkIcon name="pages"/>{measures.totalPages} стр.</span>}{measures.minutes!==null&&<span><WorkIcon name="clock"/>≈ {measures.minutes} мин</span>}</span>
               <span className="wd-volume-stats">
                 {canMark && progress.total > 0 ? `Прочитано ${progress.read} из ${progress.total}` : `${progress.total} вышло`}
                 {scheduled > 0 ? ` · Ожидается ${scheduled}` : ""}
               </span>
-              {canMark && progress.total > 0 && <progress aria-label={`Прогресс: ${title}`} max={progress.total} value={progress.read} />}
+              {canMark && progress.total > 0 && <span className="wd-volume-progress"><span><WorkIcon name="book"/>По главам: {measures.chapterPercent}% ({progress.read} из {progress.total})</span><progress aria-label={`Прогресс: ${title}`} max={progress.total} value={progress.read} /></span>}
+              {canMark&&measures.totalPages!==null&&<span className="wd-volume-progress"><span><WorkIcon name="pages"/>Страницы прочитанных глав: {measures.pagePercent}% ({measures.readPages} из {measures.totalPages})</span><progress aria-label={`Страницы прочитанных глав: ${title}`} max={measures.totalPages} value={measures.readPages!}/></span>}
+              {measures.totalPages===null&&measures.knownPageChapters>0&&<small className="wd-volume-incomplete">Страницы заполнены для {measures.knownPageChapters} из {measures.totalChapters} глав</small>}
+              {kind==='MAIN'&&<span className="wd-volume-rating" aria-label={volumeRating?.average==null?'Рейтинг тома: оценок пока нет':undefined}><strong><WorkIcon name="star"/>{formatRating(volumeRating?.average??null)}</strong><small>По оценкам глав</small><small>{volumeRating?.votes?formatRatingVotes(volumeRating.votes,true):'—'}</small></span>}
             </summary>
             <ul className="wd-chapters">{group.chapters.map(renderChapter)}</ul>
           </details>;

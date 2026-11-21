@@ -7,10 +7,12 @@ export type CommunityRatings = {
   overall: RatingAggregate;
   criteria: Record<(typeof ratingCriteria)[number][0], RatingAggregate>;
   chapters: Record<number, RatingAggregate>;
+  volumes?: Record<number, RatingAggregate>;
+  viewerChapters?: Record<number, {rating:number|null;source:'review'|'diary'|'withdrawn';hidden:boolean}>;
 };
 
 export function formatRating(average: number | null): string {
-  return average === null ? "Пока нет оценок" :
+  return average === null ? "—" :
     `${average.toLocaleString("ru", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 5`;
 }
 

@@ -18,7 +18,8 @@ test('dynamic page checks access before aggregation, passes only summaries and p
   assert.match(page, /dynamic = "force-dynamic"/);
   assert.match(page, /communityRatings=\{communityRatings\?\.chapters \?\? \{\}\}/);
   assert.match(page, /<DiaryRatingFields/);
-  assert.match(panel, /!isScheduled && communityRatings\[c.id\]/);
+  assert.match(panel, /!isScheduled&&<span className="wd08-community-score"/);
+  assert.match(panel, /data-chapter-community=\{c.id\}/);
   assert.match(panel, /<ChapterRating/);
   assert.match(panel, /router.refresh\(\)/);
 });

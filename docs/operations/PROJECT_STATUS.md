@@ -1,4 +1,16 @@
-# AUTH + Reviews — интеграционный checkpoint 21.11.2026
+# Work presentation — кандидат 21.11.2026
+
+От master `59d217309ec1d36f4e1cf8e1e311f81fb8c671b7` подготовлена отдельная ветка
+`feature/work-presentation-20261121`: росчерк названия, возраст/жанры, страницы и
+время глав с редактором, раздельные рейтинги в оглавлении, информативные тома,
+честный прогресс и сводная оценка с равным весом читателя. Блок рейтинга содержит
+пять SVG-критериев и личную оценку отзыва; отсутствующие значения — прочерки.
+Миграция 0050 аддитивна; старые поля, отзывы, личные записи и AUTH сохранены.
+Рабочие правила и порядок rollout: `WORK_PRESENTATION_RUNBOOK.md`.
+На момент checkpoint выполнены локальные unit/typecheck/build/browser и PG17
+проверки; remote CI и production rollout кандидата ещё предстоят.
+
+## Предыдущий checkpoint AUTH + Reviews
 
 Кандидат `feature/auth-reviews-integration-20261121` от production master
 `89efa25970c1139c467cf4d8c22da2dab734de5e` объединяет принятые Reviews с AUTH 0048

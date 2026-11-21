@@ -44,6 +44,8 @@ export async function getComicChapters(
       sourceUrl:
         chapters.sourceUrl,
       coverUrl: chapters.coverUrl,
+      pageCount: chapters.pageCount,
+      readingMinutes: chapters.readingMinutes,
       sortOrder:
         chapters.sortOrder,
       volumeNumber: chapters.volumeNumber,

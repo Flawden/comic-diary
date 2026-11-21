@@ -12,6 +12,7 @@ type CoverImageProps = {
   className?: string;
   imageClassName?: string;
   fallback?: string;
+  decorative?: boolean;
 };
 
 type CoverSourceProps = {
@@ -19,6 +20,7 @@ type CoverSourceProps = {
   alt: string;
   imageClassName: string;
   fallback: string;
+  decorative: boolean;
 };
 
 function CoverFallback({
@@ -40,6 +42,7 @@ function CoverSource({
   alt,
   imageClassName,
   fallback,
+  decorative,
 }: CoverSourceProps) {
   const [failed, setFailed] =
     useState(false);
@@ -48,6 +51,7 @@ function CoverSource({
     useState(false);
 
   if (failed) {
+    if (decorative) return null;
     return (
       <CoverFallback
         label={fallback}
@@ -61,7 +65,7 @@ function CoverSource({
         <div
           aria-hidden="true"
           className="absolute inset-0 flex items-center justify-center bg-[var(--surface-raised)] p-3 text-center text-xs"
-        >Загружаем обложку…</div>
+        >{decorative ? null : "Загружаем обложку…"}</div>
       ) : null}
 
       <img
@@ -98,12 +102,14 @@ export function CoverImage({
   className = "",
   imageClassName = "",
   fallback = "Нет обложки",
+  decorative = false,
 }: CoverImageProps) {
   const normalized =
     src?.trim() ?? "";
 
   return (
     <div
+      aria-hidden={decorative || undefined}
       className={[
         "relative overflow-hidden",
         "bg-[var(--surface-raised)]",
@@ -120,6 +126,7 @@ export function CoverImage({
             imageClassName
           }
           fallback={fallback}
+          decorative={decorative}
         />
       ) : (
         <CoverFallback

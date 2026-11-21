@@ -4,7 +4,7 @@ test('0049 is additive, unique per object/user, strict score shape and chapter b
  const sql=read('drizzle/0049_reviews_and_reactions.sql');assert.doesNotMatch(sql,/\b(?:DROP|TRUNCATE|DELETE FROM|UPDATE users)\b/i);
  for(const name of ['community_reviews_work_user_unique','community_reviews_chapter_user_unique','community_reviews_scores_check','community_review_reactions_value_check','community_reviews_chapter_binding_fk'])assert.ok(sql.includes(name));
  assert.ok(sql.indexOf('chapters_id_comic_review_unique')<sql.indexOf('community_reviews_chapter_binding_fk'));
- const j=JSON.parse(read('drizzle/meta/_journal.json')).entries;assert.equal(j.at(-1).tag,'0049_reviews_and_reactions');assert.equal(j.at(-1).idx,49);
+ const j=JSON.parse(read('drizzle/meta/_journal.json')).entries;assert.equal(j[49].tag,'0049_reviews_and_reactions');assert.equal(j[49].idx,49);assert.ok(j[49].when>j[48].when);
 });
 test('new reviews expose no reply API, page uses fourth tab and chapter modal',()=>{
  assert.match(read('src/modules/library/components/WorkControls.tsx'),/\["reviews","Отзывы и комментарии"\]/);

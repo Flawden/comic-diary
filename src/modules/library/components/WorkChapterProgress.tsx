@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useOptimistic, type ReactNode } from "react";
+import { WorkIcon } from "@/shared/components/WorkIcon";
 
 // One optimistic read registry feeds both the hero and the chapter controls.
 // React rolls optimistic values back if the surrounding action fails; a
@@ -32,7 +33,7 @@ export function WorkHeroProgress({ mainChapterIds }: { mainChapterIds: number[] 
   const completed = mainChapterIds.filter(id => read.has(id)).length;
   const total = mainChapterIds.length;
   return <div className="wd-hero-progress" role="group" aria-label="Прогресс чтения произведения">
-    <div className="wd-hero-progress-heading"><span>Прогресс чтения</span><strong>Прочитано: {completed} из {total}</strong></div>
+    <div className="wd-hero-progress-heading"><span><WorkIcon name="book"/>Прогресс чтения</span><strong>Прочитано: {completed} из {total} · {Math.round(completed/total*100)}%</strong></div>
     <progress aria-label="Прогресс чтения" max={total} value={completed} />
     <p>{completed === total ? "Все вышедшие основные главы прочитаны." : `Осталось основных глав: ${total - completed}`}</p>
   </div>;

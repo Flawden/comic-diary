@@ -231,6 +231,8 @@ export const comics = pgTable(
     sourceUrl: text("source_url"),
 
     totalChapters: integer("total_chapters"),
+    ageRating: integer("age_rating"),
+    presentationRevision: integer("presentation_revision").default(0).notNull(),
 
     workType: comicWorkType("work_type").default("UNKNOWN").notNull(),
     workFormat: comicWorkFormat("work_format").default("UNKNOWN").notNull(),
@@ -269,6 +271,8 @@ export const comics = pgTable(
       .notNull(),
   },
   (table) => [
+    check("comics_age_rating_valid", sql`${table.ageRating} IS NULL OR ${table.ageRating} IN (0,6,12,16,18)`),
+    check("comics_presentation_revision_valid", sql`${table.presentationRevision} >= 0`),
     index(
       "comics_owner_user_id_idx",
     ).on(
@@ -287,6 +291,17 @@ export const comics = pgTable(
 );
 
 
+
+export const genres = pgTable("genres", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 64 }).notNull().unique(),
+  name: varchar("name", { length: 48 }).notNull(),
+}, t => [check("genres_name_nonempty", sql`length(btrim(${t.name})) > 0`)]);
+
+export const comicGenres = pgTable("comic_genres", {
+  comicId: integer("comic_id").notNull().references(() => comics.id, { onDelete: "cascade" }),
+  genreId: integer("genre_id").notNull().references(() => genres.id, { onDelete: "cascade" }),
+}, t => [primaryKey({ columns: [t.comicId,t.genreId] })]);
 
 // Optional titles for volume groups. Chapter identity and reading history are untouched.
 export const comicVolumeTitles = pgTable(
@@ -333,6 +348,8 @@ export const chapters = pgTable(
     coverUrl: text("cover_url"),
 
     kind: varchar("kind", { length: 16 }).default("MAIN").notNull(),
+    pageCount: integer("page_count"),
+    readingMinutes: integer("reading_minutes"),
     supersedesChapterId: integer("supersedes_chapter_id")
       .references((): AnyPgColumn => chapters.id, { onDelete: "restrict" }),
 
@@ -378,6 +395,8 @@ export const chapters = pgTable(
     uniqueIndex("chapters_supersedes_unique").on(table.supersedesChapterId),
     unique("chapters_id_comic_review_unique").on(table.id,table.comicId),
     check("chapters_kind_valid", sql`${table.kind} IN ('MAIN', 'SPECIAL')`),
+    check("chapters_page_count_valid", sql`${table.pageCount} IS NULL OR ${table.pageCount} BETWEEN 1 AND 100000`),
+    check("chapters_reading_minutes_valid", sql`${table.readingMinutes} IS NULL OR ${table.readingMinutes} BETWEEN 1 AND 100000`),
     check("chapters_volume_number_valid", sql`${table.volumeNumber} IS NULL OR ${table.volumeNumber} BETWEEN 1 AND 99`),
 
     index(

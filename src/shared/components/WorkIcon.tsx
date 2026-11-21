@@ -1,0 +1,2 @@
+const paths={book:'M3 4h7l2 2 2-2h7v15h-7l-2 2-2-2H3z M12 6v15',pages:'M6 2h9l4 4v16H6z M14 2v5h5 M3 6v16 M9 11h7 M9 15h7',clock:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20 M12 6v6l4 2',star:'m12 2 3 6 7 1-5 5 1 8-6-4-6 4 1-8-5-5 7-1z',check:'m4 12 5 5L21 5',play:'m7 3 14 9-14 9z',chat:'M3 3h18v14H9l-6 5z'};
+export function WorkIcon({name}:{name:keyof typeof paths}){return <svg className="work-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>;}
