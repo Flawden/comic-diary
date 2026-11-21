@@ -205,6 +205,8 @@ export async function getAdminComicChaptersByComicIds(
         chapters.sourceUrl,
       coverUrl:
         chapters.coverUrl,
+      pageCount: chapters.pageCount,
+      readingMinutes: chapters.readingMinutes,
 
       sortOrder:
         chapters.sortOrder,

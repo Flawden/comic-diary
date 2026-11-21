@@ -47,6 +47,8 @@ type ChapterEditStatus =
   | "ARCHIVED";
 
 type AdminChapter = {
+  pageCount: number | null;
+  readingMinutes: number | null;
   id: number;
   kind: string;
   supersedesChapterId: number | null;
@@ -175,6 +177,8 @@ function chapterErrorMessage(
   switch (kind) {
     case "chapter-display-code-conflict":
       return "Глава с таким кодом уже существует.";
+    case "chapter-metadata-stale":
+      return "Страницы или время изменены в другой вкладке. Ваш ввод сохранён. Скопируйте его и обновите данные перед сохранением.";
 
     case "invalid-chapter":
     case "invalid-chapter-request":
@@ -816,6 +820,8 @@ export function AdminComicManager({
     chapterEditValues,
     setChapterEditValues,
   ] = useState<{
+    pageCount: string;
+    readingMinutes: string;
     kind: "MAIN" | "SPECIAL";
     volumeNumber: string;
     displayCode: string;
@@ -1653,6 +1659,9 @@ export function AdminComicManager({
                 chapterId,
 
                 kind: chapterEditValues.kind,
+                pageCount: chapterEditValues.pageCount.trim() === '' ? null : Number(chapterEditValues.pageCount),
+                readingMinutes: chapterEditValues.readingMinutes.trim() === '' ? null : Number(chapterEditValues.readingMinutes),
+                expectedMeasures: { pageCount: chapter.pageCount, readingMinutes: chapter.readingMinutes },
                 volumeNumber: chapterEditValues.volumeNumber.trim() ? Number(chapterEditValues.volumeNumber) : null,
                 displayCode:
                   chapterEditValues.displayCode,
@@ -1948,6 +1957,15 @@ export function AdminComicManager({
                                         <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Адрес, куда читатель перейдёт для чтения.</span>
                                       </label>
                                     </div>
+                                    <div className="grid gap-4 md:grid-cols-2 admin-chapter-measures">
+                                      {(['pageCount', 'readingMinutes'] as const).map(field => <label key={field} className="block text-sm font-medium">
+                                        {field === 'pageCount' ? 'Количество страниц (необязательно)' : 'Примерное время чтения, мин (необязательно)'}
+                                        <input type="number" min={1} max={100000} step={1} value={chapterEditValues[field]}
+                                          onChange={event => setChapterEditValues({ ...chapterEditValues, [field]: event.target.value })}
+                                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-primary)]" />
+                                        <span className="mt-1 block text-xs font-normal text-[var(--text-secondary)]">Неизвестно — оставьте пустым. Значение сохраняется вместе с главой.</span>
+                                      </label>)}
+                                    </div>
                                     <div className="admin-chapter-artwork-editor">
                                       <div className="admin-chapter-artwork-heading">
                                         <span aria-hidden="true">✦</span>
@@ -2162,6 +2180,8 @@ export function AdminComicManager({
                                           );
 
                                           setChapterEditValues({
+                                            pageCount: chapter.pageCount == null ? '' : String(chapter.pageCount),
+                                            readingMinutes: chapter.readingMinutes == null ? '' : String(chapter.readingMinutes),
                                             kind: chapter.kind === "SPECIAL" ? "SPECIAL" : "MAIN",
                                             volumeNumber: chapter.volumeNumber === null ? "" : String(chapter.volumeNumber),
                                             displayCode:

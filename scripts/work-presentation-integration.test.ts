@@ -17,6 +17,45 @@ beforeEach(async()=>{actors=[];ids=[];
 afterEach(async()=>{await q('DELETE FROM user_chapter_reads WHERE user_id=ANY($1::int[])',[actors.map(a=>a.userId)]);await q('DELETE FROM administrative_audit_events WHERE actor_user_id=ANY($1::int[])',[actors.map(a=>a.userId)]);await q('DELETE FROM comics WHERE id=ANY($1::int[])',[[book,other]]);await q('DELETE FROM users WHERE id=ANY($1::int[])',[actors.map(a=>a.userId)]);});
 after(async()=>{globalThis.fetch=native;await pool.end();const {db}=await import('../src/db');await db.$client.end();});
 const input=(extra={})=>({revision:0,ageRating:12,genres:['Драма','Приключения'],chapters:[{id:ids[0],pageCount:24,readingMinutes:3},{id:ids[1],pageCount:28,readingMinutes:4}],...extra});
+
+test('chapter create/edit saves optional measures atomically, preserves omitted values and invalidates stale bulk metadata',async()=>{
+ const {createSharedCatalogChapter,updateSharedCatalogChapter}=await import('../src/modules/catalog/shared-chapter-mutations');
+ const actor={userId:actors[0].userId,role:'ADMIN' as const};
+ const metadata={displayCode:'Pages QA',title:'Editable pages',sourceUrl:null,status:'RELEASED' as const,releasedAt:null};
+ const made=await createSharedCatalogChapter(book,{...metadata,sortOrder:50,pageCount:24,readingMinutes:3},actor);
+ assert.equal(made.pageCount,24);assert.equal(made.readingMinutes,3);
+ assert.equal((await service.readPresentation(actors[0],book)).revision,1);
+ await assert.rejects(service.savePresentation(actors[0],book,input()),{status:409});
+ const legacy=await updateSharedCatalogChapter(book,made.id,{...metadata,title:'Legacy client update'},actor);
+ assert.equal(legacy.pageCount,24);assert.equal(legacy.readingMinutes,3);
+ const before=await service.readPresentation(actors[0],book);
+ await assert.rejects(updateSharedCatalogChapter(book,made.id,{...metadata,pageCount:0,readingMinutes:4},actor));
+ assert.deepEqual(await service.readPresentation(actors[0],book),before);
+ const cleared=await updateSharedCatalogChapter(book,made.id,{...metadata,pageCount:null,readingMinutes:null,expectedMeasures:{pageCount:24,readingMinutes:3}},actor);
+ assert.equal(cleared.pageCount,null);assert.equal(cleared.readingMinutes,null);
+ assert.equal((await service.readPresentation(actors[0],book)).revision,2);
+ const attempts=await Promise.allSettled(Array.from({length:8},(_,i)=>updateSharedCatalogChapter(book,made.id,{...metadata,pageCount:i+1,expectedMeasures:{pageCount:null,readingMinutes:null}},actor)));
+ assert.equal(attempts.filter(r=>r.status==='fulfilled').length,1);
+ for(const result of attempts)if(result.status==='rejected')assert.equal(result.reason.kind,'chapter-metadata-stale');
+ const {listAdminComics}=await import('../src/modules/admin-ui/admin-read-model');
+ const row=(await listAdminComics()).find(c=>c.id===book)?.chapters.find(c=>c.id===made.id);
+ assert.ok(row && row.pageCount!==null && row.pageCount>=1 && row.pageCount<=8);assert.equal(row.readingMinutes,null);
+});
+
+test('structured chapter creation includes exact optional measures and stale preview cannot overwrite a later edit',async()=>{
+ const {appendSharedChapterStructuredBatch,updateSharedCatalogChapter}=await import('../src/modules/catalog/shared-chapter-mutations');
+ const actor={userId:actors[1].userId,role:'EDITOR' as const};
+ const rows=[{displayCode:'Metadata batch',title:'New chapter',sourceUrl:null,kind:'MAIN',status:'RELEASED',volumeNumber:null,placementMode:'AUTO',anchorChapterId:null,releasedAt:null,expectedRelease:null,supersedesChapterId:null,revisionConfirmed:false,pageCount:32,readingMinutes:5}];
+ const preview=await appendSharedChapterStructuredBatch(book,rows,actor);
+ await appendSharedChapterStructuredBatch(book,rows,actor,preview.snapshot);
+ const stored=(await q("SELECT * FROM chapters WHERE comic_id=$1 AND display_code='Metadata batch'",[book])).rows[0];
+ assert.equal(stored.page_count,32);assert.equal(stored.reading_minutes,5);
+ const next=[{...rows[0],displayCode:'Another'}];
+ const stale=await appendSharedChapterStructuredBatch(book,next,actor);
+ await updateSharedCatalogChapter(book,stored.id,{displayCode:'Metadata batch',title:'New chapter',sourceUrl:null,status:'RELEASED',releasedAt:null,pageCount:33,expectedMeasures:{pageCount:32,readingMinutes:5}},actor);
+ await assert.rejects(appendSharedChapterStructuredBatch(book,next,actor,stale.snapshot),{kind:'chapter-batch-stale'});
+ assert.equal((await q('SELECT page_count,reading_minutes FROM chapters WHERE id=$1',[stored.id])).rows[0].reading_minutes,5);
+});
 test('admin/editor CRUD retains omitted chapters, identity, reading history and unrelated fields',async()=>{
  const before=(await q('SELECT * FROM users WHERE id=$1',[actors[0].userId])).rows[0];
  await q('INSERT INTO user_chapter_reads(user_id,chapter_id,rating) VALUES($1,$2,4)',[actors[0].userId,ids[0]]);

@@ -19,6 +19,8 @@ type ExistingChapter = {
   volumeNumber: number | null;
 };
 type DraftRow = {
+  pageCount: string;
+  readingMinutes: string;
   key: number;
   title: string;
   sourceUrl: string;
@@ -39,6 +41,7 @@ type Preview = {
   rows: Array<{ displayCode: string; title: string | null; kind: ChapterKind; sortOrder: number; status: ChapterStatus; supersedesChapterId?: number | null }>;
 };
 const blankRow = (key: number, status: ChapterStatus): DraftRow => ({
+  pageCount: '', readingMinutes: '',
   key, title: "", sourceUrl: "", displayCode: "", kind: "MAIN", status,
   volumeNumber: "", placementMode: "AUTO", anchorChapterId: "", releasedDate: "", expectedPrecision: "NONE",
   expectedRelease: "", supersedesChapterId: "", revisionConfirmed: false,
@@ -63,6 +66,8 @@ function normalizeRow(row: DraftRow): StructuredChapterRow {
     throw new Error("Точность ожидаемой даты не совпадает с введённым значением.");
   }
   return {
+    pageCount: toInteger(row.pageCount, 'Количество страниц'),
+    readingMinutes: toInteger(row.readingMinutes, 'Время чтения'),
     displayCode: row.displayCode, title: row.title.trim() || null,
     sourceUrl: row.sourceUrl.trim() || null, kind: row.kind, status: row.status,
     volumeNumber: toInteger(row.volumeNumber, "Том"),
@@ -215,7 +220,14 @@ export function ChapterBatchEditor({ comicId, chapters, disabled, onBusyChange }
                   onChange={event => updateRow(row.key, { title: event.target.value })} className={field} />
               </label>
             </div>
-            <p className="mt-2 text-xs text-[var(--text-secondary)]">Укажите название или код главы. Одной ссылки недостаточно.</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {(['pageCount', 'readingMinutes'] as const).map(name => <label key={name} className="block text-sm font-medium">
+                {name === 'pageCount' ? 'Количество страниц (необязательно)' : 'Примерное время чтения, мин (необязательно)'}
+                <input type="number" min={1} max={100000} step={1} value={row[name]} disabled={busy}
+                  onChange={event => updateRow(row.key, { [name]: event.target.value })} className={field} />
+              </label>)}
+            </div>
+            <p className="mt-2 text-xs text-[var(--text-secondary)]">Укажите название или код главы. Одной ссылки недостаточно. Неизвестные страницы и время оставляйте пустыми.</p>
             <details className="mt-3 rounded-lg border border-[var(--border)] px-3 py-2">
               <summary className="cursor-pointer text-sm font-medium">Дополнительные настройки</summary>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">

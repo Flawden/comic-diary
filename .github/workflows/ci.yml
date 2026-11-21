@@ -44,7 +44,7 @@ jobs:
         run: node --import tsx --test src/modules/community/review-policy.test.ts src/modules/community/chapter-rating-policy.test.ts scripts/reviews-contract.test.mjs
 
       - name: Work presentation metadata and honest progress policy
-        run: node --import tsx --test src/modules/catalog/work-presentation-policy.test.ts
+        run: node --import tsx --test src/modules/catalog/work-presentation-policy.test.ts src/modules/catalog/chapter-measures.test.ts
 
       - name: COMMUNITY threaded reply grouping regression
         run: node --import tsx --test src/modules/community/thread-model.test.ts

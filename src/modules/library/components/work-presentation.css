@@ -96,3 +96,23 @@
 
 .wd-work .reader-rating--without-personal .reader-rating-overview{grid-template-columns:minmax(140px,1fr) minmax(0,3fr)}
 @media(max-width:600px){.wd-work .reader-rating--without-personal .reader-rating-overview{grid-template-columns:minmax(0,1fr)}}
+
+/* Keep the approved central illustration, subdued behind readable chapter text. */
+.wd-work .chapter-panel--ux08 .wd-chapters .wd08-art,
+.wd-work .chapter-panel--ux08 .wd-chapters .wd08-cover-art {
+ opacity:.26;
+ filter:blur(.7px) saturate(.8) brightness(.85);
+}
+.wd-work .chapter-panel--ux08 .wd08-heading {
+ background:color-mix(in srgb,var(--ux08-card) 76%,transparent);
+ box-decoration-break:clone;
+ -webkit-box-decoration-break:clone;
+ border-radius:.2em;
+ padding-inline:.12em;
+}
+[data-theme="paper"] .wd-work .chapter-panel--ux08 .wd-chapters .wd08-art,
+[data-theme="paper"] .wd-work .chapter-panel--ux08 .wd-chapters .wd08-cover-art {opacity:.18}
+@media(max-width:600px){
+ .wd-work .chapter-panel--ux08 .wd-chapters .wd08-art,
+ .wd-work .chapter-panel--ux08 .wd-chapters .wd08-cover-art {opacity:.17}
+}
