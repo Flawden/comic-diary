@@ -5,7 +5,7 @@ import Link from "next/link";
 
 type ErrorPayload = { error?: unknown };
 
-export function ActivationForm({ enabled }: { enabled: boolean }) {
+export function ActivationForm({ enabled,onComplete }: { enabled: boolean;onComplete?:()=>void }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [complete, setComplete] = useState(false);
@@ -39,6 +39,7 @@ export function ActivationForm({ enabled }: { enabled: boolean }) {
       if (response.ok) {
         form.reset();
         setComplete(true);
+        onComplete?.();
         return;
       }
       const data = (await response.json().catch(() => ({}))) as ErrorPayload;

@@ -62,9 +62,8 @@ export default async function AccountPage() {
   }
 
   const stats = await getUserReadingStats(user.id);
-  const [account] = legacyVerificationEnabled(process.env)
-    ? await db.select({ isActive: users.isActive, emailVerifiedAt: users.emailVerifiedAt,
-      verificationRequiredAt: users.verificationRequiredAt }).from(users).where(eq(users.id, user.id)) : [];
+  const [account] = await db.select({ isActive: users.isActive, emailVerifiedAt: users.emailVerifiedAt,
+      verificationRequiredAt: users.verificationRequiredAt }).from(users).where(eq(users.id, user.id));
   const verificationState = account ? getActivationState(account) : null;
   const theme = resolveTheme((await cookies()).get(THEME_COOKIE)?.value);
 
@@ -93,7 +92,7 @@ export default async function AccountPage() {
           <div id="appearance"><ThemeSelector initialTheme={theme} /></div>
           <section id="account-settings" className="reader-panel account-settings">
             <h2>Настройки и данные</h2>
-            {verificationState === "legacy_unverified" && <AccountEmailVerificationForm requestEnabled={legacyVerificationRequestEnabled(process.env)} />}
+            {legacyVerificationEnabled(process.env) && verificationState === "legacy_unverified" && <AccountEmailVerificationForm requestEnabled={legacyVerificationRequestEnabled(process.env)} />}
             {verificationState === "verified" && <p className="mt-4 text-sm">Почта подтверждена</p>}
             <details><summary>Скачать дневник <span>Статусы, оценки и заметки</span></summary><DiaryExport /></details>
             <details><summary>Изменить пароль</summary>

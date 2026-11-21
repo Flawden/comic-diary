@@ -13,7 +13,7 @@ import { randomBytes } from "node:crypto";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 
 import { db } from "@/db";
-import { activationMailOutbox, emailVerificationTokens, users } from "@/db/schema";
+import { activationMailOutbox, emailVerificationTokens, users,betaInvitations } from "@/db/schema";
 import { issueEmailVerificationToken } from "./email-verification-token";
 import { canonicalActivationMailOrigin } from "./registration-activation-mail";
 import {
@@ -55,7 +55,7 @@ type ActivationTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
 /** Internal composition point: caller owns rollback and locks CONTROL before USER. */
 export async function enqueuePendingActivationMailInTransaction(
   tx: ActivationTransaction,
-  input: Readonly<{ userId: number; publicOrigin: string; key: ActivationMailOutboxKey }>,
+  input: Readonly<{ userId: number; publicOrigin: string; key: ActivationMailOutboxKey; invitationId?:number; notAfter?:Date }>,
 ): Promise<PendingActivationEnqueueResult> {
   return enqueueVerificationMailInTransaction(tx, input, "pending_activation");
 }
@@ -63,7 +63,7 @@ export async function enqueuePendingActivationMailInTransaction(
 /** Internal only: caller holds CONTROL -> USER (and SESSION for legacy). */
 export async function enqueueVerificationMailInTransaction(
   tx: ActivationTransaction,
-  input: Readonly<{ userId: number; publicOrigin: string; key: ActivationMailOutboxKey }>,
+  input: Readonly<{ userId: number; publicOrigin: string; key: ActivationMailOutboxKey; invitationId?:number; notAfter?:Date }>,
   purpose: VerificationPurpose,
 ): Promise<PendingActivationEnqueueResult> {
   const origin = canonicalActivationMailOrigin(input.publicOrigin);
@@ -81,9 +81,15 @@ export async function enqueueVerificationMailInTransaction(
     if (!account || !canDispatchVerificationPurpose(account, purpose)) {
       return { ok: false, kind: "account_unavailable" };
     }
+    if(purpose==="pending_activation"&&input.invitationId===undefined){
+      const [invited]=await tx.select({id:betaInvitations.id}).from(betaInvitations).where(eq(betaInvitations.pendingUserId,account.id)).limit(1);
+      if(invited)return {ok:false,kind:"account_unavailable"};
+    }
 
     const now = new Date(); // AFTER acquiring the account lock.
     const issued = issueEmailVerificationToken(now);
+    if(input.notAfter&&input.notAfter<issued.expiresAt)issued.expiresAt=input.notAfter;
+    if(issued.expiresAt.getTime()-now.getTime()<=60_000)throw Error("Invitation expiry too close");
 
     const revoked = await tx.update(emailVerificationTokens)
       .set({ revokedAt: now })
@@ -107,6 +113,7 @@ export async function enqueueVerificationMailInTransaction(
       userId: account.id,
       emailSnapshot: account.email, // Exact address from the locked row.
       purpose,
+      invitationId:input.invitationId??null,
       tokenHash: issued.tokenHash, // NEVER the raw token.
       expiresAt: issued.expiresAt,
       createdAt: now,

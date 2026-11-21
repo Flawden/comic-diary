@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 
 import { db } from "@/db";
-import { emailVerificationTokens, users } from "@/db/schema";
+import { emailVerificationTokens, users,betaInvitations } from "@/db/schema";
 
 import { needsSecurePendingActivation } from "./registration-activation-policy";
 
@@ -59,6 +59,8 @@ export async function issueEmailVerificationForUser(
     if (!account || !needsSecurePendingActivation(account) || !canIssueEmailVerification(account)) {
       return { ok: false, kind: "account_unavailable" };
     }
+    const [invited]=await tx.select({id:betaInvitations.id}).from(betaInvitations).where(eq(betaInvitations.pendingUserId,account.id)).limit(1);
+    if(invited)return {ok:false,kind:"account_unavailable"};
     if (!account) {
       return { ok: false, kind: "account_unavailable" };
     }

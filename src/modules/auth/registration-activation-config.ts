@@ -29,5 +29,5 @@ export function activationDispatchOperational(env: ActivationEnvironment): boole
   return true;
 }
 export function activationRegistrationOperational(env: ActivationEnvironment): boolean {
-  return env.REGISTRATION_ENABLED === "true" && activationDispatchOperational(env);
+  return env.REGISTRATION_ENABLED === "true" && env.AUTH_BETA_INVITATION_REGISTRATION_ENABLED !== "true" && env.AUTH_BETA_INVITATION_DISPATCH_ENABLED !== "true" && activationDispatchOperational(env);
 }

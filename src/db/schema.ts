@@ -19,6 +19,36 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+// Invitations confer registration eligibility, never a role or an existing-account credential.
+export const betaInvitations = pgTable("beta_registration_invitations", {
+  id: serial("id").primaryKey(),
+  secretHash: varchar("secret_hash", {length:64}).notNull(),
+  email: varchar("email", {length:320}).notNull(),
+  createdByUserId: integer("created_by_user_id").notNull().references(()=>users.id),
+  createdAt: timestamp("created_at",{withTimezone:true,precision:3}).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at",{withTimezone:true,precision:3}).notNull(),
+  revokedAt: timestamp("revoked_at",{withTimezone:true,precision:3}),
+  pendingUserId: integer("pending_user_id").references(()=>users.id),
+  claimedAt: timestamp("claimed_at",{withTimezone:true,precision:3}),
+  activatedAt: timestamp("activated_at",{withTimezone:true,precision:3}),
+},t=>[
+  unique("beta_invitations_secret_hash_unique").on(t.secretHash),
+  unique("beta_invitations_id_user_unique").on(t.id,t.pendingUserId),
+  index("beta_invitations_email_idx").on(t.email),
+  index("beta_invitations_pending_user_idx").on(t.pendingUserId),
+  check("beta_invitations_hash_check",sql`${t.secretHash} ~ '^[a-f0-9]{64}$'`),
+  check("beta_invitations_expiry_check",sql`${t.expiresAt} > ${t.createdAt}`),
+  check("beta_invitations_shape_check",sql`(${t.pendingUserId} IS NULL) = (${t.claimedAt} IS NULL) AND (${t.activatedAt} IS NULL OR ${t.claimedAt} IS NOT NULL) AND (${t.claimedAt} IS NULL OR ${t.claimedAt} >= ${t.createdAt}) AND (${t.revokedAt} IS NULL OR ${t.revokedAt} >= ${t.createdAt}) AND (${t.activatedAt} IS NULL OR ${t.activatedAt} >= ${t.claimedAt})`),
+]);
+
+export const betaInvitationEvents = pgTable("beta_invitation_events", {
+  id: serial("id").primaryKey(),
+  invitationId: integer("invitation_id").notNull().references(()=>betaInvitations.id,{onDelete:"cascade"}),
+  actorUserId: integer("actor_user_id").notNull().references(()=>users.id),
+  action: varchar("action",{length:16}).notNull(),
+  createdAt: timestamp("created_at",{withTimezone:true,precision:3}).notNull().defaultNow(),
+},t=>[check("beta_invitation_event_action_check",sql`${t.action} IN ('CREATED','REVOKED')`)]);
+
 // Public reviews are explicit publications, never private diary notes or replies.
 export const communityReviews = pgTable("community_reviews", {
   id: serial("id").primaryKey(),
@@ -716,6 +746,7 @@ export const emailVerificationTokens = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     emailSnapshot: varchar("email_snapshot", { length: 320 }).notNull(),
     purpose: varchar("purpose", { length: 32 }).notNull().default("pending_activation"),
+    invitationId: integer("invitation_id"),
     tokenHash: varchar("token_hash", { length: 64 }).notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     consumedAt: timestamp("consumed_at", { withTimezone: true }),
@@ -726,6 +757,9 @@ export const emailVerificationTokens = pgTable(
   },
   (table) => [
     unique("email_verification_tokens_token_hash_unique").on(table.tokenHash),
+    foreignKey({columns:[table.invitationId,table.userId],foreignColumns:[betaInvitations.id,betaInvitations.pendingUserId],name:"email_verification_invitation_user_fk"}),
+    index("email_verification_invitation_idx").on(table.invitationId),
+    check("email_verification_invitation_purpose_check",sql`${table.invitationId} IS NULL OR ${table.purpose} = 'pending_activation'`),
     check(
       "email_verification_tokens_purpose_check",
       sql`${table.purpose} IN ('pending_activation', 'legacy_email_verification')`,

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 const read = p => readFileSync(p, 'utf8');
-test('all 16 operator switches retain exact-true runtime semantics and absent default OFF', () => {
+test('all 18 operator switches retain exact-true runtime semantics and absent default OFF', () => {
   const sources = {
     'password-reset-request-config.ts': ['PASSWORD_RESET_REQUEST_ENABLED','PASSWORD_RESET_REQUEST_MAIL_READY'],
     'password-reset-dispatch.ts': ['PASSWORD_RESET_REDEEM_ENABLED','AUTH_RECOVERY_DISPATCH_ENABLED','AUTH_RECOVERY_SENDER_VERIFIED','AUTH_RECOVERY_WORKER_ENABLED'],
@@ -10,14 +10,15 @@ test('all 16 operator switches retain exact-true runtime semantics and absent de
     'registration-activation-config.ts': ['REGISTRATION_ENABLED','REGISTRATION_ACTIVATION_REDEEM_ENABLED','AUTH_ACTIVATION_DISPATCH_ENABLED','AUTH_ACTIVATION_SENDER_VERIFIED','AUTH_ACTIVATION_WORKER_ENABLED'],
     'registration-activation-operator-control.ts': ['AUTH_ACTIVATION_OPERATOR_CONTROL_ENABLED'],
     'verification-purpose.ts': ['AUTH_LEGACY_EMAIL_VERIFICATION_ENABLED','AUTH_LEGACY_EMAIL_VERIFICATION_REQUEST_ENABLED'],
+    'beta-invitation-policy.ts': ['AUTH_BETA_INVITATION_REGISTRATION_ENABLED','AUTH_BETA_INVITATION_DISPATCH_ENABLED'],
   };
   const cli = read('scripts/auth-activation-pilot-control.mjs');
   const names = [...Object.values(sources).flat(),'AUTH_ACTIVATION_RESEND_CONFIG_READY'];
-  assert.equal(names.length,16);assert.equal(new Set(names).size,16);
+  assert.equal(names.length,18);assert.equal(new Set(names).size,18);
   const list = cli.match(/const authSwitches = \[([\s\S]*?)\];/)[1];
   assert.deepEqual([...list.matchAll(/'([A-Z0-9_]+)'/g)].map(m=>m[1]).sort(),names.sort());
   for(const [file,flags] of Object.entries(sources))for(const flag of flags) {
-    assert.match(read('src/modules/auth/'+file),new RegExp(`\\.${flag} [!=]== "true"`));
+    assert.match(read('src/modules/auth/'+file),new RegExp(`\\.${flag} [!=]== ["']true["']`));
   }
   // Activation readiness delegates to the same exact-true Resend config parser.
   assert.match(read('src/modules/auth/registration-activation-config.ts'),/AUTH_RECOVERY_RESEND_CONFIG_READY: env.AUTH_ACTIVATION_RESEND_CONFIG_READY/);
