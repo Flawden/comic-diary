@@ -28,15 +28,18 @@ function HistoricalComments({comicId,chapterId}:Props){
  </details>;
 }
 function Editor({props,own,onClose,onSaved}:{props:Props;own:Review|null;onClose:()=>void;onSaved:()=>Promise<void>}){
- const n=props.chapterId?1:5;const [scores,setScores]=useState(own?.scores??Array(n).fill(0));const [body,setBody]=useState(own?.body??'');
- const [spoiler,setSpoiler]=useState(own?.spoiler??!!props.chapterId);const [busy,setBusy]=useState(false),[error,setError]=useState('');const lock=useRef(false);
- const initial=JSON.stringify([own?.scores??Array(n).fill(0),own?.body??'',own?.spoiler??!!props.chapterId]);
+ // A background list refresh must not advance the version of an open draft.
+ // Keep its text, dirty baseline and optimistic concurrency token together.
+ const [original]=useState(own);
+ const n=props.chapterId?1:5;const [scores,setScores]=useState(original?.scores??Array(n).fill(0));const [body,setBody]=useState(original?.body??'');
+ const [spoiler,setSpoiler]=useState(original?.spoiler??!!props.chapterId);const [busy,setBusy]=useState(false),[error,setError]=useState('');const lock=useRef(false);
+ const initial=JSON.stringify([original?.scores??Array(n).fill(0),original?.body??'',original?.spoiler??!!props.chapterId]);
  const dirty=JSON.stringify([scores,body,spoiler])!==initial;
  async function save(e:React.FormEvent){e.preventDefault();if(lock.current)return;lock.current=true;setBusy(true);setError('');
-  try{await request('/api/community/reviews','PUT',{comicId:props.comicId,chapterId:props.chapterId??null,scores,body,spoiler,version:own?.version??null});
+  try{await request('/api/community/reviews','PUT',{comicId:props.comicId,chapterId:props.chapterId??null,scores,body,spoiler,version:original?.version??null});
    await onSaved();onClose();
   }catch(e){setError(failure(e));}finally{lock.current=false;setBusy(false);}}
- return <ReviewDialog title={own?'Редактировать отзыв':props.chapterId?'Ваша оценка главы':'Оценить и оставить отзыв'} onClose={onClose} dirty={dirty} busy={busy}>
+ return <ReviewDialog title={original?'Редактировать отзыв':props.chapterId?'Ваша оценка главы':'Оценить и оставить отзыв'} onClose={onClose} dirty={dirty} busy={busy}>
   <p className="reviews-muted">Публичный отзыв. Личные заметки и оценки остаются в вашем дневнике.</p>
   <form onSubmit={save} className="reviews-editor"><fieldset disabled={busy} className="reviews-editor-fields">
    {scores.map((value,i)=><fieldset className="reviews-score-choice" key={i}><legend>{n===1?'Ваша оценка':reviewCriteria[i][1]}</legend>
