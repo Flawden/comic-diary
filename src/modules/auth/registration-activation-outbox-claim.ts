@@ -12,11 +12,12 @@
  * Important: a durable `in_flight` claim can have an ambiguous external
  * outcome. NEVER recycle it into `ready`, even if the process has crashed.
  */
+import { pilotAllowsDispatch } from "./activation-mail-pilot";
 import { randomBytes } from "node:crypto";
 import { and, eq, isNotNull, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
-import { activationMailOutbox, emailVerificationTokens, users } from "@/db/schema";
+import { activationMailDispatchControl, activationMailOutbox, emailVerificationTokens, users } from "@/db/schema";
 import { canDispatchVerificationPurpose } from "./verification-purpose";
 import { deriveActivationOutboxNextState } from "./registration-activation-outbox-policy";
 
@@ -31,19 +32,26 @@ export type ClaimPendingActivationMailResult = Claimed | NoWork;
  * attempting delivery. This method DOES NOT authorize sending.
  */
 export async function claimPendingActivationMailOnce(legacyEnabled = false): Promise<ClaimPendingActivationMailResult> {
+  const [pilot] = await db.select().from(activationMailDispatchControl).where(eq(activationMailDispatchControl.id, 1));
+  if (!pilot || (pilot.pilotId !== null && (pilot.pilotClosedAt !== null || pilot.pilotDispatchUsedAt !== null || pilot.pilotOutboxId === null))) return { ok: false, kind: "no_work" };
   const candidates = await db.select({
     outboxId: activationMailOutbox.id,
+    purpose: emailVerificationTokens.purpose,
     tokenId: emailVerificationTokens.id,
     userId: emailVerificationTokens.userId,
   }).from(activationMailOutbox)
     .innerJoin(emailVerificationTokens, eq(activationMailOutbox.verificationTokenId, emailVerificationTokens.id))
-    .where(and(eq(activationMailOutbox.state, "ready"), inArray(emailVerificationTokens.purpose,
+    .where(and(eq(activationMailOutbox.state, "ready"),
+      pilot.pilotId === null ? undefined : and(eq(activationMailOutbox.id, pilot.pilotOutboxId!), eq(emailVerificationTokens.userId, 1), eq(emailVerificationTokens.purpose, "legacy_email_verification")), inArray(emailVerificationTokens.purpose,
       legacyEnabled === true ? ["pending_activation", "legacy_email_verification"] : ["pending_activation"])))
     .orderBy(activationMailOutbox.expiresAt, activationMailOutbox.id)
     .limit(16);
 
   for (const candidate of candidates) {
     const result = await db.transaction(async (tx): Promise<Claimed | null> => {
+      // Recheck pilot before USER; discovery never authorizes or mutates another job.
+      const [control] = await tx.select().from(activationMailDispatchControl).where(eq(activationMailDispatchControl.id, 1)).for("share");
+      if (!control || !pilotAllowsDispatch(control, candidate.userId, candidate.purpose, candidate.outboxId)) return null;
       const [account] = await tx.select({
         id: users.id, email: users.email, passwordHash: users.passwordHash,
         isActive: users.isActive, emailVerifiedAt: users.emailVerifiedAt,
@@ -70,6 +78,7 @@ export async function claimPendingActivationMailOnce(legacyEnabled = false): Pro
 
       if (!item || item.state !== "ready" || !token || !account) return null;
       const now = new Date(); // AFTER acquiring locks, never from untrusted caller.
+      if (!pilotAllowsDispatch(control, account.id, token.purpose, item.id)) return null;
       const live = account.id === candidate.userId &&
         token.userId === account.id && token.id === item.verificationTokenId &&
         token.consumedAt === null && token.revokedAt === null &&

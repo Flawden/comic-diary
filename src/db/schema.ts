@@ -903,10 +903,24 @@ export const activationMailDispatchControl = pgTable("activation_mail_dispatch_c
   id: integer("id").primaryKey(),
   enabled: boolean("enabled").default(false).notNull(),
   generation: integer("generation").default(0).notNull(),
+  pilotId: varchar("pilot_id", { length: 36 }),
+  pilotUserId: integer("pilot_user_id"),
+  // Durable tombstone: deleting a job must never refund a pilot budget.
+  pilotOutboxId: integer("pilot_outbox_id"),
+  pilotArmedAt: timestamp("pilot_armed_at", { withTimezone: true }),
+  pilotDispatchUsedAt: timestamp("pilot_dispatch_used_at", { withTimezone: true }),
+  pilotClosedAt: timestamp("pilot_closed_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   check("activation_mail_dispatch_control_singleton_check", sql`${table.id} = 1`),
   check("activation_mail_dispatch_control_generation_check", sql`${table.generation} >= 0`),
+  check("activation_mail_pilot_shape_check", sql`(
+    (${table.pilotId} IS NULL AND ${table.pilotUserId} IS NULL AND ${table.pilotOutboxId} IS NULL AND ${table.pilotArmedAt} IS NULL AND ${table.pilotDispatchUsedAt} IS NULL AND ${table.pilotClosedAt} IS NULL)
+    OR (${table.pilotId} IS NOT NULL AND ${table.pilotId} ~ '^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$' AND ${table.pilotUserId} IS NOT NULL AND ${table.pilotUserId} = 1 AND ${table.pilotArmedAt} IS NOT NULL
+      AND (${table.pilotOutboxId} IS NULL OR ${table.pilotOutboxId} > 0)
+      AND (${table.pilotDispatchUsedAt} IS NULL OR (${table.pilotOutboxId} IS NOT NULL AND ${table.pilotDispatchUsedAt} >= ${table.pilotArmedAt}))
+      AND (${table.pilotClosedAt} IS NULL OR ${table.pilotClosedAt} >= ${table.pilotArmedAt}))
+  )`),
 ]);
 
 /**

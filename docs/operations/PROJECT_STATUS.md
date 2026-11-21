@@ -1,5 +1,15 @@
 # AUTH legacy email verification — local review candidate (2026-11-20)
 
+One-shot pilot follow-up: isolated branch
+`feature/auth-legacy-one-shot-pilot-20261120`, base
+`ca60fb2b25f83ee1b5698c5ae3eb06865806a882`. Additive 0048, durable
+CONTROL-row pilot identity/pin/budget, user 1 only while armed, same dispatcher.
+Local checks: 654 unit/contracts; 30 PG17 regression commands without failures,
+including 21 pilot integration tests and an isolated 0047->0048 upgrade/replay;
+typecheck, lint, production build, Docker build and OFF HTTP smoke passed.
+No commit/push/deploy or production changes. Review and operational arming remain
+separate approvals. See AUTH_LEGACY_ONE_SHOT_PILOT_REVIEW_RU.md and pilot runbook.
+
 Independent-review blocker correction: historical issuer is now pending-only
 with explicit purpose; historical bearer-only redemption rejects ALL tokens
 without DB access. The former legacy/pending-purpose bypass was reproduced on

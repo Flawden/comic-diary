@@ -1,0 +1,7 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { pilotAllowsIssue, pilotAllowsDispatch, type ActivationPilot } from './activation-mail-pilot';
+const normal:ActivationPilot={pilotId:null,pilotUserId:null,pilotOutboxId:null,pilotArmedAt:null,pilotDispatchUsedAt:null,pilotClosedAt:null};
+const armed:ActivationPilot={...normal,pilotId:'11111111-1111-4111-8111-111111111111',pilotUserId:1,pilotArmedAt:new Date()};
+test('normal mode retains pending policy and armed pilot restricts issuance to user 1',()=>{assert.equal(pilotAllowsDispatch(normal,9,'pending_activation',99),true);assert.equal(pilotAllowsIssue(armed,1),true);assert.equal(pilotAllowsIssue(armed,2),false);assert.equal(pilotAllowsIssue({...armed,pilotOutboxId:4},1),false);});
+test('only exact bound job, owner and legacy purpose may spend pilot budget',()=>{const bound={...armed,pilotOutboxId:4};assert.equal(pilotAllowsDispatch(bound,1,'legacy_email_verification',4),true);for(const [user,purpose,id] of [[2,'legacy_email_verification',4],[1,'pending_activation',4],[1,'legacy_email_verification',5]] as const)assert.equal(pilotAllowsDispatch(bound,user,purpose,id),false);for(const control of [{...bound,pilotDispatchUsedAt:new Date()},{...bound,pilotClosedAt:new Date()}]){assert.equal(pilotAllowsDispatch(control,1,'legacy_email_verification',4),false);assert.equal(pilotAllowsIssue(control,1),false);}});

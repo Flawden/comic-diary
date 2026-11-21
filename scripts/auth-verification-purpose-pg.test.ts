@@ -67,7 +67,7 @@ test("PG17 upgrade 0046 -> 0047 preserves rows, defaults, v1 jobs and all prior 
     await t.test("upgrade and migrator replay are safe with preexisting data", async () => {
       await migrate(db, { migrationsFolder: "drizzle" });
       const applied = (await pool!.query("SELECT * FROM drizzle.__drizzle_migrations ORDER BY id")).rows;
-      assert.equal(applied.length, 48);
+      assert.equal(applied.length, journal.entries.length);
       await migrate(db, { migrationsFolder: "drizzle" });
       assert.deepEqual((await pool!.query("SELECT * FROM drizzle.__drizzle_migrations ORDER BY id")).rows, applied);
       for (let i = 0; i < preservedTables.length; i++) assert.deepEqual((await pool!.query(`SELECT * FROM ${preservedTables[i]} ORDER BY id`)).rows, before[i].rows);

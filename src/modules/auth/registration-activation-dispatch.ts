@@ -4,6 +4,7 @@
  * Its commit is the authorization point; later OFF/revoke cannot cancel HTTP.
  * A crash after commit sacrifices delivery rather than risks a second attempt.
  */
+import { pilotAllowsDispatch } from "./activation-mail-pilot";
 import { legacyVerificationEnabled } from "./verification-purpose";
 import { and, eq, isNotNull, isNull, lte, or } from "drizzle-orm";
 import { db } from "@/db";
@@ -99,7 +100,7 @@ async function beginDispatch(claim: Claim, config: Config, legacyEnabled: boolea
     .where(eq(outboxTable.id, claim.outboxId));
   if (!candidate) return null;
   return db.transaction(async tx => {
-    const [control] = await tx.select().from(controlTable).where(eq(controlTable.id, 1)).for("share");
+    const [control] = await tx.select().from(controlTable).where(eq(controlTable.id, 1)).for("update");
     if (!control?.enabled) return null;
     const [account] = await tx.select().from(users).where(eq(users.id, candidate.userId)).for("update");
     const [token] = await tx.select().from(emailVerificationTokens).where(eq(emailVerificationTokens.id, candidate.tokenId)).for("update");
@@ -107,6 +108,7 @@ async function beginDispatch(claim: Claim, config: Config, legacyEnabled: boolea
     if (!account || !token || !outbox || (token.purpose === "legacy_email_verification" && !legacyEnabled) || outbox.dispatchStartedAt !== null ||
         !outbox.dispatchFenceAt || !outbox.dispatchReservationAt ||
         outbox.dispatchReservationGeneration !== control.generation) return null;
+    if (!pilotAllowsDispatch(control, account.id, token.purpose, outbox.id)) return null;
     const now = new Date();
     const preflight = preflightClaimedActivationMailDryRun({ snapshot: { account, token, outbox },
       claimId: claim.claimId, expectedPublicOrigin: config.publicOrigin,
@@ -124,6 +126,14 @@ async function beginDispatch(claim: Claim, config: Config, legacyEnabled: boolea
     const wire = prepareResendActivationCandidate(config, mail, outbox.idempotencyKey, token.purpose);
     if (!wire) return null;
     const body = JSON.stringify({ from: wire.payload.from, to: [wire.payload.to[0]], subject: wire.payload.subject, text: wire.payload.text });
+    if (control.pilotId !== null) {
+      const spent = await tx.update(controlTable).set({ pilotDispatchUsedAt: now }).where(and(
+        eq(controlTable.id, 1), eq(controlTable.pilotId, control.pilotId), eq(controlTable.pilotUserId, 1),
+        eq(controlTable.pilotOutboxId, outbox.id), isNull(controlTable.pilotDispatchUsedAt), isNull(controlTable.pilotClosedAt),
+        eq(controlTable.enabled, true), eq(controlTable.generation, control.generation),
+      )).returning({ id: controlTable.id });
+      if (spent.length !== 1) return null;
+    }
     const changed = await tx.update(outboxTable).set({ dispatchStartedAt: now, updatedAt: now }).where(and(
       eq(outboxTable.id, claim.outboxId), eq(outboxTable.claimId, claim.claimId),
       eq(outboxTable.state, "in_flight"), eq(outboxTable.verificationTokenId, token.id),
@@ -131,6 +141,7 @@ async function beginDispatch(claim: Claim, config: Config, legacyEnabled: boolea
       eq(outboxTable.payloadDigest, outbox.payloadDigest), eq(outboxTable.idempotencyKey, outbox.idempotencyKey),
       isNull(outboxTable.dispatchStartedAt), isNull(outboxTable.finalizedAt),
     )).returning({ id: outboxTable.id });
+    if (changed.length !== 1 && control.pilotId !== null) throw new Error("Pilot start transaction aborted");
     return changed.length === 1 ? { body, idempotencyKey: outbox.idempotencyKey,
       startedAt: now, expiresAt: token.expiresAt, generation: control.generation } : null;
   });
@@ -184,13 +195,16 @@ export async function recoverAbandonedActivationDispatches(): Promise<number> {
     and(isNull(outboxTable.dispatchStartedAt), lte(outboxTable.claimedAt, cutoff)),
     and(isNotNull(outboxTable.dispatchStartedAt), lte(outboxTable.dispatchStartedAt, cutoff)),
   );
+  const [pilot] = await db.select().from(controlTable).where(eq(controlTable.id, 1));
+  if (!pilot || (pilot.pilotId !== null && pilot.pilotOutboxId === null)) return 0;
   const candidates = await db.select({ id: outboxTable.id, userId: emailVerificationTokens.userId, tokenId: emailVerificationTokens.id })
     .from(outboxTable).innerJoin(emailVerificationTokens, eq(outboxTable.verificationTokenId, emailVerificationTokens.id))
-    .where(and(eq(outboxTable.state, "in_flight"), abandoned)).limit(100);
+    .where(and(eq(outboxTable.state, "in_flight"), abandoned, pilot.pilotId === null ? undefined : eq(outboxTable.id, pilot.pilotOutboxId!))).limit(100);
   let recovered = 0;
   for (const item of candidates) {
     recovered += await db.transaction(async tx => {
-      await tx.select().from(controlTable).where(eq(controlTable.id, 1)).for("share");
+      const [control] = await tx.select().from(controlTable).where(eq(controlTable.id, 1)).for("share");
+      if (!control || (control.pilotId !== null && item.id !== control.pilotOutboxId)) return 0;
       await tx.select({ id: users.id }).from(users).where(eq(users.id, item.userId)).for("update");
       await tx.select({ id: emailVerificationTokens.id }).from(emailVerificationTokens).where(eq(emailVerificationTokens.id, item.tokenId)).for("update");
       const rows = await tx.update(outboxTable).set({ state: "uncertain", finalizedAt: new Date(), updatedAt: new Date() })
