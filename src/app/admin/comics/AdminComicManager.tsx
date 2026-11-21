@@ -9,6 +9,7 @@ import type { WorkType, WorkFormat } from "@/modules/comics/work-metadata";
 import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
 
 import { seriesStatusLabels, type SeriesStatus } from "@/modules/comics/series-status";
+import { AdminPresentationEditor } from "./AdminPresentationEditor";
 
 import {
   CoverUploadField,
@@ -787,6 +788,7 @@ export function AdminComicManager({
   } | null>(null);
   const [comicDirty, setComicDirty] = useState<Record<number, boolean>>({});
   const [volumeTitleDirty, setVolumeTitleDirty] = useState<Record<number, boolean>>({});
+  const [presentationDirty, setPresentationDirty] = useState<Record<number, boolean>>({});
   const [volumeTitleRevision, setVolumeTitleRevision] = useState<Record<number, number>>({});
   const [comicCoverUrls, setComicCoverUrls] = useState<Record<number, string>>({});
   const [comicBannerUrls, setComicBannerUrls] = useState<Record<number, string>>({});
@@ -890,6 +892,7 @@ export function AdminComicManager({
     setComicBannerUrls(previous => ({ ...previous, [comicId]: baseline.bannerUrl ?? "" }));
     setComicDirty(previous => ({ ...previous, [comicId]: false }));
     setVolumeTitleDirty(previous => ({ ...previous, [comicId]: false }));
+    setPresentationDirty(previous => ({ ...previous, [comicId]: false }));
     setVolumeTitleRevision(previous => ({ ...previous, [comicId]: (previous[comicId] ?? 0) + 1 }));
     setError(null);
     setMessage(null);
@@ -915,6 +918,7 @@ export function AdminComicManager({
     Object.values(comicDirty).some(Boolean) ||
     Object.values(coverUploads).some(Boolean) ||
     Object.values(volumeTitleDirty).some(Boolean) ||
+    Object.values(presentationDirty).some(Boolean) ||
     createDirty;
 
   function requestComicSwitchConfirmation(): Promise<boolean> {
@@ -1728,7 +1732,7 @@ export function AdminComicManager({
       <AdminComicList comics={initialComics} categories={categories}
         onCreate={openCreateWizard}
         onSelectionChange={async currentId => {
-          if (currentId !== null && (comicDirty[currentId] || volumeTitleDirty[currentId])) {
+          if (currentId !== null && (comicDirty[currentId] || volumeTitleDirty[currentId] || presentationDirty[currentId])) {
             const confirmed = await requestComicSwitchConfirmation();
             if (!confirmed) return false;
             discardComicChanges(currentId);
@@ -1835,6 +1839,10 @@ export function AdminComicManager({
                         false
                       }
                     />
+                    <div hidden={studioTab !== "metadata" && studioTab !== "chapters"}>
+                      <AdminPresentationEditor key={`presentation-${comic.id}:${volumeTitleRevision[comic.id] ?? 0}`} comicId={comic.id} disabled={busyKey !== null || editingChapterId !== null}
+                        onDirtyChange={dirty => setPresentationDirty(previous => (previous[comic.id] ?? false) === dirty ? previous : { ...previous, [comic.id]: dirty })}/>
+                    </div>
                     {comic.categorySlug ===
                     null ? (
                       <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">

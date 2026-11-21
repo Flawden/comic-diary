@@ -48,6 +48,7 @@ export async function getComicBySlug(
       sourceUrl: comics.sourceUrl,
       seriesStatus: comics.seriesStatus,
       workType: comics.workType,
+      ageRating: comics.ageRating,
       workFormat: comics.workFormat,
       totalChapters: comics.totalChapters,
       publicationStatus:

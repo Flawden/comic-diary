@@ -56,7 +56,8 @@ test('one selected chapter panel, no discussion fetching inside chapter row map'
   assert.doesNotMatch(panel,/<Comments /);
   const page=read('src/app/comics/[slug]/page.tsx');
   assert.match(page,/comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED" \? <Reviews/);
-  assert.match(page,/<CommunityRatings/);
+  assert.match(page,/<Reviews ratings=\{communityRatings\?\?undefined\}/);
+  assert.match(read('src/modules/community/Reviews.tsx'),/<CommunityRatings ratings=\{props.ratings\}/);
 });
 test('CI runs new unit/contracts and entire guarded PG suite',()=>{
   const ci=read('.github/workflows/ci.yml');

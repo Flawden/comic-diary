@@ -5,7 +5,7 @@ import { calculateAverageRating } from "./calculate-average-rating";
 
 test("empty ratings remain null and never render zero out of five", () => {
   assert.equal(calculateAverageRating({ ratingPlot: null, ratingCharacters: null, ratingArt: null, ratingDepth: null, ratingWorld: null }), null);
-  assert.equal(formatRating(null), "Пока нет оценок");
+  assert.equal(formatRating(null), "—");
 });
 test("partial personal means retain precision; equal-reader example is three", () => {
   const a = calculateAverageRating({ ratingPlot: 5, ratingCharacters: 5, ratingArt: 5, ratingDepth: 5, ratingWorld: 5 })!;

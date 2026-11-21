@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 import { hasPermission } from "@/modules/auth/permissions";
 import { Reviews } from "@/modules/community/Reviews";
 import { getReviewCounts } from "@/modules/community/review-service";
+import { getComicGenreNames } from "@/modules/catalog/work-presentation-service";
 import { CommunityRatings } from "@/modules/library/components/CommunityRatings";
+import { WorkIcon } from "@/shared/components/WorkIcon";
+import { formatRatingVotes } from "@/modules/library/ratings/community-rating";
+import "@/modules/library/components/work-presentation.css";
 import { getCommunityRatings } from "@/modules/library/queries/get-community-ratings";
 import { listReturn } from "@/modules/library/list-navigation";
 import { WorkDescriptionModal } from "@/modules/comics/components/WorkDescriptionModal";
@@ -92,6 +96,7 @@ export default async function ComicPage({
     );
 
   const volumeTitles = await getComicVolumeTitles(comic.id);
+  const genreNames = await getComicGenreNames(comic.id);
 
   const readingState =
     currentUser
@@ -113,6 +118,7 @@ export default async function ComicPage({
   const chapterCoverUrls = new Map(
     chapters.map((chapter) => [chapter.id, chapter.coverUrl] as const),
   );
+  const chapterMeasures = new Map(chapters.map(c=>[c.id,{pageCount:c.pageCount,readingMinutes:c.readingMinutes}]));
   const registry=readingState?.chapterReading.registry ?? chapters;
   const readIds=readingState?.chapterReading.readIds ?? [];
   const mainChapterIds=registry.filter(c=>c.status==="RELEASED" && c.kind==="MAIN").map(c=>c.id);
@@ -134,8 +140,11 @@ export default async function ComicPage({
         <div className="wd-identity">
           <p className="wd-hero-eyebrow">{comic.categoryName}</p>
           <h1 className={Array.from(comic.title).length > 20 ? "wd-title--long" : undefined}>{comic.title}</h1>
+          <svg className="wd-title-flourish" viewBox="0 0 240 18" fill="currentColor" aria-hidden="true"><path d="M2 13C57 8 115 5 181 9c24 1 41-2 57-7-13 10-31 14-57 12C116 10 59 12 2 15Z"/></svg>
           <span className="wd-hero-meta">{[comic.workType!=="UNKNOWN" && workTypeLabels[comic.workType],new Intl.NumberFormat("ru").format(total)+" "+({one:"глава",few:"главы",many:"глав"}[new Intl.PluralRules("ru").select(total) as "one"|"few"|"many"]??"глав")].filter(Boolean).join(" · ")}</span>
           <div className="wd-hero-badges">
+            {comic.ageRating!==null&&<small className="wd-age-rating">{comic.ageRating}+</small>}
+            <a href="#reviews" className="wd-hero-rating" aria-label={communityRatings?.overall.average==null?'Рейтинг читателей: оценок пока нет':`Рейтинг читателей: ${communityRatings.overall.average.toFixed(1)} из 5`}><WorkIcon name="star"/>{communityRatings?.overall.average==null?'—':communityRatings.overall.average.toLocaleString('ru',{maximumFractionDigits:1,minimumFractionDigits:1})}{communityRatings&&communityRatings.overall.votes>0&&<span> · {formatRatingVotes(communityRatings.overall.votes)}</span>}</a>
             {comic.seriesStatus!=="UNKNOWN" && <small>● {seriesStatusLabels[comic.seriesStatus]}</small>}
             {comic.visibility === "PRIVATE" ? <small>Личный тайтл</small> : null}
             {comic.publicationStatus !== "PUBLISHED" ? (
@@ -151,10 +160,11 @@ export default async function ComicPage({
         <aside className="wd-hero-summary" aria-label="Описание произведения">
           {comic.description?.trim() ? <WorkDescriptionModal text={comic.description} previewChars={245} /> :
             <div className="wd-hero-summary-empty"><h2>Об истории</h2><p>Описание пока не добавлено.</p></div>}
+          {genreNames.length>0&&<ul className="wd-genre-tags" aria-label="Жанры произведения">{genreNames.map(name=><li key={name}>{name}</li>)}</ul>}
         </aside>
       </header>
-      <WorkTabs count={total} reviews={<>{communityRatings && <CommunityRatings ratings={communityRatings}/>}
-        {comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED" ? <Reviews comicId={comic.id} canWrite={currentUser !== null} canModerate={currentUser?hasPermission(currentUser.role,'ADMIN_SECURITY'):false} refreshToken={commentsRefreshToken} loginHref={`/login?next=${encodeURIComponent("/comics/"+comic.slug)}`} /> : <p>Публичные отзывы недоступны для личного произведения.</p>}</>} chapters={
+      <WorkTabs count={total} reviews={<>
+        {comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED" ? <Reviews ratings={communityRatings??undefined} comicId={comic.id} canWrite={currentUser !== null} canModerate={currentUser?hasPermission(currentUser.role,'ADMIN_SECURITY'):false} refreshToken={commentsRefreshToken} loginHref={`/login?next=${encodeURIComponent("/comics/"+comic.slug)}`} /> : <>{communityRatings&&<CommunityRatings ratings={communityRatings} showPersonal={false}/>}<p>Публичные отзывы недоступны для личного произведения.</p></>}</>} chapters={
         <div className={`wd-chapter-content${visibleChapters.length === 0 ? " wd-chapter-content--empty" : ""}`}>
           {visibleChapters.length === 0 ? (
             <div className="wd-empty-state">
@@ -176,12 +186,14 @@ export default async function ComicPage({
           <ChapterReadingPanel
             comicId={comic.id}
             readerId={currentUser?.id ?? null}
-            chapters={visibleChapters.map((chapter) => ({ id: chapter.id, displayCode: chapter.displayCode, title: chapter.title, coverUrl: chapterCoverUrls.get(chapter.id) ?? null, sourceUrl: chapter.status === "RELEASED" ? chapter.sourceUrl : null, sortOrder: chapter.sortOrder, volumeNumber: chapter.volumeNumber, status: chapter.status, kind: chapter.kind, supersedesChapterId: chapter.supersedesChapterId, expectedRelease: chapter.expectedRelease }))}
+            chapters={visibleChapters.map((chapter) => ({ id: chapter.id, displayCode: chapter.displayCode, title: chapter.title, coverUrl: chapterCoverUrls.get(chapter.id) ?? null, pageCount:chapterMeasures.get(chapter.id)?.pageCount??null,readingMinutes:chapterMeasures.get(chapter.id)?.readingMinutes??null,sourceUrl: chapter.status === "RELEASED" ? chapter.sourceUrl : null, sortOrder: chapter.sortOrder, volumeNumber: chapter.volumeNumber, status: chapter.status, kind: chapter.kind, supersedesChapterId: chapter.supersedesChapterId, expectedRelease: chapter.expectedRelease }))}
             ratings={readingState?.chapterReading.ratings ?? {}}
             canMark={readingState?.inLibrary === true}
             workSourceUrl={comic.sourceUrl}
             volumeTitles={volumeTitles}
             communityRatings={communityRatings?.chapters ?? {}}
+            volumeRatings={communityRatings?.volumes??{}}
+            viewerRatings={communityRatings?.viewerChapters??{}}
             reviewCounts={reviewCounts.chapters}
             canModerateReviews={currentUser?hasPermission(currentUser.role,'ADMIN_SECURITY'):false}
             commentsEnabled={comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED"}
