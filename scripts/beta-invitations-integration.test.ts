@@ -98,6 +98,7 @@ before(async () => {
 });
 beforeEach(async () => {
   Object.assign(process.env, flags);
+  await q("UPDATE site_access_policy SET public_registration=false,beta_only=false WHERE id=1");
   prefix = 'beta-' + randomUUID();
   email = prefix + '@example.invalid';
   actors = [];
@@ -133,7 +134,9 @@ afterEach(async () => {
     'DELETE FROM beta_registration_invitations WHERE created_by_user_id=$1',
     [actors[0].userId],
   );
+  await q('DELETE FROM site_access_events WHERE actor_user_id=$1',[actors[0].userId]);
   await q('DELETE FROM users WHERE email LIKE $1', [prefix + '%']);
+  await q('UPDATE site_access_policy SET public_registration=false,beta_only=false WHERE id=1');
 });
 after(async () => {
   globalThis.fetch = native;
@@ -882,4 +885,80 @@ test('invited activation and worker never elevate an account whose role was chan
       .rows[0].email_verified_at,
     null,
   );
+});
+
+
+test('runtime policy is ADMIN only, audited, revision fenced, and never alters pilot or sessions',async()=>{
+ const {readSiteAccess,setSiteAccess}=await import('../src/modules/auth/site-access-service');
+ const old=await readSiteAccess();
+ const sessionsBefore=(await q('SELECT * FROM sessions WHERE user_id=ANY($1::int[]) ORDER BY id',[actors.map(a=>a.userId)])).rows;
+ for(const actor of actors.slice(1)) await assert.rejects(setSiteAccess(actor,true,true,old.revision),(e:unknown)=>e instanceof admin.InvitationError && e.status===403);
+ const changed=await setSiteAccess(actors[0],true,true,old.revision);
+ assert.equal(changed.publicRegistration,true);assert.equal(changed.betaOnly,true);
+ await assert.rejects(setSiteAccess(actors[0],false,false,old.revision),(e:unknown)=>e instanceof admin.InvitationError && e.status===409);
+ assert.equal((await q('SELECT * FROM site_access_events WHERE actor_user_id=$1',[actors[0].userId])).rowCount,1);
+ assert.deepEqual((await q('SELECT * FROM sessions WHERE user_id=ANY($1::int[]) ORDER BY id',[actors.map(a=>a.userId)])).rows,sessionsBefore);
+});
+
+test('beta invitation grants membership only at activation, not frame; ordinary invitation never grants it',async()=>{
+ for(const grants of [true,false]){
+   email=prefix+'-'+grants+'@example.invalid';
+   const made=await admin.createBetaInvitation(actors[0],email,grants);
+   await service.inspectBetaInvitation(made.secret);
+   assert.equal((await q('SELECT id FROM users WHERE email=$1',[email])).rowCount,0);
+   await service.registerWithBetaInvitation({intent:'request',invitation:made.secret,email});
+   const user=(await q('SELECT id FROM users WHERE email=$1',[email])).rows[0];
+   assert.equal((await q('SELECT * FROM user_appearance WHERE user_id=$1',[user.id])).rowCount,0);
+   const token=await code();
+   assert.equal((await activation.activatePendingRegistrationWithEmailToken(token,'final-membership-password')).ok,true);
+   const appearance=(await q('SELECT * FROM user_appearance WHERE user_id=$1',[user.id])).rows[0];
+   assert.equal(appearance?.beta_participant??false,grants);
+   assert.equal(appearance?.beta_frame_granted??false,false);
+   assert.equal(appearance?.selected_frame??null,null);
+   assert.equal((await activation.activatePendingRegistrationWithEmailToken(token,'replay-password-long')).ok,false);
+ }
+});
+
+test('membership failure rolls back mailbox proof, consumed token and invitation atomically',async()=>{
+ const made=await admin.createBetaInvitation(actors[0],email,true);
+ await service.registerWithBetaInvitation({intent:'request',invitation:made.secret,email});
+ const token=await code();
+ await q("CREATE FUNCTION qa_reject_membership() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN RAISE EXCEPTION 'synthetic';END$$");
+ await q('CREATE TRIGGER qa_reject_membership BEFORE INSERT ON user_appearance FOR EACH ROW EXECUTE FUNCTION qa_reject_membership()');
+ try{await assert.rejects(activation.activatePendingRegistrationWithEmailToken(token,'final-membership-password'));}
+ finally{await q('DROP TRIGGER qa_reject_membership ON user_appearance');await q('DROP FUNCTION qa_reject_membership()');}
+ assert.equal((await q('SELECT email_verified_at FROM users WHERE email=$1',[email])).rows[0].email_verified_at,null);
+ assert.equal((await q('SELECT consumed_at FROM email_verification_tokens WHERE invitation_id=$1',[made.id])).rows[0].consumed_at,null);
+ assert.equal((await q('SELECT activated_at FROM beta_registration_invitations WHERE id=$1',[made.id])).rows[0].activated_at,null);
+ assert.equal((await activation.activatePendingRegistrationWithEmailToken(token,'final-membership-password')).ok,true);
+});
+
+test('public email-first registration is closed by default; concurrent enabled requests use existing dispatcher and never award beta',async()=>{
+ const {readSiteAccess,setSiteAccess}=await import('../src/modules/auth/site-access-service');
+ const {registerPasswordUser}=await import('../src/modules/auth/registration-service');
+ assert.deepEqual(await registerPasswordUser(email,null),{ok:false,kind:'registration_unavailable'});
+ await setSiteAccess(actors[0],true,false,(await readSiteAccess()).revision);
+ await Promise.all(Array.from({length:4},()=>registerPasswordUser(email,null)));
+ assert.equal((await q('SELECT id FROM users WHERE email=$1',[email])).rowCount,1);
+ assert.equal((await jobs()).length,1);
+ const token=await code();let calls=0;
+ const sent=await dispatch.dispatchActivationMailForTest({env:flags,http:transport(()=>calls++)});
+ assert.equal(sent.status,'recorded');assert.equal(calls,1);
+ const closed=await setSiteAccess(actors[0],false,false,(await readSiteAccess()).revision);
+ assert.equal(closed.publicRegistration,false);
+ // Previously received code can still complete after intake is closed.
+ assert.equal((await activation.activatePendingRegistrationWithEmailToken(token,'final-public-password')).ok,true);
+ const user=(await q('SELECT id FROM users WHERE email=$1',[email])).rows[0];
+ assert.equal((await q('SELECT * FROM user_appearance WHERE user_id=$1',[user.id])).rowCount,0);
+ assert.equal((await registerPasswordUser(prefix+'-closed@example.invalid',null)).ok,false);
+});
+
+test('closing public policy after reservation blocks committed send start; no HTTP, no pilot budget change',async()=>{
+ const {readSiteAccess,setSiteAccess}=await import('../src/modules/auth/site-access-service');
+ const {registerPasswordUser}=await import('../src/modules/auth/registration-service');
+ await setSiteAccess(actors[0],true,false,(await readSiteAccess()).revision);
+ await registerPasswordUser(email,null);let calls=0;
+ const result=await dispatch.dispatchActivationMailForTest({env:flags,http:transport(()=>calls++),hooks:{afterReservation:async()=>{await setSiteAccess(actors[0],false,false,(await readSiteAccess()).revision);}}});
+ assert.equal(result.attempted,false);assert.equal(calls,0);
+ assert.equal((await jobs())[0].dispatch_started_at,null);
 });

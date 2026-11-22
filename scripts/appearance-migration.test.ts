@@ -103,7 +103,7 @@ test('0051 -> 0052: additive tables, every historical hash and row preserved, ol
       await pool.query('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id')
     ).rows;
     assert.equal(old.length, 52);
-    assert.equal(after.length, 53);
+    assert.equal(after.length, 54);
     assert.deepEqual(after.slice(0, 52), old);
     assert.deepEqual(await snapshot(), before);
     after.forEach((r, i) =>

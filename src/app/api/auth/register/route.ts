@@ -3,7 +3,7 @@ import { isSameOriginRequest } from "@/modules/auth/request-origin";
 import { readTrustedClientIp } from "@/modules/auth/client-ip";
 import { consumeRegistrationRateLimit } from "@/modules/auth/auth-rate-limit";
 import { registerPasswordUser } from "@/modules/auth/registration-service";
-import { activationRegistrationOperational } from "@/modules/auth/registration-activation-config";
+import { publicRegistrationOperational } from "@/modules/auth/site-access-service";
 import { readRegistrationActivationBody } from "@/modules/auth/registration-activation-http";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,7 +11,7 @@ const headers = { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
 function error(kind: string, status: number) { return NextResponse.json({ error: kind }, { status, headers }); }
 export async function POST(request: NextRequest) {
   if (!isSameOriginRequest(request)) return error("forbidden_origin", 403);
-  if (!activationRegistrationOperational(process.env)) return error("registration_unavailable", 503);
+  if (!await publicRegistrationOperational()) return error("registration_unavailable", 503);
   if (request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !== "application/json") return error("unsupported_media_type", 415);
   const read = await readRegistrationActivationBody(request);
   if (!read.ok) return error(read.reason, read.reason === "request_too_large" ? 413 : 400);
@@ -19,9 +19,7 @@ export async function POST(request: NextRequest) {
   try { value = JSON.parse(read.raw); } catch { return error("invalid_json", 400); }
   if (!value || typeof value !== "object" || Array.isArray(value)) return error("invalid_request", 400);
   const body = value as Record<string, unknown>;
-  if (Object.keys(body).sort().join() !== "email,password,passwordConfirm" ||
-      typeof body.email !== "string" || typeof body.password !== "string" || typeof body.passwordConfirm !== "string") return error("invalid_request", 400);
-  if (body.password !== body.passwordConfirm) return error("password_mismatch", 400);
+  if (Object.keys(body).join() !== "email" || typeof body.email !== "string") return error("invalid_request",400);
   const ip = readTrustedClientIp(request.headers);
   if (!ip) return error("rate_limit_identity_unavailable", 503);
   try {
@@ -30,7 +28,7 @@ export async function POST(request: NextRequest) {
     if (!limit.allowed) return NextResponse.json({ error: "rate_limited" }, {
       status: 429, headers: { ...headers, "Retry-After": String(limit.retryAfterSeconds) },
     });
-    const result = await registerPasswordUser(body.email as string, body.password as string);
+    const result = await registerPasswordUser(body.email as string, null);
     if (!result.ok) return error(result.kind, result.kind === "registration_unavailable" ? 503 : 400);
     // Same acknowledgement for new, pending, verified, disabled and absent addresses.
     return NextResponse.json({ ok: true, activationRequired: true }, { status: 202, headers });

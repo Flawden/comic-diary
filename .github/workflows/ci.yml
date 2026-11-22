@@ -38,7 +38,7 @@ jobs:
         run: node --import tsx --test src/modules/community/policy.test.ts scripts/community01-contract.test.mjs
 
       - name: Closed beta invitation policy (default OFF)
-        run: node --import tsx --test src/modules/auth/beta-invitation-policy.test.ts
+        run: node --import tsx --test src/modules/auth/beta-invitation-policy.test.ts src/modules/auth/site-access-policy.test.ts
 
       - name: Public reviews validation and boundary contracts
         run: node --import tsx --test src/modules/community/review-policy.test.ts src/modules/community/chapter-rating-policy.test.ts scripts/reviews-contract.test.mjs
@@ -477,6 +477,7 @@ jobs:
           APPEARANCE_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
         run: |
           node --import tsx --test scripts/appearance-migration.test.ts
+          node --import tsx --test scripts/site-access-migration.test.ts
           node --import tsx --test scripts/appearance-integration.test.ts
 
       - name: Mobile reader in Chrome

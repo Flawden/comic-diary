@@ -64,6 +64,7 @@ async function control(tx: InvitationTx) {
 export async function createBetaInvitation(
   actor: InvitationActor,
   rawEmail: unknown,
+  grantsBeta = false,
 ) {
   const email = invitationEmail(rawEmail);
   if (!email) throw new InvitationError(400, 'invalid_email');
@@ -109,6 +110,7 @@ export async function createBetaInvitation(
       .insert(betaInvitations)
       .values({
         secretHash: secret.hash,
+        grantsBeta,
         email,
         createdByUserId: actor.userId,
         createdAt: now,
@@ -143,6 +145,7 @@ export async function listBetaInvitations(
       .select({
         id: betaInvitations.id,
         email: betaInvitations.email,
+        grantsBeta: betaInvitations.grantsBeta,
         createdAt: betaInvitations.createdAt,
         expiresAt: betaInvitations.expiresAt,
         revokedAt: betaInvitations.revokedAt,
@@ -161,6 +164,7 @@ export async function listBetaInvitations(
         .map((r) => ({
           id: r.id,
           email: r.email,
+          grantsBeta: r.grantsBeta,
           createdAt: r.createdAt.toISOString(),
           expiresAt: r.expiresAt.toISOString(),
           status: invitationStatus(r, now),

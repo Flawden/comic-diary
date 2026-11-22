@@ -6,6 +6,7 @@ type Item = {
   createdAt: string;
   expiresAt: string;
   status: string;
+  grantsBeta: boolean;
 };
 type Page = { items: Item[]; nextCursor: number | null };
 const labels: Record<string, string> = {
@@ -18,6 +19,7 @@ const labels: Record<string, string> = {
 export function InvitationManager() {
   const [page, setPage] = useState<Page | null>(null),
     [email, setEmail] = useState(''),
+    [grantsBeta,setGrantsBeta]=useState(true),
     [link, setLink] = useState(''),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState('');
@@ -76,7 +78,7 @@ export function InvitationManager() {
             const r = await fetch('/api/admin/invitations', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email }),
+              body: JSON.stringify({ email, grantsBeta }),
             });
             if (!r.ok) {
               setMessage(
@@ -95,6 +97,8 @@ export function InvitationManager() {
           });
         }}
       >
+        <label className="my-4 flex gap-3"><input type="checkbox" checked={grantsBeta} onChange={e=>setGrantsBeta(e.target.checked)} disabled={busy}/>Участник закрытой беты после подтверждения почты</label>
+        <p className="text-sm">Награда-рамка выдаётся отдельно. Без галочки — обычное приглашение на регистрацию.</p>
         <label className="block">
           Почта участника
           <input
@@ -169,7 +173,7 @@ export function InvitationManager() {
           >
             <h2 className="font-semibold">Приглашение #{item.id}</h2>
             <p className="break-all">{item.email}</p>
-            <p>{labels[item.status]}</p>
+            <p>{labels[item.status]} · {item.grantsBeta ? "Участник беты" : "Обычная регистрация"}</p>
             <p className="text-sm text-[var(--text-secondary)]">
               Действует до {new Date(item.expiresAt).toLocaleString('ru-RU')}
             </p>

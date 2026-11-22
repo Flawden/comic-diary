@@ -14,7 +14,7 @@ Object.assign(process.env, { DATABASE_URL: target, NODE_ENV: "test" });
 const pool = new Pool({ connectionString: target });
 const origin = "https://reader.example.invalid";
 const key = randomBytes(32);
-const flags: Record<string,string> = { REGISTRATION_ENABLED: "true", REGISTRATION_ACTIVATION_REDEEM_ENABLED: "true",
+const flags: Record<string,string> = { REGISTRATION_ENABLED: "false", AUTH_BETA_INVITATION_REGISTRATION_ENABLED:"true", AUTH_BETA_INVITATION_DISPATCH_ENABLED:"true", REGISTRATION_ACTIVATION_REDEEM_ENABLED: "true",
  AUTH_ACTIVATION_OPERATOR_CONTROL_ENABLED: "true", AUTH_ACTIVATION_WORKER_ENABLED: "true", AUTH_ACTIVATION_DISPATCH_ENABLED: "true",
  AUTH_ACTIVATION_SENDER_VERIFIED: "true", AUTH_ACTIVATION_RESEND_CONFIG_READY: "true", RESEND_API_KEY: "re_SYNTHETIC_NO_REAL_CREDENTIAL",
  AUTH_ACTIVATION_FROM_ADDRESS: "no-reply@example.invalid", AUTH_ACTIVATION_SENDER_DOMAIN: "example.invalid",
@@ -37,7 +37,7 @@ let initialControl: { enabled: boolean; generation: number; updated_at: Date };
 const nativeFetch = globalThis.fetch;
 const request = (body: unknown, route = "/api/auth/register", source = origin) => new NextRequest(origin + route, {
  method:"POST", headers: { host:"reader.example.invalid", origin:source, "x-real-ip":"192.0.2.71", "content-type":"application/json" }, body:JSON.stringify(body) });
-const register = () => registration.POST(request({ email, password:"Original-Password-123!", passwordConfirm:"Original-Password-123!" }));
+const register = () => registration.POST(request({ email }));
 const row = async () => (await pool.query("SELECT o.* FROM activation_mail_outbox o JOIN email_verification_tokens t ON t.id=o.verification_token_id JOIN users u ON u.id=t.user_id WHERE u.email=$1 ORDER BY o.id DESC LIMIT 1",[email])).rows[0];
 const http = async (endpoint:string, init:RequestInit) => {
  calls++; assert.equal(endpoint,"https://api.resend.com/emails"); assert.equal(init.method,"POST"); assert.equal(init.redirect,"error");
@@ -60,6 +60,7 @@ before(async()=>{
  console.log("PG_MAJOR="+(await pool.query("SELECT current_setting('server_version_num')::int/10000 AS major")).rows[0].major);
 });
 beforeEach(async()=>{Object.assign(process.env,flags);email=`activation-${randomUUID()}@example.invalid`;calls=0;token="";sentKey=null;
+ await pool.query("UPDATE site_access_policy SET public_registration=true,beta_only=false WHERE id=1");
  await pool.query("UPDATE activation_mail_dispatch_control SET enabled=true,generation=1 WHERE id=1");
  await pool.query("DELETE FROM auth_rate_limits WHERE scope LIKE 'registration%'");
 });
@@ -68,6 +69,7 @@ after(async()=>{
  try {
   // Disposable fixture ownership ends here. Later CI probes must see the same
   // default-OFF control row, not this suite's last ON/generation fixture.
+  await pool.query("UPDATE site_access_policy SET public_registration=false,beta_only=false WHERE id=1");
   if(initialControl) await pool.query("UPDATE activation_mail_dispatch_control SET enabled=$1,generation=$2,updated_at=$3 WHERE id=1",
    [initialControl.enabled,initialControl.generation,initialControl.updated_at]);
  } finally {globalThis.fetch=nativeFetch;key.fill(0);await pool.end();}
@@ -122,7 +124,7 @@ for(const [name,transport,expected] of [
  await register();let count=0;const result=await run(async()=>{count++;return transport();});assert.equal(result.classification,expected);
  assert.equal((await row()).state,expected);await run(async()=>{count++;return transport();});assert.equal(count,1);
 });
-for(const flag of ["REGISTRATION_ENABLED","AUTH_ACTIVATION_WORKER_ENABLED","AUTH_ACTIVATION_DISPATCH_ENABLED","AUTH_ACTIVATION_RESEND_CONFIG_READY","AUTH_ACTIVATION_SENDER_VERIFIED","REGISTRATION_ACTIVATION_REDEEM_ENABLED"]) test(`missing ${flag} blocks public registration`,async()=>{
+for(const flag of ["AUTH_BETA_INVITATION_REGISTRATION_ENABLED","AUTH_BETA_INVITATION_DISPATCH_ENABLED","AUTH_ACTIVATION_WORKER_ENABLED","AUTH_ACTIVATION_DISPATCH_ENABLED","AUTH_ACTIVATION_RESEND_CONFIG_READY","AUTH_ACTIVATION_SENDER_VERIFIED","REGISTRATION_ACTIVATION_REDEEM_ENABLED"]) test(`missing ${flag} blocks public registration`,async()=>{
  delete process.env[flag];assert.equal((await register()).status,503);assert.equal(await row(),undefined);assert.equal(calls,0);
 });
 test("DB gate OFF blocks creation, leaves existing READY, no HTTP",async()=>{
@@ -233,13 +235,15 @@ test("expired code cannot redeem and a fresh manual request remains available",a
 });
 test("hourly issuance limit and cooldown do not change the original password",async()=>{
  await register();
+ const initialHash=(await pool.query("SELECT password_hash FROM users WHERE email=$1",[email])).rows[0].password_hash;
  for(let i=0;i<7;i++) {
   await pool.query("UPDATE email_verification_tokens SET created_at=$2 WHERE user_id=(SELECT id FROM users WHERE email=$1)",[email,new Date(Date.now()-120_000)]);
   assert.equal((await service.registerPasswordUser(email,"Attacker-Password-123!")).ok,true);
  }
  assert.equal((await pool.query("SELECT count(*)::int n FROM email_verification_tokens WHERE user_id=(SELECT id FROM users WHERE email=$1)",[email])).rows[0].n,5);
  const pw=await import("../src/modules/auth/password");const account=(await pool.query("SELECT password_hash FROM users WHERE email=$1",[email])).rows[0];
- assert.equal(await pw.verifyPassword(account.password_hash,"Original-Password-123!"),true);
+ assert.equal(account.password_hash,initialHash);
+ assert.equal(await pw.verifyPassword(account.password_hash,"Original-Password-123!"),false);
  assert.equal(await pw.verifyPassword(account.password_hash,"Attacker-Password-123!"),false);
 });
 test("forged public dispatch arguments cannot select or authorize a job",async()=>{

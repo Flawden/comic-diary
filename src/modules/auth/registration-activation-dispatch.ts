@@ -1,3 +1,4 @@
+import {readSiteAccess} from './site-access-service';
 /** Server-only activation dispatcher. No public send/receipt/authorization API.
  * The only network path follows a committed, conditional PostgreSQL start.
  * CONTROL -> USER -> TOKEN -> OUTBOX locks serialize the final preflight.
@@ -67,7 +68,8 @@ async function dispatch(env: Environment, http: Http, hooks: TestHooks = {}): Pr
     // Do not consume work while the persisted operator gate is OFF.
     const [gate] = await db.select().from(controlTable).where(eq(controlTable.id, 1));
     if (!gate?.enabled) return BLOCKED;
-    const claim = await claimPendingActivationMailOnce(legacyVerificationEnabled(env),betaDispatchEnabled(env));
+    const publicEnabled=betaDispatchEnabled(env) && env.AUTH_BETA_INVITATION_REGISTRATION_ENABLED==='true' && (await readSiteAccess()).publicRegistration;
+    const claim = await claimPendingActivationMailOnce(legacyVerificationEnabled(env),betaDispatchEnabled(env),publicEnabled);
     if (!claim.ok) return { status: "no_work", attempted: false };
     await hooks.afterClaim?.();
     const binding = { outboxId: claim.outboxId, claimId: claim.claimId,
@@ -77,7 +79,7 @@ async function dispatch(env: Environment, http: Http, hooks: TestHooks = {}): Pr
     const reserved = await reservePendingActivationDispatchOnce(binding);
     if (!reserved.ok) return BLOCKED;
     await hooks.afterReservation?.();
-    const start = await beginDispatch(claim, config, legacyVerificationEnabled(env),betaDispatchEnabled(env));
+    const start = await beginDispatch(claim, config, legacyVerificationEnabled(env),betaDispatchEnabled(env),publicEnabled);
     if (!start) return BLOCKED;
     await hooks.afterStart?.();
     // A paused/crashed worker must not use a stale handoff on resumption.
@@ -96,7 +98,7 @@ async function dispatch(env: Environment, http: Http, hooks: TestHooks = {}): Pr
 /** Private: this is not callable with a forged external authorization object.
  * No HTTP occurs in this transaction. Commit acknowledgement is required.
  */
-async function beginDispatch(claim: Claim, config: Config, legacyEnabled: boolean,betaEnabled:boolean) {
+async function beginDispatch(claim: Claim, config: Config, legacyEnabled: boolean,betaEnabled:boolean,publicEnabled:boolean) {
   const [candidate] = await db.select({ userId: emailVerificationTokens.userId, tokenId: emailVerificationTokens.id, invitationId:emailVerificationTokens.invitationId })
     .from(outboxTable).innerJoin(emailVerificationTokens, eq(outboxTable.verificationTokenId, emailVerificationTokens.id))
     .where(eq(outboxTable.id, claim.outboxId));
@@ -105,16 +107,17 @@ async function beginDispatch(claim: Claim, config: Config, legacyEnabled: boolea
     const [control] = await tx.select().from(controlTable).where(eq(controlTable.id, 1)).for("update");
     if (!control?.enabled) return null;
     const invite=betaEnabled&&betaPilotCompatible(control)?await lockBoundInvitation(tx,candidate.invitationId,candidate.userId):null;
-    if(betaEnabled?!invite:candidate.invitationId!==null)return null;
+    const publicJob=betaEnabled && publicEnabled && candidate.invitationId===null && betaPilotCompatible(control) && (await readSiteAccess(tx,true)).publicRegistration;
+    if(betaEnabled?(!invite&&!publicJob):candidate.invitationId!==null)return null;
     const [account] = await tx.select().from(users).where(eq(users.id, candidate.userId)).for("update");
     const [token] = await tx.select().from(emailVerificationTokens).where(eq(emailVerificationTokens.id, candidate.tokenId)).for("update");
     const [outbox] = await tx.select().from(outboxTable).where(eq(outboxTable.id, claim.outboxId)).for("update");
     if (!account || !token || !outbox || (token.purpose === "legacy_email_verification" && !legacyEnabled) || outbox.dispatchStartedAt !== null ||
         !outbox.dispatchFenceAt || !outbox.dispatchReservationAt ||
         outbox.dispatchReservationGeneration !== control.generation) return null;
-    if(betaEnabled ? (!invite||account.role!=="USER"||token.invitationId!==invite.id||token.purpose!=="pending_activation"||account.email!==invite.email) : !pilotAllowsDispatch(control, account.id, token.purpose, outbox.id))return null;
+    if(betaEnabled ? ((!publicJob&&(!invite||token.invitationId!==invite.id||account.email!==invite.email))||account.role!=="USER"||token.purpose!=="pending_activation"||(publicJob&&token.invitationId!==null)) : !pilotAllowsDispatch(control, account.id, token.purpose, outbox.id))return null;
     const now = new Date();
-    if(betaEnabled&&!liveInvitation(invite??undefined,now))return null;
+    if(betaEnabled&&!publicJob&&!liveInvitation(invite??undefined,now))return null;
     const preflight = preflightClaimedActivationMailDryRun({ snapshot: { account, token, outbox },
       claimId: claim.claimId, expectedPublicOrigin: config.publicOrigin,
       operatorDryRunEnabled: control.enabled, keys: config.keys, now });
@@ -204,7 +207,7 @@ export async function recoverAbandonedActivationDispatches(betaEnabled=false): P
   if (!pilot || (!betaEnabled && pilot.pilotId !== null && pilot.pilotOutboxId === null)) return 0;
   const candidates = await db.select({ id: outboxTable.id, userId: emailVerificationTokens.userId, tokenId: emailVerificationTokens.id, invitationId:emailVerificationTokens.invitationId })
     .from(outboxTable).innerJoin(emailVerificationTokens, eq(outboxTable.verificationTokenId, emailVerificationTokens.id))
-    .where(and(eq(outboxTable.state, "in_flight"), abandoned, betaEnabled ? and(isNotNull(emailVerificationTokens.invitationId),eq(emailVerificationTokens.purpose,"pending_activation")) : pilot.pilotId === null ? isNull(emailVerificationTokens.invitationId) : eq(outboxTable.id, pilot.pilotOutboxId!))).limit(100);
+    .where(and(eq(outboxTable.state, "in_flight"), abandoned, betaEnabled ? eq(emailVerificationTokens.purpose,"pending_activation") : pilot.pilotId === null ? isNull(emailVerificationTokens.invitationId) : eq(outboxTable.id, pilot.pilotOutboxId!))).limit(100);
   let recovered = 0;
   for (const item of candidates) {
     recovered += await db.transaction(async tx => {

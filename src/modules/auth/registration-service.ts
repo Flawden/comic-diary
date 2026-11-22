@@ -1,4 +1,7 @@
-import { activationRegistrationOperational, readActivationDispatchConfig } from "./registration-activation-config";
+import {randomBytes} from 'node:crypto';
+import {readSiteAccess,publicRegistrationOperational} from './site-access-service';
+import {betaPilotCompatible} from './beta-invitation-policy';
+import { readActivationDispatchConfig } from "./registration-activation-config";
 import { enqueuePendingActivationMailInTransaction } from "./registration-activation-outbox-issue";
 import { needsSecurePendingActivation } from "./registration-activation-policy";
 import { canIssueEmailVerification } from "./email-verification-policy";
@@ -11,7 +14,7 @@ import {
 } from "@/db";
 
 import {
-  users, activationMailDispatchControl, emailVerificationTokens,
+  users, activationMailDispatchControl, emailVerificationTokens, betaInvitations,
 } from "@/db/schema";
 
 import {
@@ -80,22 +83,24 @@ export async function registerPasswordUser(
   const email = normalizeRegistrationEmail(rawEmail);
   if (!email) return { ok: false, kind: "invalid_email" };
   if (password !== null && !isRegistrationPasswordAllowed(password)) return { ok: false, kind: "weak_password" };
-  if (!activationRegistrationOperational(process.env)) return { ok: false, kind: "registration_unavailable" };
+  if (!await publicRegistrationOperational()) return { ok: false, kind: "registration_unavailable" };
   const config = readActivationDispatchConfig(process.env);
   if (!config) return { ok: false, kind: "registration_unavailable" };
   try {
     // Equal work for new and existing registration addresses; no duplicate fast path.
-    const passwordHash = password === null ? null : await hashPassword(password);
+    const passwordHash = await hashPassword(password ?? randomBytes(32).toString("base64url"));
     return await db.transaction(async tx => {
       const [gate] = await tx.select().from(activationMailDispatchControl)
         .where(eq(activationMailDispatchControl.id, 1)).for("share");
-      if (!gate?.enabled || gate.generation <= 0) return { ok: false, kind: "registration_unavailable" } as const;
+      if (!gate?.enabled || gate.generation <= 0 || !betaPilotCompatible(gate) || !(await readSiteAccess(tx,true)).publicRegistration) return { ok: false, kind: "registration_unavailable" } as const;
       if (passwordHash) {
         await tx.insert(users).values({ email, passwordHash, role: "USER", isActive: true,
           verificationRequiredAt: new Date() }).onConflictDoNothing({ target: users.email });
       }
       const [account] = await tx.select().from(users).where(eq(users.email, email)).for("update");
       if (!account || !needsSecurePendingActivation(account) || !canIssueEmailVerification(account)) return { ok: true } as const;
+      const [bound] = await tx.select({id:betaInvitations.id}).from(betaInvitations).where(eq(betaInvitations.pendingUserId,account.id)).limit(1);
+      if(bound) return {ok:true} as const;
       // Serialize per account. Suppress bursts without invalidating the first email.
       const recent = await tx.select({ count: sql<number>`count(*)::int`, newest: sql<Date | null>`max(${emailVerificationTokens.createdAt})` })
         .from(emailVerificationTokens).where(and(eq(emailVerificationTokens.userId, account.id),

@@ -32,7 +32,10 @@ export function GET(request: NextRequest) {
 }
 export function POST(request: NextRequest) {
   return invitationResponse(async () => {
-    const v = invitationFields(await invitationJson(request), ['email']);
+    const raw=await invitationJson(request);
+    const hasBeta=raw!==null && typeof raw==='object' && 'grantsBeta' in raw;
+    const v = invitationFields(raw,hasBeta?['email','grantsBeta']:['email']);
+    if(hasBeta && typeof v.grantsBeta!=='boolean') throw new InvitationError(400,'invalid_request');
     const origin = process.env.COMIC_DIARY_PUBLIC_ORIGIN;
     if (
       !origin ||
@@ -40,7 +43,7 @@ export function POST(request: NextRequest) {
       !origin.startsWith('https://')
     )
       throw new InvitationError(503, 'unavailable');
-    const made = await createBetaInvitation(await invitationActor(), v.email);
+    const made = await createBetaInvitation(await invitationActor(), v.email, v.grantsBeta===true);
     return {
       id: made.id,
       expiresAt: made.expiresAt,

@@ -9,9 +9,8 @@ import "@/modules/library/components/work-presentation.css";
 import { getCommunityRatings } from "@/modules/library/queries/get-community-ratings";
 import { listReturn } from "@/modules/library/list-navigation";
 import { WorkDescriptionModal } from "@/modules/comics/components/WorkDescriptionModal";
-import { WorkTabs, WorkPreferences, PromptSwitch, ShelfAction, DiaryForm } from "@/modules/library/components/WorkControls";
+import { WorkTabs, WorkPreferences, PromptSwitch, ShelfAction } from "@/modules/library/components/WorkControls";
 import Link from "next/link";
-import { DiaryRatingFields } from "@/modules/library/components/DiaryRatingFields";
 import { workTypeLabels, workFormatLabels } from "@/modules/comics/work-metadata";
 import { WorkMetadataFields } from "@/modules/comics/components/WorkMetadataFields";
 import { seriesStatusLabels } from "@/modules/comics/series-status";
@@ -383,8 +382,8 @@ export default async function ComicPage({
             <section className="wd-diary work-diary">
               <header className="wd-section-intro wd-section-intro--diary">
                 <p className="wd-section-kicker">ЛИЧНАЯ БИБЛИОТЕКА</p>
-                <h2>Дневник читателя</h2>
-                <p>Ваш прогресс чтения, впечатления и заметки об этой истории.</p>
+                <h2>Моё чтение</h2>
+                <p>Ваш прогресс чтения и настройки обновлений.</p>
               </header>
 
               {readingState?.inLibrary ? (
@@ -427,9 +426,7 @@ export default async function ComicPage({
                       </form>
                     )}
                   </div>
-                  <DiaryForm comicId={comic.id}>
-                    <DiaryRatingFields key={JSON.stringify([comic.id, readingState.ratingPlot, readingState.ratingCharacters, readingState.ratingArt, readingState.ratingDepth, readingState.ratingWorld, readingState.personalNote])} ratings={readingState} personalNote={readingState.personalNote ?? ""} />
-                  </DiaryForm>
+
 
                   {(["MAIN", "SPECIAL"] as const).map(kind => {
                     const { average, rated, read } = chapterRatingSummary(readingState.chapterReading, kind);

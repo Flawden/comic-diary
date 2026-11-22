@@ -1,5 +1,4 @@
 import {AvatarSettings} from './AvatarSettings';
-import {UserAvatar} from '@/shared/components/UserAvatar';
 import {ownAppearance} from '@/modules/appearance/service';
 import Link from "next/link";
 import { db } from "@/db";
@@ -82,12 +81,13 @@ export default async function AccountPage() {
       </nav>
       <div className="account-layout">
         <aside className="account-identity reader-panel">
-          <UserAvatar name={user.displayName || "Читатель"} appearance={appearance} size={144}/>
+          <AvatarSettings name={user.displayName || "Читатель"} initial={appearance} mode="avatar"/>
           <h2>{user.displayName || "Читатель"}</h2>
           <p className="account-email">{user.email}</p>
           <p className="reader-eyebrow">{roleLabel(user.role)}</p>
           <details className="account-edit-name"><summary>Изменить имя</summary><AccountProfileForm initialDisplayName={user.displayName} /></details>
           {(["EDIT_SHARED_CATALOG", "ADMIN_USERS", "RUN_BULK_IMPORT", "ADMIN_SECURITY"] as const).some(permission => hasPermission(user.role, permission)) ? <Link href="/admin" className="tea-outline">Панель управления →</Link> : null}
+          {user.role === "ADMIN" && <Link href="/admin/invitations#site-access-title" className="tea-outline">Регистрация и доступ →</Link>}
           <LogoutButton />
         </aside>
         <div className="account-content">

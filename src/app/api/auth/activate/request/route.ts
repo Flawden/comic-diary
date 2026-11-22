@@ -3,7 +3,7 @@ import { isSameOriginRequest } from "@/modules/auth/request-origin";
 import { readTrustedClientIp } from "@/modules/auth/client-ip";
 import { consumeRegistrationRateLimit } from "@/modules/auth/auth-rate-limit";
 import { registerPasswordUser } from "@/modules/auth/registration-service";
-import { activationRegistrationOperational } from "@/modules/auth/registration-activation-config";
+import { publicRegistrationOperational } from "@/modules/auth/site-access-service";
 import { readRegistrationActivationBody } from "@/modules/auth/registration-activation-http";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,7 +11,7 @@ const headers = { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
 function error(kind: string, status: number) { return NextResponse.json({ error: kind }, { status, headers }); }
 export async function POST(request: NextRequest) {
   if (!isSameOriginRequest(request)) return error("forbidden_origin", 403);
-  if (!activationRegistrationOperational(process.env)) return error("registration_unavailable", 503);
+  if (!await publicRegistrationOperational()) return error("registration_unavailable", 503);
   if (request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !== "application/json") return error("unsupported_media_type", 415);
   const read = await readRegistrationActivationBody(request);
   if (!read.ok) return error(read.reason, read.reason === "request_too_large" ? 413 : 400);

@@ -1,3 +1,5 @@
+import {SiteAccessSettings} from './SiteAccessSettings';
+import {readSiteAccess} from '@/modules/auth/site-access-service';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getAdminWorkspaceAccess } from '@/modules/admin-ui/admin-page-access';
@@ -19,11 +21,12 @@ export default async function InvitationsPage() {
       <h1 className="reader-title">Приглашения</h1>
       <p className="my-4">
         Персональная ссылка действует 7 дней. Аккаунт создаёт сам получатель и
-        обязательно подтверждает почту. Публичная регистрация остаётся закрытой.
+        обязательно подтверждает почту. Режим публичной регистрации управляется ниже.
       </p>
       <Link className="tea-text-action" href="/admin/users">
         Пользователи и роли →
       </Link>
+      <SiteAccessSettings initial={await readSiteAccess()}/>
       <InvitationManager />
     </div>
   );
