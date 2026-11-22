@@ -345,10 +345,10 @@ try {
       .locator('.wd08-row')
       .getByRole('button', { name: /Снять отметку:/ })
       .waitFor();
-    await p.getByRole('tab', { name: 'Мой дневник', exact: true }).click();
+    await p.getByRole('tab', { name: 'Моё чтение', exact: true }).click();
     assert.equal(
-      await p.locator('.journal-form textarea').inputValue(),
-      'PRIVATE NOTE 1',
+      await p.locator('.journal-form textarea').count(),
+      0,
     );
     assert.equal(await baselineB(), untouchedB);
   } finally {
