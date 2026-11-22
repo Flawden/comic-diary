@@ -346,7 +346,9 @@ export function AdminUserManager({
                       user.createdAt,
                     ).toLocaleString(
                       "ru-RU",
+                      { timeZone: "Europe/Moscow" },
                     )}
+                    {" · МСК"}
                   </p>
                 </div>
 

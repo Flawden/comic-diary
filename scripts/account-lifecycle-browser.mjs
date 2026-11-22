@@ -33,7 +33,7 @@ async function context(who,theme='tea',width=1440){
    const rh=res.headers();if(rh['set-cookie']){assert.match(rh['set-cookie'],/;\s*secure/i);rh['set-cookie']=rh['set-cookie'].replace(/;\s*secure/gi,'');}
    return r.fulfill({response:res,headers:rh});
   }return r.continue();
- });c.on('page',p=>p.on('pageerror',e=>result.errors.push(e.message)));return c;
+ });c.on('page',p=>p.on('pageerror',e=>result.errors.push({url:p.url(),message:e.message})));return c;
 }
 async function post(c,path,data,originHeader=canonical){return c.request.post(origin+path,{headers:{host:'reader.example.invalid',origin:originHeader},data});}
 try{
