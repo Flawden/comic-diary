@@ -82,7 +82,7 @@ export default async function AdminUsersPage() {
         </Link>
       </div>
 
-      <nav className="my-5 flex gap-4" aria-label="Пользователи и приглашения"><Link href="/admin/users" aria-current="page">Пользователи</Link><Link href="/admin/invitations">Приглашения</Link><Link href="/admin/beta-participants">Участники беты</Link></nav>
+      <nav className="my-5 flex flex-wrap gap-4" aria-label="Пользователи и приглашения"><Link href="/admin/users" aria-current="page">Пользователи</Link><Link href="/admin/invitations">Приглашения</Link><Link href="/admin/beta-participants">Участники беты</Link></nav>
       <AdminUserManager
         currentUserId={
           access.currentUser.id

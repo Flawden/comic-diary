@@ -57,6 +57,14 @@ try{
  await card.getByRole('button',{name:'Удалить пользователя…',exact:true}).click();await card.getByLabel('Подтверждение ID').fill(String(victim.id));await card.getByRole('button',{name:'Удалить навсегда',exact:true}).click();await card.waitFor({state:'detached'});
  result.checks.push('Actual ADMIN UI ban, unban, typed-ID permanent delete');
  for(const [theme,width] of [['tea',1440],['paper',390],['night',320]]){
+  const c=await context(admin,theme,width),page=await c.newPage();
+  await page.goto(origin+'/admin/users',{waitUntil:'domcontentloaded'});
+  await page.getByRole('heading',{name:'Пользователи',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Удалить пользователя…',exact:true}).first().waitFor();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  const shot=theme+'-'+width+'-admin-users.png';await page.screenshot({path:resolve(out,shot),fullPage:true});result.screenshots.push(shot);
+ }
+ for(const [theme,width] of [['tea',1440],['paper',390],['night',320]]){
   const who=await actor(),c=await context(who,theme,width),page=await c.newPage();
   await q('UPDATE site_access_policy SET beta_only=true WHERE id=1');
   await page.goto(origin+'/account/delete',{waitUntil:'domcontentloaded'});await page.getByRole('heading',{name:'Удалить мой аккаунт',exact:true}).waitFor();
