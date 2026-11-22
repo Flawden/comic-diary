@@ -365,6 +365,13 @@
       "when": 1795285785676,
       "tag": "0051_beta_registration_invitations",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1795327200000,
+      "tag": "0052_user_appearance",
+      "breakpoints": true
     }
   ]
 }

@@ -189,6 +189,9 @@ jobs:
       - name: Unread chapter confirmation regression
         run: node --import tsx --test src/modules/library/needs-unread-confirmation.test.ts
 
+      - name: Avatar decoding, crop, metadata stripping and image limits
+        run: node --import tsx --test src/modules/appearance/avatar-storage.test.ts
+
       - name: Canonical Origin and Host regression tests
         run: node --import tsx --test src/modules/auth/request-origin.test.ts
 
@@ -263,7 +266,7 @@ jobs:
   database:
     name: PostgreSQL release checks
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     permissions:
       contents: read
@@ -469,6 +472,13 @@ jobs:
           node --import tsx --test scripts/beta-invitations-migration.test.ts
           node --import tsx --test scripts/beta-invitations-integration.test.ts
 
+      - name: Avatar additive upgrade, beta exclusivity, concurrency and account preservation
+        env:
+          APPEARANCE_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: |
+          node --import tsx --test scripts/appearance-migration.test.ts
+          node --import tsx --test scripts/appearance-integration.test.ts
+
       - name: Mobile reader in Chrome
         timeout-minutes: 8
         run: |
@@ -602,6 +612,30 @@ jobs:
         with:
           name: beta-invitations-browser-${{ github.run_id }}
           path: ${{ runner.temp }}/beta-invitations-browser/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Avatar upload and beta frame browser acceptance (no provider HTTP)
+        timeout-minutes: 6
+        env:
+          APPEARANCE_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: |
+          set -euo pipefail
+          export WD_BROWSER_ROOT="$RUNNER_TEMP/d1-browser-deps"
+          export APPEARANCE_BROWSER_OUTPUT="$RUNNER_TEMP/appearance-browser"
+          export APPEARANCE_TEST_MEDIA_ROOT="$RUNNER_TEMP/appearance-media"
+          node scripts/appearance-browser-server.mjs > "$RUNNER_TEMP/appearance-host.log" 2>&1 &
+          qa_pid=$!
+          trap 'kill "$qa_pid" 2>/dev/null || true' EXIT
+          curl -fsS --retry 25 --retry-delay 1 --retry-connrefused http://127.0.0.1:3118/login -o /dev/null
+          node scripts/appearance-browser.mjs || { tail -40 "$RUNNER_TEMP/appearance-host.log"; exit 1; }
+
+      - name: Upload avatar and beta frame visual acceptance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appearance-browser-${{ github.run_id }}
+          path: ${{ runner.temp }}/appearance-browser/
           if-no-files-found: ignore
           retention-days: 7
 

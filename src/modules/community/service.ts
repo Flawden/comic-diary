@@ -1,7 +1,9 @@
+import {getPublicAppearances,publicAppearance} from '@/modules/appearance/service';
+import {EMPTY_APPEARANCE,type PublicAppearance} from '@/modules/appearance/policy';
 import { createHash } from "node:crypto";
 import { and, asc, desc, eq, gt, lt, isNull, or, sql, inArray, lte, getTableColumns } from "drizzle-orm";
 import { db } from "@/db";
-import { chapters, comics, users, sessions, communityComments as comments, communityControls as controls,
+import { chapters, comics, users, sessions, userAppearance, communityComments as comments, communityControls as controls,
   communityReports as reports, communityModerationEvents as events } from "@/db/schema";
 import { SHARED_CATALOG_ADVISORY_LOCK } from "@/modules/catalog/canonical-catalog-write";
 import { hasPermission } from "@/modules/auth/permissions";
@@ -20,8 +22,8 @@ const conflict = (): never => { throw new CommunityError(409, "conflict"); };
 const targetWhere = (target: Target) => and(eq(comments.comicId, target.comicId),
   target.chapterId === null ? isNull(comments.chapterId) : eq(comments.chapterId, target.chapterId));
 
-function dto(row: Comment, name: string | null, active: boolean, viewer: number | null): PublicComment {
-  return { id: row.id, parentId: row.parentId, author: publicAlias(name, active), mine: viewer !== null && row.authorUserId === viewer,
+function dto(row: Comment, name: string | null, active: boolean, viewer: number | null, appearance?:PublicAppearance): PublicComment {
+  return { id: row.id, parentId: row.parentId, author: publicAlias(name, active), appearance:active&&row.status==="VISIBLE"?appearance??EMPTY_APPEARANCE:EMPTY_APPEARANCE, mine: viewer !== null && row.authorUserId === viewer,
     body: row.status === "VISIBLE" ? row.body : null, spoiler: row.status === "VISIBLE" && row.spoiler,
     status: row.status as CommentStatus, createdAt: row.createdAt.toISOString(), editedAt: row.editedAt?.toISOString() ?? null };
 }
@@ -94,8 +96,8 @@ export async function listComments(target: Target, cursor: string | null = null,
         .where(and(eq(comments.id, parentId), isNull(comments.parentId), targetWhere(target)));
       if (!parent) notFound();
     }
-    const rows = await tx.select({ row: comments, name: users.displayName, active: users.isActive }).from(comments)
-      .leftJoin(users, eq(users.id, comments.authorUserId)).where(and(targetWhere(target),
+    const rows = await tx.select({ row: comments, name: users.displayName, active: users.isActive, appearance:userAppearance }).from(comments)
+      .leftJoin(users, eq(users.id, comments.authorUserId)).leftJoin(userAppearance,eq(userAppearance.userId,users.id)).where(and(targetWhere(target),
         parentId === null ? isNull(comments.parentId) : eq(comments.parentId, parentId), after ?
         or(gt(comments.createdAt, after.at), and(eq(comments.createdAt, after.at), gt(comments.id, after.id))) : undefined))
       .orderBy(asc(comments.createdAt), asc(comments.id)).limit(limits.pageSize + 1);
@@ -104,20 +106,20 @@ export async function listComments(target: Target, cursor: string | null = null,
       .from(comments).where(targetWhere(target));
     const more = rows.length > limits.pageSize, page = rows.slice(0, limits.pageSize), last = page.at(-1)?.row;
     const nextCursor = more && last ? encodeCursor(last.createdAt, last.id) : null;
-    const items = page.map(r => dto(r.row, r.name, r.active ?? false, viewer));
+    const items = page.map(r => dto(r.row, r.name, r.active ?? false, viewer,publicAppearance(r.appearance,r.active??false)));
     const replyPages: NonNullable<CommentPage["replyPages"]> = {};
     if (parentId !== null) replyPages[parentId] = { total: count.replies, nextCursor };
     else if (page.length) {
       // One bounded batch for all visible roots, not one query per thread.
       // Independent reply cursors prevent a long thread displacing other roots.
-      const ranked = tx.select({ ...getTableColumns(comments), authorName: users.displayName, authorActive: users.isActive,
+      const ranked = tx.select({ ...getTableColumns(comments), authorName: users.displayName, authorActive: users.isActive, avatarFilename:userAppearance.avatarFilename,selectedFrame:userAppearance.selectedFrame,betaFrameGranted:userAppearance.betaFrameGranted,
         rank: sql<number>`row_number() OVER (PARTITION BY ${comments.parentId} ORDER BY ${comments.createdAt}, ${comments.id})`.as("reply_rank"),
         total: sql<number>`count(*) OVER (PARTITION BY ${comments.parentId})::int`.as("reply_total") })
-        .from(comments).leftJoin(users, eq(users.id, comments.authorUserId))
+        .from(comments).leftJoin(users, eq(users.id, comments.authorUserId)).leftJoin(userAppearance,eq(userAppearance.userId,users.id))
         .where(and(targetWhere(target), inArray(comments.parentId, page.map(r => r.row.id)))).as("ranked_replies");
       const previews = await tx.select().from(ranked).where(lte(ranked.rank, 3)).orderBy(asc(ranked.createdAt), asc(ranked.id));
       for (const row of previews) {
-        items.push(dto(row, row.authorName, row.authorActive ?? false, viewer));
+        items.push(dto(row, row.authorName, row.authorActive ?? false, viewer,publicAppearance({...row,betaFrameGranted:row.betaFrameGranted??false},row.authorActive??false)));
         replyPages[row.parentId!] = { total: row.total, nextCursor: row.total > 3 ? encodeCursor(row.createdAt, row.id) : null };
       }
     }
@@ -133,7 +135,7 @@ export async function createComment(actor: Actor, input: unknown) {
     const [prior] = await c.tx.select().from(comments).where(and(eq(comments.authorUserId, actor.userId), eq(comments.requestId, v.requestId)));
     if (prior) {
       if (prior.requestDigest !== digest) conflict();
-      return { item: dto(prior, c.name, true, actor.userId), replay: true };
+      return { item: dto(prior, c.name, true, actor.userId,(await getPublicAppearances([actor.userId],c.tx)).get(actor.userId)), replay: true };
     }
     requireUnrestricted(c);
     if (v.parentId !== null) {
@@ -145,7 +147,7 @@ export async function createComment(actor: Actor, input: unknown) {
     await consume(c, "post");
     const [row] = await c.tx.insert(comments).values({ ...v, authorUserId: actor.userId,
       requestDigest: digest, createdAt: c.now, updatedAt: c.now }).returning();
-    return { item: dto(row, c.name, true, actor.userId), replay: false };
+    return { item: dto(row, c.name, true, actor.userId,(await getPublicAppearances([actor.userId],c.tx)).get(actor.userId)), replay: false };
   });
 }
 export async function editComment(actor: Actor, id: number, input: unknown) {
@@ -156,7 +158,7 @@ export async function editComment(actor: Actor, id: number, input: unknown) {
     if (row.status !== "VISIBLE") conflict();
     await consume(c, "edit");
     const [updated] = await c.tx.update(comments).set({ ...v, updatedAt: c.now, editedAt: c.now }).where(eq(comments.id, id)).returning();
-    return dto(updated, c.name, true, actor.userId);
+    return dto(updated, c.name, true, actor.userId,(await getPublicAppearances([actor.userId],c.tx)).get(actor.userId));
   });
 }
 export async function deleteComment(actor: Actor, id: number) {
@@ -167,7 +169,7 @@ export async function deleteComment(actor: Actor, id: number) {
     const [updated] = await c.tx.update(comments).set({ body: null, spoiler: false, status: "REMOVED_BY_AUTHOR",
       deletedAt: c.now, updatedAt: c.now }).where(eq(comments.id, id)).returning();
     await c.tx.update(reports).set({ note: null }).where(eq(reports.commentId, id));
-    return dto(updated, c.name, true, actor.userId);
+    return dto(updated, c.name, true, actor.userId,(await getPublicAppearances([actor.userId],c.tx)).get(actor.userId));
   });
 }
 export async function reportComment(actor: Actor, id: number, input: unknown) {
@@ -246,8 +248,9 @@ export async function moderationQueue(actor: Actor, status = "OPEN", cursor: str
         auditAfter ? or(lt(events.createdAt, auditAfter.at), and(eq(events.createdAt, auditAfter.at), lt(events.id, auditAfter.id))) : undefined))
       .orderBy(desc(events.createdAt), desc(events.id)).limit(21);
     const auditPage = audit.slice(0,20), lastAudit = auditPage.at(-1);
+    const authorAppearances=await getPublicAppearances(page.map(r=>r.comment.authorUserId),c.tx);
     return { items: page.map(r => ({ id: r.report.id, commentId: r.comment.id, authorUserId: r.comment.authorUserId,
-      author: publicAlias(r.author, r.active ?? false), comicId: r.comment.comicId, chapterId: r.comment.chapterId,
+      author: publicAlias(r.author, r.active ?? false), appearance:authorAppearances.get(r.comment.authorUserId!)??EMPTY_APPEARANCE, comicId: r.comment.comicId, chapterId: r.comment.chapterId,
       title: r.title, slug: r.slug, body: r.comment.status === "REMOVED_BY_AUTHOR" ? null : r.comment.body,
       commentStatus: r.comment.status, reason: r.report.reason, note: r.comment.status === "REMOVED_BY_AUTHOR" ? null : r.report.note,
       status: r.report.status, createdAt: r.report.createdAt.toISOString(), blockedUntil: r.blockedUntil?.toISOString() ?? null })),

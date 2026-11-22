@@ -1,4 +1,5 @@
 "use client";
+import {UserAvatar} from '@/shared/components/UserAvatar';
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/shared/components/ui";
@@ -61,7 +62,7 @@ export function Moderation({ refreshToken }: { refreshToken: string }) {
     {page && page.items.length === 0 && <p>Жалоб в выбранном разделе нет.</p>}
     {page?.items.map(item => <article key={item.id} data-moderation-report={item.id} className="min-w-0 space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4" style={{ overflowWrap: "anywhere" }}>
       <h2 className="font-semibold"><Link className="tea-text-action" href={`/comics/${item.slug}${item.chapterId === null ? "" : "#chapters"}`}>{item.title}</Link>{item.chapterId !== null && <span> · обсуждение главы</span>}</h2>
-      <p className="text-sm">Автор: {item.author} · {new Date(item.createdAt).toLocaleString("ru-RU")}</p>
+      <p className="text-sm"><UserAvatar name={item.author} appearance={item.appearance}/> Автор: {item.author} · {new Date(item.createdAt).toLocaleString("ru-RU")}</p>
       <p className="text-sm">Причина: {item.reason} · Жалоба: {item.status} · Сообщение: {item.commentStatus}</p>
       {item.note && <p className="whitespace-pre-wrap text-sm">Пояснение: {item.note}</p>}
       {item.body === null ? <p>Удалённый комментарий</p> : <details><summary className="cursor-pointer">Показать текст сообщения</summary><p className="mt-2 whitespace-pre-wrap text-sm">{item.body}</p></details>}

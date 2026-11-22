@@ -20,6 +20,30 @@ import {
 } from "drizzle-orm/pg-core";
 
 // Invitations confer registration eligibility, never a role or an existing-account credential.
+export const userAppearance = pgTable('user_appearance', {
+  userId: integer('user_id').primaryKey().references(() => users.id, {onDelete:'cascade'}),
+  avatarFilename: varchar('avatar_filename', {length:64}),
+  selectedFrame: varchar('selected_frame', {length:40}),
+  betaParticipant: boolean('beta_participant').notNull().default(false),
+  betaFrameGranted: boolean('beta_frame_granted').notNull().default(false),
+  revision: integer('revision').notNull().default(1),
+  updatedAt: timestamp('updated_at', {withTimezone:true}).notNull().defaultNow(),
+}, t => [
+  uniqueIndex('appearance_avatar_unique').on(t.avatarFilename),
+  check('appearance_revision_positive',sql`${t.revision}>0`),
+  check('appearance_avatar_filename',sql`${t.avatarFilename} IS NULL OR ${t.avatarFilename} ~ '^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\\.webp$'`),
+  check('appearance_beta_grant',sql`NOT ${t.betaFrameGranted} OR ${t.betaParticipant}`),
+  check('appearance_frame_grant',sql`${t.selectedFrame} IS NULL OR (${t.selectedFrame}='beta_dragon_2026' AND ${t.betaFrameGranted})`),
+]);
+export const appearanceEvents = pgTable('user_appearance_events', {
+  id: serial('id').primaryKey(),
+  actorUserId: integer('actor_user_id').references(() => users.id, {onDelete:'set null'}),
+  targetUserId: integer('target_user_id').references(() => users.id, {onDelete:'set null'}),
+  betaParticipant: boolean('beta_participant').notNull(),
+  betaFrameGranted: boolean('beta_frame_granted').notNull(),
+  createdAt: timestamp('created_at', {withTimezone:true}).notNull().defaultNow(),
+},t=>[index('appearance_events_target_idx').on(t.targetUserId,t.createdAt)]);
+
 export const betaInvitations = pgTable("beta_registration_invitations", {
   id: serial("id").primaryKey(),
   secretHash: varchar("secret_hash", {length:64}).notNull(),

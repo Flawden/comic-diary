@@ -1,3 +1,4 @@
+import type {PublicAppearance} from '@/modules/appearance/policy';
 export const COMMUNITY_LIMITS = { bodyBytes: 16 * 1024, textPoints: 2000, pageSize: 20,
   postIntervalMs: 15_000, postWindowMs: 3_600_000, postsPerWindow: 20,
   reportWindowMs: 600_000, reportsPerWindow: 5, editWindowMs: 60_000, editsPerWindow: 20,
@@ -8,7 +9,7 @@ export type Target = { comicId: number; chapterId: number | null };
 export type Actor = { userId: number; sessionId: number };
 export type CreateComment = Target & { parentId: number | null; body: string; spoiler: boolean; requestId: string };
 export type CommentStatus = "VISIBLE" | "REMOVED_BY_AUTHOR" | "HIDDEN_BY_MODERATOR";
-export type PublicComment = { id: number; parentId: number | null; author: string; mine: boolean;
+export type PublicComment = { id: number; parentId: number | null; author: string; mine: boolean; appearance?:PublicAppearance;
   body: string | null; spoiler: boolean; status: CommentStatus; createdAt: string; editedAt: string | null };
 export type ReplyPage = { total: number; nextCursor: string | null };
 export type CommentPage = { items: PublicComment[]; nextCursor: string | null; visibleCount: number;

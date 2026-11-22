@@ -1,3 +1,5 @@
+import {publicAppearance,getPublicAppearances} from '@/modules/appearance/service';
+import {EMPTY_APPEARANCE} from '@/modules/appearance/policy';
 import {and,eq,isNull,sql} from "drizzle-orm";
 import {db} from "@/db";
 import {communityReviews as reviews,communityReviewReactions as reactions,communityModerationEvents} from "@/db/schema";
@@ -79,15 +81,15 @@ export async function listReviews(target:Target,viewer:number|null,cursor:string
   const filtered=filter==='text'?sql`AND r.body<>''`:filter==='scores'?sql`AND r.body=''`:sql``;
   const boundary=!after?sql``:order==='new'?sql`AND (r.created_at,r.id)<(${after.at},${after.id})`:sql`AND (r.created_at,r.id)>(${after.at},${after.id})`;
   const sort=order==='new'?sql`DESC`:sql`ASC`;
-  type Entry=Row & {name:string|null;active:boolean;up:number;down:number;reaction:number};
-  const selection=sql`SELECT r.id,r.comic_id AS "comicId",r.chapter_id AS "chapterId",r.user_id AS "userId",r.rating_plot AS "ratingPlot",r.rating_characters AS "ratingCharacters",r.rating_art AS "ratingArt",r.rating_depth AS "ratingDepth",r.rating_world AS "ratingWorld",r.rating,r.body,r.spoiler,r.version,r.created_at AS "createdAt",r.updated_at AS "updatedAt",r.deleted_at AS "deletedAt",u.display_name AS name,u.is_active AS active,
+  type Entry=Row & {name:string|null;active:boolean;up:number;down:number;reaction:number;avatarFilename:string|null;selectedFrame:string|null;betaFrameGranted:boolean};
+  const selection=sql`SELECT r.id,r.comic_id AS "comicId",r.chapter_id AS "chapterId",r.user_id AS "userId",r.rating_plot AS "ratingPlot",r.rating_characters AS "ratingCharacters",r.rating_art AS "ratingArt",r.rating_depth AS "ratingDepth",r.rating_world AS "ratingWorld",r.rating,r.body,r.spoiler,r.version,r.created_at AS "createdAt",r.updated_at AS "updatedAt",r.deleted_at AS "deletedAt",u.display_name AS name,u.is_active AS active,a.avatar_filename AS "avatarFilename",a.selected_frame AS "selectedFrame",coalesce(a.beta_frame_granted,false) AS "betaFrameGranted",
    (SELECT count(*)::int FROM community_review_reactions x WHERE x.review_id=r.id AND x.value=1) AS up,
    (SELECT count(*)::int FROM community_review_reactions x WHERE x.review_id=r.id AND x.value=-1) AS down,
    coalesce((SELECT value FROM community_review_reactions x WHERE x.review_id=r.id AND x.user_id=${viewer}),0) AS reaction
-   ,r.hidden_at AS "hiddenAt" FROM community_reviews r JOIN users u ON u.id=r.user_id`;
+   ,r.hidden_at AS "hiddenAt" FROM community_reviews r JOIN users u ON u.id=r.user_id LEFT JOIN user_appearance a ON a.user_id=u.id`;
   const found=await tx.execute<Entry>(sql`${selection} WHERE ${condition} ${filtered} ${boundary} ORDER BY r.created_at ${sort},r.id ${sort} LIMIT 21`);
   const own=viewer===null?null:(await tx.execute<Entry>(sql`${selection} WHERE ${targetCondition} AND r.user_id=${viewer}`)).rows[0]??null;
-  const dto=(r:Entry):Review=>({id:r.id,mine:r.userId===viewer,author:publicAlias(r.name,r.active),scores:scores(r),body:r.body,spoiler:r.spoiler,version:r.version,createdAt:new Date(r.createdAt).toISOString(),updatedAt:new Date(r.updatedAt).toISOString(),up:r.up,down:r.down,reaction:r.reaction,hidden:r.hiddenAt!==null});
+  const dto=(r:Entry):Review=>({id:r.id,mine:r.userId===viewer,author:publicAlias(r.name,r.active),appearance:publicAppearance(r,r.active),scores:scores(r),body:r.body,spoiler:r.spoiler,version:r.version,createdAt:new Date(r.createdAt).toISOString(),updatedAt:new Date(r.updatedAt).toISOString(),up:r.up,down:r.down,reaction:r.reaction,hidden:r.hiddenAt!==null});
   const rows=found.rows.slice(0,20),last=rows.at(-1);const count=await tx.execute<{n:number}>(sql`SELECT count(*)::int n FROM community_reviews r WHERE ${condition} ${filtered}`);
   return {items:rows.map(dto),mine:own?dto(own):null,total:count.rows[0].n,nextCursor:found.rows.length>20&&last?encodeCursor(new Date(last.createdAt),last.id):null};
  };return filter==='hidden'?mutate(moderator!,async c=>{const result=await read(c.tx);await live(c);return result;},true):db.transaction(read,{isolationLevel:'repeatable read'});
@@ -105,5 +107,6 @@ export async function reviewHistory(target:Target,cursor:string|null=null,viewer
  await lockTarget(tx,target);
  const rows=await tx.execute<{id:number;userId:number|null;body:string|null;spoiler:boolean;status:string;createdAt:string;name:string|null;active:boolean}>(sql`SELECT c.id,c.author_user_id AS "userId",c.body,c.spoiler,c.status,c.created_at AS "createdAt",u.display_name AS name,u.is_active AS active FROM community_comments c LEFT JOIN users u ON u.id=c.author_user_id WHERE c.comic_id=${target.comicId} AND c.chapter_id IS NOT DISTINCT FROM ${target.chapterId}::integer ${after?sql`AND (c.created_at,c.id)>(${after.at},${after.id})`:sql``} ORDER BY c.created_at,c.id LIMIT 21`);
  const items=rows.rows.slice(0,20),last=items.at(-1);
- return {items:items.map(r=>({id:r.id,mine:viewer!==null&&r.userId===viewer,author:publicAlias(r.name,r.active),body:r.status==='VISIBLE'?r.body:null,spoiler:r.status==='VISIBLE'&&r.spoiler,status:r.status,createdAt:new Date(r.createdAt).toISOString()})),nextCursor:rows.rows.length>20&&last?encodeCursor(new Date(last.createdAt),last.id):null};
+ const appearances=await getPublicAppearances(items.map(r=>r.userId),tx);
+ return {items:items.map(r=>({id:r.id,mine:viewer!==null&&r.userId===viewer,author:publicAlias(r.name,r.active),appearance:r.status==='VISIBLE'?appearances.get(r.userId!)??EMPTY_APPEARANCE:EMPTY_APPEARANCE,body:r.status==='VISIBLE'?r.body:null,spoiler:r.status==='VISIBLE'&&r.spoiler,status:r.status,createdAt:new Date(r.createdAt).toISOString()})),nextCursor:rows.rows.length>20&&last?encodeCursor(new Date(last.createdAt),last.id):null};
 },{isolationLevel:'repeatable read'});}

@@ -1,4 +1,5 @@
 "use client";
+import {UserAvatar} from '@/shared/components/UserAvatar';
 import "./community.css";
 import { commentThreads } from "./thread-model";
 import { useEffect, useId, useRef, useState } from "react";
@@ -67,6 +68,7 @@ export function Comments({ comicId, chapterId = null, canWrite, loginHref, refre
   function renderItem(item: PublicComment) {
     return <article key={item.id} id={`community-comment-${item.id}`} tabIndex={-1} data-comment={item.id} className={`community-comment${item.parentId === null ? "" : " community-comment--reply"}`}>
       <header className="community-comment-meta">
+        <UserAvatar name={item.author} appearance={item.appearance}/>
         <strong className="text-[var(--text-primary)]" style={{ overflowWrap: "anywhere" }}>{item.author}</strong>
         <time dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString("ru-RU")}</time>
         {item.editedAt && <span>изменено</span>}{item.parentId && (loadedIds.has(item.parentId) ?
