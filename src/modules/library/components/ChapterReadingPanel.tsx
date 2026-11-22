@@ -266,6 +266,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
       {filtered.length > limit ? <Button variant="secondary" className="mt-3" onClick={() => setLimit(limit + 30)}>Показать ещё 30</Button> : null}
       {history.length ? <details className="mt-5 rounded-xl border border-[var(--border)] p-3"><summary className="cursor-pointer font-semibold">Прочитанные архивные версии ({history.length})</summary><ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">{history.map((c) => <li key={c.id}>{c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""} · прочитано{ratings[c.id] ? ` · ★ ${ratings[c.id]} / 5` : ""}</li>)}</ul></details> : null}
       {confirmUnread && <UnreadChapterConfirmation
+        preservePublicRating={viewerRatings[confirmUnread.id]?.source === 'review' && viewerRatings[confirmUnread.id]?.rating != null}
         chapter={confirmUnread}
         onCancel={() => setConfirmUnread(null)}
         onConfirm={() => mark(confirmUnread, "unread", true)} />}

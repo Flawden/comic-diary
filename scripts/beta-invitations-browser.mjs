@@ -219,7 +219,7 @@ try {
       waitUntil: 'networkidle',
     });
     await page
-      .getByRole('heading', { name: 'Шаг 1 из 2 · Создание аккаунта' })
+      .getByRole('heading', { name: 'Шаг 1 из 2 · Получение кода' })
       .waitFor();
     assert.equal(
       (await q('SELECT id FROM users WHERE email=$1', [email])).rowCount,
@@ -237,18 +237,15 @@ try {
     });
     result.screenshots.push(theme + '-' + width + '-register.png');
     await page.getByLabel('Email (логин)', { exact: true }).fill(email);
-    await page.getByLabel('Пароль', { exact: true }).fill('beta-password-long');
-    await page
-      .getByLabel('Повторите пароль', { exact: true })
-      .fill('beta-password-long');
+    assert.equal(await page.locator('input[type=password]').count(), 0);
     await page
       .getByRole('button', {
-        name: 'Создать аккаунт и запросить код',
+        name: 'Получить код на почту',
         exact: true,
       })
       .click();
     await page
-      .getByRole('heading', { name: 'Шаг 2 из 2 · Подтверждение почты' })
+      .getByRole('heading', { name: 'Шаг 2 из 2 · Подтверждение и пароль' })
       .waitFor();
     const u = (
       await q('SELECT id,email_verified_at FROM users WHERE email=$1', [email])

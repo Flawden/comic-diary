@@ -196,6 +196,75 @@ const transport =
     );
   };
 
+test('email-first concurrent requests bind one account and job; no supplied password, replay cannot reset credential', async () => {
+  const made = await invite();
+  const input = { intent: 'request', invitation: made.secret, email };
+  await Promise.all(
+    Array.from({ length: 8 }, () => service.registerWithBetaInvitation(input)),
+  );
+  const accounts = (
+    await q(
+      'SELECT id,password_hash,email_verified_at FROM users WHERE email=$1',
+      [email],
+    )
+  ).rows;
+  assert.equal(accounts.length, 1);
+  assert.equal(accounts[0].email_verified_at, null);
+  assert.ok(accounts[0].password_hash);
+  assert.equal((await jobs()).length, 1);
+  await service.registerWithBetaInvitation(input);
+  assert.equal((await jobs()).length, 1);
+  assert.equal(
+    (await q('SELECT password_hash FROM users WHERE id=$1', [accounts[0].id]))
+      .rows[0].password_hash,
+    accounts[0].password_hash,
+  );
+  const { verifyPassword } = await import('../src/modules/auth/password');
+  assert.equal(
+    await verifyPassword(accounts[0].password_hash, 'beta-password-long'),
+    false,
+  );
+  const token = await code();
+  assert.equal(
+    (
+      await activation.activatePendingRegistrationWithEmailToken(
+        token,
+        'final-email-first-password',
+      )
+    ).ok,
+    true,
+  );
+  const updated = (
+    await q('SELECT password_hash,email_verified_at FROM users WHERE id=$1', [
+      accounts[0].id,
+    ])
+  ).rows[0];
+  assert.ok(updated.email_verified_at);
+  assert.equal(
+    await verifyPassword(updated.password_hash, 'final-email-first-password'),
+    true,
+  );
+});
+
+test('email-first rejects foreign address, injected account ID and credential fields without writes', async () => {
+  const made = await invite();
+  const input = { intent: 'request', invitation: made.secret, email };
+  for (const value of [
+    { ...input, email: 'foreign@example.invalid' },
+    { ...input, userId: actors[2].userId },
+    { ...input, password: 'unrequested-password' },
+  ]) {
+    await assert.rejects(service.registerWithBetaInvitation(value), {
+      status: 400,
+    });
+  }
+  assert.equal((await jobs()).length, 0);
+  assert.equal(
+    (await q('SELECT id FROM users WHERE email=$1', [email])).rowCount,
+    0,
+  );
+});
+
 test('ADMIN creates hash-only seven-day invitation without a user; list has no recoverable secret', async () => {
   const count = (await q('SELECT count(*)::int n FROM users')).rows[0].n;
   const made = await invite();
@@ -235,15 +304,27 @@ test('USER/EDITOR, expired, revoked and demoted administrator sessions cannot ma
     status: 403,
   });
   await q("UPDATE users SET role='ADMIN' WHERE id=$1", [actors[0].userId]);
-    await q("UPDATE sessions SET expires_at=now()-interval '1 second' WHERE id=$1", [actors[0].sessionId]);
-    await assert.rejects(admin.createBetaInvitation(actors[0], email), { status: 401 });
-    await assert.rejects(admin.listBetaInvitations(actors[0]), { status: 401 });
-    await assert.rejects(admin.revokeBetaInvitation(actors[0], made.id), { status: 401 });
-    await q("UPDATE sessions SET expires_at=now()+interval '1 hour' WHERE id=$1", [actors[0].sessionId]);
-    await q('UPDATE users SET is_active=false WHERE id=$1', [actors[0].userId]);
-    await assert.rejects(admin.createBetaInvitation(actors[0], email), { status: 401 });
-    await assert.rejects(admin.listBetaInvitations(actors[0]), { status: 401 });
-    await q('UPDATE users SET is_active=true WHERE id=$1', [actors[0].userId]);
+  await q(
+    "UPDATE sessions SET expires_at=now()-interval '1 second' WHERE id=$1",
+    [actors[0].sessionId],
+  );
+  await assert.rejects(admin.createBetaInvitation(actors[0], email), {
+    status: 401,
+  });
+  await assert.rejects(admin.listBetaInvitations(actors[0]), { status: 401 });
+  await assert.rejects(admin.revokeBetaInvitation(actors[0], made.id), {
+    status: 401,
+  });
+  await q(
+    "UPDATE sessions SET expires_at=now()+interval '1 hour' WHERE id=$1",
+    [actors[0].sessionId],
+  );
+  await q('UPDATE users SET is_active=false WHERE id=$1', [actors[0].userId]);
+  await assert.rejects(admin.createBetaInvitation(actors[0], email), {
+    status: 401,
+  });
+  await assert.rejects(admin.listBetaInvitations(actors[0]), { status: 401 });
+  await q('UPDATE users SET is_active=true WHERE id=$1', [actors[0].userId]);
   await q('DELETE FROM sessions WHERE id=$1', [actors[0].sessionId]);
   await assert.rejects(admin.revokeBetaInvitation(actors[0], made.id), {
     status: 401,
