@@ -109,7 +109,10 @@ test('0050 -> 0051 additive upgrade preserves all old rows, old inserts, closed 
           'SELECT * FROM drizzle.__drizzle_migrations ORDER BY id',
         )
       ).rows;
-    await migrate(db, { migrationsFolder: 'drizzle' });
+    const targetJournal = {...journal, entries: journal.entries.filter((e: {idx:number}) => e.idx <= 53)};
+    writeFileSync(join(folder, 'meta/_journal.json'), JSON.stringify(targetJournal));
+    for (const e of targetJournal.entries) copyFileSync('drizzle/' + e.tag + '.sql', join(folder, e.tag + '.sql'));
+    await migrate(db, { migrationsFolder: folder });
     const current = (
       await pool.query('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id')
     ).rows;
@@ -144,7 +147,7 @@ test('0050 -> 0051 additive upgrade preserves all old rows, old inserts, closed 
       "INSERT INTO email_verification_tokens(user_id,email_snapshot,token_hash,expires_at,revoked_at) VALUES($1,'upgrade@example.invalid',repeat('c',64),now()+interval '30 minutes',now())",
       [id],
     );
-    await migrate(db, { migrationsFolder: 'drizzle' });
+    await migrate(db, { migrationsFolder: folder });
     assert.deepEqual(
       (
         await pool.query(

@@ -3,6 +3,7 @@ import {
   desc,
   eq,
   inArray,
+  isNull,
 } from "drizzle-orm";
 
 import {
@@ -274,6 +275,7 @@ export async function listAdminUsers() {
         .from(
           users,
         )
+        .where(isNull(users.deletedAt))
         .orderBy(
           desc(
             users.createdAt,

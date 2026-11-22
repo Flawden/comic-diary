@@ -59,6 +59,7 @@ export default async function BetaWait() {
         {user ? "Войти в другой аккаунт" : "Войти в аккаунт"}
       </Link>
       {user && <LogoutButton />}
+      {user && <p className="mt-5"><Link href="/account/delete">Удалить мой аккаунт</Link></p>}
     </main>
   );
 }

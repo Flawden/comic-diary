@@ -62,6 +62,7 @@ export function parseReport(value: unknown) {
   return { reason: v.reason as ReportReason, note: v.note == null || v.note === "" ? null : textValue(v.note, 300) };
 }
 export function publicAlias(name: string | null, active: boolean): string {
+  if (name === "Удалённый пользователь") return name;
   if (!active || !name || name.includes("@")) return "Читатель";
   return Array.from(name.replace(/[\p{Cf}\p{Cc}]/gu, "").trim()).slice(0, 80).join("") || "Читатель";
 }

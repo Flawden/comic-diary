@@ -200,6 +200,7 @@ export const administrativeAuditTarget = pgEnum(
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 
   email: varchar("email", { length: 320 })
     .notNull()
@@ -239,7 +240,16 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
-});
+}, t => [check("users_deleted_inert",sql`${t.deletedAt} IS NULL OR (${t.isActive}=false AND ${t.passwordHash} IS NULL AND ${t.role}='USER' AND ${t.displayName}='Удалённый пользователь' AND ${t.emailVerifiedAt} IS NULL AND ${t.email} ~ '^deleted-[a-f0-9-]+@account[.]invalid$')`)]);
+
+// Immutable identity IDs survive anonymisation so audit and discussion references stay valid.
+export const accountLifecycleEvents = pgTable("account_lifecycle_events", {
+  id: serial("id").primaryKey(),
+  actorUserId: integer("actor_user_id").notNull().references(() => users.id),
+  targetUserId: integer("target_user_id").notNull().references(() => users.id),
+  action: varchar("action", { length: 20 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, t => [check("account_lifecycle_action", sql`${t.action} IN ('BAN','UNBAN','DELETE','SELF_DELETE')`)]);
 
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),

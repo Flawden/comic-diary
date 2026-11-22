@@ -102,7 +102,10 @@ test("0052 -> 0053: access policy defaults OFF, historical rows and hashes prese
           "SELECT * FROM drizzle.__drizzle_migrations ORDER BY id",
         )
       ).rows;
-    await migrate(db, { migrationsFolder: "drizzle" });
+    const targetJournal = {...journal, entries: journal.entries.filter((e: {idx:number}) => e.idx <= 53)};
+    writeFileSync(join(folder, 'meta/_journal.json'), JSON.stringify(targetJournal));
+    for (const e of targetJournal.entries) copyFileSync('drizzle/' + e.tag + '.sql', join(folder, e.tag + '.sql'));
+    await migrate(db, { migrationsFolder: folder });
     const after = (
       await pool.query("SELECT * FROM drizzle.__drizzle_migrations ORDER BY id")
     ).rows;
@@ -139,7 +142,7 @@ test("0052 -> 0053: access policy defaults OFF, historical rows and hashes prese
     await pool.query(
       "INSERT INTO users(email,password_hash) VALUES('old-insert@example.invalid','unchanged-synthetic')",
     );
-    await migrate(db, { migrationsFolder: "drizzle" });
+    await migrate(db, { migrationsFolder: folder });
     assert.deepEqual(
       (
         await pool.query(

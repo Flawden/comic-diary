@@ -138,6 +138,11 @@ export async function updateManagedAccount(
         `,
       );
 
+      const [currentActor] = await tx.select().from(users).where(eq(users.id, actor.userId)).for("update");
+      if (!currentActor || !currentActor.isActive || currentActor.deletedAt || currentActor.role !== "ADMIN") {
+        throw new AccountAdministrationError("invalid-update");
+      }
+
       const rows =
         await tx
           .select({
@@ -152,6 +157,7 @@ export async function updateManagedAccount(
 
             isActive:
               users.isActive,
+            deletedAt: users.deletedAt,
           })
           .from(
             users,
@@ -172,7 +178,7 @@ export async function updateManagedAccount(
       const target =
         rows[0];
 
-      if (!target) {
+      if (!target || target.deletedAt) {
         throw new AccountAdministrationError(
           "user-not-found",
         );

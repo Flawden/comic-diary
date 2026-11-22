@@ -100,6 +100,7 @@ async function change(
     const accounts = await tx
       .select({
         id: users.id,
+        deletedAt: users.deletedAt,
         role: users.role,
         isActive: users.isActive,
         emailVerifiedAt: users.emailVerifiedAt,
@@ -119,7 +120,7 @@ async function change(
       throw new AppearanceError(401, 'unauthorized');
     if (admin ? who.role !== 'ADMIN' : target !== actor.userId)
       throw new AppearanceError(403, 'forbidden');
-    if (!accounts.some((a) => a.id === target))
+    if (!accounts.some((a) => a.id === target && !a.deletedAt))
       throw new AppearanceError(404, 'not_found');
     const valid = await tx
       .select({ id: sessions.id })

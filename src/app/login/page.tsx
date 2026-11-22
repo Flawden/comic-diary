@@ -12,6 +12,7 @@ export const dynamic =
   "force-dynamic";
 
 type SearchParams = {
+  account?: string;
   next?:
     | string
     | string[];
@@ -63,6 +64,7 @@ export default async function LoginPage({
         <h1 className="mt-2 reader-title">
           Вход
         </h1>
+        {params.account === "deleted" && <p role="status" className="mt-4">Аккаунт удалён. Все его сессии завершены.</p>}
 
         <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
           Войдите, чтобы продолжить вести

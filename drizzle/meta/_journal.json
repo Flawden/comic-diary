@@ -379,6 +379,13 @@
       "when": 1795330800000,
       "tag": "0053_site_access_policy",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1795356000000,
+      "tag": "0054_account_lifecycle",
+      "breakpoints": true
     }
   ]
 }

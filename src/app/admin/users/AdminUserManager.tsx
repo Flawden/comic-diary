@@ -1,4 +1,5 @@
 "use client";
+import {AccountLifecycleControls} from './AccountLifecycleControls';
 
 import {UserAvatar} from '@/shared/components/UserAvatar';
 import type {PublicAppearance} from '@/modules/appearance/policy';
@@ -316,9 +317,7 @@ export function AdminUserManager({
         {initialUsers.map(
           (user) => (
             <article
-              key={
-                user.id
-              }
+              key={`${user.id}:${user.updatedAt}`}
               className="rounded-2xl border border-black/5 bg-[var(--surface)] p-5 shadow-sm"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -347,7 +346,9 @@ export function AdminUserManager({
                       user.createdAt,
                     ).toLocaleString(
                       "ru-RU",
+                      { timeZone: "Europe/Moscow" },
                     )}
+                    {" · МСК"}
                   </p>
                 </div>
 
@@ -445,6 +446,7 @@ export function AdminUserManager({
                   Сохранить
                 </button>
               </form>
+              <AccountLifecycleControls id={user.id} active={user.isActive} own={user.id===currentUserId}/>
             </article>
           ),
         )}
