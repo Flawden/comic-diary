@@ -38,7 +38,7 @@ jobs:
         run: node --import tsx --test src/modules/community/policy.test.ts scripts/community01-contract.test.mjs
 
       - name: Closed beta invitation policy (default OFF)
-        run: node --import tsx --test src/modules/auth/beta-invitation-policy.test.ts src/modules/auth/site-access-policy.test.ts
+        run: node --import tsx --test src/modules/auth/beta-invitation-policy.test.ts src/modules/auth/site-access-policy.test.ts src/modules/auth/login-redirect.test.ts
 
       - name: Public reviews validation and boundary contracts
         run: node --import tsx --test src/modules/community/review-policy.test.ts src/modules/community/chapter-rating-policy.test.ts scripts/reviews-contract.test.mjs
@@ -637,6 +637,40 @@ jobs:
         with:
           name: appearance-browser-${{ github.run_id }}
           path: ${{ runner.temp }}/appearance-browser/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Standalone closed-beta login and waiting-page regression (no mail)
+        env:
+          BETA_ACCESS_TEST_DATABASE_URL: postgresql://comic_diary_ci:ci_ephemeral_password@127.0.0.1:5432/comic_diary_release
+        run: |
+          set -euo pipefail
+          export WD_BROWSER_ROOT="$RUNNER_TEMP/d1-browser-deps"
+          export BETA_ACCESS_OUTPUT="$RUNNER_TEMP/beta-access-browser"
+          export BETA_ACCESS_RUNTIME_OUTPUT="$RUNNER_TEMP/beta-access-runtime"
+          export COMIC_DIARY_PUBLIC_ORIGIN="https://reader.example.invalid"
+          export NEXT_TELEMETRY_DISABLED=1
+          unset RESEND_API_KEY
+          for flag in PASSWORD_RESET_REQUEST_ENABLED PASSWORD_RESET_REQUEST_MAIL_READY PASSWORD_RESET_REDEEM_ENABLED AUTH_RECOVERY_WORKER_ENABLED AUTH_RECOVERY_DISPATCH_ENABLED AUTH_RECOVERY_SENDER_VERIFIED AUTH_RECOVERY_RESEND_CONFIG_READY REGISTRATION_ENABLED REGISTRATION_ACTIVATION_REDEEM_ENABLED AUTH_ACTIVATION_RESEND_CONFIG_READY AUTH_ACTIVATION_SENDER_VERIFIED AUTH_ACTIVATION_DISPATCH_ENABLED AUTH_ACTIVATION_WORKER_ENABLED AUTH_ACTIVATION_OPERATOR_CONTROL_ENABLED AUTH_LEGACY_EMAIL_VERIFICATION_ENABLED AUTH_LEGACY_EMAIL_VERIFICATION_REQUEST_ENABLED AUTH_BETA_INVITATION_REGISTRATION_ENABLED AUTH_BETA_INVITATION_DISPATCH_ENABLED; do export "$flag=false"; done
+          mkdir -p .next/standalone/.next
+          cp -R .next/static .next/standalone/.next/
+          cp -R public .next/standalone/
+          export NODE_OPTIONS="--import=file://$GITHUB_WORKSPACE/scripts/beta-access-network-guard.mjs"
+          HOSTNAME=127.0.0.1 PORT=3120 node .next/standalone/server.js > "$RUNNER_TEMP/beta-access-host.log" 2>&1 &
+          qa_pid=$!
+          trap 'kill "$qa_pid" 2>/dev/null || true' EXIT
+          curl -fsS --retry 25 --retry-delay 1 --retry-connrefused http://127.0.0.1:3120/api/health/ready -o /dev/null
+          node scripts/beta-access-browser.mjs || { tail -40 "$RUNNER_TEMP/beta-access-host.log"; exit 1; }
+          node --input-type=module -e 'import {readdirSync,readFileSync} from "node:fs";import {join} from "node:path";const p=process.env.BETA_ACCESS_RUNTIME_OUTPUT;const rows=readdirSync(p).map(n=>JSON.parse(readFileSync(join(p,n))));if(!rows.length||rows.some(r=>r.externalHttpAttempts!==0||!r.allAuthFlagsOff||r.providerKeyPresent))process.exit(1);console.log("STANDALONE_RUNTIME_AUTH_OFF_NO_PROVIDER_HTTP=PASS");'
+
+      - name: Upload standalone beta access regression
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-access-standalone-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/beta-access-browser/
+            ${{ runner.temp }}/beta-access-runtime/
           if-no-files-found: ignore
           retention-days: 7
 

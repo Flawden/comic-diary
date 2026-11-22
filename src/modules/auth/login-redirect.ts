@@ -40,8 +40,7 @@ export function getSafeLoginRedirect(
      * straight back into the login page.
      */
     if (
-      target.pathname ===
-      "/login"
+      target.pathname === "/login" || target.pathname === "/beta-wait"
     ) {
       return fallback;
     }

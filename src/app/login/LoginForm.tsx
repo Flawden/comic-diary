@@ -5,10 +5,6 @@ import {
   useState,
 } from "react";
 
-import {
-  useRouter,
-} from "next/navigation";
-
 import Link from "next/link";
 
 type LoginFormProps = {
@@ -18,9 +14,6 @@ type LoginFormProps = {
 export function LoginForm({
   nextPath,
 }: LoginFormProps) {
-  const router =
-    useRouter();
-
   const [
     submitting,
     setSubmitting,
@@ -115,11 +108,8 @@ export function LoginForm({
         return;
       }
 
-      router.replace(
-        nextPath,
-      );
-
-      router.refresh();
+      // Discard prefetched closed-beta redirects and the previous identity cache.
+      window.location.replace(nextPath);
     } catch {
       setError(
         "Не удалось связаться с сервером. Попробуйте ещё раз.",
