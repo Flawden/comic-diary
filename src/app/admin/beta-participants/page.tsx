@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { asc, desc, eq, gt } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { users, userAppearance, appearanceEvents } from '@/db/schema';
 import { getCurrentUser } from '@/modules/auth/request-identity';
@@ -34,7 +34,7 @@ export default async function Page({
     })
     .from(users)
     .leftJoin(userAppearance, eq(users.id, userAppearance.userId))
-    .where(gt(users.id, cursor))
+    .where(and(gt(users.id, cursor),isNull(users.deletedAt)))
     .orderBy(asc(users.id))
     .limit(51);
   const page = rows.slice(0, 50);

@@ -1,0 +1,104 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { randomUUID, createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+
+const target=process.env.LIFECYCLE_TEST_DATABASE_URL ?? "";
+const u=new URL(target);
+const local=u.hostname==='127.0.0.1'&&u.port==='55727'&&u.username==='lifecycle_qa'&&u.pathname==='/lifecycle_review';
+const ci=process.env.GITHUB_ACTIONS==='true'&&process.env.GITHUB_REPOSITORY==='Flawden/comic-diary'&&u.hostname==='127.0.0.1'&&u.port==='5432'&&u.username==='comic_diary_ci'&&u.pathname==='/comic_diary_release';
+if(u.protocol!=='postgresql:'||(!local&&!ci)||u.search||u.hash)throw Error('Explicit disposable database required');
+
+test('PG17 lifecycle: authority, ban/session revocation, anonymisation, preserved discussions, races and rollback',async()=>{
+ const root=new Pool({connectionString:target}), database='lifecycle_service_'+randomUUID().replaceAll('-','');
+ await root.query('CREATE DATABASE "'+database+'"');
+ const child=new URL(target);child.pathname='/'+database;process.env.DATABASE_URL=child.href;
+ const pool=new Pool({connectionString:child.href}),q=(s:string,v:unknown[]=[])=>pool.query(s,v);
+ const {db}=await import('../src/db');
+ const {changeAccountLifecycle:change}=await import('../src/modules/auth/account-lifecycle');
+ const {updateManagedAccount}=await import('../src/modules/auth/account-administration');
+ const {getAuthenticatedSession}=await import('../src/modules/auth/session-service');
+ const {publicAlias}=await import('../src/modules/community/policy');
+ const {hashPassword}=await import('../src/modules/auth/password');
+ const ids:number[]=[], prefix='lifecycle-'+randomUUID(), password='Disposable-password-123!';
+ const actor=async(role='USER')=>{
+  const id=(await q('INSERT INTO users(email,password_hash,display_name,role,email_verified_at) VALUES($1,$2,$3,$4,now()) RETURNING id',[prefix+'-'+randomUUID()+'@example.invalid',await hashPassword(password),'Synthetic '+role,role])).rows[0].id;
+  ids.push(id);const token=randomUUID()+randomUUID();
+  const sessionId=(await q('INSERT INTO sessions(user_id,token_hash,expires_at) VALUES($1,$2,now()+interval \'1 hour\') RETURNING id',[id,createHash('sha256').update(token).digest('hex')])).rows[0].id;
+  return {userId:id,sessionId,token};
+ };
+ let comic:number|undefined;
+ try{
+  assert.equal((await q("SELECT current_setting('server_version_num')::int/10000 n")).rows[0].n,17);
+  await migrate(drizzle(pool),{migrationsFolder:'drizzle'});
+  const journal=JSON.parse(readFileSync('drizzle/meta/_journal.json','utf8')).entries;
+  const before=(await q('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id')).rows;
+  assert.equal(before.length,journal.length);assert.equal(journal.at(-1).tag,'0054_account_lifecycle');
+  before.forEach((r,i)=>assert.equal(r.hash,createHash('sha256').update(readFileSync('drizzle/'+journal[i].tag+'.sql')).digest('hex')));
+  await migrate(drizzle(pool),{migrationsFolder:'drizzle'});
+  assert.deepEqual((await q('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id')).rows,before);
+  const controls=()=>q('SELECT row_to_json(t) r FROM activation_mail_dispatch_control t UNION ALL SELECT row_to_json(t) FROM password_reset_mail_dispatch_control t');
+  const gates=(await controls()).rows;
+  const admin=await actor('ADMIN'),editor=await actor('EDITOR'),user=await actor(),other=await actor();
+  await assert.rejects(change(editor,user.userId,'BAN'),{kind:'forbidden'});
+  await assert.rejects(change(user,other.userId,'DELETE'),{kind:'forbidden'});
+  await assert.rejects(change(user,other.userId,'SELF_DELETE',password),{kind:'forbidden'});
+  await assert.rejects(change({...admin,sessionId:-1},user.userId,'DELETE'),{kind:'unauthorized'});
+  await assert.rejects(change(admin,admin.userId,'DELETE'),{kind:'use_own_account_settings'});
+  const adminCount=Number((await q("SELECT count(*) n FROM users WHERE role='ADMIN' AND is_active")).rows[0].n);
+  assert.equal(adminCount,1);
+  await assert.rejects(change(admin,admin.userId,'SELF_DELETE',password),{kind:'last_active_admin'});
+  await q('INSERT INTO password_reset_tokens(user_id,token_hash,expires_at) VALUES($1,$2,now()+interval \'1 hour\')',[user.userId,'a'.repeat(64)]);
+  const ban=await change(admin,user.userId,'BAN');assert.equal(ban.sessionsRevoked,1);
+  assert.equal(await getAuthenticatedSession(user.token),null);
+  assert.ok((await q('SELECT revoked_at FROM password_reset_tokens WHERE user_id=$1',[user.userId])).rows[0].revoked_at);
+  await change(admin,user.userId,'UNBAN');assert.equal(await getAuthenticatedSession(user.token),null);
+  assert.equal((await q('SELECT is_active FROM users WHERE id=$1',[user.userId])).rows[0].is_active,true);
+  await assert.rejects(change(other,other.userId,'SELF_DELETE','wrong password'),{kind:'invalid_current_password'});
+  assert.ok(await getAuthenticatedSession(other.token));
+  comic=(await q('INSERT INTO comics(slug,title) VALUES($1,$1) RETURNING id',[prefix])).rows[0].id;
+  const review=(await q('INSERT INTO community_reviews(comic_id,user_id,rating_plot,rating_characters,rating_art,rating_depth,rating_world,body) VALUES($1,$2,5,4,3,4,5,$3) RETURNING id',[comic,other.userId,'Published review survives'])).rows[0].id;
+  const comment=(await q('INSERT INTO community_comments(comic_id,author_user_id,request_id,request_digest,body) VALUES($1,$2,$3,$4,$5) RETURNING id',[comic,other.userId,randomUUID(),'b'.repeat(64),'Published answer survives'])).rows[0].id;
+  await q('INSERT INTO user_comics(user_id,comic_id,personal_note) VALUES($1,$2,$3)',[other.userId,comic,'Private note must disappear']);
+  await q('INSERT INTO user_appearance(user_id,avatar_filename,beta_participant,beta_frame_granted,selected_frame) VALUES($1,$2,true,true,\'beta_dragon_2026\')',[other.userId,randomUUID()+'.webp']);
+  const personal=(await q("INSERT INTO comics(slug,title,visibility,owner_user_id) VALUES($1,$1,'PRIVATE',$2) RETURNING id",[prefix+'-private',other.userId])).rows[0].id;
+  await q('INSERT INTO chapters(comic_id,display_code,sort_order,page_count) VALUES($1,\'1\',1,10)',[personal]);
+  const original=(await q('SELECT email FROM users WHERE id=$1',[other.userId])).rows[0].email;
+  await change(other,other.userId,'SELF_DELETE',password);
+  const deleted=(await q('SELECT * FROM users WHERE id=$1',[other.userId])).rows[0];
+  assert.equal(deleted.password_hash,null);assert.equal(deleted.is_active,false);assert.ok(deleted.deleted_at);assert.notEqual(deleted.email,original);
+  assert.equal(publicAlias(deleted.display_name,false),'Удалённый пользователь');
+  assert.equal(await getAuthenticatedSession(other.token),null);
+  assert.equal((await q('SELECT body FROM community_reviews WHERE id=$1',[review])).rows[0].body,'Published review survives');
+  assert.equal((await q('SELECT body FROM community_comments WHERE id=$1',[comment])).rows[0].body,'Published answer survives');
+  for(const table of ['user_appearance','user_comics','user_chapter_reads','sessions','user_entitlements'])assert.equal((await q(`SELECT count(*)::int n FROM ${table} WHERE user_id=$1`,[other.userId])).rows[0].n,0);
+  assert.equal((await q('SELECT count(*)::int n FROM comics WHERE id=$1',[personal])).rows[0].n,0);
+  await assert.rejects(change(admin,other.userId,'UNBAN'),{kind:'account_deleted'});
+  await assert.rejects(updateManagedAccount({userId:admin.userId,role:'ADMIN'},other.userId,{isActive:true}),{kind:'user-not-found'});
+  await assert.rejects(q('INSERT INTO user_comics(user_id,comic_id) VALUES($1,$2)',[other.userId,comic]),{code:'23514'});
+  await assert.rejects(q('UPDATE users SET is_active=true WHERE id=$1',[other.userId]),{code:'23514'});
+  const race=await actor();
+  const outcomes=await Promise.allSettled([change(admin,race.userId,'DELETE'),change(admin,race.userId,'DELETE')]);
+  assert.equal(outcomes.filter(r=>r.status==='fulfilled').length,1);
+  assert.equal((await q("SELECT count(*)::int n FROM account_lifecycle_events WHERE target_user_id=$1 AND action='DELETE'",[race.userId])).rows[0].n,1);
+  // Force an audit failure AFTER cleanup: transaction must restore account and sessions.
+  const rollback=await actor();
+  await q("CREATE FUNCTION lifecycle_test_abort() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic audit failure'; END $$");
+  await q(`CREATE TRIGGER lifecycle_test_abort BEFORE INSERT ON account_lifecycle_events FOR EACH ROW WHEN (NEW.target_user_id=${rollback.userId}) EXECUTE FUNCTION lifecycle_test_abort()`);
+  try{await assert.rejects(change(admin,rollback.userId,'DELETE'));assert.ok(await getAuthenticatedSession(rollback.token));assert.equal((await q('SELECT deleted_at FROM users WHERE id=$1',[rollback.userId])).rows[0].deleted_at,null);}finally{await q('DROP TRIGGER lifecycle_test_abort ON account_lifecycle_events');await q('DROP FUNCTION lifecycle_test_abort()');}
+  assert.deepEqual((await controls()).rows,gates);
+  const secondAdmin=await actor('ADMIN');
+  const adminRace=await Promise.allSettled([change(admin,admin.userId,'SELF_DELETE',password),change(secondAdmin,secondAdmin.userId,'SELF_DELETE',password)]);
+  assert.equal(adminRace.filter(r=>r.status==='fulfilled').length,1);
+  assert.equal((await q("SELECT count(*)::int n FROM users WHERE role='ADMIN' AND is_active")).rows[0].n,1);
+ }finally{
+  if(comic)await q('DELETE FROM comics WHERE id=$1',[comic]);
+  await q('DELETE FROM account_lifecycle_events WHERE actor_user_id=ANY($1::int[]) OR target_user_id=ANY($1::int[])',[ids]);
+  await q('DELETE FROM administrative_audit_events WHERE actor_user_id=ANY($1::int[])',[ids]);
+  await q('DELETE FROM users WHERE id=ANY($1::int[])',[ids]);
+  await pool.end();await db.$client.end();await root.query('DROP DATABASE "'+database+'"');await root.end();
+ }
+});

@@ -102,6 +102,7 @@ export default async function AccountPage() {
               <p className="mt-4 text-sm text-[var(--text-secondary)]">Потребуется текущий пароль. После смены пароля вход на других устройствах завершится.</p>
               <AccountPasswordForm />
             </details>
+            <Link href="/account/delete" className="tea-outline mt-5">Удалить мой аккаунт…</Link>
           </section>
         </div>
       </div>

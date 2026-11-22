@@ -26,6 +26,9 @@ test("content and write endpoints cannot bypass beta gate; authentication remain
     assert.equal(accessGateExempt(p), false, p);
   for (const p of [
     "/beta-wait",
+    "/account/delete",
+    "/api/account/delete",
+    "/api/account/export",
     "/login",
     "/register",
     "/activate",

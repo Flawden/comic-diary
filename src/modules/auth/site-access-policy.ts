@@ -11,6 +11,9 @@ export function canEnterBeta(
 export function accessGateExempt(path: string) {
   return (
     path === "/beta-wait" ||
+    path === "/account/delete" ||
+    path === "/api/account/delete" ||
+    path === "/api/account/export" ||
     path === "/login" ||
     path === "/register" ||
     path === "/activate" ||
