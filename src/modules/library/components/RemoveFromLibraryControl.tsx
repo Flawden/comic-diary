@@ -51,7 +51,7 @@ export function RemoveFromLibraryControl({
       setConfirming(false);
       router.refresh();
     } catch {
-      setError("Не удалось убрать комикс. Попробуйте ещё раз.");
+      setError("Не удалось получить подтверждение. Обновите страницу, чтобы проверить, убрано ли произведение из библиотеки. История чтения сохраняется.");
     } finally {
       setPending(false);
     }

@@ -1,5 +1,9 @@
 # Web release readiness — 2026-10-23
 
+For the November invitation-only beta, see
+[the 22 November acceptance record](closed-beta-release-20261122.md).
+The checklist below is retained as historical evidence.
+
 This is the current acceptance index. Older roadmap sections and delivery notes
 remain as history; a deployed implementation and a verified workflow are separate
 states. No open item below is closed by a screenshot, unit test or green build alone.

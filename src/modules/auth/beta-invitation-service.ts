@@ -23,6 +23,7 @@ import {
 } from './registration-activation-config';
 import { isRegistrationPasswordAllowed } from './registration-service';
 import { hashPassword } from './password';
+import { randomBytes } from 'node:crypto';
 import { enqueuePendingActivationMailInTransaction } from './registration-activation-outbox-issue';
 export function betaRegistrationOperational(
   env: Readonly<Record<string, string | undefined>>,
@@ -51,7 +52,11 @@ export async function registerWithBetaInvitation(input: unknown) {
   if (!input || typeof input !== 'object' || Array.isArray(input))
     throw new InvitationError(400, 'invalid_request');
   const v = input as Record<string, unknown>;
-  if (v.intent !== 'register' && v.intent !== 'resend')
+  if (
+    v.intent !== 'register' &&
+    v.intent !== 'request' &&
+    v.intent !== 'resend'
+  )
     throw new InvitationError(400, 'invalid_request');
   const fields =
     v.intent === 'register'
@@ -78,8 +83,17 @@ export async function registerWithBetaInvitation(input: unknown) {
   const config = readActivationDispatchConfig(process.env);
   if (!config) throw new InvitationError(503, 'registration_unavailable');
   try {
+    // Email-first requests have no usable credential before mailbox proof.
+    // Keep the existing pending-activation contract; redeem replaces this
+    // unshared random credential with the password chosen by the mailbox owner.
     const passwordHash =
-      v.intent === 'register' ? await hashPassword(v.password as string) : null;
+      v.intent === 'resend'
+        ? null
+        : await hashPassword(
+            v.intent === 'register'
+              ? (v.password as string)
+              : randomBytes(32).toString('base64url'),
+          );
     return await db.transaction(async (tx) => {
       const [gate] = await tx
         .select()
@@ -95,7 +109,7 @@ export async function registerWithBetaInvitation(input: unknown) {
         .for('update');
       if (!liveInvitation(invite, new Date()) || invite.email !== email)
         throw new InvitationError(400, 'invalid_invitation');
-      if (invite.pendingUserId !== null && v.intent === 'register')
+      if (invite.pendingUserId !== null && v.intent !== 'resend')
         return { ok: true, activationRequired: true };
       if (invite.pendingUserId === null && v.intent === 'resend')
         return { ok: true, activationRequired: true };

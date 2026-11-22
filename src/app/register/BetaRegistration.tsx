@@ -63,23 +63,9 @@ export function BetaRegistration({ enabled }: { enabled: boolean }) {
     );
     return () => clearTimeout(timer);
   }, [cooldown]);
-  async function submit(intent: 'register' | 'resend', form?: HTMLFormElement) {
+  async function submit(intent: 'request' | 'resend', form?: HTMLFormElement) {
     if (lock.current) return;
-    const fields = form ? new FormData(form) : null;
-    const body =
-      intent === 'register'
-        ? {
-            intent,
-            invitation: secret,
-            email,
-            password: fields?.get('password'),
-            passwordConfirm: fields?.get('passwordConfirm'),
-          }
-        : { intent, invitation: secret, email };
-    if (intent === 'register' && body.password !== body.passwordConfirm) {
-      setError('Пароли не совпадают.');
-      return;
-    }
+    const body = { intent, invitation: secret, email };
     lock.current = true;
     setBusy(true);
     setError('');
@@ -104,7 +90,7 @@ export function BetaRegistration({ enabled }: { enabled: boolean }) {
       setPhase('pending');
       setCooldown(60);
       setNotice(
-        intent === 'register'
+        intent === 'request'
           ? 'Запрос принят. Проверьте почту и папку «Спам».'
           : 'Запрос повторного письма принят. Проверьте почту.',
       );
@@ -119,7 +105,7 @@ export function BetaRegistration({ enabled }: { enabled: boolean }) {
   }
   function register(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    void submit('register', e.currentTarget);
+    void submit('request', e.currentTarget);
   }
   const input =
     'mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-4 py-3 text-[var(--text-primary)]';
@@ -148,7 +134,7 @@ export function BetaRegistration({ enabled }: { enabled: boolean }) {
       )}
       {phase === 'register' && (
         <>
-          <h3 className="font-semibold">Шаг 1 из 2 · Создание аккаунта</h3>
+          <h3 className="font-semibold">Шаг 1 из 2 · Получение кода</h3>
           <form className="space-y-4" onSubmit={register}>
             <fieldset disabled={busy} className="space-y-4">
               <label className="block">
@@ -164,37 +150,12 @@ export function BetaRegistration({ enabled }: { enabled: boolean }) {
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </label>
-              <label className="block">
-                Пароль
-                <input
-                  className={input}
-                  name="password"
-                  type="password"
-                  minLength={10}
-                  maxLength={256}
-                  required
-                  autoComplete="new-password"
-                />
-              </label>
-              <label className="block">
-                Повторите пароль
-                <input
-                  className={input}
-                  name="passwordConfirm"
-                  type="password"
-                  minLength={10}
-                  maxLength={256}
-                  required
-                  autoComplete="new-password"
-                />
-              </label>
               <p className="text-sm text-[var(--text-secondary)]">
-                Не менее 10 символов. Для безопасной активации после кода из
-                письма ещё раз задайте пароль для входа; можно использовать тот
-                же пароль.
+                Сначала подтвердите почту. Пароль для входа зададите на
+                следующем шаге вместе с кодом из письма.
               </p>
               <button className="tea-outline w-full" type="submit">
-                {busy ? 'Создаём…' : 'Создать аккаунт и запросить код'}
+                {busy ? 'Запрашиваем…' : 'Получить код на почту'}
               </button>
             </fieldset>
           </form>
@@ -202,7 +163,7 @@ export function BetaRegistration({ enabled }: { enabled: boolean }) {
       )}
       {phase === 'pending' && (
         <>
-          <h3 className="font-semibold">Шаг 2 из 2 · Подтверждение почты</h3>
+          <h3 className="font-semibold">Шаг 2 из 2 · Подтверждение и пароль</h3>
           <p>
             Без подтверждения почты вход в новый аккаунт недоступен. Введите код
             из письма и задайте окончательный пароль.
