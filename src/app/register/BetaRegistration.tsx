@@ -2,21 +2,20 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ActivationForm } from '../activate/ActivationForm';
-type Info = { status: string; emailHint: string; expiresAt: string };
-export function BetaRegistration({ enabled }: { enabled: boolean }) {
+type Info = { grantsBeta:boolean; status: string; emailHint: string; expiresAt: string };
+export function BetaRegistration({ enabled, publicEnabled=false }: { enabled: boolean; publicEnabled?:boolean }) {
   const [secret, setSecret] = useState(''),
     [info, setInfo] = useState<Info | null>(null),
     [email, setEmail] = useState(''),
-    [phase, setPhase] = useState('closed'),
+    [phase, setPhase] = useState('init'),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [notice, setNotice] = useState(''),
     [cooldown, setCooldown] = useState(0);
   const lock = useRef(false);
   useEffect(() => {
-    if (!enabled) return;
     const value = new URLSearchParams(location.hash.slice(1)).get('invite');
-    if (!value) return;
+    if (!value || !enabled) {const task=setTimeout(()=>setPhase('closed'),0);return ()=>clearTimeout(task);}
     const abort = new AbortController();
     const task = setTimeout(() => {
       setSecret(value);
@@ -65,13 +64,13 @@ export function BetaRegistration({ enabled }: { enabled: boolean }) {
   }, [cooldown]);
   async function submit(intent: 'request' | 'resend', form?: HTMLFormElement) {
     if (lock.current) return;
-    const body = { intent, invitation: secret, email };
+    const body = secret ? { intent, invitation: secret, email } : {email};
     lock.current = true;
     setBusy(true);
     setError('');
     setNotice('');
     try {
-      const r = await fetch('/api/auth/invitations/register', {
+      const r = await fetch(secret ? '/api/auth/invitations/register' : '/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -109,7 +108,8 @@ export function BetaRegistration({ enabled }: { enabled: boolean }) {
   }
   const input =
     'mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-4 py-3 text-[var(--text-primary)]';
-  if (!enabled || phase === 'closed')
+  if (enabled && phase==='init') return <p role="status">Проверяем условия регистрации…</p>;
+  if (!enabled || (phase === 'closed' && !publicEnabled))
     return (
       <p className="mt-4 text-sm text-[var(--text-secondary)]">
         Если администратор выдал вам приглашение, откройте персональную ссылку.
@@ -119,6 +119,7 @@ export function BetaRegistration({ enabled }: { enabled: boolean }) {
   return (
     <section className="mt-5 space-y-4" aria-label="Регистрация по приглашению">
       {phase === 'loading' && <p role="status">Проверяем приглашение…</p>}
+      {info && <p className="text-sm">{info.grantsBeta?"Приглашение участника закрытой беты. Участие подтвердится после активации почты.":"Приглашение на обычную регистрацию. Доступ к закрытой бете и награда-рамка автоматически не выдаются."}</p>}
       {info && (
         <p className="break-words text-sm text-[var(--text-secondary)]">
           Приглашение для {info.emailHint}. Срок:{' '}
@@ -132,7 +133,7 @@ export function BetaRegistration({ enabled }: { enabled: boolean }) {
             : 'Срок приглашения истёк или оно отозвано. Свяжитесь с администратором.'}
         </p>
       )}
-      {phase === 'register' && (
+      {(phase === 'register' || (phase === 'closed' && publicEnabled)) && (
         <>
           <h3 className="font-semibold">Шаг 1 из 2 · Получение кода</h3>
           <form className="space-y-4" onSubmit={register}>

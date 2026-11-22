@@ -1,11 +1,11 @@
 import { ResendActivationForm } from "./ResendActivationForm";
-import { activationRegistrationOperational } from "@/modules/auth/registration-activation-config";
+import { publicRegistrationOperational } from "@/modules/auth/site-access-service";
 import Link from "next/link";
 import { ActivationForm } from "./ActivationForm";
 
 export const dynamic = "force-dynamic";
 
-export default function ActivationPage() {
+export default async function ActivationPage() {
   // Presentation only. The POST endpoint independently enforces this opt-in.
   const enabled = process.env.REGISTRATION_ACTIVATION_REDEEM_ENABLED === "true";
 
@@ -26,7 +26,7 @@ export default function ActivationPage() {
               : "Подтверждение пока недоступно: отправка писем не запущена, а приём кодов отключён."}
           </p>
           <ActivationForm enabled={enabled} />
-          {activationRegistrationOperational(process.env) ? <ResendActivationForm /> : null}
+          {await publicRegistrationOperational() ? <ResendActivationForm /> : null}
         </section>
         <div className="fantasy-auth-links mt-6 text-center text-sm text-[var(--muted)]">
           <Link href="/login" className="font-medium text-[var(--primary)] hover:underline">Вернуться ко входу</Link>

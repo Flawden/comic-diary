@@ -1,9 +1,9 @@
-'use client';
+"use client";
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { UserAvatar } from '@/shared/components/UserAvatar';
-import { BETA_FRAME, type PublicAppearance } from '@/modules/appearance/policy';
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { UserAvatar } from "@/shared/components/UserAvatar";
+import { BETA_FRAME, type PublicAppearance } from "@/modules/appearance/policy";
 type State = PublicAppearance & {
   revision: number;
   selectedFrame: string | null;
@@ -13,15 +13,18 @@ type State = PublicAppearance & {
 export function AvatarSettings({
   name,
   initial,
+  mode = "frames",
 }: {
   name: string;
   initial: State;
+  mode?: "avatar" | "frames";
 }) {
   const router = useRouter();
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const [state, setState] = useState(initial),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState(''),
-    [notice, setNotice] = useState('');
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
   const [source, setSource] = useState<{
       url: string;
       file: File;
@@ -42,6 +45,19 @@ export function AvatarSettings({
     },
     [source],
   );
+  useEffect(() => {
+    const update = (event: Event) =>
+      setState((event as CustomEvent<State>).detail);
+    window.addEventListener("account-appearance-updated", update);
+    return () =>
+      window.removeEventListener("account-appearance-updated", update);
+  }, []);
+  function publish(value: State) {
+    setState(value);
+    window.dispatchEvent(
+      new CustomEvent("account-appearance-updated", { detail: value }),
+    );
+  }
   const crop = source
     ? (() => {
         const size = Math.floor(Math.min(source.width, source.height) / zoom);
@@ -55,17 +71,17 @@ export function AvatarSettings({
   function clear() {
     if (source) URL.revokeObjectURL(source.url);
     setSource(null);
-    if (fileRef.current) fileRef.current.value = '';
+    if (fileRef.current) fileRef.current.value = "";
   }
   async function choose(file?: File) {
     if (!file) return;
-    setError('');
-    setNotice('');
+    setError("");
+    setNotice("");
     if (
-      !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ||
+      !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
       file.size > 5 * 1024 * 1024
     ) {
-      setError('Выберите JPEG, PNG или WebP размером до 5 МБ.');
+      setError("Выберите JPEG, PNG или WebP размером до 5 МБ.");
       return;
     }
     const url = URL.createObjectURL(file);
@@ -91,7 +107,7 @@ export function AvatarSettings({
     } catch {
       URL.revokeObjectURL(url);
       setError(
-        'Не удалось открыть изображение. Нужно не менее 64×64 и не более 16 млн пикселей.',
+        "Не удалось открыть изображение. Нужно не менее 64×64 и не более 16 млн пикселей.",
       );
     }
   }
@@ -99,28 +115,28 @@ export function AvatarSettings({
     if (lock.current) return;
     lock.current = true;
     setBusy(true);
-    setError('');
-    setNotice('');
+    setError("");
+    setNotice("");
     try {
-      const r = await fetch(url, { ...init, credentials: 'same-origin' });
+      const r = await fetch(url, { ...init, credentials: "same-origin" });
       const body = await r.json();
       if (!r.ok) {
         setError(
-          body.error === 'appearance_changed'
-            ? 'Настройки уже изменились. Обновите данные перед повторной попыткой.'
-            : body.error === 'rate_limited'
-              ? 'Слишком много изменений. Попробуйте позже.'
-              : 'Не удалось сохранить. Проверьте изображение и обновите данные.',
+          body.error === "appearance_changed"
+            ? "Настройки уже изменились. Обновите данные перед повторной попыткой."
+            : body.error === "rate_limited"
+              ? "Слишком много изменений. Попробуйте позже."
+              : "Не удалось сохранить. Проверьте изображение и обновите данные.",
         );
         return;
       }
-      setState(body);
+      publish(body);
       clear();
-      setNotice('Сохранено.');
+      setNotice("Сохранено.");
       router.refresh();
     } catch {
       setError(
-        'Подтверждение не получено. Обновите данные, чтобы проверить результат. Автоматического повтора не будет.',
+        "Подтверждение не получено. Обновите данные, чтобы проверить результат. Автоматического повтора не будет.",
       );
     } finally {
       lock.current = false;
@@ -131,9 +147,9 @@ export function AvatarSettings({
   function chooseFrame(frame: string | null) {
     if (lock.current) return;
     setPendingFrame(frame);
-    void perform('/api/account/appearance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    void perform("/api/account/appearance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ frame, revision: state.revision }),
     });
   }
@@ -141,133 +157,193 @@ export function AvatarSettings({
     if (lock.current) return;
     setBusy(true);
     try {
-      const r = await fetch('/api/account/appearance', { cache: 'no-store' });
+      const r = await fetch("/api/account/appearance", { cache: "no-store" });
       if (!r.ok) throw Error();
-      setState(await r.json());
-      setError('');
+      publish(await r.json());
+      setError("");
       router.refresh();
     } catch {
-      setError('Не удалось обновить данные.');
+      setError("Не удалось обновить данные.");
     } finally {
       setBusy(false);
     }
   }
+  const feedback = (
+    <>
+      {" "}
+      {busy && <p role="status">Сохраняем…</p>}
+      {notice && <p role="status">{notice}</p>}
+      {error && (
+        <div role="alert">
+          <p>{error}</p>
+          <button
+            type="button"
+            className="tea-outline"
+            disabled={busy}
+            onClick={() => void reload()}
+          >
+            Обновить данные
+          </button>
+        </div>
+      )}
+    </>
+  );
+  if (mode === "avatar")
+    return (
+      <>
+        <button
+          type="button"
+          className="profile-avatar-edit"
+          aria-label="Изменить аватар"
+          onClick={() => dialogRef.current?.showModal()}
+        >
+          <UserAvatar name={name} appearance={state} size={144} />
+          <span>✎ Изменить аватар</span>
+        </button>
+        <dialog
+          ref={dialogRef}
+          className="avatar-editor-dialog"
+          aria-labelledby="avatar-editor-title"
+          onCancel={(e) => {
+            if (busy) e.preventDefault();
+          }}
+        >
+          <h2 id="avatar-editor-title">Изменить аватар</h2>
+          <fieldset disabled={busy} className="avatar-settings-fields">
+            {" "}
+            <label className="avatar-file-label">
+              Выбрать изображение
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => void choose(e.target.files?.[0])}
+              />
+            </label>
+            <p className="avatar-help">
+              JPEG, PNG, WebP · до 5 МБ · от 64×64 до 16 млн пикселей. Аватар
+              публичный; исходник и метаданные не сохраняются.
+            </p>
+            {source && crop && (
+              <div className="avatar-crop-controls">
+                <h3>Обрезка аватара</h3>
+                <div
+                  className="avatar-crop-preview"
+                  role="img"
+                  aria-label="Предпросмотр обрезки"
+                >
+                  <img
+                    src={source.url}
+                    alt=""
+                    style={{
+                      width: (source.width / crop.size) * 100 + "%",
+                      height: (source.height / crop.size) * 100 + "%",
+                      left: (-crop.left / crop.size) * 100 + "%",
+                      top: (-crop.top / crop.size) * 100 + "%",
+                    }}
+                  />
+                </div>
+                <label>
+                  Масштаб
+                  <input
+                    type="range"
+                    min={1}
+                    max={Math.min(
+                      4,
+                      Math.min(source.width, source.height) / 64,
+                    )}
+                    step={0.01}
+                    value={zoom}
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                  />
+                </label>
+                <label>
+                  По горизонтали
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={x}
+                    onChange={(e) => setX(Number(e.target.value))}
+                  />
+                </label>
+                <label>
+                  По вертикали
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={y}
+                    onChange={(e) => setY(Number(e.target.value))}
+                  />
+                </label>
+                <div className="avatar-actions">
+                  <button
+                    type="button"
+                    className="tea-outline"
+                    onClick={() =>
+                      void perform("/api/account/avatar", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": source.file.type,
+                          "If-Match": String(state.revision),
+                          "X-Avatar-Crop": JSON.stringify(crop),
+                        },
+                        body: source.file,
+                      })
+                    }
+                  >
+                    Сохранить аватар
+                  </button>
+                  <button
+                    type="button"
+                    className="tea-text-action"
+                    onClick={clear}
+                  >
+                    Отменить обрезку
+                  </button>
+                </div>
+              </div>
+            )}
+            {state.avatarUrl && (
+              <button
+                type="button"
+                className="tea-outline"
+                onClick={() =>
+                  void perform("/api/account/avatar", {
+                    method: "DELETE",
+                    headers: { "If-Match": String(state.revision) },
+                  })
+                }
+              >
+                Удалить аватар
+              </button>
+            )}
+          </fieldset>
+          {feedback}
+          <button
+            type="button"
+            className="tea-outline"
+            disabled={busy}
+            onClick={() => {
+              clear();
+              dialogRef.current?.close();
+            }}
+          >
+            Закрыть
+          </button>
+        </dialog>
+      </>
+    );
   return (
     <section
       className="reader-panel avatar-settings"
       aria-labelledby="avatar-settings-title"
     >
-      <h2 id="avatar-settings-title">Аватар и рамка</h2>
-      <div className="avatar-settings-preview">
-        <UserAvatar name={name} appearance={state} size={144} />
-        <p>
-          Аватар и выбранная рамка видны рядом с вашими отзывами и
-          комментариями.
-        </p>
-      </div>
+      <h2 id="avatar-settings-title">Рамки</h2>
+      <p>Выбранная рамка видна рядом с вашими отзывами и комментариями.</p>
       <fieldset disabled={busy} className="avatar-settings-fields">
-        <legend className="sr-only">Настройки аватара</legend>
-        <label className="avatar-file-label">
-          Выбрать изображение
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(e) => void choose(e.target.files?.[0])}
-          />
-        </label>
-        <p className="avatar-help">
-          JPEG, PNG, WebP · до 5 МБ · от 64×64 до 16 млн пикселей. Аватар
-          публичный; исходник и метаданные не сохраняются.
-        </p>
-        {source && crop && (
-          <div className="avatar-crop-controls">
-            <h3>Обрезка аватара</h3>
-            <div
-              className="avatar-crop-preview"
-              role="img"
-              aria-label="Предпросмотр обрезки"
-            >
-              <img
-                src={source.url}
-                alt=""
-                style={{
-                  width: (source.width / crop.size) * 100 + '%',
-                  height: (source.height / crop.size) * 100 + '%',
-                  left: (-crop.left / crop.size) * 100 + '%',
-                  top: (-crop.top / crop.size) * 100 + '%',
-                }}
-              />
-            </div>
-            <label>
-              Масштаб
-              <input
-                type="range"
-                min={1}
-                max={Math.min(4, Math.min(source.width, source.height) / 64)}
-                step={0.01}
-                value={zoom}
-                onChange={(e) => setZoom(Number(e.target.value))}
-              />
-            </label>
-            <label>
-              По горизонтали
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={x}
-                onChange={(e) => setX(Number(e.target.value))}
-              />
-            </label>
-            <label>
-              По вертикали
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={y}
-                onChange={(e) => setY(Number(e.target.value))}
-              />
-            </label>
-            <div className="avatar-actions">
-              <button
-                type="button"
-                className="tea-outline"
-                onClick={() =>
-                  void perform('/api/account/avatar', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': source.file.type,
-                      'If-Match': String(state.revision),
-                      'X-Avatar-Crop': JSON.stringify(crop),
-                    },
-                    body: source.file,
-                  })
-                }
-              >
-                Сохранить аватар
-              </button>
-              <button type="button" className="tea-text-action" onClick={clear}>
-                Отменить обрезку
-              </button>
-            </div>
-          </div>
-        )}
-        {state.avatarUrl && (
-          <button
-            type="button"
-            className="tea-outline"
-            onClick={() =>
-              void perform('/api/account/avatar', {
-                method: 'DELETE',
-                headers: { 'If-Match': String(state.revision) },
-              })
-            }
-          >
-            Удалить аватар
-          </button>
-        )}
+        {" "}
         <h3>Рамка аватара</h3>
         <div className="avatar-frame-options">
           <label>
@@ -303,14 +379,14 @@ export function AvatarSettings({
                 appearance={{
                   avatarUrl: state.avatarUrl,
                   frameUrl: state.frameReady
-                    ? '/avatar-frames/beta-dragon-2026.webp'
+                    ? "/avatar-frames/beta-dragon-2026.webp"
                     : null,
                 }}
                 size={80}
               />
               <span>
                 Бета-дракон · эксклюзив участника беты
-                {!state.frameReady ? ' · готовится' : ''}
+                {!state.frameReady ? " · готовится" : ""}
               </span>
             </label>
           )}
@@ -322,21 +398,7 @@ export function AvatarSettings({
           </p>
         )}
       </fieldset>
-      {busy && <p role="status">Сохраняем…</p>}
-      {notice && <p role="status">{notice}</p>}
-      {error && (
-        <div role="alert">
-          <p>{error}</p>
-          <button
-            type="button"
-            className="tea-outline"
-            disabled={busy}
-            onClick={() => void reload()}
-          >
-            Обновить данные
-          </button>
-        </div>
-      )}
+      {feedback}
     </section>
   );
 }

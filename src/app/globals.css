@@ -4743,3 +4743,15 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
 .avatar-crop-controls{display:grid;gap:1rem}.avatar-crop-preview{position:relative;width:min(100%,240px);aspect-ratio:1;border-radius:50%;overflow:hidden;background:var(--surface-raised);border:1px solid var(--border)}.avatar-crop-preview img{position:absolute;max-width:none;object-fit:fill}.avatar-crop-controls label{display:grid;gap:.35rem;max-width:24rem}.avatar-crop-controls input{width:100%;accent-color:var(--primary)}.avatar-actions{display:flex;flex-wrap:wrap;gap:.7rem}
 .avatar-frame-options{display:flex;gap:1rem;flex-wrap:wrap}.avatar-frame-options label{display:flex;align-items:center;gap:.65rem;border:1px solid var(--border);padding:.7rem;border-radius:1rem;max-width:100%;overflow-wrap:anywhere}.avatar-frame-options input{accent-color:var(--primary);flex-shrink:0}
 .community-comment-meta .user-avatar{margin-right:.4rem}.reviews-card>header>.user-avatar{margin-right:.25rem}
+
+/* Keep the artist's original colours in Night; darken without recolouring. */
+[data-theme="night"] .catalog-page .catalog-hero {background-blend-mode:normal,normal,normal; --ux06-art-tint:transparent;}
+.profile-avatar-edit {display:grid;justify-items:center;gap:8px;cursor:pointer;background:transparent;border:0;color:var(--text-primary);}
+.profile-avatar-edit > span:last-child {border:1px solid var(--border);border-radius:20px;padding:6px 12px;background:var(--surface-raised);font-size:.85rem;}
+.profile-avatar-edit:focus-visible {outline:2px solid var(--primary);outline-offset:5px;border-radius:12px;}
+.avatar-editor-dialog {width:min(560px,calc(100% - 24px));max-height:90dvh;overflow:auto;margin:auto;padding:24px;border:1px solid var(--border);border-radius:20px;background:var(--surface);color:var(--text-primary);}
+.avatar-editor-dialog::backdrop {background:rgb(0 0 0 / .65);}
+.avatar-editor-dialog h2 {font-size:1.5rem;margin-bottom:16px;}
+.avatar-editor-dialog > button {margin-top:20px;}
+.avatar-file-label {display:grid;gap:12px;cursor:pointer;}
+.avatar-file-label input::file-selector-button {cursor:pointer;padding:10px 16px;margin-right:12px;border:1px solid var(--border);border-radius:12px;background:var(--primary);color:var(--primary-foreground);font:inherit;}

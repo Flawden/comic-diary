@@ -19,6 +19,23 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+// Runtime access policy: a singleton, never an AUTH gate or a cosmetic award.
+export const siteAccessPolicy = pgTable('site_access_policy', {
+  id: integer('id').primaryKey(),
+  publicRegistration: boolean('public_registration').notNull().default(false),
+  betaOnly: boolean('beta_only').notNull().default(false),
+  revision: integer('revision').notNull().default(1),
+  updatedAt: timestamp('updated_at', {withTimezone:true}).notNull().defaultNow(),
+},t=>[check('site_access_policy_singleton',sql`${t.id}=1`),check('site_access_policy_revision',sql`${t.revision}>0`)]);
+export const siteAccessEvents = pgTable('site_access_events', {
+  id: serial('id').primaryKey(),
+  actorUserId: integer('actor_user_id').notNull().references(()=>users.id),
+  publicRegistration: boolean('public_registration').notNull(),
+  betaOnly: boolean('beta_only').notNull(),
+  revision: integer('revision').notNull(),
+  createdAt: timestamp('created_at',{withTimezone:true}).notNull().defaultNow(),
+});
+
 // Invitations confer registration eligibility, never a role or an existing-account credential.
 export const userAppearance = pgTable('user_appearance', {
   userId: integer('user_id').primaryKey().references(() => users.id, {onDelete:'cascade'}),
@@ -46,6 +63,7 @@ export const appearanceEvents = pgTable('user_appearance_events', {
 
 export const betaInvitations = pgTable("beta_registration_invitations", {
   id: serial("id").primaryKey(),
+  grantsBeta: boolean("grants_beta").notNull().default(false),
   secretHash: varchar("secret_hash", {length:64}).notNull(),
   email: varchar("email", {length:320}).notNull(),
   createdByUserId: integer("created_by_user_id").notNull().references(()=>users.id),

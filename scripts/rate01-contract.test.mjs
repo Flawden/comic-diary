@@ -13,11 +13,13 @@ test('aggregate has a server-side publication/ownership boundary and no voter pa
   assert.equal((query.match(/db.execute/g) ?? []).length, 1);
   assert.match(query, /GROUP BY c.id/);
 });
-test('dynamic page checks access before aggregation, passes only summaries and preserves personal controls', () => {
+test('dynamic page checks access before aggregation, passes only summaries and keeps reading controls while duplicate private rating is retired', () => {
   assert.ok(page.indexOf('notFound();') < page.indexOf('await getCommunityRatings'));
   assert.match(page, /dynamic = "force-dynamic"/);
   assert.match(page, /communityRatings=\{communityRatings\?\.chapters \?\? \{\}\}/);
-  assert.match(page, /<DiaryRatingFields/);
+  assert.doesNotMatch(page, /<DiaryRatingFields/);
+  assert.match(page, /<ReadingStatusForm/);
+  assert.match(page, /<Reviews/);
   assert.match(panel, /!isScheduled&&<span className="wd08-community-score"/);
   assert.match(panel, /data-chapter-community=\{c.id\}/);
   assert.match(panel, /<ChapterRating/);

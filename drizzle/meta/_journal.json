@@ -372,6 +372,13 @@
       "when": 1795327200000,
       "tag": "0052_user_appearance",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1795330800000,
+      "tag": "0053_site_access_policy",
+      "breakpoints": true
     }
   ]
 }

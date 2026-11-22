@@ -114,7 +114,7 @@ test('0050 -> 0051 additive upgrade preserves all old rows, old inserts, closed 
       await pool.query('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id')
     ).rows;
     assert.equal(old.length, 51);
-    assert.equal(current.length, 53);
+    assert.equal(current.length, 54);
     assert.deepEqual(current.slice(0, 51), old);
     assert.deepEqual(await snapshot(), before);
     assert.equal(

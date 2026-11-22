@@ -44,6 +44,7 @@ export async function inspectBetaInvitation(secret: unknown) {
   if (!row) throw new InvitationError(400, 'invalid_invitation');
   return {
     status: invitationStatus(row, new Date()),
+    grantsBeta: row.grantsBeta,
     emailHint: maskedInvitationEmail(row.email),
     expiresAt: row.expiresAt.toISOString(),
   };

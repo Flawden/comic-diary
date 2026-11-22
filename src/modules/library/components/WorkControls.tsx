@@ -34,7 +34,7 @@ export function ShelfAction({comicId, member, hasDiary, login}:{comicId:number;m
   return <div><button type="button" className="wd-bookmark" disabled={pending} onClick={async()=>{setPending(true);setError("");try{await writeReading(comicId,{intent:"add-to-library"});router.refresh();}catch{setPending(false);setError("Не удалось добавить. Попробуйте ещё раз.");}}}>{pending?"Добавляем…":hasDiary?"＋ Вернуть в библиотеку":"＋ В дневник"}</button>{error && <small role="alert">{error}</small>}</div>;
 }
 
-const tabs=[["chapters","Главы"],["about","Об истории"],["reviews","Отзывы и комментарии"],["my-reading","Мой дневник"]] as const;
+const tabs=[["chapters","Главы"],["about","Об истории"],["reviews","Отзывы и комментарии"],["my-reading","Моё чтение"]] as const;
 export function WorkTabs({chapters,about,diary,reviews,count}:{chapters:ReactNode;about:ReactNode;diary:ReactNode;reviews?:ReactNode;count:number}) {
   const [tab,setTab]=useState<string>("chapters");
   const refs=useRef<(HTMLAnchorElement|null)[]>([]);
