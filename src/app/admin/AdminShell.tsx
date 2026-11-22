@@ -85,6 +85,7 @@ export function AdminShell({ children, role, permissions }: AdminShellProps) {
         ...(permissions.manageUsers ? [
           { href: "/admin/users", label: "Пользователи", icon: "users" as const, active: pathname.startsWith("/admin/users") },
           ...(role === "ADMIN" ? [{href:"/admin/invitations",label:"Приглашения",icon:"users" as const,active:pathname.startsWith("/admin/invitations")}] : []),
+          ...(role === "ADMIN" ? [{href:"/admin/beta-participants",label:"Участники беты",icon:"users" as const,active:pathname.startsWith("/admin/beta-participants")}] : []),
         ] : []),
         ...(permissions.viewAudit ? [
           { href: "/admin/community", label: "Модерация комментариев", icon: "audit" as const, active: pathname.startsWith("/admin/community") },

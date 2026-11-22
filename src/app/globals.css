@@ -4730,3 +4730,16 @@ background:radial-gradient(ellipse at 80% 0%,#b0c6c133,transparent 63%),radial-g
     opacity: calc(var(--ux08-art-opacity) * .65);
   }
 }
+
+/* Public identity: one component in profile, reviews, comments and administration. */
+.user-avatar{--avatar-size:56px;display:inline-block;position:relative;width:var(--avatar-size);height:var(--avatar-size);flex:0 0 var(--avatar-size);vertical-align:middle;isolation:isolate}
+.user-avatar-face{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:50%;overflow:hidden;background:var(--surface-raised);color:var(--text-primary);border:1px solid var(--border);font-size:calc(var(--avatar-size) * .3);font-weight:600}
+.user-avatar-face img{display:block;width:100%;height:100%;object-fit:cover}
+.user-avatar--framed .user-avatar-face{inset:27% auto auto 13%;width:70%;height:70%;font-size:calc(var(--avatar-size) * .22)}
+.user-avatar-frame{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:1}
+.avatar-settings{margin-block:1rem}.avatar-settings h2{font-family:var(--font-reader-serif),Georgia,serif;font-size:1.5rem}.avatar-settings h3{margin-top:1rem;font-weight:600}
+.avatar-settings-preview{display:flex;gap:1.2rem;align-items:center;flex-wrap:wrap;margin:1rem 0}.avatar-settings-preview p{max-width:24rem}.avatar-settings-fields{display:grid;gap:1rem;min-width:0}.avatar-settings-fields:disabled{opacity:.6}
+.avatar-file-label{display:grid;gap:.5rem;max-width:100%;overflow-wrap:anywhere}.avatar-file-label input{width:100%;min-width:0;max-width:100%}.avatar-help{font-size:.85rem;line-height:1.5;color:var(--text-secondary)}
+.avatar-crop-controls{display:grid;gap:1rem}.avatar-crop-preview{position:relative;width:min(100%,240px);aspect-ratio:1;border-radius:50%;overflow:hidden;background:var(--surface-raised);border:1px solid var(--border)}.avatar-crop-preview img{position:absolute;max-width:none;object-fit:fill}.avatar-crop-controls label{display:grid;gap:.35rem;max-width:24rem}.avatar-crop-controls input{width:100%;accent-color:var(--primary)}.avatar-actions{display:flex;flex-wrap:wrap;gap:.7rem}
+.avatar-frame-options{display:flex;gap:1rem;flex-wrap:wrap}.avatar-frame-options label{display:flex;align-items:center;gap:.65rem;border:1px solid var(--border);padding:.7rem;border-radius:1rem;max-width:100%;overflow-wrap:anywhere}.avatar-frame-options input{accent-color:var(--primary);flex-shrink:0}
+.community-comment-meta .user-avatar{margin-right:.4rem}.reviews-card>header>.user-avatar{margin-right:.25rem}

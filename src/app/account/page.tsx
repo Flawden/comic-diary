@@ -1,3 +1,6 @@
+import {AvatarSettings} from './AvatarSettings';
+import {UserAvatar} from '@/shared/components/UserAvatar';
+import {ownAppearance} from '@/modules/appearance/service';
 import Link from "next/link";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -61,7 +64,7 @@ export default async function AccountPage() {
     );
   }
 
-  const stats = await getUserReadingStats(user.id);
+  const [stats,appearance] = await Promise.all([getUserReadingStats(user.id),ownAppearance(user.id)]);
   const [account] = await db.select({ isActive: users.isActive, emailVerifiedAt: users.emailVerifiedAt,
       verificationRequiredAt: users.verificationRequiredAt }).from(users).where(eq(users.id, user.id));
   const verificationState = account ? getActivationState(account) : null;
@@ -79,7 +82,7 @@ export default async function AccountPage() {
       </nav>
       <div className="account-layout">
         <aside className="account-identity reader-panel">
-          <span className="account-monogram" aria-hidden="true">{(user.displayName || user.email).slice(0,1).toLocaleUpperCase("ru")}</span>
+          <UserAvatar name={user.displayName || "Читатель"} appearance={appearance} size={144}/>
           <h2>{user.displayName || "Читатель"}</h2>
           <p className="account-email">{user.email}</p>
           <p className="reader-eyebrow">{roleLabel(user.role)}</p>
@@ -89,7 +92,7 @@ export default async function AccountPage() {
         </aside>
         <div className="account-content">
           <div id="account-diary"><ReadingStats stats={stats} /></div>
-          <div id="appearance"><ThemeSelector initialTheme={theme} /></div>
+          <div id="appearance"><AvatarSettings name={user.displayName || "Читатель"} initial={appearance}/><ThemeSelector initialTheme={theme} /></div>
           <section id="account-settings" className="reader-panel account-settings">
             <h2>Настройки и данные</h2>
             {legacyVerificationEnabled(process.env) && verificationState === "legacy_unverified" && <AccountEmailVerificationForm requestEnabled={legacyVerificationRequestEnabled(process.env)} />}

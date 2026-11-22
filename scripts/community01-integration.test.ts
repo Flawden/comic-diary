@@ -54,7 +54,8 @@ test("create/read/edit/delete tombstone; public DTO never exposes identities/not
   const result = await service.createComment(actors[0], v); assert.equal(result.replay, false);
   const page = await service.listComments(target);
   assert.equal(page.items[0].body, v.body); assert.equal(page.items[0].mine, false);
-  assert.deepEqual(Object.keys(page.items[0]).sort(), ["id","parentId","author","mine","body","spoiler","status","createdAt","editedAt"].sort());
+  assert.deepEqual(Object.keys(page.items[0]).sort(), ["id","parentId","author","appearance","mine","body","spoiler","status","createdAt","editedAt"].sort());
+  assert.deepEqual(Object.keys(page.items[0].appearance!).sort(),["avatarUrl","frameUrl"]);
   assert.doesNotMatch(JSON.stringify(page), /userId|authorUserId|reporter|requestId|requestDigest|example.invalid|password|personalNote/);
   await assert.rejects(service.editComment(actors[1], result.item.id, { body: "stolen", spoiler: false }), code(403));
   await assert.rejects(service.deleteComment(actors[1], result.item.id), code(403));

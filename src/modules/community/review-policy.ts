@@ -1,6 +1,7 @@
+import type {PublicAppearance} from '@/modules/appearance/policy';
 import { record,exactKeys,positiveId,textValue,invalid } from "./policy";
 export const reviewCriteria=[['plot','Сюжет'],['characters','Персонажи'],['art','Рисовка'],['depth','Глубина'],['world','Мир']] as const;
-export type Review = { id:number; mine:boolean; author:string; scores:number[]; body:string; spoiler:boolean; version:number; createdAt:string; updatedAt:string; up:number; down:number; reaction:number; hidden:boolean };
+export type Review = { id:number; mine:boolean; author:string; appearance?:PublicAppearance; scores:number[]; body:string; spoiler:boolean; version:number; createdAt:string; updatedAt:string; up:number; down:number; reaction:number; hidden:boolean };
 export type ReviewPage={items:Review[];mine:Review|null;total:number;nextCursor:string|null};
 export type ReviewFilter='all'|'text'|'scores'|'hidden';
 export function reviewBody(input:unknown){

@@ -1,5 +1,7 @@
 "use client";
 
+import {UserAvatar} from '@/shared/components/UserAvatar';
+import type {PublicAppearance} from '@/modules/appearance/policy';
 import {
   type FormEvent,
   useState,
@@ -18,6 +20,7 @@ type AccountEntitlement =
   | "PRIVATE_CATALOG";
 
 type AdminUser = {
+  appearance?:PublicAppearance;
   id: number;
   email: string;
   displayName: string | null;
@@ -321,7 +324,7 @@ export function AdminUserManager({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-semibold">
+                    <UserAvatar name={user.displayName || "Читатель"} appearance={user.appearance}/><h2 className="font-semibold">
                       {user.displayName ??
                         user.email}
                     </h2>

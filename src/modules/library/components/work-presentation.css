@@ -100,8 +100,9 @@
 /* Keep the approved central illustration, subdued behind readable chapter text. */
 .wd-work .chapter-panel--ux08 .wd-chapters .wd08-art,
 .wd-work .chapter-panel--ux08 .wd-chapters .wd08-cover-art {
- opacity:.26;
- filter:blur(.7px) saturate(.8) brightness(.85);
+ opacity:.30;
+ /* Preserve source detail. Transparency blends crisp artwork into the card. */
+ filter:none;
 }
 .wd-work .chapter-panel--ux08 .wd08-heading {
  background:color-mix(in srgb,var(--ux08-card) 76%,transparent);
