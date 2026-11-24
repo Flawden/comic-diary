@@ -1030,7 +1030,7 @@ jobs:
             echo
             echo "\`$RELEASE_DIGEST\`"
             echo
-            echo "Public readiness, catalog and login smoke: **PASS**"
+            echo "Public readiness, permitted guest landing and login smoke: **PASS**"
             echo
             echo "Result: **PASS**"
           } >> "$GITHUB_STEP_SUMMARY"
