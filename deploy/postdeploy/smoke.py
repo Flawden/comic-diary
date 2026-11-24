@@ -42,7 +42,7 @@ def validate_origin(origin: str) -> str:
     return origin.rstrip("/")
 
 
-def fetch(origin: str, path: str, timeout: float = 8.0) -> bytes:
+def fetch_response(origin: str, path: str, timeout: float = 8.0) -> tuple[int, bytes, list[str]]:
     url = origin + path
     request = urllib.request.Request(
         url,
@@ -55,20 +55,29 @@ def fetch(origin: str, path: str, timeout: float = 8.0) -> bytes:
     )
     opener = urllib.request.build_opener(NoRedirect())
     try:
-        with opener.open(request, timeout=timeout) as response:
-            if response.status != 200:
-                raise SmokeFailure(f"{path.split('?')[0]} returned HTTP {response.status}")
+        try:
+            response = opener.open(request, timeout=timeout)
+        except urllib.error.HTTPError as exc:
+            # Observe redirects without following them. Only the landing-page
+            # caller may recognise the single explicit closed-beta route.
+            response = exc
+        with response:
             if urllib.parse.urlsplit(response.url).netloc != urllib.parse.urlsplit(origin).netloc:
                 raise SmokeFailure("Response was served by a different host")
             body = response.read(MAX_BODY + 1)
             if len(body) > MAX_BODY:
                 raise SmokeFailure(f"{path.split('?')[0]} response is too large")
-            return body
-    except urllib.error.HTTPError as exc:
-        raise SmokeFailure(f"{path.split('?')[0]} returned HTTP {exc.code}") from exc
+            return response.status, body, response.headers.get_all("Location", [])
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         # Do not print response bodies, database diagnostics, cookies, or credentials.
         raise SmokeFailure(f"{path.split('?')[0]} network error ({type(exc).__name__})") from exc
+
+
+def fetch(origin: str, path: str, timeout: float = 8.0) -> bytes:
+    status, body, _ = fetch_response(origin, path, timeout)
+    if status != 200:
+        raise SmokeFailure(f"{path.split('?')[0]} returned HTTP {status}")
+    return body
 
 
 class CatalogDocument(HTMLParser):
@@ -99,7 +108,72 @@ def check_catalog(body: bytes) -> None:
         raise SmokeFailure("/ did not render its catalog container and shelf")
 
 
-def check_once(origin: str, expected_sha: str, timeout: float = 8.0) -> None:
+class BetaWaitDocument(HTMLParser):
+    """Guest waiting page must provide the real login and access-recheck flow."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.in_main = False
+        self.in_heading = False
+        self.heading_parts: list[str] = []
+        self.has_heading = False
+        self.has_retry_form = False
+        self.has_login = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attributes = dict(attrs)
+        if tag == "main" and "reader-panel" in (attributes.get("class") or "").split():
+            self.in_main = True
+        if not self.in_main:
+            return
+        if tag == "h1":
+            self.in_heading = True
+            self.heading_parts = []
+        if tag == "form" and attributes.get("action") == "/beta-wait" and (attributes.get("method") or "get").lower() == "get":
+            self.has_retry_form = True
+        if tag == "a" and attributes.get("href") == "/login?next=%2F":
+            self.has_login = True
+
+    def handle_data(self, data: str) -> None:
+        if self.in_heading:
+            self.heading_parts.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "h1" and self.in_heading:
+            self.has_heading |= " ".join("".join(self.heading_parts).split()) == "Закрытое бета-тестирование"
+            self.in_heading = False
+        if tag == "main":
+            self.in_main = False
+
+
+def check_beta_wait(body: bytes) -> None:
+    try:
+        html = body.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise SmokeFailure("/beta-wait did not return UTF-8 HTML") from exc
+    parser = BetaWaitDocument()
+    parser.feed(html)
+    parser.close()
+    if not (parser.has_heading and parser.has_retry_form and parser.has_login):
+        raise SmokeFailure("/beta-wait did not render its guest heading, access-recheck form and login link")
+
+
+def check_landing(origin: str, timeout: float) -> str:
+    status, body, locations = fetch_response(origin, "/", timeout)
+    if status == 200:
+        check_catalog(body)
+        return "catalog"
+    if status != 307:
+        raise SmokeFailure(f"/ returned HTTP {status}")
+    # Literal allowlist: no credentials, query, fragment, protocol-relative URLs,
+    # alternate ports, encoded paths or redirect chains. Do not fetch Location.
+    if len(locations) != 1 or locations[0] not in ("/beta-wait", origin + "/beta-wait"):
+        raise SmokeFailure("/ returned an unexpected redirect")
+    check_beta_wait(fetch(origin, "/beta-wait", timeout))
+    return "closed_beta"
+
+
+def check_once(origin: str, expected_sha: str, timeout: float = 8.0) -> str:
     try:
         response = json.loads(fetch(origin, f"/api/health/ready?br02={expected_sha}", timeout))
     except (ValueError, UnicodeDecodeError) as exc:
@@ -109,9 +183,10 @@ def check_once(origin: str, expected_sha: str, timeout: float = 8.0) -> None:
     if response.get("commit") != expected_sha:
         raise SmokeFailure("Public site is serving a different commit")
 
-    check_catalog(fetch(origin, "/", timeout))
+    landing = check_landing(origin, timeout)
     if "Вход".encode("utf-8") not in fetch(origin, "/login", timeout):
         raise SmokeFailure("/login did not render its expected page")
+    return landing
 
 
 def run(origin: str, expected_sha: str, attempts: int, delay: float, timeout: float) -> bool:
@@ -122,8 +197,9 @@ def run(origin: str, expected_sha: str, attempts: int, delay: float, timeout: fl
         raise ValueError("Invalid retry or timeout settings")
     for attempt in range(1, attempts + 1):
         try:
-            check_once(origin, expected_sha, timeout)
-            print(f"BR02=PASS; COMMIT={expected_sha}; READINESS=ok; CATALOG=ok; LOGIN=ok", flush=True)
+            landing = check_once(origin, expected_sha, timeout)
+            catalog = "ok" if landing == "catalog" else "restricted"
+            print(f"BR02=PASS; COMMIT={expected_sha}; READINESS=ok; LANDING={landing}; CATALOG={catalog}; LOGIN=ok", flush=True)
             return True
         except SmokeFailure as exc:
             print(f"BR02=RETRY; ATTEMPT={attempt}/{attempts}; REASON={exc}", flush=True)
