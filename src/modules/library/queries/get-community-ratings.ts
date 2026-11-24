@@ -54,7 +54,7 @@ export async function getCommunityRatings(comicId: number, viewerUserId: number 
     ), volume_readers AS (
       SELECT c.volume_number,r.user_id,avg(r.rating) AS reader_average
       FROM chapter_votes r JOIN chapters c ON c.id=r.chapter_id
-      WHERE c.status='RELEASED' AND c.kind='MAIN' AND c.volume_number IS NOT NULL
+      WHERE c.status='RELEASED' AND c.kind='MAIN'
       GROUP BY c.volume_number,r.user_id
     ), volume_scores AS (
       SELECT volume_number, jsonb_build_object('average',avg(reader_average),'votes',count(*)) AS value
@@ -70,7 +70,8 @@ export async function getCommunityRatings(comicId: number, viewerUserId: number 
     )
     SELECT work.value || jsonb_build_object('chapters', coalesce(
       (SELECT jsonb_object_agg(id, value) FROM chapter_scores), '{}'::jsonb),
-      'volumes',coalesce((SELECT jsonb_object_agg(volume_number,value) FROM volume_scores),'{}'::jsonb),
+      'volumes',coalesce((SELECT jsonb_object_agg(volume_number,value) FROM volume_scores WHERE volume_number IS NOT NULL),'{}'::jsonb),
+      'unassignedChapters',coalesce((SELECT value FROM volume_scores WHERE volume_number IS NULL),jsonb_build_object('average',NULL,'votes',0)),
       'viewerChapters',coalesce((SELECT jsonb_object_agg(chapter_id,value) FROM viewer_scores),'{}'::jsonb)) AS ratings
     FROM accessible CROSS JOIN work
   `);
