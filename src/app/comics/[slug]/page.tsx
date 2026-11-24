@@ -148,7 +148,7 @@ export default async function ComicPage({
             ) : null}
           </div>
           {readingState?.inLibrary && readingState.chapterReading.registered && mainChapterIds.length > 0 ?
-            <WorkHeroProgress mainChapterIds={mainChapterIds} /> : null}
+            <WorkHeroProgress mainChapterIds={mainChapterIds} chapters={chapters.map(c=>({id:c.id,status:c.status,kind:c.kind,pageCount:c.pageCount,readingMinutes:c.readingMinutes}))} /> : null}
           <div className="wd-hero-actions">
             <div className="wd-shelf"><ShelfAction comicId={comic.id} member={!!readingState?.inLibrary} hasDiary={readingState !== null} login={currentUser?null:`/login?next=${encodeURIComponent("/comics/"+comic.slug)}`}/></div>
           </div>
@@ -189,6 +189,7 @@ export default async function ComicPage({
             volumeTitles={volumeTitles}
             communityRatings={communityRatings?.chapters ?? {}}
             volumeRatings={communityRatings?.volumes??{}}
+            unassignedRating={communityRatings?.unassignedChapters}
             viewerRatings={communityRatings?.viewerChapters??{}}
             ratingsEnabled={comic.visibility === "SHARED" && comic.publicationStatus === "PUBLISHED"}
           />

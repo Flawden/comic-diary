@@ -124,3 +124,31 @@ test('scheduled/archived/special votes do not distort main volume rating and pri
  assert.deepEqual((await ratings.getCommunityRatings(book))?.volumes,{});
  await q("UPDATE comics SET visibility='PRIVATE',owner_user_id=$1 WHERE id=$2",[actors[0].userId,book]);assert.equal(await ratings.getCommunityRatings(book,actors[1].userId),null);
 });
+
+test('unassigned chapters use equal reader weight and exclude specials, archive, planned and other works',async()=>{
+ await q('UPDATE chapters SET volume_number=NULL WHERE comic_id=$1',[book]);
+ for(const id of ids.slice(0,2))await q('INSERT INTO user_chapter_reads(user_id,chapter_id,rating) VALUES($1,$2,5)',[actors[0].userId,id]);
+ await q('INSERT INTO user_chapter_reads(user_id,chapter_id,rating) VALUES($1,$2,1)',[actors[1].userId,ids[0]]);
+ for(const [status,kind] of [['RELEASED','SPECIAL'],['ARCHIVED','MAIN'],['SCHEDULED','MAIN']]){
+  const id=(await q('INSERT INTO chapters(comic_id,display_code,sort_order,status,kind) VALUES($1,$2,10,$3,$4) RETURNING id',[book,status+kind,status,kind])).rows[0].id;
+  await q('INSERT INTO user_chapter_reads(user_id,chapter_id,rating) VALUES($1,$2,1)',[actors[2].userId,id]);
+ }
+ await q('INSERT INTO user_chapter_reads(user_id,chapter_id,rating) VALUES($1,$2,1)',[actors[2].userId,ids[2]]);
+ const result=await ratings.getCommunityRatings(book,actors[0].userId);
+ assert.deepEqual(result?.volumes,{});assert.deepEqual(result?.unassignedChapters,{average:3,votes:2});
+ await q('UPDATE chapters SET volume_number=1 WHERE id=$1',[ids[1]]);
+ const mixed=await ratings.getCommunityRatings(book);assert.deepEqual(mixed?.volumes?.[1],{average:5,votes:1});assert.deepEqual(mixed?.unassignedChapters,{average:3,votes:2});
+});
+
+test('hidden or withdrawn unassigned public ratings never restore private diary fallback',async()=>{
+ await q('UPDATE chapters SET volume_number=NULL WHERE comic_id=$1',[book]);
+ const user=actors[0].userId;await q('INSERT INTO user_chapter_reads(user_id,chapter_id,rating) VALUES($1,$2,1)',[user,ids[0]]);
+ const review=(await q('INSERT INTO community_reviews(comic_id,chapter_id,user_id,rating) VALUES($1,$2,$3,5) RETURNING id',[book,ids[0],user])).rows[0].id;
+ assert.deepEqual((await ratings.getCommunityRatings(book))?.unassignedChapters,{average:5,votes:1});
+ await q('UPDATE community_reviews SET hidden_at=now() WHERE id=$1',[review]);
+ assert.deepEqual((await ratings.getCommunityRatings(book))?.unassignedChapters,{average:null,votes:0});
+ await q('UPDATE community_reviews SET deleted_at=now() WHERE id=$1',[review]);
+ assert.deepEqual((await ratings.getCommunityRatings(book))?.unassignedChapters,{average:null,votes:0});
+ await q("UPDATE comics SET visibility='PRIVATE',owner_user_id=$1 WHERE id=$2",[user,book]);
+ assert.equal(await ratings.getCommunityRatings(book,actors[1].userId),null);
+});

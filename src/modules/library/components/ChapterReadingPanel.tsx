@@ -14,20 +14,20 @@ import { useRef, useState, useTransition } from "react";
 import { Button } from "@/shared/components/ui";
 import type { ComicChapter } from "@/modules/comics/queries/get-comic-chapters";
 import { formatExpectedRelease } from "@/modules/catalog/chapter-release-dates";
-import { groupChaptersByVolume, volumeHeading, volumeProgress } from "@/modules/catalog/chapter-volumes";
+import { groupChaptersByVolume, volumeHeading } from "@/modules/catalog/chapter-volumes";
 import { getChapterReadingSource, readingSource } from "@/modules/library/reading-target";
 import { useWorkChapterProgress } from "./WorkChapterProgress";
-import { readingMeasures,chapterCountLabel } from "@/modules/catalog/work-presentation-policy";
+import { ChapterGroupSummary } from "./ChapterGroupSummary";
 import { WorkIcon } from "@/shared/components/WorkIcon";
 
 type Chapter = Omit<ComicChapter, "releasedAt">;
-type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; canMark: boolean; workSourceUrl: string | null; volumeTitles?: Record<number, string>; communityRatings?: Record<number, RatingAggregate>; volumeRatings?:Record<number,RatingAggregate>;viewerRatings?:Record<number,{rating:number|null;source:'review'|'diary'|'withdrawn';hidden:boolean}>; ratingsEnabled?: boolean };
+type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; canMark: boolean; workSourceUrl: string | null; volumeTitles?: Record<number, string>; communityRatings?: Record<number, RatingAggregate>; volumeRatings?:Record<number,RatingAggregate>;unassignedRating?:RatingAggregate;viewerRatings?:Record<number,{rating:number|null;source:'review'|'diary'|'withdrawn';hidden:boolean}>; ratingsEnabled?: boolean };
 
-export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canMark, workSourceUrl, volumeTitles = {}, communityRatings = {}, volumeRatings={},viewerRatings={},ratingsEnabled = false }: Props) {
+export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canMark, workSourceUrl, volumeTitles = {}, communityRatings = {}, volumeRatings={},unassignedRating,viewerRatings={},ratingsEnabled = false }: Props) {
   const [discussion, setDiscussion] = useState<number | null>(null);
   const [query, setQuery] = useState("");
-  const [kind, setKind] = useState("MAIN");
-  const [limit, setLimit] = useState(30);
+  const [mainLimit, setMainLimit] = useState(30);
+  const [specialLimit, setSpecialLimit] = useState(30);
   const [hideScheduled, setHideScheduled] = useState(false);
   // A reader's explicit expand/collapse choice overrides automatic next-chapter focus.
   const [manualVolumeOpen, setManualVolumeOpen] = useState<Record<string, boolean>>({});
@@ -38,7 +38,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
   const {readIds: ids, showReadIds: show}=useWorkChapterProgress();
   const read=new Set(ids);
   const [sheet,setSheet]=useState<Chapter|null>(null);
-  const [failure,setFailure]=useState<{chapter:Chapter;action:"read"|"unread"|"read-through"}|null>(null);
+  const [failure,setFailure]=useState<{chapter:Chapter;action:"read"|"unread"}|null>(null);
   const [confirmUnread,setConfirmUnread]=useState<Chapter|null>(null);
   const {enabled}=usePromptPreference();
   const [previousPrompt, setPreviousPrompt] = useState<{ target: Chapter; missing: Chapter[] } | null>(null);
@@ -51,7 +51,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
   function disablePreviousPrompt() {
     try { localStorage.setItem(preferenceKey, "off"); } catch { /* private browsing */ }
   }
-  function mark(chapter:Chapter,action:"read"|"unread"|"read-through", approved=false){
+  function mark(chapter:Chapter,action:"read"|"unread", approved=false){
     if(lock.current || pending)return;
     if(needsUnreadConfirmation(action, ratings[chapter.id]) && !approved){
       setConfirmUnread(chapter);
@@ -64,8 +64,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
     start(async()=>{
       const next=new Set(ids);
       if(action==="unread")next.delete(chapter.id);
-      else if(action==="read")next.add(chapter.id);
-      else for(const c of main){next.add(c.id);if(c.id===chapter.id)break;}
+      else next.add(chapter.id);
       show([...next]);
       try{await writeReading(comicId,{intent:"chapter-reading",action,chapterId:String(chapter.id)});
         router.refresh();
@@ -75,19 +74,23 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
       finally{lock.current=false;}
     });
   }
-  const active = chapters.filter((c) => c.status === "RELEASED");
-  const scheduledCount = chapters.filter((c) => c.status === "SCHEDULED").length;
-  const main = active.filter((c) => c.kind === "MAIN");
-  const filtered = chapters.filter((c) => (c.status === "RELEASED" || (!hideScheduled && c.status === "SCHEDULED")) && c.kind === kind &&
-    `${c.displayCode || c.title || "Глава"} ${c.title ?? ""}`.toLocaleLowerCase("ru").includes(query.trim().toLocaleLowerCase("ru")));
-  const history = chapters.filter((c) => c.status === "ARCHIVED" && read.has(c.id));
+  const allMain = chapters.filter(c => c.kind === "MAIN" && (c.status === "RELEASED" || c.status === "SCHEDULED"));
+  const allSpecials = chapters.filter(c => c.kind === "SPECIAL" && (c.status === "RELEASED" || c.status === "SCHEDULED"));
+  const main = allMain.filter(c => c.status === "RELEASED");
+  const scheduledCount = [...allMain, ...allSpecials].filter(c => c.status === "SCHEDULED").length;
+  const search = query.trim().toLocaleLowerCase("ru");
+  const matches = (c: Chapter) => (!hideScheduled || c.status !== "SCHEDULED") &&
+    `${c.displayCode} ${c.title ?? ""}`.toLocaleLowerCase("ru").includes(search);
+  const filteredMain = allMain.filter(matches);
+  const filteredSpecials = allSpecials.filter(matches);
+  const visibleMain = filteredMain.slice(0, mainLimit);
+  const visibleSpecials = filteredSpecials.slice(0, specialLimit);
+  const history = chapters.filter(c => c.status === "ARCHIVED" && read.has(c.id));
   const control = "w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2.5 text-sm";
-  const visible = filtered.slice(0, limit);
-  const groups = groupChaptersByVolume(visible);
-  // A pagination limit or search query must never change a volume's true progress.
-  const allVolumeGroups = groupChaptersByVolume(chapters.filter(c =>
-    (c.status === "RELEASED" || (!hideScheduled && c.status === "SCHEDULED")) && c.kind === kind));
-  const hasVolumes = groups.some(group => group.number !== null);
+  const groups = groupChaptersByVolume(visibleMain);
+  // Full membership, never a filtered/paginated subset, defines progress and grouping.
+  const allVolumeGroups = groupChaptersByVolume(allMain);
+  const hasVolumes = allVolumeGroups.some(group => group.number !== null);
   const nextChapterId = main.find(chapter => !read.has(chapter.id))?.id ?? null;
 
   function renderChapter(c: Chapter) {
@@ -173,97 +176,60 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
 
   return (
     <section className="chapter-panel chapter-panel--ux08" aria-label="Главы и история чтения">
-      <header className="wd08-intro">
-        <div><p className="wd08-kicker">Оглавление</p><h2>Главы истории</h2>
-          <p>Прочитанные страницы, доступные истории и главы, которые ещё ждут своего часа.</p>
-        </div>
-        <span className="wd08-count">{main.length} вышло{scheduledCount ? ` · ${scheduledCount} ожидается` : ""}</span>
-      </header>
       {sharedSource ? <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
         <div><p className="font-semibold">Общий источник произведения</p><p className="text-xs text-[var(--text-secondary)]">Переход ведёт к произведению целиком, не к отдельной главе.</p></div>
         <a className="inline-flex min-h-11 items-center rounded-lg border border-[var(--border)] px-3 text-sm font-semibold text-[var(--text-accent)]" href={sharedSource.href} target="_blank" rel="noopener noreferrer">{sharedSource.label} ↗</a>
       </div> : null}
       {scheduledCount > 0 && <label className="wd-planned-toggle">
         <span>Скрыть запланированные <small>Ещё не вышли: {scheduledCount}</small></span>
-        <input type="checkbox" checked={hideScheduled} onChange={(e) => { setHideScheduled(e.target.checked); setLimit(30); }}/>
+        <input type="checkbox" checked={hideScheduled} onChange={(e) => { setHideScheduled(e.target.checked); setMainLimit(30); setSpecialLimit(30); }}/>
       </label>}
-      {chapters.length > 0 && (
-      <details className="wd-tools"><summary>Поиск и действия</summary>
-      {canMark && main.length > 0 ? (
-        <details className="chapter-bulk"><summary>Отметить несколько глав прочитанными</summary>
-          <form onSubmit={e=>{e.preventDefault();const id=Number(new FormData(e.currentTarget).get("chapterId"));const c=main.find(x=>x.id===id);if(c)mark(c,"read-through");}}>
-            <input type="hidden" name="comicId" value={comicId} />
-            <input type="hidden" name="intent" value="chapter-reading" />
-            <input type="hidden" name="action" value="read-through" />
-            <label className="block text-sm font-medium">
-              Прочитано до главы
-              <select name="chapterId" required defaultValue="" className={`${control} mt-2`}>
-                <option value="" disabled>Выберите последнюю прочитанную главу</option>
-                {main.map((c) => <option key={c.id} value={c.id}>{c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""}{c.supersedesChapterId ? " (новая редакция)" : ""}</option>)}
-              </select>
-            </label>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">Отметит основные главы до выбранной включительно в текущем порядке. Спецвыпуски и архивные версии останутся без изменений.</p>
-            <Button disabled={pending} type="submit" className="mt-3 w-full sm:w-auto">Отметить прочитанное до выбранной</Button>
-          </form>
-        </details>
-      ) : null}
-      <details className="chapter-filters">
-        <summary>Поиск и раздел <span>{kind === "MAIN" ? "Основные" : "Спецвыпуски"}{query.trim() ? " · есть поиск" : ""} · {filtered.length}</span></summary>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm">Поиск по коду или названию
-          <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setLimit(30); }} placeholder="15.5, спецвыпуск, название…" className={`${control} mt-2`} />
+      {chapters.length > 0 && <div className="wd-chapter-navigation">
+        {allSpecials.length > 0 && <nav className="wd-chapter-sections" aria-label="Разделы оглавления">
+          <a href="#main-chapters">Основная история <span>{main.length}</span></a>
+          <a href="#special-chapters">Спецвыпуски и бонусы <span>{allSpecials.filter(c => c.status === "RELEASED").length}</span></a>
+        </nav>}
+        <label className="block text-sm">Поиск глав и спецвыпусков
+          <input type="search" value={query} onChange={e => {setQuery(e.target.value);setMainLimit(30);setSpecialLimit(30);}} placeholder="Код или название…" className={`${control} mt-2`}/>
         </label>
-        <label className="block text-sm">Раздел
-          <select value={kind} onChange={(e) => { setKind(e.target.value); setLimit(30); }} className={`${control} mt-2`}>
-            <option value="MAIN">Основные главы</option><option value="SPECIAL">Спецвыпуски и бонусы</option>
-          </select>
-        </label>
-      </div>
-        {query || kind !== "MAIN" ? <button type="button" className="tea-text-action chapter-filter-reset" onClick={() => { setQuery(""); setKind("MAIN"); setLimit(30); }}>Сбросить фильтры</button> : null}
-      </details>
-      </details>
-      )}
+        {query && <button type="button" className="tea-text-action chapter-filter-reset" onClick={() => {setQuery("");setMainLimit(30);setSpecialLimit(30);}}>Сбросить поиск</button>}
+      </div>}
       {failure && <div className="wd-reading-error" role="alert">Не удалось подтвердить отметку. <button className="tea-text-action" disabled={pending} onClick={()=>mark(failure.chapter,failure.action)}>Повторить</button></div>}
-      {hasVolumes ? <div className="wd-volumes" aria-label="Тома и главы">
-        {groups.map((group) => {
-          const allInVolume = allVolumeGroups.find(candidate => candidate.number === group.number)?.chapters ?? group.chapters;
-          const progress = volumeProgress(allInVolume, read);
-          const measures=readingMeasures(allInVolume,read,kind);
-          const volumeRating=group.number===null||kind!=='MAIN'?null:volumeRatings[group.number];
-          const scheduled = allInVolume.filter(c => c.status === "SCHEDULED").length;
-          const title = volumeHeading(group.number, group.number === null ? null : volumeTitles[group.number]);
-          const volumeKey = group.number === null ? "ungrouped" : `volume-${group.number}`;
-          const autoOpen = nextChapterId !== null
-            ? group.chapters.some(c => c.id === nextChapterId)
-            : group.number === groups[0]?.number;
-          const expanded = manualVolumeOpen[volumeKey] ?? autoOpen;
-          return <details key={volumeKey} className="wd-volume" open={expanded}>
-            <summary className="wd-volume-summary" onClick={(event) => {
-              // Let React control this toggle; native toggling would race with the
-              // next-chapter auto-open value and could erase user intent.
-              event.preventDefault();
-              setManualVolumeOpen(current => ({
-                ...current,
-                [volumeKey]: !(current[volumeKey] ?? autoOpen),
-              }));
-            }}>
-              <span className="wd-volume-heading">{title}</span>
-              <span className="wd-volume-measures"><span><WorkIcon name="book"/>{chapterCountLabel(measures.totalChapters,kind)}</span>{scheduled>0&&<span>Ожидается: {scheduled}</span>}{measures.totalPages!==null&&<span><WorkIcon name="pages"/>{measures.totalPages} стр.</span>}{measures.minutes!==null&&<span><WorkIcon name="clock"/>≈ {measures.minutes} мин</span>}</span>
-              <span className="wd-volume-stats">
-                {canMark && progress.total > 0 ? `Прочитано ${progress.read} из ${progress.total}` : `${progress.total} вышло`}
-                {scheduled > 0 ? ` · Ожидается ${scheduled}` : ""}
-              </span>
-              {canMark && progress.total > 0 && <span className="wd-volume-progress"><span><WorkIcon name="book"/>По главам: {measures.chapterPercent}% ({progress.read} из {progress.total})</span><progress aria-label={`Прогресс: ${title}`} max={progress.total} value={progress.read} /></span>}
-              {canMark&&measures.totalPages!==null&&<span className="wd-volume-progress"><span><WorkIcon name="pages"/>Страницы прочитанных глав: {measures.pagePercent}% ({measures.readPages} из {measures.totalPages})</span><progress aria-label={`Страницы прочитанных глав: ${title}`} max={measures.totalPages} value={measures.readPages!}/></span>}
-              {measures.totalPages===null&&measures.knownPageChapters>0&&<small className="wd-volume-incomplete">Страницы заполнены для {measures.knownPageChapters} из {measures.totalChapters} глав</small>}
-              {kind==='MAIN'&&<span className="wd-volume-rating" aria-label={volumeRating?.average==null?'Рейтинг тома: оценок пока нет':undefined}><strong><WorkIcon name="star"/>{formatRating(volumeRating?.average??null)}</strong><small>По оценкам глав</small><small>{volumeRating?.votes?formatRatingVotes(volumeRating.votes,true):'—'}</small></span>}
-            </summary>
-            <ul className="wd-chapters">{group.chapters.map(renderChapter)}</ul>
-          </details>;
-        })}
-      </div> : <ul className="wd-chapters">{visible.map(renderChapter)}</ul>}
-      {filtered.length === 0 ? <p className="wd-no-chapters mt-4 text-sm text-[var(--text-secondary)]">{query ? "По запросу ничего не найдено." : hideScheduled ? "В этом разделе пока нет вышедших глав." : "В этом разделе пока нет глав."}</p> : null}
-      {filtered.length > limit ? <Button variant="secondary" className="mt-3" onClick={() => setLimit(limit + 30)}>Показать ещё 30</Button> : null}
+      <section id="main-chapters" data-chapter-section="main" aria-label="Основная история" className="wd-chapter-section">
+        {hasVolumes ? <div className="wd-volumes" aria-label="Тома и главы">
+          {groups.map(group => {
+            const allInVolume = allVolumeGroups.find(candidate => candidate.number === group.number)?.chapters ?? group.chapters;
+            const title = volumeHeading(group.number, group.number === null ? null : volumeTitles[group.number]);
+            const volumeKey = group.number === null ? "ungrouped" : `volume-${group.number}`;
+            const autoOpen = nextChapterId !== null ? allInVolume.some(c => c.id === nextChapterId) : group.number === groups[0]?.number;
+            const expanded = manualVolumeOpen[volumeKey] ?? autoOpen;
+            return <details key={volumeKey} className="wd-volume" open={expanded}>
+              <summary className="wd-volume-summary" onClick={event => {
+                event.preventDefault();
+                setManualVolumeOpen(current => ({...current,[volumeKey]:!(current[volumeKey] ?? autoOpen)}));
+              }}>
+                <ChapterGroupSummary title={title} chapters={allInVolume} read={read} canMark={canMark}
+                  rating={group.number === null ? unassignedRating : volumeRatings[group.number]}/>
+              </summary>
+              <ul className="wd-chapters">{group.chapters.map(renderChapter)}</ul>
+            </details>;
+          })}
+        </div> : allMain.length > 0 ? <section className="wd-volume wd-flat-summary" aria-label="Сводка основной истории">
+          <div className="wd-volume-summary"><ChapterGroupSummary title="Основная история" headingAs="h2" chapters={allMain} read={read} canMark={canMark} rating={unassignedRating}/></div>
+          <ul className="wd-chapters">{visibleMain.map(renderChapter)}</ul>
+        </section> : null}
+        {filteredMain.length === 0 && <p className="wd-no-chapters mt-4 text-sm text-[var(--text-secondary)]">{search ? "Основные главы по запросу не найдены." : hideScheduled && allMain.length ? "Основные главы пока ожидаются." : "Основных глав пока нет."}</p>}
+        {filteredMain.length > mainLimit && <Button variant="secondary" className="mt-3" onClick={() => setMainLimit(mainLimit + 30)}>Показать ещё 30 глав</Button>}
+      </section>
+      {allSpecials.length > 0 && <section id="special-chapters" data-chapter-section="special" aria-labelledby="special-chapters-title" className="wd-chapter-section wd-specials">
+        <header className="wd-specials-heading"><div><h2 id="special-chapters-title">Спецвыпуски и бонусы</h2>
+          <p>Отдельные истории и дополнения. Не входят в прогресс основной истории.</p></div>
+          <span>{allSpecials.filter(c => c.status === "RELEASED").length} вышло{allSpecials.some(c => c.status === "SCHEDULED") ? ` · ${allSpecials.filter(c => c.status === "SCHEDULED").length} ожидается` : ""}</span>
+        </header>
+        <ul className="wd-chapters">{visibleSpecials.map(renderChapter)}</ul>
+        {filteredSpecials.length === 0 && <p className="wd-no-chapters mt-4 text-sm text-[var(--text-secondary)]">{search ? "Спецвыпуски по запросу не найдены." : "Спецвыпуски пока ожидаются."}</p>}
+        {filteredSpecials.length > specialLimit && <Button variant="secondary" className="mt-3" onClick={() => setSpecialLimit(specialLimit + 30)}>Показать ещё 30 спецвыпусков</Button>}
+      </section>}
       {history.length ? <details className="mt-5 rounded-xl border border-[var(--border)] p-3"><summary className="cursor-pointer font-semibold">Прочитанные архивные версии ({history.length})</summary><ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">{history.map((c) => <li key={c.id}>{c.displayCode}{c.title ? `${c.displayCode ? " — " : ""}${c.title}` : ""} · прочитано{ratings[c.id] ? ` · ★ ${ratings[c.id]} / 5` : ""}</li>)}</ul></details> : null}
       {confirmUnread && <UnreadChapterConfirmation
         preservePublicRating={viewerRatings[confirmUnread.id]?.source === 'review' && viewerRatings[confirmUnread.id]?.rating != null}

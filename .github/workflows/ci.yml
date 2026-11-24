@@ -668,6 +668,7 @@ jobs:
           trap 'kill "$qa_pid" 2>/dev/null || true' EXIT
           curl -fsS --retry 25 --retry-delay 1 --retry-connrefused http://127.0.0.1:3120/api/health/ready -o /dev/null
           node scripts/beta-access-browser.mjs || { tail -40 "$RUNNER_TEMP/beta-access-host.log"; exit 1; }
+          PRESENTATION_TEST_DATABASE_URL="$DATABASE_URL" TOC_BROWSER_OUTPUT="$RUNNER_TEMP/chapter-toc-browser" node scripts/chapter-toc-browser.mjs || { tail -40 "$RUNNER_TEMP/beta-access-host.log"; exit 1; }
           LIFECYCLE_TEST_DATABASE_URL="$DATABASE_URL" LIFECYCLE_BROWSER_OUTPUT="$RUNNER_TEMP/account-lifecycle-browser" node scripts/account-lifecycle-browser.mjs || { tail -40 "$RUNNER_TEMP/beta-access-host.log"; exit 1; }
           node --input-type=module -e 'import {readdirSync,readFileSync} from "node:fs";import {join} from "node:path";const p=process.env.BETA_ACCESS_RUNTIME_OUTPUT;const rows=readdirSync(p).map(n=>JSON.parse(readFileSync(join(p,n))));if(!rows.length||rows.some(r=>r.externalHttpAttempts!==0||!r.allAuthFlagsOff||r.providerKeyPresent))process.exit(1);console.log("STANDALONE_RUNTIME_AUTH_OFF_NO_PROVIDER_HTTP=PASS");'
 
@@ -680,6 +681,7 @@ jobs:
             ${{ runner.temp }}/beta-access-browser/
             ${{ runner.temp }}/beta-access-runtime/
             ${{ runner.temp }}/account-lifecycle-browser/
+            ${{ runner.temp }}/chapter-toc-browser/
           if-no-files-found: ignore
           retention-days: 7
 

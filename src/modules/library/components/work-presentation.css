@@ -8,6 +8,21 @@
 .wd-work .wd-genre-tags li{border:1px solid var(--border);border-radius:999px;padding:.3rem .65rem;font-size:.76rem;color:var(--text-primary);background:color-mix(in srgb,var(--surface) 80%,transparent);overflow-wrap:anywhere}
 .wd-work .wd-hero-progress-heading>span{display:flex;align-items:center;gap:.4rem}
 .wd-work .wd-hero-progress-heading{flex-wrap:wrap;gap:.35rem}
+.wd-work .wd-hero-page-progress{display:grid;gap:.35rem;margin-top:.3rem}
+.wd-work .wd-hero-page-progress .wd-hero-progress-heading{font-size:.72rem}
+.wd-work .wd-hero-page-progress .wd-hero-progress-heading strong{font-size:.8rem;overflow-wrap:anywhere}
+.wd-work .wd-chapter-navigation{display:grid;gap:.8rem;margin-bottom:1rem}
+.wd-work .wd-chapter-sections{display:flex;gap:.65rem;flex-wrap:wrap}
+.wd-work .wd-chapter-sections a{display:inline-flex;align-items:center;gap:.6rem;min-height:44px;padding:.5rem .8rem;border:1px solid var(--border);border-radius:.75rem;background:var(--surface-raised);font-size:.85rem;color:var(--text-primary)}
+.wd-work .wd-chapter-sections a span{font-size:.75rem;color:var(--text-accent)}
+.wd-work .wd-chapter-section{scroll-margin-top:6rem;min-width:0}
+.wd-work .chapter-panel--ux08 .wd-flat-summary .wd-volume-summary{cursor:default;padding-left:1.25rem}
+.wd-work .chapter-panel--ux08 .wd-flat-summary .wd-volume-heading{margin:0}
+.wd-work .chapter-panel--ux08 .wd-volume.wd-flat-summary .wd-volume-heading::before{display:none}
+.wd-work .wd-specials{margin-top:1.5rem;padding:1rem;border:1px solid var(--border);border-radius:1rem;background:var(--surface)}
+.wd-work .wd-specials-heading{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.6rem;margin-bottom:1rem}
+.wd-work .wd-specials-heading h2{font-family:var(--cd-font-display),Georgia,serif;font-size:1.3rem;font-weight:400;margin:0}
+.wd-work .wd-specials-heading p,.wd-work .wd-specials-heading>span{font-size:.76rem;color:var(--text-secondary);margin:.4rem 0 0}
 .wd-work .reader-rating{margin:0 0 1.6rem;padding:1.1rem 1.3rem;border:1px solid var(--border);border-radius:1.2rem;background:var(--surface-raised)}
 .wd-work .reader-rating-overview{display:grid;grid-template-columns:minmax(155px,1.2fr) minmax(0,3fr) minmax(145px,1fr);gap:1.2rem;align-items:center}
 .wd-work .reader-rating-label{font-family:var(--cd-font-display),Georgia,serif;font-size:.92rem;color:var(--text-primary)}

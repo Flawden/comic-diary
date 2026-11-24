@@ -642,7 +642,8 @@ try {
         const response = await ux08Page.goto(url+"#chapters", {waitUntil:"load"});
         assert.equal(response?.status(), 200, `UX08 ${theme}/${view.name}: page response`);
         const ux08Panel = ux08Page.getByRole("tabpanel", {name:/Главы/});
-        await ux08Panel.locator(".wd08-intro").waitFor({state:"visible"});
+        await ux08Panel.locator(".chapter-panel--ux08").waitFor({state:"visible"});
+        assert.equal(await ux08Panel.locator(".wd08-intro, .wd-tools, .chapter-bulk").count(),0,"Removed obsolete TOC controls must stay absent");
         await ux08Page.evaluate(() => document.fonts.ready);
         const ux08Metrics = await ux08Page.evaluate(() => ({
           theme:document.documentElement.getAttribute("data-theme"),
@@ -716,7 +717,7 @@ try {
     ux08ProgressPage.setDefaultTimeout(25000);
     await ux08ProgressPage.goto(url+"#chapters", {waitUntil:"load"});
     const progressPanel = ux08ProgressPage.getByRole("tabpanel", {name:/Главы/});
-    await progressPanel.locator(".wd08-intro").waitFor({state:"visible"});
+    await progressPanel.locator(".chapter-panel--ux08").waitFor({state:"visible"});
     // Prove React hydration by exercising a stateful filter before toggling.
     const scheduledToggle = progressPanel.getByRole("checkbox", {name:/Скрыть запланированные/});
     await scheduledToggle.check();

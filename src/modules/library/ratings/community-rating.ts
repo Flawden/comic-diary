@@ -8,6 +8,7 @@ export type CommunityRatings = {
   criteria: Record<(typeof ratingCriteria)[number][0], RatingAggregate>;
   chapters: Record<number, RatingAggregate>;
   volumes?: Record<number, RatingAggregate>;
+  unassignedChapters?: RatingAggregate;
   viewerChapters?: Record<number, {rating:number|null;source:'review'|'diary'|'withdrawn';hidden:boolean}>;
 };
 
