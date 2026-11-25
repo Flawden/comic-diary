@@ -14,7 +14,7 @@ const {chromium}=createRequire(resolve(process.env.WD_BROWSER_ROOT??'.qa/browser
 const out=resolve(process.env.TOC_BROWSER_OUTPUT??'.qa/toc-browser');await mkdir(out,{recursive:true});
 const browser=await chromium.launch({headless:true,...(process.env.TOC_BROWSER_EXECUTABLE?{executablePath:process.env.TOC_BROWSER_EXECUTABLE}:{channel:'chrome'})});
 const pool=new Pool({connectionString:target.href}),q=(s,v=[])=>pool.query(s,v),users=[],books=[],contexts=[],prefix='toc-'+randomUUID();
-const result={status:'PENDING',checks:[],screenshots:[],errors:[],external:[]};
+const result={status:'PENDING',checks:[],screenshots:[],errors:[],external:[],assetErrors:[]};
 const policy=(await q('SELECT beta_only FROM site_access_policy WHERE id=1')).rows[0];
 const controls=(await q('SELECT row_to_json(t) r FROM activation_mail_dispatch_control t UNION ALL SELECT row_to_json(t) FROM password_reset_mail_dispatch_control t')).rows;
 async function context(token,theme,width){
@@ -29,7 +29,7 @@ async function context(token,theme,width){
    const response=await c.request.fetch(r.url(),{method:r.method(),headers,data:r.postDataBuffer(),maxRedirects:0});
    return route.fulfill({response});
   }return route.continue();
- });c.on('page',p=>p.on('pageerror',e=>result.errors.push({url:p.url(),message:e.message})));return c;
+ });c.on('response',r=>{if(r.status()>=400&&['font','stylesheet','script','image'].includes(r.request().resourceType()))result.assetErrors.push({path:new URL(r.url()).pathname,status:r.status()});});c.on('page',p=>p.on('pageerror',e=>result.errors.push({url:p.url(),message:e.message})));return c;
 }
 async function chapter(book,code,title,order,{status='RELEASED',kind='MAIN',pages=null,minutes=null,volume=null}={}){
  return (await q("INSERT INTO chapters(comic_id,display_code,title,sort_order,status,kind,page_count,reading_minutes,volume_number,source_url,cover_url) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'https://example.invalid/chapter','/images/fantasy-editorial/catalog/catalog-library-background.webp') RETURNING id",[book,code,title,order,status,kind,pages,minutes,volume])).rows[0].id;
@@ -58,15 +58,20 @@ try{
   await p.goto(origin+'/comics/'+prefix+'-single#chapters',{waitUntil:'domcontentloaded'});
   const panel=p.getByRole('tabpanel',{name:/Главы/});await panel.locator('.wd-flat-summary').waitFor();
   assert.equal(await panel.locator('.wd08-intro,.wd-tools,.chapter-bulk').count(),0);
+  assert.equal(await panel.locator('.wd08-external').count(),0);
+  for(const link of await panel.locator('.wd-row-title>a').all())assert.equal((await link.textContent()).includes('↗'),false);
   const summary=panel.locator('.wd-flat-summary .wd-volume-summary');
   assert.match(await summary.textContent(),/100 стр/);assert.match(await summary.textContent(),/12 мин/);
-  assert.match(await summary.textContent(),/По главам: 0% \(0 из 3\)/);assert.match(await summary.textContent(),/Страницы прочитанных глав: 0% \(0 из 100\)/);
+  assert.match(await summary.textContent(),/Прочитано глав: 0 из 3/);assert.match(await summary.textContent(),/Страницы прочитанных глав: 0 из 100/);
   assert.match(await summary.textContent(),/3,0 \/ 5/);
   const specials=panel.locator('[data-chapter-section="special"]');await specials.getByRole('link',{name:/Дополнительная история.*открыть главу/}).waitFor();
   assert.equal(await specials.locator('.wd08-row').count(),1);
   assert.equal(await panel.locator('[data-chapter-section="main"] .wd-row--scheduled').count(),1);
-  assert.equal(await p.locator('.wd-hero-page-progress progress').getAttribute('max'),'100');
-  assert.equal(await p.locator('.wd-hero-page-progress progress').getAttribute('value'),'0');
+  assert.equal(await p.locator('.wd-hero-progress progress').count(),1);
+  assert.equal(await p.locator('.wd-hero-progress progress').getAttribute('max'),'3');
+  assert.equal(await summary.locator('progress').count(),0);
+  assert.match(await p.locator('.wd-hero-bonus-progress').textContent(),/0 из 1/);
+  assert.equal(await specials.getByRole('progressbar',{name:'Прогресс дополнительных материалов'}).getAttribute('value'),'0');
   const search=panel.getByRole('searchbox',{name:'Поиск глав и спецвыпусков'});await search.fill('Тайна леса');
   assert.equal(await panel.locator('[data-chapter-section="main"] .wd08-row').count(),1);
   assert.match(await summary.textContent(),/100 стр/);assert.match(await summary.textContent(),/0 из 3/);
@@ -78,23 +83,43 @@ try{
   let saved=p.waitForResponse(r=>r.url().endsWith('/api/library/reading-state')&&r.request().method()==='POST');
   await row.getByRole('button',{name:/^Отметить прочитанной:/}).click();assert.equal((await saved).status(),200);
   await p.locator('.wd-hero-progress').getByText('Прочитано: 1 из 3 · 33%',{exact:true}).waitFor();
-  await p.locator('.wd-hero-page-progress').getByText('20 из 100 · 20%',{exact:true}).waitFor();
-  assert.match(await summary.textContent(),/20% \(20 из 100\)/);
+  await p.locator('.wd-hero-page-progress').getByText('20 из 100',{exact:true}).waitFor();
+  assert.match(await summary.textContent(),/Страницы прочитанных глав: 20 из 100/);
   saved=p.waitForResponse(r=>r.url().endsWith('/api/library/reading-state')&&r.request().method()==='POST');
   await specials.getByRole('button',{name:/^Отметить прочитанной:/}).click();assert.equal((await saved).status(),200);
   await specials.getByRole('button',{name:/^Снять отметку:/}).waitFor();
   assert.match(await p.locator('.wd-hero-progress').textContent(),/Прочитано: 1 из 3/);
+  assert.match(await p.locator('.wd-hero-bonus-progress').textContent(),/1 из 1/);
+  assert.equal(await specials.getByRole('progressbar',{name:'Прогресс дополнительных материалов'}).getAttribute('value'),'1');
   assert.equal((await q('SELECT rating FROM user_chapter_reads WHERE user_id=$1 AND chapter_id=$2',[user,archived])).rows[0].rating,4);
   assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await p.evaluate(()=>document.fonts.ready);
   const file=theme+'-'+width+'-single.png';await p.screenshot({path:resolve(out,file),fullPage:true});result.screenshots.push(file);
   result.checks.push(theme+'_'+width+'_VISIBLE_SPECIALS_ZERO_AND_OPTIMISTIC_PAGE_PROGRESS_SEARCH_PLANNED_ARCHIVE');
  }
  const c=await context(token,'night',390),p=await c.newPage();
- await q('UPDATE chapters SET page_count=NULL WHERE id=$1',[ids[1]]);
+ await q('UPDATE chapters SET volume_number=1 WHERE comic_id=$1 AND kind=\'MAIN\' AND status<>\'ARCHIVED\'',[single]);
  await p.goto(origin+'/comics/'+prefix+'-single#chapters',{waitUntil:'domcontentloaded'});
+ await p.locator('.wd-volume summary').first().waitFor();
+ assert.equal(await p.locator('.wd-volume summary progress').count(),0);
+ await q('UPDATE chapters SET volume_number=2 WHERE id=$1',[ids[2]]);
+ await p.reload({waitUntil:'domcontentloaded'});
+ await p.locator('.wd-volume').nth(1).waitFor();
+ assert.equal(await p.locator('.wd-volume summary progress').count(),2);
+ result.checks.push('EXPLICIT_ONE_VOLUME_NO_DUPLICATE_BAR_TWO_VOLUMES_INDEPENDENT_BARS');
+ await q('UPDATE chapters SET volume_number=NULL WHERE comic_id=$1',[single]);
+ for(const id of ids)await q('INSERT INTO user_chapter_reads(user_id,chapter_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[user,id]);
+ await chapter(single,'Бонус 2','Новый дополнительный материал',6,{kind:'SPECIAL',pages:17});
+ await p.reload({waitUntil:'domcontentloaded'});
+ await p.locator('.wd-hero-progress').getByText('Прочитано: 3 из 3 · 100%',{exact:true}).waitFor();
+ assert.match(await p.locator('.wd-hero-bonus-progress').textContent(),/1 из 2/);
+ assert.equal(await p.getByRole('progressbar',{name:'Прогресс дополнительных материалов'}).getAttribute('max'),'2');
+ result.checks.push('ADDING_BONUS_PRESERVES_COMPLETED_MAIN_STORY_WITH_SEPARATE_BONUS_TOTAL');
+ await q('UPDATE chapters SET page_count=NULL WHERE id=$1',[ids[1]]);
+ await p.reload({waitUntil:'domcontentloaded'});
  await p.getByText('Страницы заполнены для 2 из 3 глав',{exact:true}).waitFor();
  assert.equal(await p.locator('.wd-hero-page-progress').count(),0);
- assert.equal(await p.locator('.wd-flat-summary progress').count(),1);
+ assert.equal(await p.locator('.wd-flat-summary progress').count(),0);
  await q('UPDATE chapters SET page_count=30 WHERE id=$1',[ids[1]]);
  await p.goto(origin+'/comics/'+prefix+'-paged#chapters',{waitUntil:'domcontentloaded'});
  const panel=p.getByRole('tabpanel',{name:/Главы/});await panel.locator('.wd-flat-summary').waitFor();
@@ -108,8 +133,18 @@ try{
  assert.equal(await panel.locator('[data-chapter-section="special"] .wd08-row').count(),1);
  assert.match(await panel.locator('.wd-flat-summary .wd-volume-summary').textContent(),/33 стр/);
  result.checks.push('INCOMPLETE_PAGES_NO_FAKE_PERCENT_AND_INDEPENDENT_PAGINATION_33_MAIN_SPECIAL_VISIBLE');
+ const onlySpecial=(await q("INSERT INTO comics(slug,title,cover_url) VALUES($1,'Только дополнительные материалы','/demo/covers/tea.svg') RETURNING id",[prefix+'-extras'])).rows[0].id;books.push(onlySpecial);
+ await chapter(onlySpecial,'Дополнение','Единственный бонус',0,{kind:'SPECIAL',pages:9});
+ await q('INSERT INTO user_comics(user_id,comic_id,prompt_chapter_rating) VALUES($1,$2,false)',[user,onlySpecial]);
+ await p.goto(origin+'/comics/'+prefix+'-extras#chapters',{waitUntil:'domcontentloaded'});
+ await p.locator('.wd-hero-bonus-progress').waitFor();
+ assert.equal(await p.locator('.wd-hero-progress progress').count(),0);
+ assert.match(await p.locator('.wd-hero-bonus-progress').textContent(),/0 из 1/);
+ assert.equal(await p.getByRole('progressbar',{name:'Прогресс дополнительных материалов'}).getAttribute('max'),'1');
+ result.checks.push('BONUS_ONLY_REGISTRY_NO_FAKE_MAIN_ZERO_DENOMINATOR');
+
  assert.deepEqual((await q('SELECT row_to_json(t) r FROM activation_mail_dispatch_control t UNION ALL SELECT row_to_json(t) FROM password_reset_mail_dispatch_control t')).rows,controls);
- assert.deepEqual(result.external,[]);assert.deepEqual(result.errors,[]);result.status='PASS';
+ assert.deepEqual(result.external,[]);assert.deepEqual(result.errors,[]);assert.deepEqual(result.assetErrors,[]);result.status='PASS';
 }catch(e){result.status='FAIL';result.failure=String(e);throw e;}
 finally{
  await writeFile(resolve(out,'RESULTS.json'),JSON.stringify(result,null,2));

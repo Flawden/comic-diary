@@ -11,6 +11,10 @@
 .wd-work .wd-hero-page-progress{display:grid;gap:.35rem;margin-top:.3rem}
 .wd-work .wd-hero-page-progress .wd-hero-progress-heading{font-size:.72rem}
 .wd-work .wd-hero-page-progress .wd-hero-progress-heading strong{font-size:.8rem;overflow-wrap:anywhere}
+.wd-work .wd-hero-bonus-progress{display:flex;justify-content:space-between;flex-wrap:wrap;gap:.4rem;margin-top:.5rem;padding-top:.7rem;border-top:1px solid var(--border);font-size:.76rem}
+.wd-work .wd-hero-bonus-progress strong{white-space:nowrap}
+.wd-work .wd-special-progress{display:grid;gap:.5rem;margin-bottom:1rem;font-size:.8rem;color:var(--text-primary)}
+.wd-work .wd-special-progress progress{inline-size:100%;block-size:.4rem;accent-color:var(--wd-gold)}
 .wd-work .wd-chapter-navigation{display:grid;gap:.8rem;margin-bottom:1rem}
 .wd-work .wd-chapter-sections{display:flex;gap:.65rem;flex-wrap:wrap}
 .wd-work .wd-chapter-sections a{display:inline-flex;align-items:center;gap:.6rem;min-height:44px;padding:.5rem .8rem;border:1px solid var(--border);border-radius:.75rem;background:var(--surface-raised);font-size:.85rem;color:var(--text-primary)}

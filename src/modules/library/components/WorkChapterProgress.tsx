@@ -29,19 +29,22 @@ export function useWorkChapterProgress() {
 
 export function WorkHeroProgress({ mainChapterIds, chapters = [] }: { mainChapterIds: number[]; chapters?: ChapterMeasure[] }) {
   const { readIds } = useWorkChapterProgress();
-  if (!mainChapterIds.length) return null;
   const read = new Set(readIds);
   const completed = mainChapterIds.filter(id => read.has(id)).length;
   const total = mainChapterIds.length;
   const measures = readingMeasures(chapters, read);
+  const bonuses = readingMeasures(chapters, read, 'SPECIAL');
+  if (!total && !bonuses.totalChapters) return null;
   return <div className="wd-hero-progress" role="group" aria-label="Прогресс чтения произведения">
-    <div className="wd-hero-progress-heading"><span><WorkIcon name="book"/>Прогресс чтения</span><strong>Прочитано: {completed} из {total} · {Math.round(completed/total*100)}%</strong></div>
+    {total > 0 && <><div className="wd-hero-progress-heading"><span><WorkIcon name="book"/>Прогресс истории</span><strong>Прочитано: {completed} из {total} · {Math.round(completed/total*100)}%</strong></div>
     <progress aria-label="Прогресс чтения" max={total} value={completed} />
     {measures.totalPages !== null && <div className="wd-hero-page-progress">
-      <div className="wd-hero-progress-heading"><span><WorkIcon name="pages"/>Страницы прочитанных глав</span><strong>{measures.readPages} из {measures.totalPages} · {measures.pagePercent}%</strong></div>
-      <progress aria-label="Прогресс по страницам прочитанных глав" max={measures.totalPages} value={measures.readPages!}/>
+      <div className="wd-hero-progress-heading"><span><WorkIcon name="pages"/>Страницы прочитанных глав</span><strong>{measures.readPages} из {measures.totalPages}</strong></div>
     </div>}
     {measures.totalPages === null && measures.knownPageChapters > 0 && <p className="wd-hero-pages-incomplete">Страницы указаны для {measures.knownPageChapters} из {measures.totalChapters} глав.</p>}
-    <p>{completed === total ? "Все вышедшие основные главы прочитаны." : `Осталось основных глав: ${total - completed}`}</p>
+    <p>{completed === total ? "Все вышедшие основные главы прочитаны." : `Осталось основных глав: ${total - completed}`}</p></>}
+    {bonuses.totalChapters > 0 && <div className="wd-hero-bonus-progress">
+      <span>Дополнительные материалы</span><strong>{bonuses.readChapters} из {bonuses.totalChapters}</strong>
+    </div>}
   </div>;
 }
