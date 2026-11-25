@@ -19,6 +19,7 @@ import { getChapterReadingSource, readingSource } from "@/modules/library/readin
 import { useWorkChapterProgress } from "./WorkChapterProgress";
 import { ChapterGroupSummary } from "./ChapterGroupSummary";
 import { WorkIcon } from "@/shared/components/WorkIcon";
+import { readingMeasures } from "@/modules/catalog/work-presentation-policy";
 
 type Chapter = Omit<ComicChapter, "releasedAt">;
 type Props = { comicId: number; readerId: number | null; chapters: Chapter[]; ratings: Record<number, number>; canMark: boolean; workSourceUrl: string | null; volumeTitles?: Record<number, string>; communityRatings?: Record<number, RatingAggregate>; volumeRatings?:Record<number,RatingAggregate>;unassignedRating?:RatingAggregate;viewerRatings?:Record<number,{rating:number|null;source:'review'|'diary'|'withdrawn';hidden:boolean}>; ratingsEnabled?: boolean };
@@ -91,6 +92,8 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
   // Full membership, never a filtered/paginated subset, defines progress and grouping.
   const allVolumeGroups = groupChaptersByVolume(allMain);
   const hasVolumes = allVolumeGroups.some(group => group.number !== null);
+  const showGroupProgress = allVolumeGroups.length > 1;
+  const specialProgress = readingMeasures(allSpecials, read, 'SPECIAL');
   const nextChapterId = main.find(chapter => !read.has(chapter.id))?.id ?? null;
 
   function renderChapter(c: Chapter) {
@@ -124,7 +127,7 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
             {direct ? (
               <a href={direct.href} target="_blank" rel="noopener noreferrer"
                 aria-label={label + " — открыть главу в новой вкладке"}>
-                {heading} <span className="wd08-external" aria-hidden="true">↗</span>
+                {heading}
               </a>
             ) : <span className="wd08-heading">{heading}</span>}
             {destination.kind === "general" && destination.source ? (
@@ -209,13 +212,14 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
                 setManualVolumeOpen(current => ({...current,[volumeKey]:!(current[volumeKey] ?? autoOpen)}));
               }}>
                 <ChapterGroupSummary title={title} chapters={allInVolume} read={read} canMark={canMark}
+                  showProgress={showGroupProgress}
                   rating={group.number === null ? unassignedRating : volumeRatings[group.number]}/>
               </summary>
               <ul className="wd-chapters">{group.chapters.map(renderChapter)}</ul>
             </details>;
           })}
         </div> : allMain.length > 0 ? <section className="wd-volume wd-flat-summary" aria-label="Сводка основной истории">
-          <div className="wd-volume-summary"><ChapterGroupSummary title="Основная история" headingAs="h2" chapters={allMain} read={read} canMark={canMark} rating={unassignedRating}/></div>
+          <div className="wd-volume-summary"><ChapterGroupSummary title="Основная история" headingAs="h2" chapters={allMain} read={read} canMark={canMark} rating={unassignedRating} showProgress={false}/></div>
           <ul className="wd-chapters">{visibleMain.map(renderChapter)}</ul>
         </section> : null}
         {filteredMain.length === 0 && <p className="wd-no-chapters mt-4 text-sm text-[var(--text-secondary)]">{search ? "Основные главы по запросу не найдены." : hideScheduled && allMain.length ? "Основные главы пока ожидаются." : "Основных глав пока нет."}</p>}
@@ -226,6 +230,10 @@ export function ChapterReadingPanel({ comicId, readerId, chapters, ratings, canM
           <p>Отдельные истории и дополнения. Не входят в прогресс основной истории.</p></div>
           <span>{allSpecials.filter(c => c.status === "RELEASED").length} вышло{allSpecials.some(c => c.status === "SCHEDULED") ? ` · ${allSpecials.filter(c => c.status === "SCHEDULED").length} ожидается` : ""}</span>
         </header>
+        {canMark && specialProgress.totalChapters > 0 && <div className="wd-special-progress">
+          <span>Прочитано спецвыпусков: {specialProgress.readChapters} из {specialProgress.totalChapters}</span>
+          <progress aria-label="Прогресс дополнительных материалов" max={specialProgress.totalChapters} value={specialProgress.readChapters}/>
+        </div>}
         <ul className="wd-chapters">{visibleSpecials.map(renderChapter)}</ul>
         {filteredSpecials.length === 0 && <p className="wd-no-chapters mt-4 text-sm text-[var(--text-secondary)]">{search ? "Спецвыпуски по запросу не найдены." : "Спецвыпуски пока ожидаются."}</p>}
         {filteredSpecials.length > specialLimit && <Button variant="secondary" className="mt-3" onClick={() => setSpecialLimit(specialLimit + 30)}>Показать ещё 30 спецвыпусков</Button>}
